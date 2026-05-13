@@ -1,0 +1,1 @@
+- [x] Update resources/views/admin/courses/index.blade.php design
