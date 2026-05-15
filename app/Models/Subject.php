@@ -5,9 +5,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Subject extends Model
 {
+    public $timestamps = false;
     // note: column renamed from class_room_id to class_id for consistency
     protected $fillable = ['name', 'type'];
-    public $timestamps = false;
 
     // Removed conflicting belongsTo - using belongsToMany via pivot instead
 
