@@ -16,7 +16,21 @@ class HomeController extends Controller
         $courses = Course::count();
         $lives = Live::latest()->take(3)->get();
 
-        return view('front.home', compact('classes','courses','lives'));
+        $subjectsReligieux = \App\Models\Subject::where('type', 'religieux')->get();
+        $subjectsScolaire = \App\Models\Subject::where('type', 'scolaire')->get();
+
+$subjectsGrouped = [
+            'Matières Religieuses' => [
+                'subjects' => $subjectsReligieux,
+                'color' => 'primary'
+            ],
+            'Matières Scolaires' => [
+                'subjects' => $subjectsScolaire,
+                'color' => 'success'
+            ]
+        ];
+
+        return view('front.home', compact('classes','courses','lives', 'subjectsGrouped'));
     }
 
     // Liste classes

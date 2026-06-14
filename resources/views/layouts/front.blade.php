@@ -4,473 +4,858 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'E-School — Plateforme Éducative')</title>
+
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary:     #1e40af;
-            --primary-d:   #1e3a8a;
-            --primary-l:   #3b82f6;
-            --accent:      #f59e0b;
-            --accent-l:    #fbbf24;
-            --teal:        #0d9488;
-            --bg:          #f8fafc;
-            --text:        #0f172a;
-            --text-light:  #475569;
-            --muted:       #94a3b8;
-            --border:      #e2e8f0;
-            --nav-h:       72px;
-            --shadow:      0 4px 24px rgba(0,0,0,.06);
-            --shadow-hover: 0 12px 40px rgba(0,0,0,.1);
-            --radius:      12px;
-            --radius-lg:   20px;
-        }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- 3D Design System -->
+    <link rel="stylesheet" href="{{ asset('css/layouts-3d.css') }}">        <style>
+        /* ══════════════════════════════════════════════════════════════
+           DARK MODE 3D — FRONT LAYOUT
+           ══════════════════════════════════════════════════════════════ */
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
         body {
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg); color: var(--text);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: #080c14;
+            color: rgba(255,255,255,0.88);
+            min-height: 100vh;
+            overflow-x: hidden;
         }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* ── NAVBAR ── */
-        .main-nav {
-            position: fixed; top: 0; left: 0; right: 0;
-            height: var(--nav-h); z-index: 1000;
-            background: rgba(15,23,42,.85);
-            backdrop-filter: blur(20px) saturate(1.5);
-            -webkit-backdrop-filter: blur(20px) saturate(1.5);
-            border-bottom: 1px solid rgba(255,255,255,.06);
-            transition: all .3s ease;
-        }
-        .main-nav.scrolled {
-            background: rgba(15,23,42,.95);
-            box-shadow: 0 4px 30px rgba(0,0,0,.2);
-        }
-        .nav-inner {
-            max-width: 1200px; margin: 0 auto;
-            padding: 0 1.5rem; height: 100%;
-            display: flex; align-items: center; gap: 2rem;
-        }
-        .nav-brand {
-            display: flex; align-items: center; gap: 12px;
-            text-decoration: none; flex-shrink: 0;
-        }
-        .nav-brand .brand-icon {
-            width: 38px; height: 38px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,.15);
-        }
-        .nav-brand .brand-icon img {
-            width: 100%; height: 100%; object-fit: contain;
-        }
-        .nav-brand span {
-            font-size: 1.2rem; font-weight: 800;
-            background: linear-gradient(135deg, #f8fafc 50%, rgba(248,250,252,.6));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -.03em;
-        }
-        .nav-brand .brand-beta {
-            font-size: 9px; font-weight: 700; letter-spacing: .05em;
+        /* ── BADGE NAV ── */
+        .badge-nav {
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            background: linear-gradient(135deg, #FFD166, #FFB347);
+            color: #1E293B;
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
             text-transform: uppercase;
-            background: rgba(6,182,212,.15); color: #22d3ee;
-            padding: 2px 7px; border-radius: 4px;
+            letter-spacing: 0.05em;
+            box-shadow: 0 4px 15px rgba(255, 209, 102, 0.4);
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
         }
 
-        .nav-links {
-            display: flex; align-items: center; gap: 2px;
-            flex: 1; list-style: none;
+        /* ── PULSE GLOW ON REGISTER BTN ── */
+        .pulse-glow {
+            animation: btnPulseGlow 2.5s ease-in-out infinite;
         }
-        .nav-links a {
-            display: block; padding: .5rem .9rem;
-            color: rgba(255,255,255,.7); font-size: 14px; font-weight: 500;
-            text-decoration: none; border-radius: 8px;
-            transition: all .2s ease; position: relative;
-        }
-        .nav-links a:hover { color: white; background: rgba(255,255,255,.07); }
-        .nav-links a.active {
-            color: white; font-weight: 600;
-            background: rgba(255,255,255,.08);
+        @keyframes btnPulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 58, 143, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(0, 58, 143, 0), 0 0 30px rgba(124, 58, 237, 0.2); }
         }
 
-        .nav-ctas { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
-        .btn-nav-ghost {
-            padding: .45rem 1.1rem; border-radius: 999px;
-            color: rgba(255,255,255,.8); font-size: 13px; font-weight: 600;
-            text-decoration: none; transition: all .2s ease;
+        /* ── FLOATING CTA BANNER ── */
+        .floating-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 9995;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(24px) saturate(1.5);
+            -webkit-backdrop-filter: blur(24px) saturate(1.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 0;
+            transform: translateY(100%);
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
         }
-        .btn-nav-ghost:hover { background: rgba(255,255,255,.08); color: white; }
-        .btn-nav-primary {
-            padding: .45rem 1.25rem; border-radius: 999px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white; font-size: 13px; font-weight: 700;
-            text-decoration: none; transition: all .25s ease;
-            box-shadow: 0 4px 14px rgba(59,130,246,.35);
+        .floating-cta.show {
+            transform: translateY(0);
         }
-        .btn-nav-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(59,130,246,.45);
+        .floating-cta .cta-pulse-ring {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22C55E;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+            animation: livePulse 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes livePulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .floating-cta-close {
+            background: rgba(255, 255, 255, 0.06);
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .floating-cta-close:hover {
+            background: rgba(255, 255, 255, 0.12);
             color: white;
         }
-        .btn-nav-dashboard {
-            padding: .45rem 1.1rem; border-radius: 999px;
-            background: rgba(255,255,255,.12); color: white;
-            font-size: 13px; font-weight: 600; text-decoration: none;
-            transition: all .2s ease;
-            border: 1px solid rgba(255,255,255,.15);
-        }
-        .btn-nav-dashboard:hover { background: rgba(255,255,255,.2); color: white; }
-        .btn-nav-logout {
-            padding: .45rem 1rem; border-radius: 999px;
-            background: rgba(239,68,68,.12); color: #fca5a5;
-            border: 1px solid rgba(239,68,68,.15);
-            font-size: 13px; font-weight: 600; cursor: pointer;
-            transition: all .2s ease; font-family: inherit;
-        }
-        .btn-nav-logout:hover { background: rgba(239,68,68,.22); color: #f87171; }
 
-        /* Hamburger */
-        .nav-toggle {
-            display: none; align-items: center; justify-content: center;
-            background: none; border: none;
-            color: white; font-size: 24px;
-            cursor: pointer; width: 38px; height: 38px;
-            border-radius: 10px; transition: background .2s;
-        }
-        .nav-toggle:hover { background: rgba(255,255,255,.1); }
-
-        .mobile-menu {
-            display: none;
-            position: absolute; top: 100%; left: 0; right: 0;
-            background: rgba(15,23,42,.97);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255,255,255,.06);
-            padding: 1rem 1.5rem 1.5rem;
-            max-height: 0; overflow: hidden;
-            transition: max-height .35s cubic-bezier(.22,.61,.36,1);
-        }
-        .mobile-menu.open {
-            display: block;
-            max-height: 600px;
-        }
-        .mobile-menu a, .mobile-menu-link {
-            display: block; padding: .7rem 1rem;
-            color: rgba(255,255,255,.7);
-            font-size: 15px; font-weight: 500;
-            text-decoration: none; border-radius: 10px;
-            transition: all .15s ease;
-        }
-        .mobile-menu a:hover { background: rgba(255,255,255,.07); color: white; }
-        .mobile-menu-divider {
-            border: none; border-top: 1px solid rgba(255,255,255,.06);
-            margin: .5rem 0;
-        }
-        @media(max-width: 768px) {
-            .nav-links, .nav-ctas { display: none; }
-            .nav-toggle { display: flex; }
-            .nav-brand span { font-size: 1rem; }
-        }
-
-        /* ── MAIN ── */
-        .front-main {
-            margin-top: var(--nav-h);
-            min-height: calc(100vh - var(--nav-h) - 200px);
-            padding: 2rem 0;
-        }
-        .front-main .container { max-width: 1200px; }
-
-        /* Alerts */
-        .front-alert {
-            border-radius: var(--radius);
-            padding: .9rem 1.2rem;
-            font-size: 14px; font-weight: 500;
-            display: flex; align-items: center; gap: 8px;
-            margin-bottom: 1.25rem;
-            animation: alertSlide .4s cubic-bezier(.22,.61,.36,1);
-            box-shadow: 0 2px 12px rgba(0,0,0,.04);
-        }
-        @keyframes alertSlide {
-            from { opacity: 0; transform: translateY(-12px) scale(.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .front-alert-success {
-            background: #f0fdf4; border: 1px solid #86efac;
-            color: #166534;
-        }
-        .front-alert-danger {
-            background: #fef2f2; border: 1px solid #fca5a5;
-            color: #dc2626;
-        }
-        .front-alert-info {
-            background: #eff6ff; border: 1px solid #93c5fd;
-            color: #1e40af;
-        }
-
-        /* ── FOOTER ── */
-        .site-footer {
-            background: #0f172a;
-            background-image: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,.08) 0%, transparent 60%);
+        /* ── FLOATING WHATSAPP / CHAT ── */
+        .floating-chat {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            z-index: 9994;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #25D366, #128C7E);
             color: white;
-            margin-top: 5rem;
-            padding: 4rem 0 0;
-            position: relative;
-            overflow: hidden;
-        }
-        .site-footer::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(59,130,246,.3), transparent);
-        }
-        .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
-        .footer-brand {
-            display: flex; align-items: center; gap: 12px;
-            margin-bottom: 1rem;
-        }
-        .footer-brand .brand-icon {
-            width: 38px; height: 38px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,.15);
-        }
-        .footer-brand .brand-icon img {
-            width: 100%; height: 100%; object-fit: contain;
-        }
-        .footer-brand span { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; }
-        .footer-desc {
-            color: rgba(255,255,255,.45);
-            font-size: 14px; max-width: 280px;
-            line-height: 1.7;
-        }
-        .footer-social {
-            display: flex; gap: .5rem; margin-top: 1.25rem;
-        }
-        .footer-social a {
-            width: 36px; height: 36px; border-radius: 10px;
-            background: rgba(255,255,255,.06);
-            color: rgba(255,255,255,.5);
-            display: flex; align-items: center; justify-content: center;
-            text-decoration: none; font-size: 15px;
-            transition: all .2s ease;
-        }
-        .footer-social a:hover {
-            background: rgba(59,130,246,.2);
-            color: #93c5fd;
-            transform: translateY(-2px);
-        }
-        .footer-heading {
-            font-size: 12px; font-weight: 700;
-            letter-spacing: .08em; text-transform: uppercase;
-            color: rgba(255,255,255,.3);
-            margin-bottom: .9rem;
-        }
-        .footer-link {
-            display: block;
-            color: rgba(255,255,255,.55);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(37, 211, 102, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
-            font-size: 14px; font-weight: 400;
-            padding: .3rem 0;
-            transition: all .2s ease;
+            animation: chatBounce 2s ease-in-out infinite;
         }
-        .footer-link:hover {
+        .floating-chat:hover {
+            transform: scale(1.1) translateY(-4px);
+            box-shadow: 0 12px 40px rgba(37, 211, 102, 0.4);
             color: white;
-            transform: translateX(4px);
         }
-        .footer-bottom {
-            border-top: 1px solid rgba(255,255,255,.05);
-            margin-top: 3rem;
-            padding: 1.2rem 1.5rem;
-            display: flex; align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap; gap: .5rem;
-            max-width: 1200px; margin-left: auto; margin-right: auto;
+        .floating-chat .chat-tooltip {
+            position: absolute;
+            right: 66px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .footer-bottom-text {
-            font-size: 12px;
-            color: rgba(255,255,255,.3);
+        .floating-chat:hover .chat-tooltip {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        @keyframes chatBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
 
-        /* ── BACK TO TOP ── */
-        .back-top {
-            position: fixed; bottom: 1.5rem; right: 1.5rem;
-            width: 44px; height: 44px; border-radius: 14px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white; border: none; cursor: pointer;
-            font-size: 18px; display: none;
-            align-items: center; justify-content: center;
-            box-shadow: 0 4px 16px rgba(59,130,246,.35);
-            transition: all .25s ease; z-index: 50;
+        @media (max-width: 768px) {
+            .floating-chat {
+                bottom: 80px;
+                right: 16px;
+                width: 48px;
+                height: 48px;
+                font-size: 1.25rem;
+            }
+            .floating-cta .btn-3d-gold {
+                padding: 8px 16px !important;
+                font-size: 0.8rem !important;
+            }
         }
-        .back-top.show { display: flex; }
-        .back-top:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(59,130,246,.45);
+
+        /* ── PRELOADER ── */
+        .preloader-3d {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: #080c14;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 24px;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
         }
-        .back-top:active { transform: translateY(0); }
+        .preloader-3d.loaded {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .preloader-3d-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            animation: preloaderPulse 1.5s ease-in-out infinite;
+        }
+        .preloader-3d-bar {
+            width: 160px;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .preloader-3d-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #003A8F, #7C3AED, #FFD166);
+            border-radius: 4px;
+            animation: preloaderFill 0.7s ease-in-out forwards;
+        }
+        @keyframes preloaderPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        @keyframes preloaderFill {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        /* ── COSMIC DARK BACKGROUND ── */
+        .cosmic-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(ellipse at 20% 50%, #0a1628, #080c14 60%, #060810);
+        }
+
+        /* Deep space gradient layers */
+        .cosmic-bg::before {
+            content: '';
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 58, 143, 0.12), transparent 70%);
+            top: -250px;
+            right: -150px;
+            animation: cosmicDrift 25s ease-in-out infinite;
+        }
+        .cosmic-bg::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.08), transparent 70%);
+            bottom: -200px;
+            left: -100px;
+            animation: cosmicDrift 30s ease-in-out infinite reverse;
+        }
+
+        /* Nebula accent */
+        .cosmic-nebula {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 209, 102, 0.04), transparent 60%);
+            top: 40%;
+            right: 10%;
+            filter: blur(80px);
+            animation: cosmicDrift 20s ease-in-out infinite;
+            animation-delay: -10s;
+        }
+
+        @keyframes cosmicDrift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(60px, -70px) scale(1.15); }
+            66% { transform: translate(-40px, 50px) scale(0.85); }
+        }
+
+        /* ── STARS ── */
+        .stars-container {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) ease-in-out infinite;
+            animation-delay: var(--delay);
+        }
+        .star.size-md { width: 3px; height: 3px; }
+        .star.size-lg { width: 4px; height: 4px; box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: var(--min-opacity, 0.2); transform: scale(1); }
+            50% { opacity: var(--max-opacity, 0.9); transform: scale(1.3); }
+        }
+
+        /* ── FLOATING ORBS ── */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(50px);
+            opacity: 0.08;
+            animation: orbFloat 18s ease-in-out infinite;
+        }
+        .orb:nth-child(1) {
+            width: 300px; height: 300px;
+            background: #003A8F;
+            top: 15%; left: 5%;
+            animation-delay: 0s;
+        }
+        .orb:nth-child(2) {
+            width: 250px; height: 250px;
+            background: #7C3AED;
+            bottom: 20%; right: 10%;
+            animation-delay: -6s;
+        }
+        .orb:nth-child(3) {
+            width: 200px; height: 200px;
+            background: #FFD166;
+            top: 50%; left: 50%;
+            animation-delay: -12s;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(40px, -60px) scale(1.2); }
+            50% { transform: translate(-30px, 40px) scale(0.9); }
+            75% { transform: translate(20px, -20px) scale(1.1); }
+        }
+
+        /* ── SHOOTING STARS ── */
+        .shooting-star {
+            position: absolute;
+            width: 120px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6));
+            border-radius: 1px;
+            animation: shoot 4s ease-in-out infinite;
+            opacity: 0;
+        }
+        .shooting-star:nth-child(1) { top: 10%; left: 80%; animation-delay: 3s; }
+        .shooting-star:nth-child(2) { top: 25%; left: 60%; animation-delay: 8s; }
+        .shooting-star:nth-child(3) { top: 5%; left: 90%; animation-delay: 15s; }
+        .shooting-star::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -2px;
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        @keyframes shoot {
+            0% { transform: translateX(0) translateY(0) rotate(-35deg); opacity: 0; }
+            5% { opacity: 1; }
+            15% { transform: translateX(-300px) translateY(200px) rotate(-35deg); opacity: 0; }
+            100% { opacity: 0; }
+        }
+
+        /* ── IMAGE HOVER ZOOM IN CARDS ── */
+        .card-3d:hover img {
+            transform: scale(1.08);
+        }
+
+        /* ── 3D CUSTOM CURSOR ── */
+        .cursor-3d {
+            position: fixed;
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255, 209, 102, 0.4);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99998;
+            transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s, transform 0.1s;
+            transform: translate(-50%, -50%);
+            backdrop-filter: blur(4px);
+            display: none;
+        }
+        .cursor-3d.active {
+            width: 48px;
+            height: 48px;
+            border-color: rgba(255, 209, 102, 0.6);
+            background: rgba(255, 209, 102, 0.06);
+        }
+        .cursor-3d-dot {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: #FFD166;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.05s;
+            display: none;
+        }
+
+        /* ── CONTENT WRAPPER ── */
+        .front-content {
+            padding-top: 90px;
+            min-height: 70vh;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── SECTION DIVIDERS ── */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+            margin: 0;
+        }
+
+        /* ── SMOOTH TRANSITIONS ── */
+        .fade-in-3d {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-in-3d.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── GLOW TEXT (utile pour les vues enfants) ── */
+        .glow-text {
+            text-shadow: 0 0 40px rgba(0, 58, 143, 0.3), 0 0 80px rgba(124, 58, 237, 0.15);
+        }
+
+        /* ── REVEAL 3D override (cohérent avec layouts-3d.css) ── */
+        .reveal-3d {
+            opacity: 0;
+            transform: translateY(40px) rotateX(-10deg);
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .reveal-3d.revealed {
+            opacity: 1;
+            transform: translateY(0) rotateX(0);
+        }
+
+        /* ── NAVBAR OVERRIDES ── */
+        .navbar-3d {
+            background: rgba(8, 12, 20, 0.6) !important;
+        }
+        .navbar-3d.scrolled {
+            background: rgba(8, 12, 20, 0.92) !important;
+        }
+
+        /* ── FOOTER OVERRIDES ── */
+        .footer-3d {
+            background: rgba(8, 12, 20, 0.95);
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .cursor-3d, .cursor-3d-dot { display: none !important; }
+            .shooting-star { display: none; }
+        }
+
+        @media (min-width: 1024px) {
+            .cursor-3d, .cursor-3d-dot { display: block; }
+        }
     </style>
-    @stack('styles')
+
+    @stack('head')
 </head>
+
 <body>
 
-@php $route = request()->route()->getName() ?? ''; @endphp
+<!-- ═══ PRELOADER ═══ -->
+<div class="preloader-3d" id="preloader">
+    <img src="{{ asset('images/Edu-School.png') }}" alt="" class="preloader-3d-logo">
+    <div class="preloader-3d-bar">
+        <div class="preloader-3d-bar-inner"></div>
+    </div>
+    <small style="color: rgba(255,255,255,0.25); font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase;">
+        Chargement...
+    </small>
+</div>
 
-<!-- NAVBAR -->
-<nav class="main-nav" id="mainNav">
-    <div class="nav-inner">
-        <a href="{{ route('home') }}" class="nav-brand">
-            <div class="brand-icon">
-                <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo">
-            </div>
-            <span>E-School</span>
-            <span class="brand-beta">Beta</span>
+<!-- ═══ 3D CURSOR ═══ -->
+<div class="cursor-3d" id="cursor3d"></div>
+<div class="cursor-3d-dot" id="cursorDot"></div>
+
+<!-- ═══ COSMIC DARK BACKGROUND ═══ -->
+<div class="cosmic-bg">
+    <div class="cosmic-nebula"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+
+    <!-- Stars -->
+    <div class="stars-container" id="starsContainer"></div>
+
+    <!-- Shooting stars -->
+    <div class="shooting-star"></div>
+    <div class="shooting-star"></div>
+    <div class="shooting-star"></div>
+</div>
+
+<!-- ═══ 3D GLASS NAVBAR ═══ -->
+<nav id="navbar3d" class="navbar navbar-expand-lg navbar-3d fixed-top">
+    <div class="container">
+        <a class="navbar-brand" href="{{ route('home') }}">
+            <img src="{{ asset('images/Edu-School.png') }}" width="34" height="34" alt="E-School" class="me-2" style="filter: brightness(10); border-radius: 8px;">
+            E-School
         </a>
 
-        <ul class="nav-links">
-            <li><a href="{{ route('home') }}" class="{{ $route === 'home' ? 'active' : '' }}">Accueil</a></li>
-            <li><a href="{{ route('levels') }}" class="{{ str_contains($route,'level') || str_contains($route,'course') ? 'active' : '' }}">Niveaux</a></li>
-            <li><a href="{{ route('front.lives') }}" class="{{ str_contains($route,'lives') ? 'active' : '' }}">Lives</a></li>
-            <li><a href="{{ route('plans') }}" class="{{ str_contains($route,'plans') ? 'active' : '' }}">Offres</a></li>
-        </ul>
-
-        <div class="nav-ctas">
-            @auth
-                <a href="{{ route('student.dashboard') }}" class="btn-nav-dashboard">
-                    <i class="bi bi-grid-fill me-1"></i>Dashboard
-                </a>
-                <form method="POST" action="{{ route('logout') }}" style="margin:0;">
-                    @csrf
-                    <button class="btn-nav-logout"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
-                </form>
-            @else
-                <a href="{{ route('login') }}" class="btn-nav-ghost">Connexion</a>
-                <a href="{{ route('register') }}" class="btn-nav-primary"><i class="bi bi-person-plus me-1"></i>Inscription</a>
-            @endauth
-        </div>
-
-        <button class="nav-toggle" onclick="toggleMobile()" id="navToggle" aria-label="Menu">
-            <i class="bi bi-list" id="toggleIcon"></i>
+        <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                style="background: rgba(255,255,255,0.06); border-radius: 10px;" aria-label="Toggle navigation">
+            <i class="bi bi-list text-white fs-4"></i>
         </button>
-    </div>
 
-    <!-- Mobile menu -->
-    <div class="mobile-menu" id="mobileMenu">
-        <a href="{{ route('home') }}"><i class="bi bi-house me-2"></i>Accueil</a>
-        <a href="{{ route('levels') }}"><i class="bi bi-layers me-2"></i>Niveaux</a>
-        <a href="{{ route('front.lives') }}"><i class="bi bi-camera-video me-2"></i>Lives</a>
-        <a href="{{ route('plans') }}"><i class="bi bi-star me-2"></i>Offres</a>
-        <hr class="mobile-menu-divider">
-        @auth
-            <a href="{{ route('student.dashboard') }}"><i class="bi bi-grid me-2"></i>Dashboard</a>
-            <form method="POST" action="{{ route('logout') }}" style="margin:0;">
-                @csrf
-                <button class="mobile-menu-link" style="width:100%;background:none;border:none;text-align:left;color:rgba(255,255,255,.8);cursor:pointer;padding:.7rem 1rem;border-radius:10px;">
-                    <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
-                </button>
-            </form>
-        @else
-            <a href="{{ route('login') }}"><i class="bi bi-box-arrow-in-right me-2"></i>Connexion</a>
-            <a href="{{ route('register') }}"><i class="bi bi-person-plus me-2"></i>Inscription</a>
-        @endauth
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('home') }}">Accueil</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('levels') }}">Niveaux</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('front.lives') }}">Lives</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('plans') }}">Offres</a>
+                </li>
+
+                @auth
+                    <li class="nav-item ms-lg-2">
+                        <a href="{{ route('student.dashboard') }}" class="btn nav-btn-3d nav-btn-3d-primary">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+
+                    <li class="nav-item ms-lg-1">
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button class="btn nav-btn-3d nav-btn-3d-danger">
+                                <i class="bi bi-box-arrow-right"></i>
+                            </button>
+                        </form>
+                    </li>
+                @else
+                    <li class="nav-item ms-lg-2">
+                        <a href="{{ route('login') }}" class="btn nav-btn-3d nav-btn-3d-outline">
+                            <i class="bi bi-person"></i> Connexion
+                        </a>
+                    </li>
+
+                    <li class="nav-item ms-lg-1" style="position: relative; overflow: visible;">
+                        <a href="{{ route('register') }}" class="btn nav-btn-3d nav-btn-3d-primary pulse-glow">
+                            <i class="bi bi-person-plus"></i> Inscription
+                            <span class="badge-nav">Gratuit</span>
+                        </a>
+                    </li>
+                @endauth
+
+            </ul>
+        </div>
     </div>
 </nav>
 
-<!-- MAIN CONTENT -->
-<main class="front-main">
-    <div class="container">
-        @if(session('success'))
-            <div class="front-alert front-alert-success">
-                <i class="bi bi-check-circle-fill"></i> {{ session('success') }}
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="front-alert front-alert-danger">
-                <i class="bi bi-x-circle-fill"></i> {{ session('error') }}
-            </div>
-        @endif
-        @yield('content')
-    </div>
+<!-- ═══ CONTENT ═══ -->
+<main class="front-content">
+    @yield('content')
 </main>
 
-<!-- FOOTER -->
-<footer class="site-footer">
-    <div class="footer-inner">
+<!-- ═══ 3D FOOTER ═══ -->
+<footer class="footer-3d text-white py-5 mt-5">
+    <div class="container">
         <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="footer-brand">
-                    <div class="brand-icon"><img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo"></div>
-                    <span>E-School</span>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <img src="{{ asset('images/Edu-School.png') }}" width="42" height="42" alt="" style="filter: brightness(10); border-radius: 10px;">
+                    <div>
+                        <h5 class="fw-bold mb-0" style="font-family: 'Poppins', sans-serif;">E-School</h5>
+                        <small style="color: rgba(255,255,255,0.3);">Apprentissage intelligent</small>
+                    </div>
                 </div>
-                <p class="footer-desc">Plateforme éducative moderne pour étudiants et enseignants. Apprenez à votre rythme.</p>
-                <div class="footer-social">
-                    <a href="#" title="Facebook"><i class="bi bi-facebook"></i></a>
-                    <a href="#" title="Instagram"><i class="bi bi-instagram"></i></a>
-                    <a href="#" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
-                    <a href="#" title="YouTube"><i class="bi bi-youtube"></i></a>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="footer-heading">Navigation</div>
-                <a href="{{ route('home') }}" class="footer-link">Accueil</a>
-                <a href="{{ route('levels') }}" class="footer-link">Niveaux</a>
-                <a href="{{ route('front.lives') }}" class="footer-link">Lives</a>
-                <a href="{{ route('plans') }}" class="footer-link">Offres</a>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="footer-heading">Compte</div>
-                <a href="{{ route('login') }}" class="footer-link">Connexion</a>
-                <a href="{{ route('register') }}" class="footer-link">Inscription</a>
-                @auth
-                <a href="{{ route('student.dashboard') }}" class="footer-link">Dashboard</a>
-                @endauth
-            </div>
-            <div class="col-lg-4">
-                <div class="footer-heading">Contact</div>
-                <p style="color:rgba(255,255,255,.6);font-size:14px;line-height:1.6;">
-                    <i class="bi bi-envelope me-2"></i>contact@eschool.ma<br>
-                    <i class="bi bi-geo-alt me-2"></i>Maroc
+                <p class="text-white-50 small" style="line-height: 1.8; max-width: 320px;">
+                    Plateforme éducative intelligente qui connecte étudiants et enseignants pour une expérience d'apprentissage moderne et interactive.
                 </p>
+                <div class="d-flex gap-3 mt-3">
+                    <a href="#" class="social-icon-3d"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="social-icon-3d"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="social-icon-3d"><i class="bi bi-youtube"></i></a>
+                    <a href="#" class="social-icon-3d"><i class="bi bi-linkedin"></i></a>
+                </div>
             </div>
+
+            <div class="col-lg-2 col-md-6 col-6">
+                <h6 class="fw-bold mb-3 text-white" style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5;">Navigation</h6>
+                <div class="d-flex flex-column gap-2">
+                    <a href="{{ route('home') }}" class="footer-link-3d">Accueil</a>
+                    <a href="{{ route('levels') }}" class="footer-link-3d">Niveaux</a>
+                    <a href="{{ route('front.lives') }}" class="footer-link-3d">Lives</a>
+                    <a href="{{ route('plans') }}" class="footer-link-3d">Offres</a>
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-md-6 col-6">
+                <h6 class="fw-bold mb-3 text-white" style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5;">Matières</h6>
+                <div class="d-flex flex-column gap-2">
+                    <a href="{{ route('front.religieux') }}" class="footer-link-3d">Religieuses</a>
+                    <a href="{{ route('front.classes') }}" class="footer-link-3d">Scolaires</a>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <h6 class="fw-bold mb-3 text-white" style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5;">Contact</h6>
+                <div class="d-flex flex-column gap-2 small text-white-50">
+                    <span class="d-flex align-items-center gap-2">
+                        <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="bi bi-envelope" style="font-size: 0.85rem;"></i>
+                        </span>
+                        contact@e-school.com
+                    </span>
+                    <span class="d-flex align-items-center gap-2">
+                        <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="bi bi-telephone" style="font-size: 0.85rem;"></i>
+                        </span>
+                        +212 5XX XX XX XX
+                    </span>
+                    <span class="d-flex align-items-center gap-2">
+                        <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="bi bi-geo-alt" style="font-size: 0.85rem;"></i>
+                        </span>
+                        Casablanca, Maroc
+                    </span>
+                </div>
+            </div>
+
         </div>
-        <div class="footer-bottom">
-            <span class="footer-bottom-text">&copy; {{ date('Y') }} E-School — Tous droits réservés</span>
-            <span class="footer-bottom-text">Fait avec ❤️ pour l'éducation</span>
+
+        <hr class="my-4" style="border-color: rgba(255,255,255,0.04);">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <small style="color: rgba(255,255,255,0.25);">
+                &copy; {{ date('Y') }} E-School. Tous droits réservés.
+            </small>
+            <small style="color: rgba(255,255,255,0.2);">
+                Fièrement conçu avec <i class="bi bi-heart-fill" style="color: #D90429;"></i> pour l'éducation
+            </small>
         </div>
     </div>
 </footer>
 
-<!-- BACK TO TOP -->
-<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+<!-- ═══ BACK TO TOP 3D ═══ -->
+<button id="backToTop" class="back-to-top-3d" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Retour en haut">
     <i class="bi bi-arrow-up"></i>
 </button>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-// Navbar scroll
-const nav = document.getElementById('mainNav');
-window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 40);
-    document.getElementById('backTop').classList.toggle('show', window.scrollY > 300);
-});
+<!-- ═══ FLOATING CTA BANNER ═══ -->
+<div class="floating-cta" id="floatingCta">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="d-none d-md-flex align-items-center gap-3">
+            <div class="cta-pulse-ring"></div>
+            <span class="fw-semibold" style="font-size: 0.95rem;">
+                🎓 <span style="color: var(--3d-gold);">50%</span> de réduction sur l'abonnement Premium — offre limitée
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-3 w-100 w-md-auto justify-content-center justify-content-md-end">
+            <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 10px 24px; font-size: 0.9rem; white-space: nowrap;">
+                <i class="bi bi-rocket-takeoff"></i> Commencer maintenant
+            </a>
+            <button class="floating-cta-close" onclick="document.getElementById('floatingCta').classList.add('d-none')" aria-label="Fermer">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+</div>
 
-// Mobile toggle
-let mobileOpen = false;
-function toggleMobile() {
-    mobileOpen = !mobileOpen;
-    document.getElementById('mobileMenu').classList.toggle('open', mobileOpen);
-    document.getElementById('toggleIcon').className = mobileOpen ? 'bi bi-x' : 'bi bi-list';
-}
+<!-- ═══ FLOATING CHAT ═══ -->
+<a href="https://wa.me/2125XXXXXXXX?text=Bonjour%20E-School%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
+    <i class="bi bi-whatsapp"></i>
+    <span class="chat-tooltip">Besoin d'aide ?</span>
+</a>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    (function() {
+        'use strict';
+
+        // ── PRELOADER ──
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('preloader').classList.add('loaded');
+            }, 1200);
+        });
+
+        // ── GENERATE STARS ──
+        (function createStars() {
+            const container = document.getElementById('starsContainer');
+            if (!container) return;
+            const count = 150;
+            for (let i = 0; i < count; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random();
+                if (size > 0.9) star.classList.add('size-lg');
+                else if (size > 0.7) star.classList.add('size-md');
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (3 + Math.random() * 4) + 's');
+                star.style.setProperty('--delay', (Math.random() * 5) + 's');
+                star.style.setProperty('--min-opacity', (0.1 + Math.random() * 0.3));
+                star.style.setProperty('--max-opacity', (0.5 + Math.random() * 0.5));
+                container.appendChild(star);
+            }
+        })();
+
+        // ── NAVBAR SCROLL ──
+        const navbar = document.getElementById('navbar3d');
+        if (navbar) {
+            window.addEventListener('scroll', () => {
+                navbar.classList.toggle('scrolled', window.scrollY > 50);
+            }, { passive: true });
+        }
+
+        // ── BACK TO TOP ──
+        const backBtn = document.getElementById('backToTop');
+        if (backBtn) {
+            window.addEventListener('scroll', () => {
+                backBtn.classList.toggle('show', window.scrollY > 400);
+            }, { passive: true });
+        }
+
+        // ── 3D CURSOR ──
+        const cursor = document.getElementById('cursor3d');
+        const cursorDot = document.getElementById('cursorDot');
+        if (cursor && cursorDot && window.innerWidth >= 1024) {
+            let mouseX = 0, mouseY = 0;
+            let cursorX = 0, cursorY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                cursorDot.style.left = mouseX + 'px';
+                cursorDot.style.top = mouseY + 'px';
+            });
+
+            // Smooth cursor follow
+            function animateCursor() {
+                cursorX += (mouseX - cursorX) * 0.12;
+                cursorY += (mouseY - cursorY) * 0.12;
+                cursor.style.left = cursorX + 'px';
+                cursor.style.top = cursorY + 'px';
+                requestAnimationFrame(animateCursor);
+            }
+            animateCursor();
+
+            // Hover effect on interactive elements
+            document.querySelectorAll('a, button, .card-3d, .btn, .nav-link').forEach(el => {
+                el.addEventListener('mouseenter', () => cursor.classList.add('active'));
+                el.addEventListener('mouseleave', () => cursor.classList.remove('active'));
+            });
+        }
+
+        // ── FLOATING CTA ──
+        const floatingCta = document.getElementById('floatingCta');
+        if (floatingCta) {
+            // Vérifier si l'utilisateur a déjà fermé la bannière
+            const ctaDismissed = localStorage.getItem('ctaDismissed');
+            if (ctaDismissed === 'true') {
+                floatingCta.style.display = 'none';
+            } else {
+                let ctaShown = false;
+                window.addEventListener('scroll', () => {
+                    if (!ctaShown && window.scrollY > 600) {
+                        floatingCta.classList.add('show');
+                        ctaShown = true;
+                    }
+                }, { passive: true });
+
+                // Fermeture persistante
+                const closeBtn = floatingCta.querySelector('.floating-cta-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        floatingCta.classList.remove('show');
+                        floatingCta.style.display = 'none';
+                        localStorage.setItem('ctaDismissed', 'true');
+                    });
+                }
+            }
+        }
+
+        // ── SCROLL REVEAL (fade-in-3d) ──
+        const fadeEls = document.querySelectorAll('.fade-in-3d');
+        if (fadeEls.length) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            fadeEls.forEach(el => observer.observe(el));
+        }
+
+        // ── SCROLL REVEAL (reveal-3d) ──
+        const reveal3dEls = document.querySelectorAll('.reveal-3d');
+        if (reveal3dEls.length) {
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        revealObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+            reveal3dEls.forEach(el => revealObserver.observe(el));
+        }
+
+        // ── 3D TILT ON CARDS ──
+        document.querySelectorAll('.card-3d').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width - 0.5;
+                const y = (e.clientY - rect.top) / rect.height - 0.5;
+                card.style.transform =
+                    `perspective(1000px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateY(-10px) translateZ(10px)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+            });
+        });
+
+        // ── AUTO-CLOSE MOBILE NAV ──
+        document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const collapse = document.getElementById('navbarContent');
+                if (collapse && collapse.classList.contains('show')) {
+                    bootstrap.Collapse.getInstance(collapse)?.hide();
+                }
+            });
+        });
+
+        // ── SOCIAL ICONS hover géré via CSS uniquement ──
+
+    })();
 </script>
+
 @stack('scripts')
+
 </body>
 </html>

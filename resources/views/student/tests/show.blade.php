@@ -1,68 +1,118 @@
 @extends('layouts.student')
-
 @section('title', $test->title)
-
 @section('content')
-<div class="st-page">
-  <div class="st-container">
 
-    <div class="st-hero st-hero-violet st-fade-up st-flex-between">
-      <div>
-        <h1 id="testTitle">{{ $test->title }} <small id="timer" style="font-size: 1rem; opacity: .8;"></small></h1>
-        <p>Durée: {{ $test->duration }} minutes — Répondez aux questions ci-dessous</p>
-      </div>
-      <div style="font-size: 2rem; opacity: .6;">
-        <i class="bi bi-clock-history"></i>
-      </div>
-    </div>
+<style>
+.question-card {
+    background: #1E293B;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+.question-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(124,58,237,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #7C3AED;
+    flex-shrink: 0;
+}
+.option-item {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.option-item:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.08);
+}
+.option-item input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: #7C3AED;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.option-item label {
+    color: #94A3B8;
+    font-size: 0.88rem;
+    cursor: pointer;
+    margin: 0;
+    flex: 1;
+}
+.timer {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: #0284C7;
+    font-variant-numeric: tabular-nums;
+}
+.timer.warning { color: #DC2626; animation: blink 1s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+</style>
 
-    <form method="POST" action="{{ route('student.tests.submit', $test) }}">
-      @csrf
-
-      @foreach($test->questions as $question)
-        <div class="st-card st-mb-4 st-fade-up" style="animation-delay: {{ $loop->index * 0.1 }}s;">
-          <div class="st-card-header" style="background: #f8fafc;">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--st-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;">
-              {{ $loop->iteration }}
-            </div>
-            <h5>{{ $question->question }}</h5>
-          </div>
-          <div class="st-card-body">
-            @foreach($question->answers as $answer)
-              <div class="form-check" style="padding: .6rem .75rem; border-radius: 10px; transition: background .15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                <input class="form-check-input" type="checkbox" name="answers[{{ $question->id }}][]" value="{{ $answer->id }}" id="q{{ $question->id }}a{{ $answer->id }}">
-                <label class="form-check-label" for="q{{ $question->id }}a{{ $answer->id }}" style="font-size: 14px; cursor: pointer;">
-                  {{ $answer->answer }}
-                </label>
-              </div>
-            @endforeach
-          </div>
+<div class="page-header">
+    <div>
+        <h1 style="font-size:1.15rem;"><i class="bi bi-pencil-square me-2" style="color:#7C3AED;"></i> {{ $test->title }}</h1>
+        <div class="subtitle">
+            <span class="pr-badge pr-badge-info me-2"><i class="bi bi-clock me-1"></i> {{ $test->duration }} minutes</span>
+            <span class="pr-badge pr-badge-purple"><i class="bi bi-question-circle me-1"></i> {{ $test->questions->count() }} questions</span>
         </div>
-      @endforeach
-
-      <div class="text-center st-mt-4">
-        <button type="submit" class="st-btn st-btn-success st-btn-lg">
-          <i class="bi bi-send me-1"></i> Envoyer les réponses
-        </button>
-      </div>
-    </form>
-
-  </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div class="timer" id="timerDisplay">{{ $test->duration }}:00</div>
+    </div>
 </div>
 
-@push('scripts')
+<form method="POST" action="{{ route('student.tests.submit', $test) }}" id="testForm">
+    @csrf
+
+    @foreach($test->questions as $index => $question)
+    <div class="question-card">
+        <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="question-num">{{ $index + 1 }}</div>
+            <h5 style="font-weight:600;color:#F1F5F9;margin:0;font-size:0.9rem;">{{ $question->question }}</h5>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding-left:42px;">
+            @foreach($question->answers as $answer)
+            <div class="option-item">
+                <input type="checkbox" name="answers[{{ $question->id }}][]" value="{{ $answer->id }}" id="q{{ $question->id }}a{{ $answer->id }}">
+                <label for="q{{ $question->id }}a{{ $answer->id }}">{{ $answer->answer }}</label>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endforeach
+
+    <div style="text-align:center;margin-top:1.5rem;">
+        <button type="submit" class="pr-btn pr-btn-primary" style="padding:10px 36px;font-size:1rem;">
+            <i class="bi bi-check2-circle me-2"></i> Envoyer les réponses
+        </button>
+    </div>
+</form>
+
 <script>
-  let timeLeft = {{ $test->duration * 60 }};
-  const timer = setInterval(() => {
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    document.getElementById('timer').innerHTML = '(' + minutes + ':' + seconds.toString().padStart(2, '0') + ')';
-    timeLeft--;
-    if (timeLeft < 0) {
-      clearInterval(timer);
-      document.querySelector('form').submit();
-    }
-  }, 1000);
+(function() {
+    let timeLeft = {{ $test->duration * 60 }};
+    const timer = document.getElementById('timerDisplay');
+    const form = document.getElementById('testForm');
+    const interval = setInterval(() => {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        timer.textContent = m + ':' + s.toString().padStart(2, '0');
+        if (timeLeft <= 60) { timer.classList.add('warning'); timer.style.color = '#DC2626'; }
+        timeLeft--;
+        if (timeLeft < 0) { clearInterval(interval); form.submit(); }
+    }, 1000);
+})();
 </script>
-@endpush
+
 @endsection

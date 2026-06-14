@@ -37,7 +37,7 @@ protected $fillable = ['name', 'level_id'];
 
     public function subjects()
     {
-        return $this->belongsToMany(Subject::class, 'class_room_subject', 'class_room_id', 'subject_id');
+        return $this->belongsToMany(Subject::class);
     }
 
     public function students()

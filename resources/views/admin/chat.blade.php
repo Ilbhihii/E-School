@@ -1,100 +1,207 @@
 @extends('layouts.admin')
 
+@section('title', 'Chat Administration')
+@section('page_title', 'Chat')
+@section('breadcrumb', 'Chat administration')
+
 @section('content')
+
 <style>
+/* Dark Premium Chat Styles */
 .chat-container {
-  height: calc(100vh - 180px);
+  height: calc(100vh - 200px);
   display: flex;
   flex-direction: column;
-  background: var(--adm-surface);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: var(--adm-radius-lg);
-  box-shadow: var(--adm-shadow-lg);
   overflow: hidden;
-  margin: 1rem 0;
 }
+
 .chat-header {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-  color: white;
+  background: linear-gradient(135deg, rgba(0,58,143,0.3), rgba(124,58,237,0.15));
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   padding: 1.25rem 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
 }
+
+.chat-header-icon {
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.chat-header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+}
+
+.chat-header p {
+  color: rgba(255,255,255,0.45);
+  font-size: 0.82rem;
+  margin: 2px 0 0;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background: #f8fafc;
+  gap: 0.75rem;
 }
-.chat-messages::-webkit-scrollbar { width: 6px; }
-.chat-messages::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-.chat-messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-.chat-msg { max-width: 70%; animation: msgIn 0.3s ease; }
-@keyframes msgIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+.chat-messages::-webkit-scrollbar { width: 5px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+.chat-msg {
+  max-width: 72%;
+  animation: chatFadeIn 0.25s ease-out;
+}
+
+@keyframes chatFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .chat-msg.own { align-self: flex-end; }
 .chat-msg.other { align-self: flex-start; }
-.chat-bubble {
-  padding: 0.9rem 1.25rem;
-  border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+
+.chat-msg-own {
+  background: linear-gradient(135deg, rgba(0,58,143,0.4), rgba(0,58,143,0.2));
+  border: 1px solid rgba(0,58,143,0.15);
+  border-bottom-right-radius: 4px;
 }
-.chat-bubble.own { background: linear-gradient(135deg,#059669,#047857); color: white; border-bottom-right-radius: 6px; }
-.chat-bubble.other { background: white; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-left-radius: 6px; }
+
+.chat-msg-other {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.chat-empty-icon {
+  width: 72px; height: 72px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  font-size: 1.75rem;
+}
+
+.chat-empty h5 {
+  color: rgba(255,255,255,0.4);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
 .chat-input-area {
-  background: white;
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255,255,255,0.05);
   padding: 1.25rem 1.5rem;
-  border-top: 1px solid var(--adm-border);
 }
-.chat-input-row {
+
+.chat-input-group {
   display: flex;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-end;
 }
+
 .chat-input {
   flex: 1;
-  padding: 0.8rem 1.25rem;
-  border: 2px solid #e5e7eb;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
-  font-size: 0.95rem;
-  transition: all 0.2s;
+  font-size: 0.92rem;
+  transition: all 0.25s ease;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.85);
+  font-family: inherit;
   outline: none;
 }
-.chat-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-.chat-send {
-  padding: 0.8rem 1.5rem;
-  background: #6366f1;
+
+.chat-input:focus {
+  border-color: rgba(124,58,237,0.3);
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.06);
+}
+
+.chat-input::placeholder {
+  color: rgba(255,255,255,0.2);
+}
+
+.btn-send {
+  padding: 0.85rem 1.5rem;
+  background: var(--adm-gradient-primary);
   color: white;
   border: none;
   border-radius: 12px;
   font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  white-space: nowrap;
+  font-family: inherit;
 }
-.chat-send:hover { background: #4f46e5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
-@media (max-width:768px) {
-  .chat-container { margin:0; border-radius:0; height:calc(100vh - 120px); }
-  .chat-msg { max-width: 90%; }
+
+.btn-send:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,58,143,0.35);
+}
+
+.btn-send:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    height: calc(100vh - 160px);
+    border-radius: 0;
+    margin: 0 -1rem;
+  }
+  .chat-msg {
+    max-width: 90%;
+  }
 }
 </style>
 
 <div class="chat-container">
   <!-- Header -->
   <div class="chat-header">
-    <div style="background:rgba(255,255,255,0.15);border-radius:10px;padding:0.5rem 0.75rem;">
-      <i class="bi bi-chat-text-fill"></i>
-    </div>
+    <div class="chat-header-icon">💬</div>
     <div>
-      <h4 style="font-weight:700;margin:0;font-size:1.1rem;">Chat Administration</h4>
-      <p style="margin:0;font-size:0.85rem;opacity:0.85;">
+      <h1>Chat Administration</h1>
+      <p>
+        Conversations avec les étudiants
         @if(isset($subject))
-          {{ $subject->name ?? 'Sujet' }}
+          • {{ $subject->name ?? 'Sujet non spécifié' }}
         @endif
       </p>
     </div>
@@ -102,7 +209,8 @@
 
   @if(session('success'))
   <div class="adm-alert adm-alert-success" style="margin:1rem 1.5rem 0;">
-    <i class="bi bi-check-circle-fill"></i> {{ session('success') }}
+    <span class="adm-alert-icon"><i class="bi bi-check-circle-fill"></i></span>
+    <span>{{ session('success') }}</span>
   </div>
   @endif
 
@@ -110,43 +218,33 @@
   <div class="chat-messages" id="chat-box">
     @if(isset($messages) && $messages->count() > 0)
       @foreach($messages as $msg)
-        @if($msg->user_id == auth()->id())
-          <div class="chat-msg own">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;justify-content:flex-end;">
-              <span style="font-size:0.75rem;color:#9ca3af;">{{ $msg->created_at->format('H:i') }}</span>
-            </div>
-            <div class="chat-bubble own">{{ $msg->message }}</div>
-          </div>
-        @else
-          <div class="chat-msg other">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
-              <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:white;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;">
-                {{ strtoupper(substr($msg->user->name ?? 'E', 0, 1)) }}
-              </div>
-              <span style="font-weight:600;font-size:0.85rem;color:#374151;">{{ $msg->user->name ?? 'Étudiant' }}</span>
-              <span style="font-size:0.75rem;color:#9ca3af;">{{ $msg->created_at->format('H:i') }}</span>
-            </div>
-            <div class="chat-bubble other">{{ $msg->message }}</div>
-          </div>
-        @endif
+        <div class="chat-msg {{ $msg->user_id == auth()->id() ? 'own' : 'other' }}">
+          @if($msg->user_id == auth()->id())
+            <x-user-message :message="$msg" />
+          @else
+            <x-other-message :message="$msg" />
+          @endif
+        </div>
       @endforeach
     @else
-      <div class="adm-empty" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <div class="adm-empty-icon"><i class="bi bi-chat-dots"></i></div>
-        <h3>Aucune conversation</h3>
-        <p>Commencez la conversation avec vos étudiants.</p>
+      <div class="chat-empty">
+        <div class="chat-empty-icon">💬</div>
+        <h5>Aucune conversation</h5>
+        <p style="color:rgba(255,255,255,0.3);max-width:400px;font-size:0.85rem;">
+          Commencez la conversation avec vos étudiants en envoyant un premier message.
+        </p>
       </div>
     @endif
   </div>
 
   <!-- Input -->
   <div class="chat-input-area">
-    <form method="POST" action="{{ route('admin.chat.send') }}" class="chat-input-row">
+    <form method="POST" action="{{ route('admin.chat.send') }}" class="chat-input-group">
       @csrf
       <input type="hidden" name="subject_id" value="{{ $subject->id ?? '' }}">
       <input type="text" name="message" class="chat-input" placeholder="Tapez votre message..." required autocomplete="off">
-      <button type="submit" class="chat-send">
-        <i class="bi bi-send-fill"></i> Envoyer
+      <button type="submit" class="btn-send">
+        <i class="bi bi-send" style="font-size:0.9rem;"></i> Envoyer
       </button>
     </form>
   </div>
@@ -156,20 +254,20 @@
 document.addEventListener('DOMContentLoaded', function() {
   const chatBox = document.getElementById('chat-box');
   if (chatBox) {
-    chatBox.scrollTop = chatBox.scrollHeight;
-    
-    const observer = new MutationObserver(function() {
-      chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
-    });
-    observer.observe(chatBox, { childList: true, subtree: true });
+    function scrollToBottom() { chatBox.scrollTop = chatBox.scrollHeight; }
+
+    scrollToBottom();
+
+    const observer = new MutationObserver(function() { scrollToBottom(); });
+    observer.observe(chatBox, { childList: true, subtree: true, attributes: true });
 
     setTimeout(() => {
       chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
     }, 100);
   }
 
+  const form = document.querySelector('.chat-input-group');
   const input = document.querySelector('.chat-input');
-  const form = document.querySelector('.chat-input-row');
   if (input && form) {
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {

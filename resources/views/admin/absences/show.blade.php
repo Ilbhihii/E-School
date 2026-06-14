@@ -1,56 +1,51 @@
 @extends('layouts.admin')
 
+@section('title', 'Détails absence')
+@section('page_title', 'Détails absence')
+@section('breadcrumb', 'Détails de l\'absence')
+
 @section('content')
-<div class="admin-page">
-    <div class="admin-container" style="max-width:700px">
-
-        <!-- HEADER -->
-        <div class="admin-header">
-            <div>
-                <h1 class="admin-header-title"><span class="gradient">📌 Détails de l'absence</span></h1>
-                <p class="admin-header-subtitle">Informations complètes sur l'absence</p>
-            </div>
-        </div>
-
-        <!-- CARD -->
+<div class="row justify-content-center">
+    <div class="col-lg-8">
         <div class="adm-card">
+            <div class="adm-card-header">
+                <h4><i class="bi bi-info-circle" style="color:rgba(255,255,255,0.35);"></i> Détails de l'absence</h4>
+            </div>
             <div class="adm-card-body">
-                <div class="adm-detail-row">
-                    <div class="adm-detail-item">
-                        <label>Étudiant</label>
-                        <div class="value">{{ $absence->user->name }}</div>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Étudiant</label>
+                        <div style="font-weight:600;color:rgba(255,255,255,0.85);">{{ $absence->user->name }}</div>
                     </div>
-                    <div class="adm-detail-item">
-                        <label>Classe</label>
-                        <div class="value">{{ $absence->user->classRoom->name ?? '-' }}</div>
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Classe</label>
+                        <div><span class="adm-badge adm-badge-info">{{ $absence->user->classRoom->name ?? '-' }}</span></div>
                     </div>
-                    <div class="adm-detail-item">
-                        <label>Date</label>
-                        <div class="value">{{ \Carbon\Carbon::parse($absence->date)->format('d/m/Y') }}</div>
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Date</label>
+                        <div style="color:var(--adm-text-secondary);">{{ \Carbon\Carbon::parse($absence->date)->format('d/m/Y') }}</div>
                     </div>
-                    <div class="adm-detail-item">
-                        <label>Statut</label>
-                        <div class="value">
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Statut</label>
+                        <div>
                             @if($absence->present)
-                                <span class="adm-badge adm-badge-success"><i class="bi bi-check-circle-fill"></i> Présent</span>
+                                <span class="adm-badge adm-badge-success">✅ Présent</span>
                             @else
-                                <span class="adm-badge adm-badge-danger"><i class="bi bi-x-circle-fill"></i> Absent</span>
+                                <span class="adm-badge adm-badge-danger">❌ Absent</span>
                             @endif
                         </div>
                     </div>
                 </div>
-
-                <div class="adm-flex adm-gap-2 adm-mt-3">
+                <div class="d-flex gap-3 mt-4">
                     <a href="{{ route('admin.absences') }}" class="adm-btn adm-btn-ghost">
                         <i class="bi bi-arrow-left"></i> Retour
                     </a>
                     <a href="{{ route('admin.absences.edit', $absence->id) }}" class="adm-btn adm-btn-warning">
-                        <i class="bi bi-pencil-fill"></i> Modifier
+                        <i class="bi bi-pencil"></i> Modifier
                     </a>
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 @endsection

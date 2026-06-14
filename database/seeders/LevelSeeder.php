@@ -24,10 +24,13 @@ class LevelSeeder extends Seeder
             '3ème année lycée',
         ];
 
-foreach ($levels as $name) {
+        foreach ($levels as $name) {
             Level::firstOrCreate(
-                [],
-                ['name' => $name, 'description' => 'Niveau éducatif standard']
+                ['name' => $name],
+                [
+                    'description' => 'Niveau éducatif standard',
+                    'subject_id' => 1
+                ]
             );
         }
     }

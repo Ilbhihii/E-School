@@ -1,982 +1,609 @@
 @extends('layouts.front')
 
-@section('title', 'Accueil')
+@section('title', 'E-School — Plateforme Éducative Intelligente')
 
 @section('content')
-<style>
-/* ═══════════════════════════════════════
-   HOME PAGE — ULTRA PREMIUM DESIGN
-   ═══════════════════════════════════════ */
 
-:root {
-    --home-primary: #2563eb;
-    --home-primary-dark: #1e40af;
-    --home-accent: #06b6d4;
-    --home-dark: #0f172a;
-    --home-surface: #ffffff;
-    --home-text: #0f172a;
-    --home-text-muted: #64748b;
-    --home-border: #e2e8f0;
-    --home-radius: 20px;
-    --home-radius-sm: 14px;
-    --home-shadow: 0 4px 24px rgba(15,23,42,.06);
-    --home-shadow-hover: 0 20px 60px rgba(15,23,42,.14);
-    --home-transition: all .4s cubic-bezier(.22,.61,.36,1);
-}
-
-/* ── Animations ── */
-@keyframes homeFadeUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes homeFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-@keyframes homeFloat {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    33% { transform: translateY(-12px) rotate(1deg); }
-    66% { transform: translateY(6px) rotate(-1deg); }
-}
-@keyframes homePulseGlow {
-    0%, 100% { box-shadow: 0 0 20px rgba(37,99,235,.3); }
-    50% { box-shadow: 0 0 40px rgba(37,99,235,.5); }
-}
-@keyframes homeShimmer {
-    0% { background-position: -200% center; }
-    100% { background-position: 200% center; }
-}
-@keyframes homeScaleIn {
-    from { opacity: 0; transform: scale(.85); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* ── Hero ── */
-.hm-hero {
-    position: relative;
-    background: linear-gradient(135deg, #0b1120 0%, #0f3460 40%, #1e3a8a 70%, #312e81 100%);
-    padding: 7rem 0 8rem;
-    overflow: hidden;
-    margin-top: calc(-2rem);
-    border-radius: 0 0 48px 48px;
-}
-
-.hm-hero-particles {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-.hm-hero-particle {
-    position: absolute;
-    border-radius: 50%;
-    opacity: .04;
-}
-
-.hm-hero-particle-1 {
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
-    top: -250px; right: -150px;
-    animation: homeFloat 12s ease-in-out infinite;
-}
-
-.hm-hero-particle-2 {
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
-    bottom: -180px; left: -120px;
-    animation: homeFloat 15s ease-in-out infinite reverse;
-}
-
-.hm-hero-particle-3 {
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-    top: 20%; left: 15%;
-    animation: homeFloat 10s ease-in-out infinite 2s;
-}
-
-.hm-hero-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
-    background-size: 60px 60px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 70%);
-    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 70%);
-    pointer-events: none;
-}
-
-.hm-hero-content { position: relative; z-index: 2; }
-
-.hm-hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(6,182,212,.12);
-    border: 1px solid rgba(6,182,212,.2);
-    color: #22d3ee;
-    padding: .4rem 1.1rem .4rem .5rem;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 1.75rem;
-    animation: homeFadeUp .6s ease both;
-    backdrop-filter: blur(10px);
-}
-
-.hm-hero-badge-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #22d3ee;
-    margin-right: 2px;
-    animation: homePulseGlow 2s infinite;
-}
-
-.hm-hero h1 {
-    font-size: 3.2rem;
-    font-weight: 900;
-    letter-spacing: -.035em;
-    line-height: 1.12;
-    color: #fff;
-    margin: 0 0 1rem;
-    animation: homeFadeUp .6s ease both .1s;
-}
-
-.hm-hero h1 .hm-gradient-text {
-    background: linear-gradient(135deg, #60a5fa, #22d3ee, #818cf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    background-size: 200% auto;
-    animation: homeShimmer 4s linear infinite;
-}
-
-.hm-hero-sub {
-    font-size: 1.1rem;
-    color: rgba(255,255,255,.55);
-    max-width: 530px;
-    line-height: 1.75;
-    margin: 0 0 2rem;
-    animation: homeFadeUp .6s ease both .2s;
-}
-
-.hm-hero-actions {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    animation: homeFadeUp .6s ease both .3s;
-}
-
-.hm-btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    color: #fff;
-    padding: .85rem 2.2rem;
-    border-radius: 999px;
-    font-size: 15px;
-    font-weight: 700;
-    text-decoration: none;
-    box-shadow: 0 8px 32px rgba(37,99,235,.35);
-    transition: var(--home-transition);
-    border: none;
-    cursor: pointer;
-}
-
-.hm-btn-primary:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 40px rgba(37,99,235,.5);
-    color: #fff;
-}
-
-.hm-btn-primary i { font-size: 14px; transition: transform .3s ease; }
-.hm-btn-primary:hover i { transform: translateX(4px); }
-
-.hm-btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1.5px solid rgba(255,255,255,.25);
-    color: rgba(255,255,255,.85);
-    padding: .85rem 2rem;
-    border-radius: 999px;
-    font-size: 15px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: var(--home-transition);
-    backdrop-filter: blur(10px);
-}
-
-.hm-btn-ghost:hover {
-    border-color: rgba(255,255,255,.5);
-    color: #fff;
-    background: rgba(255,255,255,.06);
-}
-
-.hm-hero-stats {
-    display: flex;
-    gap: 2.5rem;
-    margin-top: 3.5rem;
-    padding-top: 2rem;
-    border-top: 1px solid rgba(255,255,255,.06);
-    animation: homeFadeUp .6s ease both .4s;
-}
-
-.hm-hero-stat h3 {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #fff;
-    margin: 0;
-    line-height: 1;
-}
-
-.hm-hero-stat h3 .hm-stat-plus {
-    font-size: 1.2rem;
-    color: #22d3ee;
-}
-
-.hm-hero-stat span {
-    font-size: 13px;
-    color: rgba(255,255,255,.4);
-    display: block;
-    margin-top: 4px;
-}
-
-/* ── Sections ── */
-.hm-section { padding: 5rem 0; }
-.hm-section-alt { background: #f8fafc; }
-.hm-section-dark {
-    background: linear-gradient(135deg, #0b1120, #0f3460);
-    color: #fff;
-}
-
-.hm-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--home-primary);
-    background: rgba(37,99,235,.08);
-    padding: .35rem 1rem;
-    border-radius: 999px;
-    margin-bottom: .75rem;
-}
-
-.hm-label i { font-size: 11px; }
-
-.hm-title {
-    font-size: 2.2rem;
-    font-weight: 800;
-    letter-spacing: -.025em;
-    line-height: 1.2;
-    margin: 0 0 .75rem;
-    color: var(--home-text);
-}
-
-.hm-title-center { text-align: center; }
-.hm-title-light { color: #fff; }
-
-.hm-subtitle {
-    font-size: 1rem;
-    color: var(--home-text-muted);
-    line-height: 1.7;
-    margin: 0 0 2.5rem;
-    max-width: 580px;
-}
-
-.hm-subtitle-center { text-align: center; margin-left: auto; margin-right: auto; }
-.hm-subtitle-light { color: rgba(255,255,255,.5); }
-
-/* ── Feature Cards ── */
-.hm-features-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-}
-
-.hm-feature-card {
-    background: var(--home-surface);
-    border-radius: var(--home-radius);
-    padding: 2rem 1.75rem;
-    box-shadow: var(--home-shadow);
-    border: 1px solid var(--home-border);
-    transition: var(--home-transition);
-    position: relative;
-    overflow: hidden;
-}
-
-.hm-feature-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--fc-color, #3b82f6), var(--fc-color2, #60a5fa));
-    opacity: 0;
-    transition: opacity .4s ease;
-}
-
-.hm-feature-card:hover::before { opacity: 1; }
-
-.hm-feature-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--home-shadow-hover);
-    border-color: transparent;
-}
-
-.hm-feature-icon {
-    width: 56px; height: 56px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    margin-bottom: 1.25rem;
-    transition: transform .3s ease;
-}
-
-.hm-feature-card:hover .hm-feature-icon { transform: scale(1.08) rotate(-3deg); }
-
-.hm-feature-card h5 {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--home-text);
-    margin: 0 0 .5rem;
-}
-
-.hm-feature-card p {
-    font-size: 14px;
-    color: var(--home-text-muted);
-    line-height: 1.65;
-    margin: 0;
-}
-
-/* ── Subjects Section ── */
-.hm-subjects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1rem;
-}
-
-.hm-subject-group { margin-bottom: 2.5rem; }
-.hm-subject-group:last-child { margin-bottom: 0; }
-
-.hm-subject-group-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--home-text);
-    margin: 0 0 1rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.hm-subject-group-title .hm-sg-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-}
-
-.hm-subject-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background: var(--home-surface);
-    padding: .9rem 1.1rem;
-    border-radius: var(--home-radius-sm);
-    box-shadow: 0 1px 8px rgba(15,23,42,.03);
-    border: 1px solid var(--home-border);
-    text-decoration: none;
-    color: inherit;
-    transition: var(--home-transition);
-}
-
-.hm-subject-card:hover {
-    transform: translateX(6px);
-    border-color: #bfdbfe;
-    box-shadow: 0 6px 20px rgba(37,99,235,.08);
-}
-
-.hm-subject-card-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 16px;
-    flex-shrink: 0;
-}
-
-.hm-subject-card-title {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--home-text);
-}
-
-.hm-subject-card-arrow {
-    color: #94a3b8;
-    font-size: 12px;
-    transition: transform .3s ease;
-}
-
-.hm-subject-card:hover .hm-subject-card-arrow { transform: translateX(4px); color: var(--home-primary); }
-
-/* ── About ── */
-.hm-about-img-wrap {
-    position: relative;
-    border-radius: 24px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(15,23,42,.15);
-}
-
-.hm-about-img {
-    width: 100%;
-    height: 420px;
-    object-fit: cover;
-    display: block;
-}
-
-.hm-about-img-badge {
-    position: absolute;
-    bottom: 1.5rem; left: 1.5rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(0,0,0,.5);
-    backdrop-filter: blur(16px);
-    color: #fff;
-    padding: .6rem 1.2rem;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 600;
-    border: 1px solid rgba(255,255,255,.1);
-}
-
-.hm-about-img-badge i { color: #22d3ee; font-size: 16px; }
-
-.hm-check-list {
-    list-style: none;
-    padding: 0;
-    margin: 1.5rem 0 0;
-}
-
-.hm-check-list li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: .55rem 0;
-    font-size: 15px;
-    color: #334155;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.hm-check-list li:last-child { border-bottom: none; }
-
-.hm-check-list li i {
-    color: #22c55e;
-    font-size: 17px;
-    flex-shrink: 0;
-}
-
-/* ── Steps ── */
-.hm-steps-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-    counter-reset: step;
-}
-
-.hm-step {
-    text-align: center;
-    padding: 2rem 1.5rem;
-    position: relative;
-}
-
-.hm-step:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 28px;
-    left: 65%;
-    width: 70%;
-    height: 2px;
-    background: linear-gradient(90deg, #3b82f6, #e2e8f0);
-    pointer-events: none;
-}
-
-.hm-step-num {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    color: #fff;
-    font-size: 1.3rem;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    box-shadow: 0 8px 24px rgba(37,99,235,.3);
-    position: relative;
-    transition: var(--home-transition);
-}
-
-.hm-step:hover .hm-step-num {
-    transform: scale(1.1);
-    box-shadow: 0 12px 32px rgba(37,99,235,.4);
-}
-
-.hm-step h5 {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--home-text);
-    margin: 0 0 .4rem;
-}
-
-.hm-step p {
-    color: var(--home-text-muted);
-    font-size: 14px;
-    margin: 0;
-}
-
-/* ── Live Section ── */
-.hm-lives-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.25rem;
-}
-
-.hm-live-card {
-    background: var(--home-surface);
-    border-radius: var(--home-radius);
-    padding: 1.5rem;
-    box-shadow: var(--home-shadow);
-    border: 1px solid var(--home-border);
-    transition: var(--home-transition);
-}
-
-.hm-live-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--home-shadow-hover);
-    border-color: transparent;
-}
-
-.hm-live-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.hm-live-badge {
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    padding: 4px 12px;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.hm-live-badge-live {
-    color: #dc2626;
-    background: #fef2f2;
-}
-
-.hm-live-badge-live .hm-live-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: #dc2626;
-    animation: homePulseGlow 1.5s infinite;
-}
-
-.hm-live-badge-scheduled {
-    color: #d97706;
-    background: #fffbeb;
-}
-
-.hm-live-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--home-text);
-    margin: 0 0 .35rem;
-    line-height: 1.3;
-}
-
-.hm-live-desc {
-    font-size: 13px;
-    color: var(--home-text-muted);
-    line-height: 1.5;
-    margin: 0 0 .75rem;
-}
-
-.hm-live-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.hm-live-tag {
-    font-size: 11px;
-    color: #64748b;
-    background: #f8fafc;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid #e2e8f0;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.hm-live-tag i { font-size: 9px; }
-
-.hm-live-card:hover .hm-live-arrow {
-    color: var(--home-primary);
-    transform: translateX(4px);
-}
-
-/* ── CTA ── */
-.hm-cta {
-    background: linear-gradient(135deg, #0b1120 0%, #0f3460 50%, #312e81 100%);
-    border-radius: 28px;
-    padding: 4rem 3rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.hm-cta::before {
-    content: '';
-    position: absolute;
-    width: 400px; height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(59,130,246,.08) 0%, transparent 70%);
-    top: -150px; right: -100px;
-}
-
-.hm-cta::after {
-    content: '';
-    position: absolute;
-    width: 300px; height: 300px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(6,182,212,.06) 0%, transparent 70%);
-    bottom: -120px; left: -80px;
-}
-
-.hm-cta-content { position: relative; z-index: 1; }
-
-.hm-cta h2 {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #fff;
-    margin: 0 0 .75rem;
-    letter-spacing: -.02em;
-}
-
-.hm-cta p {
-    color: rgba(255,255,255,.55);
-    font-size: 1.05rem;
-    margin: 0 0 2rem;
-}
-
-.hm-btn-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: #fff;
-    color: #1e3a8a;
-    padding: .9rem 2.5rem;
-    border-radius: 999px;
-    font-size: 16px;
-    font-weight: 700;
-    text-decoration: none;
-    box-shadow: 0 8px 32px rgba(0,0,0,.2);
-    transition: var(--home-transition);
-}
-
-.hm-btn-cta:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 40px rgba(0,0,0,.3);
-    color: #1e3a8a;
-}
-
-/* ── Responsive ── */
-@media(max-width: 992px) {
-    .hm-features-grid { grid-template-columns: repeat(2, 1fr); }
-    .hm-steps-grid { grid-template-columns: repeat(2, 1fr); }
-    .hm-lives-grid { grid-template-columns: repeat(2, 1fr); }
-    .hm-step:not(:last-child)::after { display: none; }
-}
-
-@media(max-width: 768px) {
-    .hm-hero { padding: 5rem 0 5rem; border-radius: 0 0 32px 32px; }
-    .hm-hero h1 { font-size: 2rem; }
-    .hm-hero-sub { font-size: 1rem; }
-    .hm-hero-stats { gap: 1.5rem; flex-wrap: wrap; }
-    .hm-hero-stat h3 { font-size: 1.4rem; }
-    .hm-hero-actions { flex-direction: column; }
-    .hm-btn-primary, .hm-btn-ghost { justify-content: center; }
-    .hm-section { padding: 3rem 0; }
-    .hm-title { font-size: 1.6rem; }
-    .hm-features-grid, .hm-steps-grid, .hm-lives-grid { grid-template-columns: 1fr; }
-    .hm-subjects-grid { grid-template-columns: 1fr; }
-    .hm-cta { padding: 2.5rem 1.5rem; border-radius: 20px; }
-    .hm-cta h2 { font-size: 1.5rem; }
-    .hm-about-img { height: 260px; }
-}
-
-@media(max-width: 480px) {
-    .hm-hero h1 { font-size: 1.6rem; }
-}
-</style>
-
-{{-- ═══════ HERO ═══════ --}}
-<section class="hm-hero">
-    <div class="hm-hero-particles">
-        <div class="hm-hero-particle hm-hero-particle-1"></div>
-        <div class="hm-hero-particle hm-hero-particle-2"></div>
-        <div class="hm-hero-particle hm-hero-particle-3"></div>
-    </div>
-    <div class="hm-hero-grid"></div>
-    <div class="container hm-hero-content">
-        <div class="hm-hero-badge">
-            <span class="hm-hero-badge-dot"></span>
-            Plateforme éducative #1
+<!-- ══════════════════════════════════════════════════════
+     HERO SECTION
+     ══════════════════════════════════════════════════════ -->
+<section class="hero-3d text-center" style="padding: 140px 0 100px;">
+    <div class="container hero-3d-content">
+        <!-- Badge -->
+        <div class="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-pill mb-4"
+             style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; color: rgba(255,255,255,0.6);">
+            <span class="badge" style="background: linear-gradient(135deg, #22C55E, #16A34A); font-size: 0.65rem; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase;">Nouveau</span>
+            Inscription gratuite — 7 jours d'essai offerts
+            <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
         </div>
-        <h1>
+
+        <h1 class="hero-3d-title mb-4 mx-auto" style="max-width: 850px;">
             La plateforme intelligente<br>
-            pour <span class="hm-gradient-text">réussir vos études</span>
+            pour <span class="gradient-text">réussir vos études</span>
         </h1>
-        <p class="hm-hero-sub">
-            Cours interactifs, sessions live en direct et ressources pédagogiques premium accessibles partout, à tout moment.
+
+        <p class="hero-3d-subtitle mx-auto mb-5" style="max-width: 600px; font-size: 1.15rem;">
+            Cours interactifs, sessions live, quiz et suivi personnalisé — 
+            tout ce qu'il vous faut pour exceller, accessible partout et à tout moment.
         </p>
-        <div class="hm-hero-actions">
-            <a href="{{ route('front.classes') }}" class="hm-btn-primary">
-                🚀 Explorer les cours <i class="bi bi-arrow-right"></i>
+
+        <div class="d-flex flex-wrap justify-content-center gap-3 mb-5">
+            <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 16px 40px; font-size: 1.05rem;">
+                <i class="bi bi-rocket-takeoff"></i>
+                Commencer gratuitement
+                <i class="bi bi-arrow-right"></i>
             </a>
-            <a href="{{ route('login') }}" class="hm-btn-ghost">
-                <i class="bi bi-box-arrow-in-right"></i> Se connecter
+            <a href="{{ route('front.classes') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
+                <i class="bi bi-grid-3x3-gap"></i>
+                Explorer les matières
             </a>
         </div>
-        <div class="hm-hero-stats">
-            <div class="hm-hero-stat">
-                <h3>{{ $classes }}+</h3>
-                <span>Étudiants actifs</span>
-            </div>
-            <div class="hm-hero-stat">
-                <h3>{{ $courses }}+</h3>
-                <span>Cours disponibles</span>
-            </div>
-            <div class="hm-hero-stat">
-                <h3>120+</h3>
-                <span>Lives organisés</span>
-            </div>
-            <div class="hm-hero-stat">
-                <h3>95%</h3>
-                <span>Satisfaction</span>
-            </div>
-        </div>
     </div>
+
+    <!-- Floating 3D shapes (from CSS) -->
+    <div class="shape-3d"></div>
+    <div class="shape-3d"></div>
+    <div class="shape-3d"></div>
+
+    <!-- 🎓 Floating Educational Icons Background -->
+    <div class="edu-floating-icons" aria-hidden="true">
+        <div class="edu-icon edu-icon-1"><i class="bi bi-book"></i></div>
+        <div class="edu-icon edu-icon-2"><i class="bi bi-mortarboard-fill"></i></div>
+        <div class="edu-icon edu-icon-3"><i class="bi bi-pencil-fill"></i></div>
+        <div class="edu-icon edu-icon-4"><i class="bi bi-journal-text"></i></div>
+        <div class="edu-icon edu-icon-5"><i class="bi bi-calculator-fill"></i></div>
+        <div class="edu-icon edu-icon-6"><i class="bi bi-globe"></i></div>
+        <div class="edu-icon edu-icon-7"><i class="bi bi-flask"></i></div>
+        <div class="edu-icon edu-icon-8"><i class="bi bi-star-fill"></i></div>
+        <div class="edu-icon edu-icon-9"><i class="bi bi-puzzle-fill"></i></div>
+        <div class="edu-icon edu-icon-10"><i class="bi bi-trophy-fill"></i></div>
+        <div class="edu-icon edu-icon-11"><i class="bi bi-laptop"></i></div>
+        <div class="edu-icon edu-icon-12"><i class="bi bi-clipboard-check"></i></div>
+    </div>
+
+    <style>
+        /* ═══════════════════════════════════════════════
+           FLOATING EDUCATIONAL ICONS
+           ═══════════════════════════════════════════════ */
+        .edu-floating-icons {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .hero-3d-content { position: relative; z-index: 2; }
+
+        .edu-icon {
+            position: absolute;
+            opacity: 0;
+            color: rgba(255, 255, 255, 0.08);
+            font-size: 2rem;
+            animation: eduFloatUp 14s ease-in-out infinite;
+            transform-origin: center;
+        }
+
+        /* Position & delay each icon */
+        .edu-icon-1  { left: 5%;   top: 10%; font-size: 2.4rem; animation-delay: 0s;   animation-duration: 16s; }
+        .edu-icon-2  { left: 12%;  top: 50%; font-size: 3.2rem; animation-delay: 1.5s; animation-duration: 18s; color: rgba(167, 139, 250, 0.10); }
+        .edu-icon-3  { right: 8%;  top: 15%; font-size: 2rem;   animation-delay: 3s;   animation-duration: 15s; }
+        .edu-icon-4  { right: 18%; top: 55%; font-size: 2.8rem; animation-delay: 0.8s; animation-duration: 20s; color: rgba(96, 165, 250, 0.10); }
+        .edu-icon-5  { left: 20%;  top: 70%; font-size: 1.8rem; animation-delay: 4.5s; animation-duration: 14s; }
+        .edu-icon-6  { right: 25%; top: 30%; font-size: 2.6rem; animation-delay: 2.2s; animation-duration: 17s; color: rgba(74, 222, 128, 0.08); }
+        .edu-icon-7  { left: 30%;  top: 25%; font-size: 1.6rem; animation-delay: 5.5s; animation-duration: 19s; }
+        .edu-icon-8  { right: 35%; top: 70%; font-size: 1.4rem; animation-delay: 1.2s; animation-duration: 13s; color: rgba(252, 211, 77, 0.12); }
+        .edu-icon-9  { left: 45%;  top: 80%; font-size: 2.2rem; animation-delay: 3.8s; animation-duration: 16s; }
+        .edu-icon-10 { right: 5%;  top: 80%; font-size: 2rem;   animation-delay: 6s;   animation-duration: 15s; color: rgba(167, 139, 250, 0.08); }
+        .edu-icon-11 { left: 8%;   top: 35%; font-size: 2.5rem; animation-delay: 4s;   animation-duration: 18s; }
+        .edu-icon-12 { right: 12%; top: 45%; font-size: 1.5rem; animation-delay: 2.8s; animation-duration: 14s; color: rgba(74, 222, 128, 0.10); }
+
+        @keyframes eduFloatUp {
+            0% {
+                opacity: 0;
+                transform: translateY(80px) translateX(0) scale(0.6) rotate(-10deg);
+            }
+            10% {
+                opacity: 1;
+            }
+            45% {
+                transform: translateY(-40px) translateX(30px) scale(1.1) rotate(5deg);
+            }
+            70% {
+                opacity: 0.9;
+                transform: translateY(-80px) translateX(-20px) scale(1) rotate(-3deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-140px) translateX(10px) scale(0.7) rotate(8deg);
+            }
+        }
+
+        /* Slow drift variation for some icons */
+        .edu-icon-2 { animation: eduFloatDrift 20s ease-in-out infinite; }
+        .edu-icon-6 { animation: eduFloatDrift 22s ease-in-out infinite; }
+        .edu-icon-8 { animation: eduFloatDrift 18s ease-in-out infinite; }
+
+        @keyframes eduFloatDrift {
+            0% {
+                opacity: 0;
+                transform: translateY(60px) translateX(0) scale(0.7);
+            }
+            12% {
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(-60px) translateX(-40px) scale(1.15);
+            }
+            80% {
+                opacity: 0.8;
+                transform: translateY(-120px) translateX(20px) scale(0.9);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-180px) translateX(-10px) scale(0.6);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .edu-icon { display: none; }
+            .edu-icon-1, .edu-icon-2, .edu-icon-3, .edu-icon-4 { display: block; font-size: 1.4rem; }
+        }
+    </style>
 </section>
 
-{{-- ═══════ FEATURES ═══════ --}}
-<section class="hm-section">
+<!-- ══════════════════════════════════════════════════════
+     STATS SECTION — avec compteurs animés
+     ══════════════════════════════════════════════════════ -->
+<section class="py-5" id="statsSection">
     <div class="container">
-        <div class="hm-label" style="display:inline-flex;"><i class="bi bi-lightning-fill"></i> Pourquoi nous ?</div>
-        <h2 class="hm-title">Tout ce dont vous avez besoin<br>pour réussir</h2>
-        <p class="hm-subtitle">Une plateforme complète avec des fonctionnalités conçues pour maximiser votre apprentissage.</p>
-        <div class="hm-features-grid">
-            <div class="hm-feature-card" style="--fc-color: #3b82f6; --fc-color2: #60a5fa;">
-                <div class="hm-feature-icon" style="background:#eff6ff; color:#3b82f6;"><i class="bi bi-laptop"></i></div>
-                <h5>Interface moderne</h5>
-                <p>Simple et intuitive, notre plateforme vous offre une expérience d'apprentissage fluide et agréable.</p>
+        <div class="row g-4">
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="1200" data-prefix="+" data-suffix="">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Étudiants actifs</span>
+                </div>
             </div>
-            <div class="hm-feature-card" style="--fc-color: #22c55e; --fc-color2: #4ade80;">
-                <div class="hm-feature-icon" style="background:#f0fdf4; color:#22c55e;"><i class="bi bi-broadcast"></i></div>
-                <h5>Lives interactifs</h5>
-                <p>Cours en direct avec interaction en temps réel avec vos enseignants qualifiés.</p>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="50" data-prefix="+" data-suffix="">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Cours disponibles</span>
+                </div>
             </div>
-            <div class="hm-feature-card" style="--fc-color: #f59e0b; --fc-color2: #fbbf24;">
-                <div class="hm-feature-icon" style="background:#fffbeb; color:#f59e0b;"><i class="bi bi-cloud-arrow-down"></i></div>
-                <h5>Supports PDF</h5>
-                <p>Téléchargez facilement tous vos supports de cours en format PDF pour réviser hors ligne.</p>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="120" data-prefix="+" data-suffix="">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Lives organisés</span>
+                </div>
             </div>
-            <div class="hm-feature-card" style="--fc-color: #8b5cf6; --fc-color2: #a78bfa;">
-                <div class="hm-feature-icon" style="background:#f5f3ff; color:#8b5cf6;"><i class="bi bi-people"></i></div>
-                <h5>Suivi personnalisé</h5>
-                <p>Un suivi individuel adapté à votre rythme d'apprentissage et à vos objectifs.</p>
-            </div>
-            <div class="hm-feature-card" style="--fc-color: #06b6d4; --fc-color2: #22d3ee;">
-                <div class="hm-feature-icon" style="background:#ecfeff; color:#06b6d4;"><i class="bi bi-phone"></i></div>
-                <h5>Accessible partout</h5>
-                <p>Apprenez depuis n'importe quel appareil, où que vous soyez, à tout moment.</p>
-            </div>
-            <div class="hm-feature-card" style="--fc-color: #f43f5e; --fc-color2: #fb7185;">
-                <div class="hm-feature-icon" style="background:#fff1f2; color:#f43f5e;"><i class="bi bi-star"></i></div>
-                <h5>Évaluations continues</h5>
-                <p>Des tests et évaluations réguliers pour mesurer votre progression et consolider vos acquis.</p>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="95" data-prefix="" data-suffix="%">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Satisfaction</span>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-{{-- ═══════ SUBJECTS ═══════ --}}
-@if(isset($subjectsGrouped) && count($subjectsGrouped))
-<section class="hm-section hm-section-alt">
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     WHY CHOOSE US
+     ══════════════════════════════════════════════════════ -->
+<section class="py-5">
     <div class="container">
-        <div class="text-center">
-            <div class="hm-label" style="display:inline-flex;"><i class="bi bi-book-fill"></i> Nos matières</div>
-            <h2 class="hm-title hm-title-center">Explorez nos <span style="color:var(--home-primary);">matières</span></h2>
-            <p class="hm-subtitle hm-subtitle-center">Des matières variées pour tous les niveaux, enseignées par des professeurs expérimentés.</p>
+        <div class="text-center mb-5">
+            <span class="badge px-3 py-2 mb-3" style="background: rgba(124, 58, 237, 0.15); color: #A78BFA; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
+                Pourquoi nous choisir ?
+            </span>
+            <h2 class="section-title-3d">Une expérience d'apprentissage <br class="d-none d-md-block">complète et moderne</h2>
+            <p class="text-white-50 mt-3" style="max-width: 540px; margin: 0 auto; font-size: 1.05rem;">
+                Tout ce dont vous avez besoin pour réussir, réuni en un seul endroit.
+            </p>
         </div>
-        <div class="hm-subjects-grid">
-            @foreach($subjectsGrouped as $groupName => $group)
-                @if(isset($group['subjects']) && $group['subjects']->count())
-                    @foreach($group['subjects'] as $subject)
-                        @php
-                            $subjectIcons = ['bi-book','bi-cpu','bi-calculator','bi-globe2','bi-flask','bi-music-note','bi-palette','bi-translate','bi-activity','bi-star'];
-                            $subjectColors = ['#2563eb','#059669','#7c3aed','#d97706','#dc2626','#0891b2','#db2777','#4f46e5','#0d9488','#ea580c'];
-                            $si = $loop->index % count($subjectIcons);
-                        @endphp
-                        <a href="{{ route('front.subject.classes', $subject->id) }}" class="hm-subject-card">
-                            <div class="hm-subject-card-icon" style="background: {{ $subjectColors[$si] }};">
-                                <i class="bi {{ $subjectIcons[$si] }}"></i>
-                            </div>
-                            <span class="hm-subject-card-title">{{ $subject->name }}</span>
-                            <i class="bi bi-chevron-right hm-subject-card-arrow"></i>
-                        </a>
-                    @endforeach
-                @endif
-            @endforeach
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card-3d text-center h-100 reveal-3d">
+                    <div class="card-3d-icon mx-auto">
+                        <i class="bi bi-laptop"></i>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Interface moderne</h5>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+                        Une plateforme intuitive et élégante conçue pour une expérience d'apprentissage fluide et agréable.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.1s;">
+                    <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #7C3AED, #FFD166);">
+                        <i class="bi bi-broadcast"></i>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Lives interactifs</h5>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+                        Cours en direct avec interaction en temps réel avec les enseignants et les autres étudiants.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.2s;">
+                    <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #FFD166, #FFB347);">
+                        <i class="bi bi-cloud-arrow-down"></i>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Supports PDF & vidéos</h5>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+                        Accédez à tous les cours, ressources PDF et vidéos téléchargeables à tout moment, même hors ligne.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-2">
+            <div class="col-md-4">
+                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.3s;">
+                    <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #0891B2, #06B6D4);">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Quiz & évaluations</h5>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+                        Testez vos connaissances avec des quiz interactifs et suivez votre progression en temps réel.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.4s;">
+                    <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #16A34A, #22C55E);">
+                        <i class="bi bi-person-check"></i>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Suivi personnalisé</h5>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+                        Un accompagnement sur mesure avec des enseignants dédiés pour vous aider à atteindre vos objectifs.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.5s;">
+                    <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #D90429, #EF4444);">
+                        <i class="bi bi-phone"></i>
+                    </div>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Accessible partout</h5>
+                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+                        Apprenez depuis n'importe quel appareil — ordinateur, tablette ou smartphone, où que vous soyez.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
-@endif
 
-{{-- ═══════ ABOUT ═══════ --}}
-<section class="hm-section">
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     ABOUT / QUI SOMMES-NOUS
+     ══════════════════════════════════════════════════════ -->
+<section class="py-5">
     <div class="container">
         <div class="row align-items-center g-5">
             <div class="col-lg-6">
-                <div class="hm-about-img-wrap">
-                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=700&q=85" alt="Étudiants" class="hm-about-img">
-                    <div class="hm-about-img-badge">
-                        <i class="bi bi-check-circle-fill"></i>
-                        +{{ $classes }} étudiants inscrits
+                <div class="reveal-3d position-relative">
+                    <div class="card-3d overflow-hidden p-0" style="border-radius: 24px;">
+                        <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&q=80"
+                             alt="Étudiants" class="w-100" style="height: 400px; object-fit: cover; display: block;">
+                        <div style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,58,143,0.3), rgba(124,58,237,0.2));"></div>
+                    </div>
+                    <!-- Floating badge -->
+                    <div class="position-absolute bottom-0 end-0 translate-middle-y me-4"
+                         style="background: var(--3d-gradient-main); border-radius: 16px; padding: 16px 20px; box-shadow: 0 10px 40px rgba(0,58,143,0.4);">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill" style="color: #22C55E; font-size: 1.2rem;"></i>
+                            <div>
+                                <small class="fw-bold text-white" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;">Depuis</small>
+                                <div class="fw-bold text-white">2024</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
             <div class="col-lg-6">
-                <div class="hm-label"><i class="bi bi-info-circle"></i> À propos</div>
-                <h2 class="hm-title">Qui <span style="color:var(--home-primary);">sommes-nous</span> ?</h2>
-                <p style="color: #475569; font-size: 15px; line-height: 1.8;">
-                    E-School connecte les étudiants avec des enseignants qualifiés pour une expérience d'apprentissage enrichissante et accessible à tous. Notre mission est de rendre l'éducation de qualité accessible partout.
-                </p>
-                <ul class="hm-check-list">
-                    <li><i class="bi bi-check-circle-fill"></i> Enseignants qualifiés et expérimentés</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Plateforme interactive et intuitive</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Apprentissage flexible, à votre rythme</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Support technique disponible 7j/7</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</section>
+                <div class="reveal-3d">
+                    <span class="badge px-3 py-2 mb-3" style="background: rgba(0, 58, 143, 0.15); color: #2563EB; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
+                        Qui sommes-nous ?
+                    </span>
+                    <h2 class="section-title-3d mb-4">Révolutionner l'éducation <br>au Maroc et ailleurs</h2>
+                    <p class="text-white-50 mb-4" style="line-height: 1.8; font-size: 1.05rem;">
+                        E-School est une plateforme éducative innovante qui connecte les étudiants 
+                        avec des enseignants qualifiés pour une expérience d'apprentissage moderne, 
+                        interactive et accessible à tous.
+                    </p>
 
-{{-- ═══════ HOW IT WORKS ═══════ --}}
-<section class="hm-section hm-section-alt">
-    <div class="container">
-        <div class="text-center">
-            <div class="hm-label" style="display:inline-flex;"><i class="bi bi-gear-fill"></i> Fonctionnement</div>
-            <h2 class="hm-title hm-title-center">Comment <span style="color:var(--home-primary);">ça marche</span> ?</h2>
-            <p class="hm-subtitle hm-subtitle-center">Trois étapes simples pour commencer votre parcours d'apprentissage.</p>
-        </div>
-        <div class="hm-steps-grid">
-            <div class="hm-step">
-                <div class="hm-step-num">1</div>
-                <h5>Créer un compte</h5>
-                <p>Inscrivez-vous gratuitement en quelques secondes et créez votre profil étudiant.</p>
-            </div>
-            <div class="hm-step">
-                <div class="hm-step-num">2</div>
-                <h5>Choisir votre niveau</h5>
-                <p>Sélectionnez votre niveau scolaire et les matières qui vous intéressent.</p>
-            </div>
-            <div class="hm-step">
-                <div class="hm-step-num">3</div>
-                <h5>Commencer à apprendre</h5>
-                <p>Accédez à tous les cours, lives et ressources pour progresser à votre rythme.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-{{-- ═══════ LIVES ═══════ --}}
-@if(isset($lives) && $lives->count())
-<section class="hm-section">
-    <div class="container">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-            <div>
-                <div class="hm-label"><i class="bi bi-broadcast"></i> En direct</div>
-                <h2 class="hm-title" style="margin-bottom:0;">Sessions <span style="color:var(--home-primary);">live</span></h2>
-            </div>
-            @if($lives->count() > 3)
-                <a href="{{ route('front.lives') }}" class="hm-btn-primary" style="padding:.6rem 1.5rem;font-size:13px;">
-                    Voir tout <i class="bi bi-arrow-right"></i>
-                </a>
-            @endif
-        </div>
-        <p class="hm-subtitle" style="margin-bottom:1.5rem;">Participez à nos sessions live interactives avec des professeurs en temps réel.</p>
-        <div class="hm-lives-grid">
-            @foreach($lives as $live)
-                <div class="hm-live-card">
-                    <div class="hm-live-top">
-                        <span class="hm-live-badge {{ $live->is_live ?? false ? 'hm-live-badge-live' : 'hm-live-badge-scheduled' }}">
-                            @if($live->is_live ?? false)
-                                <span class="hm-live-dot"></span> EN DIRECT
-                            @else
-                                <i class="bi bi-calendar"></i> Planifié
-                            @endif
-                        </span>
-                        <i class="bi bi-arrow-right hm-live-arrow"></i>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(0, 58, 143, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-mortarboard-fill" style="color: #2563EB; font-size: 1rem;"></i>
+                            </span>
+                            <div>
+                                <strong class="text-white">Enseignants qualifiés</strong>
+                                <p class="text-white-50 small mb-0">Des professeurs expérimentés passionnés par l'enseignement</p>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-start gap-3">
+                            <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(124, 58, 237, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-layers-fill" style="color: #7C3AED; font-size: 1rem;"></i>
+                            </span>
+                            <div>
+                                <strong class="text-white">Plateforme interactive</strong>
+                                <p class="text-white-50 small mb-0">Cours en direct, quiz, devoirs et suivi personnalisé</p>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-start gap-3">
+                            <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 209, 102, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="bi bi-clock-fill" style="color: #FFD166; font-size: 1rem;"></i>
+                            </span>
+                            <div>
+                                <strong class="text-white">Apprentissage flexible</strong>
+                                <p class="text-white-50 small mb-0">Étudiez à votre rythme, où et quand vous voulez</p>
+                            </div>
+                        </div>
                     </div>
-                    <h4 class="hm-live-title">{{ $live->title ?? $live->name ?? 'Session Live' }}</h4>
-                    <p class="hm-live-desc">{{ Str::limit($live->description ?? 'Rejoignez cette session interactive.', 60) }}</p>
-                    <div class="hm-live-meta">
-                        @if(isset($live->subject))
-                            <span class="hm-live-tag"><i class="bi bi-book"></i> {{ $live->subject->name ?? '' }}</span>
-                        @endif
-                        @if(isset($live->teacher))
-                            <span class="hm-live-tag"><i class="bi bi-person"></i> {{ $live->teacher->name ?? '' }}</span>
-                        @endif
-                        @if(isset($live->scheduled_at))
-                            <span class="hm-live-tag"><i class="bi bi-clock"></i> {{ \Carbon\Carbon::parse($live->scheduled_at)->format('d/m/Y') }}</span>
-                        @endif
+
+                    <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient mt-4">
+                        Rejoindre E-School <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     OBJECTIFS
+     ══════════════════════════════════════════════════════ -->
+<section class="py-5 text-center">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge px-3 py-2 mb-3" style="background: rgba(255, 209, 102, 0.12); color: #FFD166; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
+                Nos objectifs
+            </span>
+            <h2 class="section-title-3d">Notre mission pour votre réussite</h2>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card-3d overflow-hidden p-0 reveal-3d" style="border-radius: 20px;">
+                    <div style="height: 200px; overflow: hidden;">
+                        <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=80"
+                             class="w-100 h-100" style="object-fit: cover; transition: transform 0.5s ease;" alt="">
+                    </div>
+                    <div class="p-4 text-start">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--3d-gradient-main); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                            <i class="bi bi-book text-white" style="font-size: 1.1rem;"></i>
+                        </div>
+                        <h5 class="fw-bold text-white mb-2">Faciliter l'apprentissage</h5>
+                        <p class="text-white-50 small mb-0">Rendre l'éducation accessible et simplifiée grâce à des outils modernes et interactifs.</p>
                     </div>
                 </div>
-            @endforeach
-        </div>
-    </div>
-</section>
-@endif
+            </div>
 
-{{-- ═══════ CTA ═══════ --}}
-<section class="hm-section">
-    <div class="container">
-        <div class="hm-cta">
-            <div class="hm-cta-content">
-                <h2>Prêt à transformer votre<br>parcours éducatif ?</h2>
-                <p>Rejoignez des milliers d'étudiants qui apprennent déjà sur E-School</p>
-                <a href="{{ route('register') }}" class="hm-btn-cta">
-                    <i class="bi bi-person-plus-fill"></i> S'inscrire maintenant
-                </a>
+            <div class="col-md-4">
+                <div class="card-3d overflow-hidden p-0 reveal-3d" style="border-radius: 20px; transition-delay: 0.15s;">
+                    <div style="height: 200px; overflow: hidden;">
+                        <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&q=80"
+                             class="w-100 h-100" style="object-fit: cover; transition: transform 0.5s ease;" alt="">
+                    </div>
+                    <div class="p-4 text-start">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #7C3AED, #FFD166); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                            <i class="bi bi-trophy text-white" style="font-size: 1.1rem;"></i>
+                        </div>
+                        <h5 class="fw-bold text-white mb-2">Encourager la réussite</h5>
+                        <p class="text-white-50 small mb-0">Motiver et accompagner chaque étudiant vers l'excellence académique et la confiance en soi.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card-3d overflow-hidden p-0 reveal-3d" style="border-radius: 20px; transition-delay: 0.3s;">
+                    <div style="height: 200px; overflow: hidden;">
+                        <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&q=80"
+                             class="w-100 h-100" style="object-fit: cover; transition: transform 0.5s ease;" alt="">
+                    </div>
+                    <div class="p-4 text-start">
+                        <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #FFD166, #FFB347); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                            <i class="bi bi-lightbulb text-dark" style="font-size: 1.1rem;"></i>
+                        </div>
+                        <h5 class="fw-bold text-white mb-2">Innover dans l'éducation</h5>
+                        <p class="text-white-50 small mb-0">Repousser les limites de l'enseignement traditionnel avec des méthodes pédagogiques innovantes.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     HOW IT WORKS
+     ══════════════════════════════════════════════════════ -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge px-3 py-2 mb-3" style="background: rgba(22, 163, 74, 0.12); color: #4ADE80; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
+                Comment ça marche
+            </span>
+            <h2 class="section-title-3d">Commencez en 3 étapes simples</h2>
+            <p class="text-white-50 mt-3" style="max-width: 500px; margin: 0 auto;">
+                Pas de complicité. Créez votre compte, choisissez votre niveau et commencez à apprendre.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="step-3d reveal-3d">
+                    <div class="step-3d-number mx-auto">1</div>
+                    <h5 class="fw-bold text-white mt-3 mb-2">Créez votre compte</h5>
+                    <p class="text-white-50 small" style="line-height: 1.7;">
+                        Inscrivez-vous gratuitement en moins d'une minute. Aucune carte bancaire requise.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="step-3d reveal-3d" style="transition-delay: 0.15s;">
+                    <div class="step-3d-number mx-auto" style="background: linear-gradient(135deg, #7C3AED, #FFD166);">2</div>
+                    <h5 class="fw-bold text-white mt-3 mb-2">Choisissez votre niveau</h5>
+                    <p class="text-white-50 small" style="line-height: 1.7;">
+                        Sélectionnez votre matière et votre niveau scolaire parmi nos nombreuses offres.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="step-3d reveal-3d" style="transition-delay: 0.3s;">
+                    <div class="step-3d-number mx-auto" style="background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B;">3</div>
+                    <h5 class="fw-bold text-white mt-3 mb-2">Commencez à apprendre</h5>
+                    <p class="text-white-50 small" style="line-height: 1.7;">
+                        Accédez à tous les cours, lives et ressources. Apprenez à votre rythme et réussissez !
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient" style="padding: 16px 44px; font-size: 1.1rem;">
+                <i class="bi bi-person-plus"></i>
+                Créer mon compte gratuit
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     FINAL CTA
+     ══════════════════════════════════════════════════════ -->
+<section class="cta-3d text-center py-5">
+    <div class="container cta-3d-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <span class="badge px-3 py-2 mb-3" style="background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.8); border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
+                    🚀 Prêt à commencer ?
+                </span>
+                <h2 class="section-title-3d-light fw-bold mb-3" style="font-family: 'Poppins', sans-serif; font-size: 2.5rem;">
+                    Rejoignez des milliers d'étudiants <br>qui réussissent avec E-School
+                </h2>
+                <p class="text-white-50 mb-4" style="font-size: 1.1rem; max-width: 550px; margin: 0 auto 1.5rem;">
+                    Inscription gratuite. 7 jours d'essai. Annulation à tout moment. <br>Rejoignez l'aventure éducative dès aujourd'hui !
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 16px 44px; font-size: 1.1rem;">
+                        <i class="bi bi-rocket-takeoff"></i>
+                        S'inscrire maintenant
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                    <a href="{{ route('plans') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
+                        <i class="bi bi-credit-card"></i>
+                        Voir les offres
+                    </a>
+                </div>
+                <p class="mt-3" style="color: rgba(255,255,255,0.3); font-size: 0.8rem;">
+                    <i class="bi bi-shield-check"></i> Sans engagement · Paiement sécurisé
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+@push('scripts')
+<script>
+(function() {
+    'use strict';
+
+    /**
+     * Compteur animé — chaque nombre défile de 0 à `data-target`
+     * avec un décalage progressif entre les compteurs (stagger),
+     * lorsque la section des stats entre dans le viewport.
+     */
+    const counters = document.querySelectorAll('.counter-value');
+    if (!counters.length) return;
+
+    let animationStarted = false;
+
+    function onScrollCheck() {
+        if (animationStarted) return;
+        const section = document.getElementById('statsSection');
+        if (!section) return;
+
+        const rect = section.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight - 80 && rect.bottom > 0;
+        if (!isVisible) return;
+
+        animationStarted = true;
+
+        // Nettoyer le listener dès que l'animation démarre
+        window.removeEventListener('scroll', onScrollCheck);
+        window.removeEventListener('load', onScrollCheck);
+
+        const staggerDelay = 250; // ms entre chaque compteur
+
+        counters.forEach((counter, index) => {
+            const inner = counter.querySelector('.counter-inner');
+            if (!inner) return;
+
+            const target = parseInt(counter.dataset.target, 10);
+            const prefix = counter.dataset.prefix || '';
+            const suffix = counter.dataset.suffix || '';
+            const duration = 1800 + (target > 1000 ? target * 0.5 : 0); // plus de temps pour les grands nombres
+
+            setTimeout(() => {
+                const startTime = performance.now();
+
+                function formatNumber(n) {
+                    return n.toLocaleString('fr-FR');
+                }
+
+                function update(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // Ease-out quartique (plus doux)
+                    const eased = 1 - Math.pow(1 - progress, 4);
+                    const current = Math.round(eased * target);
+
+                    inner.textContent = prefix + formatNumber(current) + suffix;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        inner.textContent = prefix + formatNumber(target) + suffix;
+                    }
+                }
+
+                requestAnimationFrame(update);
+            }, index * staggerDelay);
+        });
+    }
+
+    window.addEventListener('scroll', onScrollCheck, { passive: true });
+    window.addEventListener('load', onScrollCheck);
+    onScrollCheck(); // vérification immédiate
+})();
+</script>
+@endpush
+
 @endsection

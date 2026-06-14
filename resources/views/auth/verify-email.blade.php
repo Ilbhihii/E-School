@@ -1,81 +1,43 @@
-@extends('layouts.front')
+@extends('layouts.guest')
 
 @section('title', 'Vérification email')
 
 @section('content')
 
-<div class="verify-email-page d-flex justify-content-center align-items-center" 
-     style="min-height:100vh; position: relative; overflow: hidden; background: linear-gradient(135deg, #e0f7fa, #ffffff);">
-
-    <!-- Floating shapes décoratifs -->
-    <div style="position:absolute; width:220px; height:220px; background: rgba(13,110,253,0.2); border-radius:50%; top:5%; left:5%; animation: float 6s ease-in-out infinite;"></div>
-    <div style="position:absolute; width:180px; height:180px; background: rgba(25,135,84,0.15); border-radius:50%; bottom:10%; right:10%; animation: float 5s ease-in-out infinite;"></div>
-
-    <div class="card shadow-lg p-5" 
-         style="width:400px; border-radius:25px; background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); color:#333; z-index:1;">
-
-        <h3 class="text-center mb-4 fw-bold text-primary">Vérification email</h3>
-
-        <div class="mb-4 text-center text-muted">
-            Merci de vous être inscrit ! Avant de commencer, pourriez-vous vérifier votre adresse email en cliquant sur le lien que nous venons de vous envoyer ? Si vous n\'avez pas reçu l\'email, nous serons ravis de vous en renvoyer un autre.
-        </div>
-
-        @if (session('status') == 'verification-link-sent')
-            <div class="alert alert-success mb-4 text-center">
-                Un nouveau lien de vérification a été envoyé à l\'adresse email que vous avez fournie lors de l\'inscription.
-            </div>
-        @endif
-
-        <div class="d-flex justify-content-between align-items-center mt-4 gap-3">
-            <form method="POST" action="{{ route('verification.send') }}" class="flex-grow-1">
-                @csrf
-                <button type="submit" class="btn btn-outline-primary w-100 fw-bold hover-scale">
-                    Renvoyer l\'email de vérification
-                </button>
-            </form>
-
-            <form method="POST" action="{{ route('logout') }}" class="flex-shrink-0">
-                @csrf
-                <button type="submit" class="btn btn-link text-danger p-0">
-                    Se déconnecter
-                </button>
-            </form>
-        </div>
-
+<!-- SUCCESS -->
+@if (session('status') == 'verification-link-sent')
+    <div class="alert text-center py-2 mb-4" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; border-radius: 12px; font-size: 0.875rem;">
+        <i class="bi bi-check-circle-fill me-1"></i>
+        Un nouveau lien de vérification a été envoyé à votre adresse email.
     </div>
+@endif
+
+<div class="text-center mb-3">
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+        <i class="bi bi-envelope-check" style="font-size: 1.75rem; color: #6EE7B7;"></i>
+    </div>
+    <h5 class="fw-bold text-white mb-1" style="font-family: 'Poppins', sans-serif;">Vérifiez votre email</h5>
+    <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; line-height: 1.6;">
+        Merci de vous être inscrit ! Avant de commencer, veuillez vérifier votre adresse email en cliquant sur le lien que nous venons de vous envoyer.
+    </p>
 </div>
 
-<!-- Styles -->
-<style>
-/* Inputs clairs et élégants */
-.form-control-light {
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(0,0,0,0.1);
-    color: #333;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-}
+<div class="d-flex flex-column gap-3">
+    <form method="POST" action="{{ route('verification.send') }}">
+        @csrf
+        <button type="submit" class="btn-3d btn-3d-gradient w-100 justify-content-center" style="padding: 14px;">
+            <i class="bi bi-arrow-repeat"></i>
+            Renvoyer l'email
+        </button>
+    </form>
 
-.form-control-light:focus {
-    background: #ffffff;
-    border-color: #0d6efd;
-    box-shadow: 0 0 12px rgba(13,110,253,0.2);
-    color: #333;
-}
-
-/* Hover effect buttons */
-.hover-scale:hover {
-    transform: scale(1.05);
-    transition: all 0.3s ease;
-}
-
-/* Floating shapes animation */
-@keyframes float {
-    0% { transform: translateY(0) translateX(0); }
-    50% { transform: translateY(-15px) translateX(10px); }
-    100% { transform: translateY(0) translateX(0); }
-}
-</style>
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit" style="background: none; border: none; color: rgba(255,255,255,0.4); font-size: 0.85rem; cursor: pointer; transition: color 0.3s;"
+                onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">
+            <i class="bi bi-box-arrow-right me-1"></i> Se déconnecter
+        </button>
+    </form>
+</div>
 
 @endsection
-

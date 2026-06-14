@@ -11,8 +11,6 @@ use App\Models\Live;
 use App\Models\Absence;
 use App\Models\Level;
 use App\Models\Subject;
-use App\Models\CourseView;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -158,6 +156,14 @@ class StudentController extends Controller
     }
 
 
+    public function showCourse($id)
+    {
+$course = Course::with(['subject', 'classRoom', 'devoirs'])->findOrFail($id);
+
+        return view('student.class.course-show', compact('course'));
+    }
+
+
     // page devoirs étudiant
     public function assignments()
     {
@@ -165,10 +171,11 @@ class StudentController extends Controller
                     ->orderBy('created_at','desc')
                     ->get();
 
-        $userClassRoom = auth()->user()->classRoom;
-        $courses = $userClassRoom?->courses ?? collect([]);
+        $classRoom = auth()->user()->classRoom;
+        $courses = $classRoom?->courses ?? collect([]);
+        $subjects = $classRoom?->subjects ?? collect([]);
 
-        return view('student.assignments', compact('assignments', 'courses'));
+        return view('student.assignments', compact('assignments', 'courses', 'classRoom', 'subjects'));
 
     }
 
@@ -179,13 +186,18 @@ class StudentController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'file' => 'required|file|max:10240', // 10MB
-            'course_id' => 'required|exists:courses,id',
+            'subject_id' => 'required|exists:subjects,id',
         ]);
 
-        $course = Course::findOrFail($request->course_id);
         $userClassRoom = auth()->user()->classRoom;
-        if ($course->classRoom && $course->classRoom->id !== $userClassRoom?->id) {
-            return back()->with('error', 'Ce cours ne vous est pas accessible.');
+
+        // Trouver un cours dans cette matière pour la classe de l'étudiant
+        $course = Course::where('subject_id', $request->subject_id)
+            ->where('class_id', $userClassRoom?->id)
+            ->first();
+
+        if (!$course) {
+            return back()->with('error', 'Aucun cours disponible pour cette matière dans votre classe.');
         }
 
         $file = $request->file('file')->store('assignments','public');
@@ -194,7 +206,8 @@ class StudentController extends Controller
             'user_id' => auth()->id(),
             'title' => $request->title,
             'file' => $file,
-            'course_id' => $request->course_id,
+            'course_id' => $course->id,
+            'subject_id' => $request->subject_id,
         ]);
 
         return back()->with('success','Devoir envoyé avec succès !');
@@ -222,6 +235,9 @@ public function settings()
 
         $totalAbsences = $absences->count();
 
+        // La colonne 'justified' n'existe pas dans la table
+        $justifiedCount = 0;
+
         // situation étudiant
         if ($totalAbsences <= 2) {
             $situation = "Situation normale";
@@ -239,6 +255,7 @@ public function settings()
         return view('student.absences', compact(
             'absences',
             'totalAbsences',
+            'justifiedCount',
             'situation',
             'color'
         ));
@@ -265,60 +282,64 @@ public function settings()
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
     }
 
-public function classes()
+public function indexSubjects()
 {
-    $classes = ClassRoom::orderBy('name')->get();
-
-    return view('student.class.classes', compact('classes'));
+    $user = auth()->user();
+    $classRoom = $user->classRoom()->with('level.subjects')->first();
+    
+    if (!$classRoom || !$classRoom->level) {
+        return redirect()->route('student.levels')
+            ->with('warning', 'Aucune classe ou niveau assigné. Choisissez un niveau.');
+    }
+    
+    $level = $classRoom->level;
+    $subjects = Subject::whereHas('classes', function($q) use ($level) {
+        $q->where('level_id', $level->id);
+    })->get();
+    
+    return view('student.subjects', compact('subjects', 'level', 'classRoom'));
 }
 
-public function subjects(ClassRoom $class)
+public function waiting()
 {
-    $subjects = Subject::whereHas('courses', function ($q) use ($class) {
-        $q->where('class_id', $class->id);
+    return view('student.waiting');
+}
+
+public function levels()
+{
+    $levels = Level::all();
+    return view('student.levels', compact('levels'));
+}
+
+public function subjects(Level $level)
+{
+
+    $subjects = Subject::whereHas('classes', function($q) use ($level){
+        $q->where('level_id', $level->id);
     })->get();
 
-    return view('student.class.subjects', compact('class', 'subjects'));
+    return view('student.subjects', compact('subjects', 'level'));
 }
 
-public function courses(ClassRoom $class, Subject $subject)
+public function classes(Subject $subject, Level $level)
 {
-    $courses = Course::where('class_id', $class->id)
-        ->where('subject_id', $subject->id)
+
+    $classes = $subject->classes()
+        ->where('level_id', $level->id)
+        ->get();
+
+    return view('student.class.subject-classes', compact('classes', 'subject', 'level'));
+}
+
+public function courses(Subject $subject, ClassRoom $class)
+{
+
+    $courses = Course::where('subject_id', $subject->id)
+        ->where('class_id', $class->id)
         ->withCount('devoirs')
         ->get();
 
     return view('student.class.courses', compact('courses', 'class', 'subject'));
-}
-
-public function showCourse(Course $course)
-{
-    $user = auth()->user();
-
-    if (!$user->hasActiveSubscription()) {
-        if (!$course->is_free) {
-            return redirect()->route('student.payment')
-                ->with('warning', 'Ce cours est réservé aux abonnés. Veuillez vous abonner pour continuer.');
-        }
-
-        $viewedCourses = CourseView::where('user_id', $user->id)
-            ->distinct()
-            ->count('course_id');
-
-        if ($viewedCourses >= 3 && !$user->courseViews()->where('course_id', $course->id)->exists()) {
-            return redirect()->route('student.payment')
-                ->with('warning', 'Vous avez atteint la limite de cours gratuits. Abonnez-vous pour continuer.');
-        }
-    }
-
-    CourseView::firstOrCreate([
-        'user_id' => $user->id,
-        'course_id' => $course->id,
-    ]);
-
-    $course->load(['devoirs', 'subject', 'classRoom']);
-
-    return view('student.class.course-show', compact('course'));
 }
 
     public function index(Request $request)

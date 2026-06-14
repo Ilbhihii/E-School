@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Subject extends Model
 {
+    public $timestamps = false;
     // note: column renamed from class_room_id to class_id for consistency
     protected $fillable = ['name', 'type'];
 
@@ -32,7 +33,7 @@ class Subject extends Model
 
     public function classes()
     {
-        return $this->belongsToMany(ClassRoom::class, 'class_room_subject', 'subject_id', 'class_room_id');
+        return $this->belongsToMany(ClassRoom::class);
     }
 
 }

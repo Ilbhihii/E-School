@@ -1,183 +1,170 @@
 @extends('layouts.front')
 
+@section('title', 'Toutes les Classes - Cours et Matières')
+
 @section('content')
-<div class="front-page">
 
-    <section class="front-hero front-hero-sm">
-        <div class="hero-bg-pattern"></div>
-        <div class="container">
-            <div class="hero-badge"><i class="bi bi-collection-fill"></i> Tous les cours</div>
-            <h1 class="hero-title">Tous les <span class="text-gradient">cours</span></h1>
-            <p class="hero-subtitle">Explorez l'intégralité des cours disponibles, classés par niveau et par classe.</p>
-        </div>
-    </section>
+<!-- HERO GLOBAL -->
+<section class="py-5 text-center" style="background: linear-gradient(135deg,#28a745,#20c997); color:white;">
+    <div class="container">
+        <h1 class="display-4 fw-bold mb-2">Toutes les Classes et leurs Cours</h1>
+        <p class="lead">Explorez tous les cours disponibles par classe et commencez votre apprentissage maintenant.</p>
+    </div>
+</section>
 
-    <section class="front-section">
-        <div class="container">
-            @if($classes->count())
-                @foreach($classes as $class)
-                    @if($class->courses->count())
-                    <div class="acc-group">
-                        <div class="acc-group-header">
-                            <div class="acc-group-icon">
-                                <i class="bi bi-layers-fill"></i>
-                            </div>
-                            <h2 class="acc-group-title">{{ $class->name }}</h2>
-                            <span class="acc-group-count">{{ $class->courses->count() }} cours</span>
+@foreach($classes as $class)
+<!-- CLASS HERO -->
+<section class="py-3 text-center" style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(32,201,151,0.1)); border-bottom: 1px solid rgba(40,167,69,0.2);">
+    <div class="container">
+        <h2 class="h3 fw-bold mb-1">Cours de {{ $class->name }}</h2>
+        <p class="text-muted mb-0">{{ $class->courses->count() }} cours disponibles</p>
+    </div>
+</section>
+
+<!-- COURSES CARDS FOR {{ $class->name }} -->
+<section class="py-4 bg-light">
+    <div class="container">
+        <div class="row g-4">
+
+            @foreach($class->courses as $course)
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('front.course.show',$course->id) }}" class="text-decoration-none text-dark">
+                    <div class="card course-card h-100 rounded-4 shadow position-relative overflow-hidden">
+
+                        <!-- Floating shapes -->
+                        <span class="shape shape-top"></span>
+                        <span class="shape shape-bottom"></span>
+
+                        <!-- Banner dégradé -->
+                        <div class="course-banner" style="height:180px;
+                             background: linear-gradient(135deg,
+                             hsl({{ rand(0,360) }},70%,60%),
+                             hsl({{ rand(0,360) }},70%,40%));
+                             transition: all 0.5s ease;">
                         </div>
-                        <div class="acc-grid">
-                            @foreach($class->courses as $course)
-                                <a href="{{ route('front.course.show', $course->id) }}" class="acc-card">
-                                    @php
-                                        $hue = ($loop->index * 47 + $loop->parent->index * 60) % 360;
-                                    @endphp
-                                    <div class="acc-card-thumb" style="background: hsl({{ $hue }}, 55%, 50%);">
-                                        <i class="bi bi-play-circle-fill"></i>
-                                    </div>
-                                    <div class="acc-card-body">
-                                        <h3 class="acc-card-title">{{ $course->title ?? $course->name ?? '' }}</h3>
-                                        <p class="acc-card-desc">{{ Str::limit($course->description ?? 'Cours complet.', 60) }}</p>
-                                        <div class="acc-card-meta">
-                                            @if(isset($course->subject))
-                                                <span class="acc-meta-tag">{{ $course->subject->name ?? '' }}</span>
-                                            @endif
-                                            @if(($course->is_free ?? false) || !($course->is_premium ?? true))
-                                                <span class="acc-meta-tag acc-meta-free">Gratuit</span>
-                                            @else
-                                                <span class="acc-meta-tag acc-meta-premium">Premium</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </a>
-                            @endforeach
+
+                        <div class="card-body text-center">
+                            <h5 class="fw-bold">{{ $course->title }}</h5>
+                            <small class="text-muted">Classe {{ $class->name }}</small>
                         </div>
                     </div>
-                    @endif
-                @endforeach
-            @else
-                <div class="front-empty">
-                    <div class="front-empty-icon"><i class="bi bi-collection"></i></div>
-                    <h3>Aucun cours disponible</h3>
-                    <p>Les cours seront bientôt publiés sur la plateforme.</p>
-                </div>
+                </a>
+            </div>
+            @endforeach
+
+            @if($class->courses->isEmpty())
+            <div class="col-12 text-center py-5">
+                <p class="text-muted">Aucun cours disponible pour cette classe pour le moment.</p>
+            </div>
             @endif
+
         </div>
-    </section>
+    </div>
+</section>
 
-</div>
+@if($class->subjects && $class->subjects->count() > 0)
+<!-- SUBJECTS / MATIÈRES CARDS FOR {{ $class->name }} -->
+<section class="py-4">
+    <div class="container">
+        <h3 class="text-center mb-4 fw-bold">Matières Associées à {{ $class->name }}</h3>
+        <div class="row g-4">
+            @foreach($class->subjects as $subject)
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('front.class.courses', $subject->class_id) }}" class="text-decoration-none text-dark">
+                    <div class="card course-card h-100 rounded-4 shadow position-relative overflow-hidden">
+                        <span class="shape shape-top"></span>
+                        <span class="shape shape-bottom"></span>
+                        <div class="course-banner" style="height:180px; background: linear-gradient(135deg, hsl({{ rand(0,360) }},70%,60%), hsl({{ rand(0,360) }},70%,40%)); transition: all 0.5s ease;"></div>
+                        <div class="card-body text-center">
+                            <h5 class="fw-bold">{{ $subject->name }}</h5>
+                            <span class="badge bg-primary">{{ $subject->courses->count() ?? 0 }} cours</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+@endif
+@endforeach
 
+<!-- CUSTOM CSS (same as original) -->
 <style>
-.acc-group { margin-bottom: 2rem; }
-
-.acc-group-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 1rem;
-    padding-bottom: .75rem;
-    border-bottom: 2px solid #f1f5f9;
+.course-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: rgba(255,255,255,0.95);
 }
 
-.acc-group-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 16px;
-    flex-shrink: 0;
+.course-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 25px 40px rgba(0,0,0,0.1);
 }
 
-.acc-group-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
+.course-card .course-banner {
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
 }
 
-.acc-group-count {
-    margin-left: auto;
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    background: #f1f5f9;
-    padding: 3px 12px;
-    border-radius: 999px;
+/* Floating shapes */
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.15;
+    z-index:0;
 }
 
-.acc-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: .85rem;
+.shape-top {
+    width: 60px;
+    height: 60px;
+    background: #28a745;
+    top: -15px;
+    right: -15px;
 }
 
-.acc-card {
-    display: flex;
-    gap: .85rem;
-    background: #fff;
-    padding: .85rem 1rem;
-    border-radius: 14px;
-    box-shadow: 0 1px 8px rgba(15,23,42,.04);
-    border: 1px solid #f1f5f9;
-    text-decoration: none;
-    color: inherit;
-    transition: all .3s cubic-bezier(.22,.61,.36,1);
+.shape-bottom {
+    width: 40px;
+    height: 40px;
+    background: #20c997;
+    bottom: -10px;
+    left: -10px;
 }
 
-.acc-card:hover {
-    transform: translateY(-3px);
-    border-color: #dbeafe;
-    box-shadow: 0 8px 24px rgba(37,99,235,.08);
+/* Hover banner */
+.course-card:hover .course-banner {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+    transition: all 0.5s ease;
 }
 
-.acc-card-thumb {
-    width: 52px; height: 52px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 20px;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,.1);
+/* Animation au scroll */
+.course-card {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
 }
 
-.acc-card-body { flex: 1; min-width: 0; }
-
-.acc-card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #0f172a;
-    margin: 0 0 .25rem;
-    line-height: 1.3;
-}
-
-.acc-card-desc {
-    font-size: 12px;
-    color: #64748b;
-    margin: 0 0 .5rem;
-    line-height: 1.4;
-}
-
-.acc-card-meta { display: flex; gap: 4px; }
-
-.acc-meta-tag {
-    font-size: 10px;
-    font-weight: 500;
-    color: #64748b;
-    background: #f8fafc;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid #e2e8f0;
-}
-
-.acc-meta-free { color: #166534; background: #dcfce7; border-color: #bbf7d0; }
-.acc-meta-premium { color: #92400e; background: #fef3c7; border-color: #fde68a; }
-
-@media(max-width:768px) {
-    .acc-grid { grid-template-columns: 1fr; }
+.course-card.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 </style>
+
+<!-- JS pour animation au scroll -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.course-card');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if(entry.isIntersecting){
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.2 });
+
+    cards.forEach(card => observer.observe(card));
+});
+</script>
+
 @endsection
+

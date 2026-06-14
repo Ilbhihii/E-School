@@ -13,6 +13,7 @@ class Assignment extends Model
         'file',
         'due_date',
         'course_id',
+        'subject_id',
         'class_room_id',
         'user_id',
         'grade',

@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\ClassRoom;
+use App\Models\Level;
+use App\Models\Subject;
 use App\Models\Test;
 use App\Models\Result;
+use App\Models\ProfAssignment;
 use App\Mail\AccountActivatedMailable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -14,6 +17,65 @@ use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
+
+    /**
+     * Affiche la page d'assignation des professeurs (niveau + classe + matière)
+     */
+    public function profAssignments()
+    {
+        $professors = User::where('role', 'prof')->orderBy('name')->get();
+        $levels = Level::orderBy('name')->get();
+        $classes = ClassRoom::orderBy('name')->get();
+        $subjects = Subject::orderBy('name')->get();
+        $assignments = ProfAssignment::with(['prof', 'level', 'classRoom', 'subject'])
+            ->latest()
+            ->get();
+
+        return view('admin.prof-assignments', compact(
+            'professors', 'levels', 'classes', 'subjects', 'assignments'
+        ));
+    }
+
+    /**
+     * Enregistrer une nouvelle assignation de professeur
+     */
+    public function storeProfAssignment(Request $request)
+    {
+        $request->validate([
+            'prof_id' => 'required|exists:users,id',
+            'level_id' => 'required|exists:levels,id',
+            'class_id' => 'required|exists:class_rooms,id',
+            'subject_id' => 'required|exists:subjects,id',
+        ]);
+
+        // Vérifier l'unicité
+        $exists = ProfAssignment::where([
+            'prof_id' => $request->prof_id,
+            'level_id' => $request->level_id,
+            'class_id' => $request->class_id,
+            'subject_id' => $request->subject_id,
+        ])->exists();
+
+        if ($exists) {
+            return back()->with('error', 'Cette assignation existe déjà pour ce professeur.');
+        }
+
+        ProfAssignment::create($request->only([
+            'prof_id', 'level_id', 'class_id', 'subject_id'
+        ]));
+
+        return back()->with('success', 'Assignation du professeur enregistrée avec succès.');
+    }
+
+    /**
+     * Supprimer une assignation de professeur
+     */
+    public function destroyProfAssignment($id)
+    {
+        ProfAssignment::findOrFail($id)->delete();
+
+        return back()->with('success', 'Assignation supprimée avec succès.');
+    }
 
     public function index()
     {
@@ -45,17 +107,7 @@ class UserController extends Controller
             'class_id' => $request->class_id
         ]);
 
-        // Créer automatiquement une entrée d'absence pour aujourd'hui (présent par défaut)
-        if ($request->class_id) {
-            \App\Models\Absence::firstOrCreate([
-                'user_id' => $user->id,
-                'date' => now(),
-            ], [
-                'present' => 1
-            ]);
-        }
-
-        return back()->with('success', 'Étudiant assigné à la classe avec succès !');
+        return back();
     }
 
     /**
@@ -223,20 +275,6 @@ class UserController extends Controller
             'updated_at' => now()
         ]);
 
-        // Mettre à jour class_id sur l'utilisateur pour la compatibilité
-        $user = User::find($request->user_id);
-        if ($user) {
-            $user->update(['class_id' => $request->class_id]);
-
-            // Créer automatiquement une entrée d'absence pour aujourd'hui
-            \App\Models\Absence::firstOrCreate([
-                'user_id' => $user->id,
-                'date' => now(),
-            ], [
-                'present' => 1
-            ]);
-        }
-
         return redirect()->back()->with('success', 'Étudiant assigné à la classe avec succès!');
     }
 
@@ -258,20 +296,6 @@ class UserController extends Controller
                 'updated_at' => now()
             ]);
 
-        // Mettre à jour class_id sur l'utilisateur
-        $user = User::find($request->user_id);
-        if ($user) {
-            $user->update(['class_id' => $request->class_id]);
-
-            // Créer automatiquement une entrée d'absence pour aujourd'hui
-            \App\Models\Absence::firstOrCreate([
-                'user_id' => $user->id,
-                'date' => now(),
-            ], [
-                'present' => 1
-            ]);
-        }
-
         return redirect()->back()->with('success', 'Assignation modifiée avec succès!');
     }
 
@@ -280,20 +304,9 @@ class UserController extends Controller
      */
     public function destroyAssignment($pivotId)
     {
-        // Récupérer les infos AVANT de supprimer
-        $pivot = DB::table('class_user')->find($pivotId);
-
         DB::table('class_user')
             ->where('id', $pivotId)
             ->delete();
-
-        // Nettoyer class_id sur l'utilisateur si c'était sa seule classe
-        if ($pivot) {
-            $user = User::find($pivot->user_id);
-            if ($user && $user->class_id == $pivot->class_id) {
-                $user->update(['class_id' => null]);
-            }
-        }
 
         return redirect()->back()->with('success', 'Assignation supprimée avec succès!');
     }

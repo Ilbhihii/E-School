@@ -1,114 +1,92 @@
-@extends('layouts.front')
+@extends('layouts.guest')
 
-@section('title', "Compte en attente")
+@section('title', 'Compte en attente')
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-center min-vh-100 bg-gradient">
+<div class="text-center">
 
-<div class="container">
-<div class="row justify-content-center">
-<div class="col-md-6">
+    <!-- LOADER -->
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 209, 102, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+        <div class="spinner-border" style="width: 2rem; height: 2rem; color: #FFD166;" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+    </div>
 
-<div class="card shadow-lg border-0 rounded-4 text-center p-4 glass">
+    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">
+        Compte en attente ⏳
+    </h5>
 
-<!-- 🔄 LOADER -->
-<div class="mb-4">
-    <div class="spinner-border text-success" style="width: 4rem; height: 4rem;"></div>
+    <p class="mb-1" style="color: #6EE7B7; font-weight: 600; font-size: 0.9rem;">
+        Validation en cours...
+    </p>
+
+    <p class="mb-3" style="color: rgba(255,255,255,0.7); font-size: 0.95rem;">
+        👋 Bonjour <strong class="text-white">{{ auth()->user()->name ?? 'Étudiant' }}</strong>
+    </p>
+
+    <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; line-height: 1.6;">
+        Votre inscription est en cours de validation par l'administrateur.
+    </p>
+
+    <p class="mb-4" style="color: var(--3d-gold); font-weight: 600; font-size: 0.85rem;">
+        ⚡ Vous serez redirigé automatiquement après activation
+    </p>
+
+    <!-- STEPS -->
+    <div class="mb-4 text-start" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1rem;">
+        <div class="d-flex align-items-center gap-2 mb-2" style="color: rgba(255,255,255,0.6); font-size: 0.8rem;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,209,102,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #FFD166; animation: pulse 1.5s ease-in-out infinite;"></span>
+            </span>
+            Vérification du compte
+        </div>
+        <div class="d-flex align-items-center gap-2 mb-2" style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="bi bi-envelope" style="font-size: 0.7rem;"></i>
+            </span>
+            Email de confirmation
+        </div>
+        <div class="d-flex align-items-center gap-2" style="color: rgba(255,255,255,0.4); font-size: 0.8rem;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="bi bi-rocket-takeoff" style="font-size: 0.7rem;"></i>
+            </span>
+            Accès complet à la plateforme
+        </div>
+    </div>
+
+    @if (auth()->user()->created_at)
+        <p style="color: rgba(255,255,255,0.25); font-size: 0.75rem; margin-bottom: 1rem;">
+            Compte créé le {{ auth()->user()->created_at->format('d/m/Y') }}
+        </p>
+    @endif
+
+    <!-- LOGOUT -->
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit" class="btn-3d btn-3d-outline w-100 justify-content-center" style="padding: 12px;">
+            <i class="bi bi-box-arrow-right"></i>
+            Se déconnecter
+        </button>
+    </form>
+
 </div>
 
-
-
-<!-- TITLE -->
-<h3 class="fw-bold mb-2 text-dark">
-    Compte en attente ⏳
-</h3>
-
-<p class="text-success fw-semibold mb-3">
-    Validation en cours...
-</p>
-
-<!-- USER -->
-<h5 class="text-secondary mb-3">
-    Bonjour {{ auth()->user()->name ?? 'Étudiant' }} 👋
-</h5>
-
-<!-- MESSAGE -->
-<p class="text-muted mb-4">
-    Votre inscription est en cours de validation par l’administrateur.
-    <br>
-    <strong class="text-success">
-        Vous serez redirigé automatiquement après activation 🚀
-    </strong>
-</p>
-
-<!-- STEPS -->
-<div class="bg-light border rounded-3 p-3 text-start mb-4">
-    <ul class="mb-0 small text-muted">
-        <li>🔍 Vérification du compte</li>
-        <li>📩 Email de confirmation</li>
-        <li>🚀 Accès complet</li>
-    </ul>
-</div>
-
-<!-- BUTTON -->
-<form method="POST" action="{{ route('logout') }}">
-@csrf
-<button class="btn btn-dark w-100 rounded-3 py-2">
-    Se déconnecter
-</button>
-</form>
-
-<p class="text-muted small mt-3">
-    Créé le {{ auth()->user()->created_at?->format('d/m/Y') }}
-</p>
-
-</div>
-
-</div>
-</div>
-</div>
-
-</div>
-
-<!-- 🎨 STYLE -->
 <style>
-.bg-gradient {
-    background: linear-gradient(135deg, #eef2ff, #d1fae5);
-}
-
-.glass {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(10px);
-}
-
-/* Hover animation */
-.card:hover {
-    transform: translateY(-5px);
-    transition: 0.3s;
-}
-
-/* Dark mode */
-body.dark {
-    background: #0f172a;
-}
-body.dark .card {
-    background: #1e293b;
-    color: white;
-}
-body.dark .text-muted {
-    color: #cbd5f5 !important;
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
 }
 </style>
 
-<!-- 🔁 AUTO REDIRECT -->
+<!-- AUTO REDIRECT -->
 <script>
 setInterval(() => {
     fetch('/check-status')
         .then(res => res.json())
         .then(data => {
-            if(data.active){
-                window.location.href = "/dashboard";
+            if (data.active) {
+                window.location.href = '/dashboard';
             }
         });
 }, 5000);

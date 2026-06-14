@@ -14,6 +14,7 @@ use App\Http\Controllers\Front\HomeController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Student\TestController as StudentTestController;
 use App\Http\Controllers\Prof\ProfController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Prof\ScheduleController;
@@ -121,14 +122,21 @@ Route::middleware(['auth','isAdmin'])
     Route::resource('devoirs', DevoirController::class);
 
     Route::resource('classes', ClassController::class);
-    Route::resource('levels', LevelController::class);
+
+    // Navigation hiérarchique : Niveaux → Classes → Matières → Cours
+    Route::get('/levels/{level}/classes', [LevelController::class, 'classes'])->name('levels.classes');
+    Route::get('/levels/{level}/classes/{class}/subjects', [LevelController::class, 'subjects'])->name('levels.subjects');
+    Route::get('/levels/{level}/classes/{class}/subjects/{subject}/courses', [LevelController::class, 'courses'])->name('levels.courses');
+    Route::post('/levels/{level}/classes/{class}/subjects/attach', [LevelController::class, 'attachSubject'])->name('levels.subjects.attach');
+    Route::delete('/levels/{level}/classes/{class}/subjects/{subject}/detach', [LevelController::class, 'detachSubject'])->name('levels.subjects.detach');
+    Route::resource('levels', LevelController::class)->except(['create', 'edit', 'show']);
 
     Route::resource('users', UserController::class);
     Route::get('users/without-class', [UserController::class, 'withoutClass'])->name('users.without-class');
     Route::get('users/{user}/test-results', [UserController::class, 'testResults'])->name('users.test-results');
     Route::get('users/{userId}/test/{testId}/result', [UserController::class, 'showResult'])->name('users.test-result');
-    Route::post('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
-    Route::post('users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
+    Route::put('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
+    Route::put('users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
 
     Route::resource('lives', LiveController::class);
     
@@ -156,6 +164,11 @@ Route::middleware(['auth','isAdmin'])
     Route::post('/assign-class', [UserController::class, 'storeAssignment'])->name('assign.class.store');
     Route::patch('/assign-class/{pivot}', [UserController::class, 'updateAssignment'])->name('assign.class.update');
     Route::delete('/assign-class/{pivot}', [UserController::class, 'destroyAssignment'])->name('assign.class.destroy');
+
+    // Assignation des professeurs : niveau + classe + matière
+    Route::get('/prof-assignments', [UserController::class, 'profAssignments'])->name('users.prof-assignments');
+    Route::post('/prof-assignments', [UserController::class, 'storeProfAssignment'])->name('users.store-prof-assignment');
+    Route::delete('/prof-assignments/{id}', [UserController::class, 'destroyProfAssignment'])->name('users.destroy-prof-assignment');
 
     Route::get('/profile', function () {
         return view('admin.profile');
@@ -266,13 +279,17 @@ Route::middleware(['auth'])
     ->name('student.')
     ->group(function () {
 
-    Route::get('/classes', [StudentController::class, 'classes'])->name('classes');
+    Route::get('/levels', [StudentController::class, 'levels'])->name('levels');
 
-    Route::get('/classes/{class}/subjects', [StudentController::class, 'subjects'])->name('subjects');
+    Route::get('/subjects', [StudentController::class, 'indexSubjects'])->name('subjects.index');
 
-    Route::get('/classes/{class}/subjects/{subject}/courses', [StudentController::class, 'courses'])->name('courses');
+    Route::get('/subjects/{level}', [StudentController::class, 'subjects'])->name('subjects');
 
-    Route::get('/course/{course}', [StudentController::class, 'showCourse'])->name('course.show');
+    Route::get('/classes/{subject}/{level}', [StudentController::class, 'classes'])->name('classes');
+
+    Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');
+
+    Route::get('/course/{id}', [StudentController::class, 'showCourse'])->name('course.show');
 
     // Profile
     Route::get('/profile', [StudentController::class, 'profile'])->name('profile');
@@ -303,73 +320,15 @@ Route::middleware(['auth'])
     // Absences
     Route::get('/absences', [StudentController::class, 'absences'])->name('absences');
 
+    // Waiting (test completed / account pending activation)
+    Route::get('/waiting', [StudentController::class, 'waiting'])->name('waiting');
+
+    // Tests
+    Route::get('/tests', [StudentTestController::class, 'index'])->name('tests.index');
+    Route::get('/tests/{test}', [StudentTestController::class, 'show'])->name('tests.show');
+    Route::post('/tests/{test}', [StudentTestController::class, 'submit'])->name('tests.submit');
+
 });
-
-Route::get('/video/{filename}', function ($filename) {
-    // Sécurité : interdire les chemins relatifs
-    $filename = basename($filename);
-    $path = storage_path('app/public/videos/' . $filename);
-
-    if (!file_exists($path)) {
-        abort(404, 'Vidéo introuvable');
-    }
-
-    $size  = filesize($path);
-    $start = 0;
-    $end   = $size - 1;
-    $status = 200;
-
-    $headers = [
-        'Content-Type'              => 'video/mp4',
-        'Accept-Ranges'             => 'bytes',
-        'Cache-Control'             => 'no-cache, no-store',
-        'Content-Disposition'       => 'inline',
-        'X-Content-Type-Options'    => 'nosniff',
-    ];
-
-    // Gestion du Range (seekable video)
-    if (request()->hasHeader('Range')) {
-        $range = request()->header('Range');
-        preg_match('/bytes=(\d+)-(\d*)/', $range, $matches);
-
-        $start  = intval($matches[1]);
-        $end    = (isset($matches[2]) && $matches[2] !== '') ? intval($matches[2]) : $size - 1;
-        $end    = min($end, $size - 1);
-        $length = $end - $start + 1;
-        $status = 206;
-
-        $headers['Content-Range']  = "bytes {$start}-{$end}/{$size}";
-        $headers['Content-Length'] = $length;
-    } else {
-        $headers['Content-Length'] = $size;
-    }
-
-    $capturedStart = $start;
-    $capturedEnd   = $end;
-
-    return response()->stream(function () use ($path, $capturedStart, $capturedEnd) {
-        // Vider tous les buffers PHP avant de streamer
-        while (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-
-        $stream = fopen($path, 'rb');
-        fseek($stream, $capturedStart);
-        $remaining = $capturedEnd - $capturedStart + 1;
-
-        while (!feof($stream) && $remaining > 0) {
-            $chunkSize = min(1024 * 64, $remaining); // 64KB par chunk
-            $data = fread($stream, $chunkSize);
-            if ($data === false) break;
-            echo $data;
-            $remaining -= strlen($data);
-            flush();
-        }
-
-        fclose($stream);
-    }, $status, $headers);
-
-})->name('video.stream');
 
 /*
 |--------------------------------------------------------------------------
@@ -388,5 +347,7 @@ Route::get('/plans', [PlanController::class, 'index'])->name('plans');
 Route::get('/paypal/checkout', [PaymentController::class, 'paypalCheckout'])->name('paypal.checkout');
 
 Route::get('/payment', [PaymentController::class, 'index'])->name('student.payment');
+Route::post('/checkout', [PaymentController::class, 'checkout'])->name('student.checkout');
 
 ?>
+

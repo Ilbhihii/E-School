@@ -1,55 +1,47 @@
 @extends('layouts.student')
-
+@section('title', 'Matières - {{ $class->name ?? '' }}')
 @section('content')
-<div class="st-page">
-  <div class="st-container">
 
-    <div class="st-hero st-fade-up st-flex-between">
-      <div>
-        <div class="st-breadcrumb">
-          <a href="{{ route('student.classes') }}"><i class="bi bi-building me-1"></i>Classes</a>
-          <span>/</span>
-          <span class="current">{{ $class->name }}</span>
+<div class="page-header">
+    <div>
+        <div class="breadcrumb">
+            <a href="{{ route('student.subjects.index') }}"><i class="bi bi-book me-1"></i>Matières</a><span class="sep">/</span>
+            <span style="color:#94A3B8;">{{ $class->name }}</span>
         </div>
-        <h1><i class="bi bi-book-half me-2"></i>Matières — {{ $class->name }}</h1>
-        <p>Choisissez une matière pour voir les cours disponibles</p>
-      </div>
-      <div style="font-size: 2.5rem; opacity: .6;">
-        <i class="bi bi-book-half"></i>
-      </div>
+        <h1><i class="bi bi-book-half" style="color:#0284C7;"></i> Matières — {{ $class->name }}</h1>
+        <div class="subtitle">Choisissez une matière pour voir les cours disponibles</div>
     </div>
-
-    @if($subjects->isEmpty())
-      <div class="st-card st-fade-up">
-        <div class="st-empty">
-          <i class="bi bi-inbox"></i>
-          <h5>Aucune matière disponible</h5>
-          <p>Aucune matière n'est associée à cette classe pour le moment.</p>
-          <a href="{{ route('student.classes') }}" class="st-btn st-btn-outline">
-            <i class="bi bi-arrow-left me-1"></i> Retour aux classes
-          </a>
-        </div>
-      </div>
-    @else
-      <div class="row g-4">
-        @foreach($subjects as $subject)
-          @php $colors = ['bi-calculator','bi-flask','bi-translate','bi-globe','bi-palette','bi-music-note-beamed','bi-cpu','bi-graph-up']; @endphp
-          <div class="col-sm-6 col-lg-4 col-xl-3">
-            <a href="{{ route('student.courses', [$class, $subject]) }}" class="st-item st-item-{{ ['blue','green','purple','yellow','red','teal'][$loop->index % 6] }} st-fade-up" style="animation-delay: {{ $loop->index * 0.1 }}s;">
-              <div class="st-item-top">
-                <div class="st-item-icon"><i class="bi {{ $colors[$loop->index % count($colors)] }}"></i></div>
-                <h5>{{ $subject->name }}</h5>
-              </div>
-              <div class="st-item-bottom">
-                <span><i class="bi bi-collection me-1"></i>Voir les cours</span>
-                <div class="st-arrow"><i class="bi bi-arrow-right"></i></div>
-              </div>
-            </a>
-          </div>
-        @endforeach
-      </div>
-    @endif
-
-  </div>
 </div>
+
+@if($subjects->isEmpty())
+<div class="pr-empty"><div class="pr-empty-icon"><i class="bi bi-book"></i></div><h5>Aucune matière disponible</h5><p>Aucune matière n'est associée à cette classe pour le moment.</p><a href="{{ route('student.classes') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-arrow-left me-1"></i> Retour aux classes</a></div>
+@else
+<div class="row g-3">
+    @foreach($subjects as $subject)
+        @php
+            $icons = ['calculator','flask','translate','globe','palette','music-note-beamed','cpu','graph-up','book','pencil','journal','robot'];
+            $colors = ['#0284C7','#059669','#7C3AED','#D97706','#DC2626','#0891B2','#4F46E5','#9333EA'];
+            $color = $colors[$loop->index % count($colors)];
+            $icon = $icons[$loop->index % count($icons)];
+            list($r,$g,$b) = sscanf($color, '#%02x%02x%02x');
+        @endphp
+        <div class="col-sm-6 col-lg-4 col-xl-3">
+            <div style="background:#1E293B;border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:1.25rem;text-align:center;transition:all 0.2s ease;height:100%;" onmouseover="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
+                <div style="width:56px;height:56px;border-radius:50%;background:rgba({{ $r }},{{ $g }},{{ $b }},0.1);display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:{{ $color }};margin-bottom:0.75rem;"><i class="bi bi-{{ $icon }}"></i></div>
+                <h5 style="font-weight:700;color:#F1F5F9;margin-bottom:0.75rem;font-size:0.95rem;">{{ $subject->name }}</h5>
+                <div class="d-flex gap-2" style="width:100%;">
+                    <a href="{{ route('student.courses', [$level, $class, $subject]) }}" class="pr-btn pr-btn-primary pr-btn-sm" style="flex:1;font-size:0.7rem;justify-content:center;"><i class="bi bi-play-circle me-1"></i> Cours</a>
+                    <a href="{{ route('student.devoirs.subject', [$level, $class, $subject]) }}" class="pr-btn pr-btn-success pr-btn-sm" style="flex:1;font-size:0.7rem;justify-content:center;"><i class="bi bi-pencil me-1"></i> Devoirs</a>
+                </div>
+            </div>
+        </div>
+    @endforeach
+</div>
+<div class="pr-card mt-3">
+    <div class="pr-card-body">
+        <a href="{{ route('student.lives.class', [$level, $class]) }}" class="pr-btn pr-btn-danger pr-btn-sm"><i class="bi bi-broadcast me-1"></i> Voir tous les lives de {{ $class->name }}</a>
+    </div>
+</div>
+@endif
+
 @endsection

@@ -1,50 +1,46 @@
 @extends('layouts.student')
-
+@section('title', 'Mes Cours')
 @section('content')
-<div class="st-page">
-  <div class="st-container">
 
-    <div class="st-hero st-hero-green st-fade-up">
-      <h1><i class="bi bi-book-half me-2"></i>Mes Cours</h1>
-      <p>
-        @if($classes->count() > 0)
-          Choisissez une classe pour voir les cours
-        @else
-          Aucune classe assignée. Contactez l'administrateur.
-        @endif
-      </p>
-    </div>
-
-    @if($classes->count() > 0)
-      <div class="row g-4">
-        @foreach($classes as $class)
-          <div class="col-lg-4 col-md-6">
-            <a href="{{ route('student.classes') }}" class="st-item st-item-green st-fade-up" style="animation-delay: {{ $loop->index * 0.1 }}s;">
-              <div class="st-item-top">
-                <div class="st-item-icon"><i class="bi bi-building"></i></div>
-                <h5>{{ $class->name }}</h5>
-              </div>
-              <div class="st-item-bottom">
-                <span><i class="bi bi-play-circle me-1"></i>{{ $class->courses_count }} cours</span>
-                <div class="st-arrow"><i class="bi bi-arrow-right"></i></div>
-              </div>
-            </a>
-          </div>
-        @endforeach
-      </div>
-    @else
-      <div class="st-card st-fade-up">
-        <div class="st-empty">
-          <i class="bi bi-inbox"></i>
-          <h5>Aucune classe disponible</h5>
-          <p>Vous n'êtes assigné à aucune classe pour le moment.</p>
-          <a href="{{ route('student.dashboard') }}" class="st-btn st-btn-outline">
-            <i class="bi bi-house me-1"></i> Retour au Dashboard
-          </a>
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-book-half" style="color:#059669;"></i> Mes Cours</h1>
+        <div class="subtitle">
+            @if(isset($classes) && $classes->count() > 0)
+                Choisissez une classe pour voir les cours
+            @else
+                Aucune classe assignée. Contactez l'administrateur.
+            @endif
         </div>
-      </div>
-    @endif
-
-  </div>
+    </div>
 </div>
+
+@if(isset($classes) && $classes->count() > 0)
+<div class="row g-3">
+    @foreach($classes as $class)
+        @php $hue = ($loop->index * 60 + 180) % 360; @endphp
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ route('student.subjects.index') }}" style="text-decoration:none;display:block;">
+                <div style="background:#1E293B;border:1px solid rgba(255,255,255,0.04);border-radius:12px;overflow:hidden;transition:all 0.2s ease;" onmouseover="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
+                    <div style="height:120px;background:linear-gradient(135deg,hsl({{ $hue }},55%,50%),hsl({{ $hue + 30 }},50%,35%));display:flex;align-items:center;justify-content:center;position:relative;">
+                        <i class="bi bi-book-half" style="font-size:2.5rem;color:rgba(255,255,255,0.25);"></i>
+                    </div>
+                    <div style="padding:1rem 1.25rem;text-align:center;">
+                        <h4 style="font-weight:700;color:#F1F5F9;margin-bottom:0.5rem;font-size:1rem;">{{ $class->name }}</h4>
+                        <span class="pr-badge pr-badge-success"><i class="bi bi-play-circle me-1"></i>{{ $class->courses_count ?? 0 }} cours</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    @endforeach
+</div>
+@else
+<div class="pr-empty">
+    <div class="pr-empty-icon"><i class="bi bi-inbox"></i></div>
+    <h5>Aucune classe disponible</h5>
+    <p>Vous n'êtes assigné à aucune classe pour le moment.</p>
+    <a href="{{ route('student.dashboard') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-house me-2"></i> Retour au Dashboard</a>
+</div>
+@endif
+
 @endsection

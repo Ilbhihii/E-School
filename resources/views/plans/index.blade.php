@@ -43,8 +43,15 @@
                     <!-- Boutons -->
                     <div class="d-grid gap-2">
 
+                        <form method="POST" action="{{ route('student.checkout') }}">
+                            @csrf
+                            <button class="btn btn-primary rounded-pill w-100">
+                                💳 Payer par carte
+                            </button>
+                        </form>
+
                         <a href="{{ route('student.payment') }}?method=paypal"
-                           class="btn btn-primary rounded-pill">
+                           class="btn btn-outline-primary rounded-pill">
                             🅿️ PayPal
                         </a>
 

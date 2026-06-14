@@ -1,114 +1,108 @@
 @extends('layouts.student')
-
+@section('title', 'Paramètres')
 @section('content')
-<div class="st-page">
-  <div class="st-container">
 
-    @if (session('success'))
-      <div class="st-alert st-alert-success"><i class="bi bi-check-circle-fill"></i> {{ session('success') }}</div>
-    @endif
-    @if ($errors->any())
-      <div class="st-alert st-alert-danger">
-        @foreach ($errors->all() as $error)
-          <div>{{ $error }}</div>
-        @endforeach
-      </div>
-    @endif
-
-    {{-- Header --}}
-    <div class="st-hero st-hero-violet st-flex-between st-fade-up">
-      <div>
-        <h1><i class="bi bi-gear-fill me-2"></i>Paramètres du Compte</h1>
-        <p>Gérez votre profil et votre sécurité</p>
-      </div>
-      <div style="font-size: 2.5rem; opacity: .6;">
-        <i class="bi bi-gear"></i>
-      </div>
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-gear-fill" style="color:#4F46E5;"></i> Paramètres</h1>
+        <div class="subtitle">Gérez votre profil et votre sécurité</div>
     </div>
-
-    <div class="st-grid-2">
-      {{-- Profil --}}
-      <div class="st-card st-fade-up st-fade-up-d1">
-        <div class="st-card-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
-          <i class="bi bi-person-circle"></i>
-          <h5 style="color: white;">Mon Profil</h5>
-        </div>
-        <div class="st-card-body">
-          <form method="POST" action="{{ route('student.settings.profile.update') }}" enctype="multipart/form-data">
-            @csrf
-            @method('PUT')
-
-            <div class="text-center st-mb-4">
-              <div style="position: relative; display: inline-block;">
-                <img src="{{ auth()->user()->profile_photo_url ?? 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->name) . '&size=100&background=667eea&color=fff' }}"
-                     alt="Profile" class="rounded-circle border-3 border-white shadow-lg"
-                     style="width: 100px; height: 100px; object-fit: cover;">
-                <label for="profile_photo" class="position-absolute bottom-0 end-0 bg-primary rounded-circle p-2" style="cursor: pointer; margin: 0 5px 5px 0;" title="Changer la photo">
-                  <i class="bi bi-camera text-white fs-6"></i>
-                  <input type="file" id="profile_photo" name="profile_photo" class="d-none" accept="image/*">
-                </label>
-              </div>
-            </div>
-
-            <div class="st-form-group">
-              <label class="st-form-label">Nom Complet</label>
-              <input type="text" class="st-form-input @error('name') is-invalid @enderror" name="name" value="{{ old('name', auth()->user()->name) }}" required>
-              @error('name')<div class="st-form-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="st-form-group">
-              <label class="st-form-label">Adresse Email</label>
-              <input type="email" class="st-form-input @error('email') is-invalid @enderror" name="email" value="{{ old('email', auth()->user()->email) }}" required>
-              @error('email')<div class="st-form-error">{{ $message }}</div>@enderror
-            </div>
-
-            <button type="submit" class="st-btn st-btn-primary w-100">
-              <i class="bi bi-save"></i> Mettre à jour le Profil
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {{-- Password --}}
-      <div class="st-card st-fade-up st-fade-up-d2">
-        <div class="st-card-header" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;">
-          <i class="bi bi-lock-fill"></i>
-          <h5 style="color: white;">Changer le Mot de Passe</h5>
-        </div>
-        <div class="st-card-body">
-          <form method="POST" action="{{ route('student.settings.password.update') }}">
-            @csrf
-            @method('PUT')
-
-            <div class="st-form-group">
-              <label class="st-form-label">Mot de Passe Actuel</label>
-              <input type="password" class="st-form-input @error('current_password') is-invalid @enderror" name="current_password" required>
-              @error('current_password')<div class="st-form-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="st-form-group">
-              <label class="st-form-label">Nouveau Mot de Passe <small class="text-muted">(8 caractères min)</small></label>
-              <input type="password" class="st-form-input @error('password') is-invalid @enderror" name="password" required minlength="8">
-              @error('password')<div class="st-form-error">{{ $message }}</div>@enderror
-              <div style="font-size: 12px; color: var(--st-text-light); margin-top: 4px;">
-                <i class="bi bi-info-circle me-1"></i>Utilisez une combinaison de lettres, chiffres et symboles
-              </div>
-            </div>
-
-            <div class="st-form-group">
-              <label class="st-form-label">Confirmer le Nouveau Mot de Passe</label>
-              <input type="password" class="st-form-input @error('password_confirmation') is-invalid @enderror" name="password_confirmation" required>
-              @error('password_confirmation')<div class="st-form-error">{{ $message }}</div>@enderror
-            </div>
-
-            <button type="submit" class="st-btn w-100" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white; box-shadow: 0 4px 15px rgba(240,147,251,0.4);">
-              <i class="bi bi-key"></i> Changer le Mot de Passe
-            </button>
-          </form>
-        </div>
-      </div>
+    <div class="page-actions">
+        <a href="{{ route('student.profile') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-person-circle me-1"></i> Voir mon profil</a>
     </div>
-
-  </div>
 </div>
+
+@if(session('success'))
+<div class="pr-alert pr-alert-success mb-4"><i class="bi bi-check-circle-fill" style="flex-shrink:0;margin-top:1px;"></i> <span>{{ session('success') }}</span></div>
+@endif
+@if($errors->any())
+<div class="pr-alert pr-alert-danger mb-4">
+    <i class="bi bi-exclamation-circle-fill" style="flex-shrink:0;margin-top:1px;"></i>
+    <span><ul class="mb-0" style="list-style:none;padding-left:0;">@foreach($errors->all() as $e)<li>• {{ $e }}</li>@endforeach</ul></span>
+</div>
+@endif
+
+<div class="row g-3">
+    <!-- Profile -->
+    <div class="col-lg-6">
+        <div class="pr-card">
+            <div class="pr-card-header" style="background:rgba(79,70,229,0.04);">
+                <h4><i class="bi bi-person-circle" style="color:#4F46E5;"></i> Mon Profil</h4>
+            </div>
+            <div class="pr-card-body">
+                <form method="POST" action="{{ route('student.settings.profile.update') }}">
+                    @csrf @method('PUT')
+
+                    <div style="margin-bottom:1rem;">
+                        <label class="pr-label"><i class="bi bi-person-fill me-1" style="color:#4F46E5;"></i>Nom complet</label>
+                        <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" class="pr-input" required>
+                    </div>
+
+                    <div style="margin-bottom:1.25rem;">
+                        <label class="pr-label"><i class="bi bi-envelope-fill me-1" style="color:#4F46E5;"></i>Adresse Email</label>
+                        <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" class="pr-input" required>
+                    </div>
+
+                    <button type="submit" class="pr-btn pr-btn-primary" style="width:100%;justify-content:center;">
+                        <i class="bi bi-check2-circle"></i> Mettre à jour le profil
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password -->
+    <div class="col-lg-6">
+        <div class="pr-card">
+            <div class="pr-card-header" style="background:rgba(5,150,105,0.04);">
+                <h4><i class="bi bi-shield-lock-fill" style="color:#059669;"></i> Sécurité</h4>
+            </div>
+            <div class="pr-card-body">
+                <form method="POST" action="{{ route('student.settings.password.update') }}">
+                    @csrf @method('PUT')
+
+                    <div style="margin-bottom:1rem;">
+                        <label class="pr-label"><i class="bi bi-lock-fill me-1" style="color:#059669;"></i>Mot de passe actuel</label>
+                        <input type="password" name="current_password" class="pr-input" required placeholder="••••••••">
+                    </div>
+
+                    <div style="margin-bottom:1rem;">
+                        <label class="pr-label"><i class="bi bi-key-fill me-1" style="color:#059669;"></i>Nouveau mot de passe</label>
+                        <input type="password" name="password" class="pr-input" required minlength="8" placeholder="Minimum 8 caractères">
+                    </div>
+
+                    <div style="margin-bottom:1.25rem;">
+                        <label class="pr-label"><i class="bi bi-check-circle-fill me-1" style="color:#059669;"></i>Confirmer le mot de passe</label>
+                        <input type="password" name="password_confirmation" class="pr-input" required placeholder="Retaper le mot de passe">
+                    </div>
+
+                    <button type="submit" class="pr-btn pr-btn-success" style="width:100%;justify-content:center;">
+                        <i class="bi bi-lock-fill"></i> Changer le mot de passe
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="pr-card mt-3">
+    <div class="pr-card-header">
+        <h4><i class="bi bi-info-circle" style="color:#64748B;"></i> Informations du compte</h4>
+    </div>
+    <div class="pr-card-body">
+        <div class="row g-2">
+            @foreach([
+                ['label' => 'Rôle', 'value' => '<span class="pr-badge pr-badge-info">Étudiant</span>'],
+                ['label' => 'Membre depuis', 'value' => auth()->user()->created_at->format('d/m/Y')],
+                ['label' => 'Statut', 'value' => '<span class="pr-badge pr-badge-success"><i class="bi bi-check-circle-fill me-1"></i> Actif</span>'],
+            ] as $info)
+            <div class="col-md-4">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em;color:#64748B;font-weight:600;margin-bottom:2px;">{{ $info['label'] }}</div>
+                <div style="font-weight:500;font-size:0.85rem;color:#F1F5F9;">{!! $info['value'] !!}</div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+
 @endsection

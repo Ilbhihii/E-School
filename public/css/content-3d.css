@@ -1,0 +1,625 @@
+/**
+ * content-3d.css — Dark theme extension for admin/prof/student content areas
+ * Designed to complement layouts-3d.css and override Bootstrap defaults
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   RESET / BASE
+   ══════════════════════════════════════════════════════════════ */
+.content-3d h1, .content-3d h2, .content-3d h3,
+.content-3d h4, .content-3d h5, .content-3d h6 {
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.content-3d p, .content-3d .text-muted {
+    color: rgba(255,255,255,0.55) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGE HEADER
+   ══════════════════════════════════════════════════════════════ */
+.page-header-3d {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.page-header-3d h1 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    background: var(--3d-gradient-main);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CARDS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .card {
+    background: rgba(255,255,255,0.06) !important;
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 16px !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: rgba(255,255,255,0.85) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+}
+
+.content-3d .card:hover {
+    border-color: rgba(255,255,255,0.15) !important;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25) !important;
+}
+
+.content-3d .card-header {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    color: rgba(255,255,255,0.9) !important;
+    font-weight: 600;
+    padding: 1.25rem 1.5rem !important;
+}
+
+.content-3d .card-body {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+.content-3d .card-footer {
+    background: transparent !important;
+    border-top: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Stat cards */
+.content-3d .stat-card-3d {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.content-3d .stat-card-3d::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+}
+
+.content-3d .stat-card-3d.blue::before { background: var(--3d-gradient-main); }
+.content-3d .stat-card-3d.green::before { background: linear-gradient(90deg, #16A34A, #22C55E); }
+.content-3d .stat-card-3d.red::before { background: linear-gradient(90deg, #D90429, #EF4444); }
+.content-3d .stat-card-3d.purple::before { background: linear-gradient(90deg, #7C3AED, #A78BFA); }
+.content-3d .stat-card-3d.orange::before { background: linear-gradient(90deg, #FFD166, #FFB347); }
+.content-3d .stat-card-3d.cyan::before { background: linear-gradient(90deg, #06B6D4, #0891B2); }
+
+.content-3d .stat-card-3d:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255,255,255,0.15);
+    box-shadow: var(--3d-shadow-lg);
+}
+
+.content-3d .stat-card-3d .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+    transition: transform 0.3s ease;
+}
+
+.content-3d .stat-card-3d:hover .stat-icon {
+    transform: scale(1.1) translateY(-2px);
+}
+
+.content-3d .stat-card-3d .stat-icon.blue { background: rgba(0,58,143,0.2); color: #2563EB; }
+.content-3d .stat-card-3d .stat-icon.green { background: rgba(22,163,74,0.2); color: #22C55E; }
+.content-3d .stat-card-3d .stat-icon.red { background: rgba(217,4,41,0.2); color: #EF4444; }
+.content-3d .stat-card-3d .stat-icon.purple { background: rgba(124,58,237,0.2); color: #A78BFA; }
+.content-3d .stat-card-3d .stat-icon.orange { background: rgba(255,209,102,0.2); color: #FFD166; }
+.content-3d .stat-card-3d .stat-icon.cyan { background: rgba(6,182,212,0.2); color: #67E8F9; }
+
+.content-3d .stat-card-3d h3 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+}
+
+.content-3d .stat-card-3d .stat-label {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TABLES
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .table {
+    color: rgba(255,255,255,0.85) !important;
+    margin-bottom: 0;
+}
+
+.content-3d .table > :not(caption) > * > * {
+    border-color: rgba(255,255,255,0.06) !important;
+    padding: 12px 16px;
+    vertical-align: middle;
+}
+
+.content-3d .table thead th {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.5) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    background: transparent !important;
+}
+
+.content-3d .table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.content-3d .table tbody tr:hover {
+    background: rgba(255,255,255,0.03) !important;
+}
+
+.content-3d .table tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.02);
+}
+
+/* Table wrapper with glass effect */
+.content-3d .table-wrapper-3d {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.content-3d .table-wrapper-3d .table th {
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FORMS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .form-control,
+.content-3d .form-select {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 10px !important;
+    color: rgba(255,255,255,0.85) !important;
+    padding: 10px 14px;
+    transition: all 0.3s ease;
+}
+
+.content-3d .form-control:focus,
+.content-3d .form-select:focus {
+    border-color: rgba(124,58,237,0.5) !important;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15) !important;
+    background: rgba(255,255,255,0.08) !important;
+}
+
+.content-3d .form-control::placeholder {
+    color: rgba(255,255,255,0.3) !important;
+}
+
+.content-3d .form-label {
+    color: rgba(255,255,255,0.7) !important;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.content-3d .form-select option {
+    background: #1E293B;
+    color: white;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BUTTONS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .btn {
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+    border: none !important;
+    padding: 8px 20px;
+}
+
+.content-3d .btn:hover {
+    transform: translateY(-2px);
+}
+
+.content-3d .btn-primary {
+    background: var(--3d-gradient-main) !important;
+}
+.content-3d .btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(0,58,143,0.4) !important;
+}
+
+.content-3d .btn-success {
+    background: linear-gradient(135deg, #16A34A, #22C55E) !important;
+}
+.content-3d .btn-success:hover {
+    box-shadow: 0 8px 25px rgba(22,163,74,0.4) !important;
+}
+
+.content-3d .btn-danger {
+    background: linear-gradient(135deg, #D90429, #EF4444) !important;
+}
+.content-3d .btn-danger:hover {
+    box-shadow: 0 8px 25px rgba(217,4,41,0.4) !important;
+}
+
+.content-3d .btn-warning {
+    background: linear-gradient(135deg, #FFD166, #FFB347) !important;
+    color: #1E293B !important;
+}
+.content-3d .btn-warning:hover {
+    box-shadow: 0 8px 25px rgba(255,209,102,0.4) !important;
+}
+
+.content-3d .btn-info {
+    background: linear-gradient(135deg, #06B6D4, #0891B2) !important;
+    color: white !important;
+}
+.content-3d .btn-info:hover {
+    box-shadow: 0 8px 25px rgba(6,182,212,0.4) !important;
+}
+
+.content-3d .btn-outline-light {
+    border: 2px solid rgba(255,255,255,0.25) !important;
+    color: rgba(255,255,255,0.8) !important;
+    background: transparent !important;
+}
+.content-3d .btn-outline-light:hover {
+    background: rgba(255,255,255,0.1) !important;
+    color: white !important;
+}
+
+.content-3d .btn-outline-primary {
+    border: 2px solid rgba(0,58,143,0.5) !important;
+    color: #2563EB !important;
+    background: transparent !important;
+}
+.content-3d .btn-outline-primary:hover {
+    background: rgba(0,58,143,0.15) !important;
+    border-color: #003A8F !important;
+}
+
+.content-3d .btn-outline-danger {
+    border: 2px solid rgba(217,4,41,0.5) !important;
+    color: #EF4444 !important;
+    background: transparent !important;
+}
+.content-3d .btn-outline-danger:hover {
+    background: rgba(217,4,41,0.15) !important;
+}
+
+.content-3d .btn-sm {
+    padding: 6px 14px !important;
+    font-size: 0.8rem !important;
+}
+
+.content-3d .btn-lg {
+    padding: 12px 28px !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ALERTS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .alert {
+    border-radius: 12px !important;
+    border: none !important;
+    backdrop-filter: blur(10px);
+}
+
+.content-3d .alert-success {
+    background: rgba(16,185,129,0.15) !important;
+    color: #6EE7B7 !important;
+    border: 1px solid rgba(16,185,129,0.2) !important;
+}
+
+.content-3d .alert-danger {
+    background: rgba(239,68,68,0.15) !important;
+    color: #FCA5A5 !important;
+    border: 1px solid rgba(239,68,68,0.2) !important;
+}
+
+.content-3d .alert-warning {
+    background: rgba(255,209,102,0.15) !important;
+    color: #FDE68A !important;
+    border: 1px solid rgba(255,209,102,0.2) !important;
+}
+
+.content-3d .alert-info {
+    background: rgba(6,182,212,0.15) !important;
+    color: #67E8F9 !important;
+    border: 1px solid rgba(6,182,212,0.2) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BADGES
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .badge {
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.content-3d .badge.bg-primary { background: var(--3d-gradient-main) !important; }
+.content-3d .badge.bg-success { background: linear-gradient(135deg,#16A34A,#22C55E) !important; }
+.content-3d .badge.bg-danger { background: linear-gradient(135deg,#D90429,#EF4444) !important; }
+.content-3d .badge.bg-warning { background: linear-gradient(135deg,#FFD166,#FFB347) !important; color: #1E293B !important; }
+.content-3d .badge.bg-info { background: linear-gradient(135deg,#06B6D4,#0891B2) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   PAGINATION
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .pagination {
+    gap: 4px;
+}
+
+.content-3d .pagination .page-link {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    color: rgba(255,255,255,0.7) !important;
+    border-radius: 8px !important;
+    padding: 8px 14px;
+    transition: all 0.3s ease;
+}
+
+.content-3d .pagination .page-link:hover {
+    background: rgba(255,255,255,0.1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+}
+
+.content-3d .pagination .page-item.active .page-link {
+    background: var(--3d-gradient-main) !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 15px rgba(0,58,143,0.3);
+}
+
+.content-3d .pagination .page-item.disabled .page-link {
+    opacity: 0.3;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROGRESS BARS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .progress {
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    overflow: hidden;
+    height: 8px;
+}
+
+.content-3d .progress-bar {
+    background: var(--3d-gradient-main);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LIST GROUP
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .list-group {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.content-3d .list-group-item {
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.06) !important;
+    color: rgba(255,255,255,0.8) !important;
+    transition: background 0.2s ease;
+}
+
+.content-3d .list-group-item:hover {
+    background: rgba(255,255,255,0.03) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODALS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .modal-content {
+    background: rgba(15,23,42,0.97);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    color: rgba(255,255,255,0.85);
+}
+
+.content-3d .modal-header {
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.content-3d .modal-footer {
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.content-3d .btn-close {
+    filter: invert(1);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CUSTOM SCROLLBAR
+   ══════════════════════════════════════════════════════════════ */
+.content-3d::-webkit-scrollbar { width: 6px; }
+.content-3d::-webkit-scrollbar-track { background: transparent; }
+.content-3d::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+}
+.content-3d::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+/* ══════════════════════════════════════════════════════════════
+   HERO / GRADIENT HEADER
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .hero-3d-card {
+    background: var(--3d-gradient-hero);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.content-3d .hero-3d-card::before {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    top: -100px;
+    right: -100px;
+}
+
+.content-3d .hero-3d-card::after {
+    content: '';
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+    bottom: -80px;
+    left: -80px;
+}
+
+.content-3d .hero-3d-card > * { position: relative; z-index: 1; }
+.content-3d .hero-3d-card h1 { color: white !important; }
+.content-3d .hero-3d-card p { color: rgba(255,255,255,0.7) !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   ANIMATED ENTRIES
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .fade-up-3d {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp3d 0.5s ease forwards;
+    animation-play-state: paused;
+}
+
+@keyframes fadeUp3d {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.content-3d .stagger-1 { animation-delay: 0.05s; }
+.content-3d .stagger-2 { animation-delay: 0.1s; }
+.content-3d .stagger-3 { animation-delay: 0.15s; }
+.content-3d .stagger-4 { animation-delay: 0.2s; }
+.content-3d .stagger-5 { animation-delay: 0.25s; }
+.content-3d .stagger-6 { animation-delay: 0.3s; }
+
+/* ══════════════════════════════════════════════════════════════
+   QUICK ACTION CARDS
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .action-card-3d {
+    display: block;
+    text-decoration: none;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+    height: 100%;
+    color: rgba(255,255,255,0.8);
+}
+
+.content-3d .action-card-3d:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255,255,255,0.15);
+    box-shadow: var(--3d-shadow-lg);
+    color: white;
+    text-decoration: none;
+}
+
+.content-3d .action-card-3d .action-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+    transition: transform 0.3s ease;
+}
+
+.content-3d .action-card-3d:hover .action-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.content-3d .action-card-3d h5 {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: rgba(255,255,255,0.9) !important;
+    font-size: 1rem;
+}
+
+.content-3d .action-card-3d p {
+    color: rgba(255,255,255,0.4) !important;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AVATAR
+   ══════════════════════════════════════════════════════════════ */
+.content-3d .avatar-3d {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--3d-gradient-main);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .page-header-3d {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem 1.25rem;
+    }
+
+    .content-3d .stat-card-3d {
+        padding: 1rem;
+    }
+
+    .content-3d .stat-card-3d h3 {
+        font-size: 1.5rem;
+    }
+}

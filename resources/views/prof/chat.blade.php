@@ -1,264 +1,280 @@
 @extends('layouts.prof')
 
+@section('title', 'Chat Professeur')
+@section('page_title', 'Chat')
+@section('breadcrumb', 'Questions étudiants')
+
 @section('content')
+
 <style>
-:root {
-  --glass-bg: rgb(255, 255, 255);
-  --glass-border: rgba(255, 255, 255, 0.18);
-  --gradient-primary: linear-gradient(135deg, #949fd4 0%, #4b62a2 100%);
-  --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  --shadow-lg: 0 25px 45px -12px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 35px 60px -12px rgba(0, 0, 0, 0.15);
+.chat-prof-container {
+    max-width: 800px;
+    margin: 0 auto;
 }
-
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+.chat-prof-box {
+    height: calc(100vh - 280px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--adm-radius-lg, 16px);
+    overflow: hidden;
 }
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+.chat-prof-header {
+    background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.15));
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+.chat-prof-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(var(--gradient-primary));
-  border-radius: 3px;
+.chat-prof-messages::-webkit-scrollbar { width: 5px; }
+.chat-prof-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-prof-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.msg-row {
+    max-width: 78%;
+    animation: msgIn 0.25s ease-out;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #4f46e5, #7c3aed);
+@keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
-.message-bubble {
-  max-width: 75%;
-  word-wrap: break-word;
-  animation: slideIn 0.3s ease-out;
+.msg-row.prof { align-self: flex-end; }
+.msg-row.student { align-self: flex-start; }
+.msg-bubble {
+    border-radius: 18px;
+    padding: 12px 18px;
+    position: relative;
 }
-.message-prof {
-  background: var(--gradient-primary) !important;
-  margin-left: auto;
-  border-bottom-right-radius: 8px !important;
+.msg-bubble.prof {
+    background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.15));
+    border: 1px solid rgba(99,102,241,0.12);
+    border-bottom-right-radius: 4px;
 }
-.message-student {
-  background: white !important;
-  border-radius: 18px !important;
-  border-bottom-left-radius: 8px !important;
+.msg-bubble.student {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-bottom-left-radius: 4px;
 }
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+.msg-bubble .msg-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(99,102,241,0.8);
+    margin-bottom: 4px;
 }
-
-#delete-form {
-  box-shadow: var(--shadow-xl);
+.msg-bubble .msg-text {
+    color: rgba(255,255,255,0.9);
+    line-height: 1.6;
+    font-size: 0.92rem;
+    margin: 0 0 6px;
 }
-
-.deleted-message {
-  text-decoration: line-through !important;
+.msg-bubble .msg-text.deleted {
+    text-decoration: line-through;
+    color: rgba(255,255,255,0.4);
+    font-style: italic;
+}
+.msg-bubble .msg-time {
+    text-align: right;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.3);
+}
+.chat-prof-input {
+    background: rgba(15,23,42,0.5);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding: 1.25rem 1.5rem;
+}
+.chat-prof-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+.chat-prof-input-field {
+    flex: 1;
+    padding: 0.85rem 1.25rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    font-size: 0.92rem;
+    transition: all 0.25s ease;
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.85);
+    font-family: inherit;
+    outline: none;
+}
+.chat-prof-input-field:focus {
+    border-color: rgba(99,102,241,0.3);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.06);
+}
+.chat-prof-input-field::placeholder { color: rgba(255,255,255,0.2); }
+.chat-prof-checkbox {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    display: none;
+}
+.msg-row.prof .chat-prof-checkbox { left: -24px; }
+.msg-row.student .chat-prof-checkbox { right: -24px; }
+.chat-prof-select-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(15,23,42,0.9);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 1rem 1.5rem;
+    display: none;
+    z-index: 1000;
+}
+@media (max-width: 768px) {
+    .chat-prof-box { height: calc(100vh - 200px); border-radius: 0; margin: 0 -1rem; }
+    .msg-row { max-width: 90%; }
 }
 </style>
 
-<div class="container-fluid py-3 px-2 px-md-4">
-  <div class="row justify-content-center g-0">
-    <div class="col-12 col-md-11 col-lg-9 col-xl-7">
-      
-      <!-- HEADER -->
-      <div class="glass-card mb-4 p-0 rounded-3 shadow-lg overflow-hidden">
-        <div class="bg-gradient-primary text-black p-4 p-md-5 position-relative rounded-top-3">
-          <div class="position-absolute inset-0 bg-white opacity-5"></div>
-          <div class="position-relative">
-            <h1 class="h3 fw-black mb-2 mb-md-3 d-flex align-items-center gap-2">
-              💬 Chat Professor
-            </h1>
-            <div class="d-flex flex-column flex-md-row gap-2">
-              <span class="badge bg-light text-dark px-3 py-2 rounded-pill fw-semibold shadow-sm">
-                📚 {{ $subject->name }}
-              </span>
-              <span class="badge bg-success rounded-circle" style="width: 10px; height: 10px;"></span>
-              <small class="text-black-50">Discussion étudiants</small>
+<div class="chat-prof-container">
+    <div class="chat-prof-box">
+        <div class="chat-prof-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:1.4rem;">💬</span>
+                <div>
+                    <div style="font-weight:700;color:rgba(255,255,255,0.9);">{{ $subject->name ?? 'Chat' }}</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Discussion avec les étudiants</div>
+                </div>
             </div>
-          </div>
+            <button id="selectToggleProf" class="adm-btn adm-btn-ghost adm-btn-sm">
+                <i class="bi bi-check-square me-1"></i> <span id="toggleTextProf">Sélectionner</span>
+            </button>
         </div>
-      </div>
 
-      <!-- SELECT MODE TOGGLE -->
-      <button id="selectToggle" class="btn btn-outline-primary btn-sm rounded-pill px-4 py-2 mb-3 shadow-sm w-100 w-md-auto">
-        <i class="bi bi-check-square me-2"></i><span id="toggleText">Sélectionner</span>
-      </button>
-
-      <!-- MESSAGES -->
-      <div id="messagesContainer" class="card border-0 shadow-lg rounded-3 glass-card mb-4 h-75vh overflow-hidden custom-scrollbar">
-        <div class="card-body p-3 p-md-4 h-100 d-flex flex-column">
-          <div id="messagesList" class="flex-grow-1 overflow-y-auto pb-3">
+        <div class="chat-prof-messages" id="profMsgList">
             @forelse($messages as $msg)
-              <div class="message-item py-2 {{ $msg->user_id == auth()->id() ? 'justify-content-end' : '' }}" data-id="{{ $msg->id }}">
-                @if($msg->user_id == auth()->id())
-                  <!-- PROF MESSAGE -->
-                  <div class="message-bubble message-prof p-3 rounded-3 shadow-sm position-relative" style="max-width: 80%;">
-                    <div class="message-text {{ $msg->deleted_at ? 'deleted-message text-muted opacity-75' : '' }}">{{ $msg->message }}</div>
-@if($msg->deleted_at)
-                    <div class="small text-danger fst-italic mt-1">
-                      ✂️ Supprimé le {{ $msg->deleted_at->format('d/m H:i') }}
-                    </div>
-@endif
-                    <small class="d-block mt-1 opacity-75 text-end">{{ $msg->created_at->diffForHumans() }}</small>
-                    <div class="checkbox-container position-absolute top-50 start-0 translate-middle ms-n3 d-none">
-                      <input type="checkbox" name="messages[]" value="{{ $msg->id }}" class="form-check-input rounded-circle shadow">
-                    </div>
-                  </div>
-                @else
-                  <!-- STUDENT MESSAGE -->
-                  <div class="d-flex gap-3 align-items-start">
-                    <div class="flex-shrink-0 mt-1">
-                      <div class="avatar bg-gradient-info text-black rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 42px; height: 42px; font-weight: 600;">
-                        {{ substr($msg->user->name ?? 'E', 0, 1) }}
-                      </div>
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="name-time small text-muted mb-1 fw-semibold d-flex align-items-center gap-1">
-                        {{ $msg->user->name ?? 'Étudiant' }}
-                        <span class="badge bg-success rounded-pill" style="font-size: 0.65em;"></span>
-                      </div>
-                      <div class="message-bubble message-student p-3 rounded-3 shadow-sm position-relative" style="max-width: 80%;">
-                        <div class="message-text {{ $msg->deleted_at ? 'deleted-message text-muted opacity-75' : '' }}">{{ $msg->message }}</div>
-@if($msg->deleted_at)
-                        <div class="small text-danger fst-italic mt-1">
-                          ✂️ Supprimé le {{ $msg->deleted_at->format('d/m H:i') }}
-                        </div>
-@endif
-                        <small class="d-block mt-1 opacity-75">{{ $msg->created_at->diffForHumans() }}</small>
-                        <div class="checkbox-container position-absolute top-50 end-0 translate-middle me-n3 d-none">
-                          <input type="checkbox" name="messages[]" value="{{ $msg->id }}" class="form-check-input rounded-circle shadow">
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                @endif
-              </div>
+            <div class="msg-row {{ $msg->user_id == auth()->id() ? 'prof' : 'student' }}" data-id="{{ $msg->id }}" style="position:relative;">
+                <div class="msg-bubble {{ $msg->user_id == auth()->id() ? 'prof' : 'student' }}">
+                    @if($msg->user_id != auth()->id())
+                    <div class="msg-name">{{ $msg->user->name ?? 'Étudiant' }}</div>
+                    @endif
+                    <p class="msg-text {{ $msg->deleted_at ? 'deleted' : '' }}">{{ $msg->message }}</p>
+                    @if($msg->deleted_at)
+                    <div style="color:#FCA5A5;font-style:italic;font-size:0.78rem;margin-top:4px;">✂️ Supprimé le {{ $msg->deleted_at->format('d/m H:i') }}</div>
+                    @endif
+                    <div class="msg-time">{{ $msg->created_at->diffForHumans() }}</div>
+                </div>
+                <div class="chat-prof-checkbox" style="position:absolute;{{ $msg->user_id == auth()->id() ? 'left:-28px' : 'right:-28px' }};top:50%;transform:translateY(-50%);display:none;">
+                    <input type="checkbox" value="{{ $msg->id }}" class="msg-checkbox" style="width:18px;height:18px;cursor:pointer;accent-color:#6366F1;">
+                </div>
+            </div>
             @empty
-              <div class="text-center py-5 text-muted">
-                <i class="bi bi-chat-square-text fs-1 opacity-50 mb-3 d-block"></i>
-                <p>Aucun message pour le moment</p>
-              </div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);text-align:center;padding:3rem 2rem;">
+                <div style="width:72px;height:72px;background:rgba(255,255,255,0.04);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;font-size:1.75rem;">💬</div>
+                <h5 style="color:rgba(255,255,255,0.4);font-weight:600;margin-bottom:0.5rem;">Aucun message</h5>
+                <p style="color:rgba(255,255,255,0.3);max-width:400px;font-size:0.85rem;">Les étudiants n'ont pas encore envoyé de message.</p>
+            </div>
             @endforelse
-          </div>
         </div>
-      </div>
 
-      <!-- SEND FORM -->
-      <form method="POST" action="{{ route('prof.chat.send') }}" class="card border-0 glass-card shadow-lg rounded-3 p-0 overflow-hidden">
-        @csrf
-        <input type="hidden" name="subject_id" value="{{ $subject->id }}">
-        <div class="input-group input-group-lg">
-          <input type="text" 
-                 name="message" 
-                 class="form-control border-0 ps-4 bg-transparent" 
-                 placeholder="✍️ Tapez votre message..." 
-                 required 
-                 autocomplete="off"
-                 style="font-size: 1.1rem;">
-          <button type="submit" class="btn btn-success btn-lg px-4 shadow-none">
-            <i class="bi bi-send-fill fs-5"></i>
-          </button>
+        <div class="chat-prof-input">
+            <form method="POST" action="{{ route('prof.chat.send') }}" class="chat-prof-form">
+                @csrf
+                <input type="hidden" name="subject_id" value="{{ $subject->id ?? '' }}">
+                <input type="text" name="message" class="chat-prof-input-field" placeholder="✍️ Tapez votre message..." required autocomplete="off">
+                <button type="submit" class="adm-btn adm-btn-primary" style="padding:0.85rem 1.5rem;border-radius:12px;white-space:nowrap;">
+                    <i class="bi bi-send-fill me-1"></i> Envoyer
+                </button>
+            </form>
         </div>
-      </form>
     </div>
-  </div>
+
+    <div class="chat-prof-select-bar" id="deleteBarProf">
+        <form method="POST" action="{{ route('prof.chat.delete') }}" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            @csrf @method('DELETE')
+            <input type="hidden" name="subject_id" value="{{ $subject->id ?? '' }}">
+            <span style="color:rgba(255,255,255,0.6);font-size:0.85rem;" id="countLabelProf">0 sélectionné(s)</span>
+            <div style="display:flex;gap:8px;">
+                <button type="button" id="selectAllProf" class="adm-btn adm-btn-ghost adm-btn-sm">Tout</button>
+                <button type="button" id="cancelProf" class="adm-btn adm-btn-ghost adm-btn-sm">Annuler</button>
+                <button type="submit" class="adm-btn adm-btn-danger adm-btn-sm" id="confirmDeleteProf" disabled>
+                    <i class="bi bi-trash me-1"></i> Supprimer
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
-
-<!-- DELETE FORM - Full width sticky bottom -->
-<form id="deleteForm" method="POST" action="{{ route('prof.chat.delete') }}" class="card border-0 shadow-lg rounded-0 position-fixed bottom-0 start-0 end-0 m-0 p-3 glass-card d-none">
-  @csrf
-  @method('DELETE')
-  <input type="hidden" name="subject_id" value="{{ $subject->id }}">
-  <div class="row align-items-center g-2">
-    <div class="col">
-      <small class="text-black fw-semibold" id="countLabel">0 sélectionné(s)</small>
-    </div>
-    <div class="col-auto">
-      <button type="button" id="selectAllBtn" class="btn btn-outline-light btn-sm me-2">Tout</button>
-      <button type="button" id="cancelBtn" class="btn btn-outline-light btn-sm me-2">Annuler</button>
-      <button type="submit" id="confirmDelete" class="btn btn-danger btn-sm px-3">
-        <i class="bi bi-trash me-1"></i>Supprimer
-      </button>
-    </div>
-  </div>
-</form>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const selectToggle = document.getElementById('selectToggle');
-  const messagesContainer = document.getElementById('messagesList');
-  const deleteForm = document.getElementById('deleteForm');
-  const checkboxes = document.querySelectorAll('input[name="messages[]"]');
-  const countLabel = document.getElementById('countLabel');
-  const toggleText = document.getElementById('toggleText');
-  
-  let selectMode = false;
+    const msgList = document.getElementById('profMsgList');
+    if (msgList) {
+        msgList.scrollTop = msgList.scrollHeight;
+        new MutationObserver(() => { msgList.scrollTop = msgList.scrollHeight; })
+            .observe(msgList, { childList: true, subtree: true });
+    }
 
-  // Toggle select mode
-  selectToggle.addEventListener('click', function() {
-    selectMode = !selectMode;
-    toggleText.textContent = selectMode ? 'Annuler' : 'Sélectionner';
-    selectToggle.classList.toggle('btn-primary', selectMode);
-    selectToggle.classList.toggle('btn-outline-primary', !selectMode);
-    
-    document.querySelectorAll('.checkbox-container').forEach(cb => {
-      cb.classList.toggle('d-none', !selectMode);
+    let selectMode = false;
+    const toggle = document.getElementById('selectToggleProf');
+    const toggleText = document.getElementById('toggleTextProf');
+    const deleteBar = document.getElementById('deleteBarProf');
+    const countLabel = document.getElementById('countLabelProf');
+    const confirmBtn = document.getElementById('confirmDeleteProf');
+    const checkboxes = () => document.querySelectorAll('.msg-checkbox');
+    const containers = () => document.querySelectorAll('.chat-prof-checkbox');
+
+    toggle.addEventListener('click', function() {
+        selectMode = !selectMode;
+        toggleText.textContent = selectMode ? 'Annuler' : 'Sélectionner';
+        toggle.classList.toggle('adm-btn-primary', selectMode);
+        toggle.classList.toggle('adm-btn-ghost', !selectMode);
+        containers().forEach(c => c.style.display = selectMode ? 'block' : 'none');
+        deleteBar.style.display = selectMode ? 'block' : 'none';
+        if (!selectMode) {
+            checkboxes().forEach(cb => cb.checked = false);
+            updateCount();
+        }
     });
-    
-    deleteForm.classList.toggle('d-none', !selectMode);
-    if (!selectMode) {
-      checkboxes.forEach(cb => cb.checked = false);
-      updateCount();
+
+    function updateCount() {
+        const checked = Array.from(checkboxes()).filter(cb => cb.checked).length;
+        countLabel.textContent = `${checked} sélectionné${checked > 1 ? 's' : ''}`;
+        confirmBtn.disabled = checked === 0;
     }
-  });
+    checkboxes().forEach(cb => cb.addEventListener('change', updateCount));
 
-  // Update selection count
-  function updateCount() {
-    const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
-    countLabel.textContent = `${checked} sélectionné${checked === 1 ? '' : 's'}`;
-    document.getElementById('confirmDelete').disabled = checked === 0;
-  }
+    document.getElementById('selectAllProf').addEventListener('click', () => {
+        checkboxes().forEach(cb => cb.checked = true);
+        updateCount();
+    });
+    document.getElementById('cancelProf').addEventListener('click', () => {
+        checkboxes().forEach(cb => cb.checked = false);
+        updateCount();
+        selectMode = false;
+        toggleText.textContent = 'Sélectionner';
+        toggle.classList.add('adm-btn-ghost');
+        toggle.classList.remove('adm-btn-primary');
+        containers().forEach(c => c.style.display = 'none');
+        deleteBar.style.display = 'none';
+    });
 
-  // Checkbox events
-  checkboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', updateCount);
-  });
+    document.getElementById('deleteBarProf').querySelector('form').addEventListener('submit', function(e) {
+        const count = Array.from(checkboxes()).filter(cb => cb.checked).length;
+        if (!count || !confirm(`⚠️ Supprimer ${count} message${count > 1 ? 's' : ''} ?`)) e.preventDefault();
+    });
 
-  // Select all
-  document.getElementById('selectAllBtn').addEventListener('click', function() {
-    checkboxes.forEach(cb => cb.checked = true);
-    updateCount();
-  });
-
-  // Cancel selection
-  document.getElementById('cancelBtn').addEventListener('click', function() {
-    checkboxes.forEach(cb => cb.checked = false);
-    updateCount();
-    selectMode = false;
-    toggleText.textContent = 'Sélectionner';
-    selectToggle.classList.remove('btn-primary');
-    selectToggle.classList.add('btn-outline-primary');
-    document.querySelectorAll('.checkbox-container').forEach(cb => cb.classList.add('d-none'));
-    deleteForm.classList.add('d-none');
-  });
-
-  // Auto-scroll to bottom
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  
-  // Delete confirmation
-  document.getElementById('deleteForm').addEventListener('submit', function(e) {
-    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-    if (!confirm(`⚠️ Supprimer ${checkedCount} message${checkedCount > 1 ? 's' : ''} ? Irreversible.`)) {
-      e.preventDefault();
+    const input = document.querySelector('.chat-prof-input-field');
+    const form = document.querySelector('.chat-prof-form');
+    if (input && form) {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.submit(); }
+        });
     }
-  });
 });
 </script>
 
 @endsection
-

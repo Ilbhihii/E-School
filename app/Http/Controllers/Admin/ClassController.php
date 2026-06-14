@@ -68,10 +68,11 @@ public function assignForm()
     }
 
     // ✅ FORMULAIRE CREATE
-    public function create()
+    public function create(Request $request)
     {
         $levels = Level::all();
-        return view('admin.classes.create', compact('levels'));
+        $selectedLevelId = $request->get('level_id');
+        return view('admin.classes.create', compact('levels', 'selectedLevelId'));
     }
 
     // ✅ ENREGISTREMENT

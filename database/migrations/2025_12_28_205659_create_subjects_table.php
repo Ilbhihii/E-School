@@ -13,17 +13,17 @@ class CreateSubjectsTable extends Migration
      */
     public function up()
     {
-        if (!Schema::hasTable('subjects')) {
-            Schema::create('subjects', function (Blueprint $table) {
-                $table->id();
-                $table->string('name');
-                // originally class_room_id, now altered in later migration
-                $table->foreignId('class_id')
-                    ->constrained('class_rooms')
-                    ->onDelete('cascade');
-                $table->timestamps();
-            });
-        }
+        Schema::create('subjects', function (Blueprint $table) {
+
+            $table->id();
+
+            $table->string('name');
+
+            $table->string('type');
+
+            $table->timestamps();
+
+        });
     }
 
     /**

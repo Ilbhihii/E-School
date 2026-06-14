@@ -1,64 +1,40 @@
 @extends('layouts.student')
-
 @section('title', 'Tests disponibles')
-
 @section('content')
-<div class="st-page">
-  <div class="st-container">
 
-    <div class="st-hero st-hero-violet st-fade-up st-flex-between">
-      <div>
-        <h1><i class="bi bi-pencil-square me-2"></i>Tests disponibles</h1>
-        <p>Testez vos connaissances avec nos évaluations</p>
-      </div>
-      <div style="font-size: 2.5rem; opacity: .6;">
-        <i class="bi bi-pencil-square"></i>
-      </div>
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-pencil-square" style="color:#7C3AED;"></i> Tests disponibles</h1>
+        <div class="subtitle">Évaluez vos connaissances</div>
     </div>
-
-    @if($tests->count() > 0)
-      <div class="st-card st-fade-up st-fade-up-d1">
-        <div class="st-table-wrap">
-          <table class="st-table">
-            <thead>
-              <tr>
-                <th>Titre</th>
-                <th>Matière</th>
-                <th>Durée</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @forelse($tests as $test)
-                <tr>
-                  <td style="font-weight: 600;">{{ $test->title }}</td>
-                  <td>{{ $test->subject->name }}</td>
-                  <td>{{ $test->duration }} min</td>
-                  <td>
-                    <a href="{{ route('student.tests.show', $test) }}" class="st-btn st-btn-primary st-btn-sm">
-                      <i class="bi bi-play-circle me-1"></i> Passer le test
-                    </a>
-                  </td>
-                </tr>
-              @empty
-                <tr>
-                  <td colspan="4" class="text-center" style="padding: 2rem; color: var(--st-text-light);">Aucun test disponible</td>
-                </tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
-      </div>
-    @else
-      <div class="st-card st-fade-up">
-        <div class="st-empty">
-          <i class="bi bi-pencil"></i>
-          <h5>Aucun test disponible</h5>
-          <p>Les tests apparaîtront ici dès qu'ils seront publiés</p>
-        </div>
-      </div>
-    @endif
-
-  </div>
 </div>
+
+@if($tests->count() > 0)
+<div class="row g-3">
+    @foreach($tests as $test)
+    <div class="col-lg-4 col-md-6">
+        <div style="background:#1E293B;border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:1.25rem;transition:all 0.2s ease;height:100%;display:flex;flex-direction:column;" onmouseover="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div style="width:44px;height:44px;border-radius:10px;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#7C3AED;flex-shrink:0;"><i class="bi bi-pencil-fill"></i></div>
+                <div>
+                    <h5 style="font-weight:600;color:#F1F5F9;margin:0;font-size:0.9rem;">{{ $test->title }}</h5>
+                    <small style="color:#64748B;">{{ $test->subject->name ?? 'Matière' }}</small>
+                </div>
+            </div>
+            <div style="flex:1;"></div>
+            <div class="d-flex align-items-center justify-content-between pt-3" style="border-top:1px solid rgba(255,255,255,0.04);">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <i class="bi bi-clock" style="color:#64748B;font-size:0.82rem;"></i>
+                    <span style="font-size:0.78rem;color:#64748B;">{{ $test->duration }} min</span>
+                </div>
+                <a href="{{ route('student.tests.show', $test) }}" class="pr-btn pr-btn-primary pr-btn-sm"><i class="bi bi-play-fill me-1"></i> Passer le test</a>
+            </div>
+        </div>
+    </div>
+    @endforeach
+</div>
+@else
+<div class="pr-empty"><div class="pr-empty-icon"><i class="bi bi-pencil"></i></div><h5>Aucun test disponible</h5><p>Les tests apparaîtront ici dès qu'ils seront créés par vos professeurs.</p></div>
+@endif
+
 @endsection

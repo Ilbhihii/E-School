@@ -1,54 +1,56 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="admin-page">
-    <div class="admin-container" style="max-width:800px">
+@section('title', 'Mon Profil')
+@section('page_title', 'Profil')
+@section('breadcrumb', 'Mon profil')
 
-        <!-- HEADER -->
-        <div class="admin-header" style="text-align:center;flex-direction:column;">
-            <div style="width:120px;height:120px;background:linear-gradient(135deg,#003A8F,#0F3460);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;box-shadow:0 15px 40px rgba(0,58,143,0.3);">
-                <i class="bi bi-person-circle" style="font-size:3.5rem;color:white;"></i>
-            </div>
-            <div>
-                <h1 class="admin-header-title"><span class="gradient">Mon Profil Administrateur</span></h1>
-                <span class="adm-badge adm-badge-primary" style="margin-top:0.5rem;"><i class="bi bi-shield-check-fill"></i> Admin Vérifié</span>
+@section('content')
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="adm-card">
+            <div class="adm-card-body" style="text-align:center;padding:2.5rem;">
+                <div class="adm-avatar adm-avatar-lg" style="width:100px;height:100px;font-size:2rem;margin:0 auto 1.25rem;background:var(--adm-gradient-primary);border-radius:50%;">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                </div>
+                <h3 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.25rem;">{{ auth()->user()->name }}</h3>
+                <span class="adm-badge adm-badge-primary" style="margin-bottom:1rem;">{{ ucfirst(auth()->user()->role) }}</span>
             </div>
         </div>
 
-        <!-- INFOS -->
-        <div class="adm-card">
+        <div class="adm-card mt-4">
+            <div class="adm-card-header">
+                <h4><i class="bi bi-info-circle" style="color:rgba(255,255,255,0.35);"></i> Informations personnelles</h4>
+            </div>
             <div class="adm-card-body">
-                <div class="adm-detail-row">
-                    <div class="adm-detail-item">
-                        <label>Nom complet</label>
-                        <div class="value">{{ auth()->user()->name }}</div>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Nom complet</label>
+                        <div style="font-weight:600;color:rgba(255,255,255,0.85);">{{ auth()->user()->name }}</div>
                     </div>
-                    <div class="adm-detail-item">
-                        <label>Email</label>
-                        <div class="value" style="font-family:monospace;">{{ auth()->user()->email }}</div>
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Email</label>
+                        <div style="font-weight:500;color:rgba(255,255,255,0.75);">{{ auth()->user()->email }}</div>
                     </div>
-                    <div class="adm-detail-item">
-                        <label>Rôle</label>
-                        <div class="value"><span class="adm-badge adm-badge-primary">{{ ucfirst(auth()->user()->role) }}</span></div>
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Rôle</label>
+                        <div><span class="adm-badge adm-badge-primary">{{ ucfirst(auth()->user()->role) }}</span></div>
                     </div>
-                    <div class="adm-detail-item">
-                        <label>Inscrit le</label>
-                        <div class="value">{{ auth()->user()->created_at->format('d/m/Y') }}</div>
+                    <div class="col-md-6">
+                        <label class="adm-form-label">Membre depuis</label>
+                        <div style="color:var(--adm-text-muted);">{{ auth()->user()->created_at->format('d/m/Y') }}</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ACTIONS -->
-        <div class="adm-flex adm-gap-2 adm-mt-3" style="justify-content:center;">
-            <a href="{{ route('admin.settings') }}" class="adm-btn adm-btn-primary adm-btn-lg">
-                <i class="bi bi-gear-fill"></i> Modifier Profil
+        <div style="text-align:center;margin-top:2rem;">
+            <a href="{{ route('admin.settings') }}" class="adm-btn adm-btn-primary">
+                <i class="bi bi-gear"></i> Modifier le profil
             </a>
-            <a href="{{ route('admin.dashboard') }}" class="adm-btn adm-btn-ghost adm-btn-lg">
+            <a href="{{ route('admin.dashboard') }}" class="adm-btn adm-btn-ghost ms-2">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
         </div>
-
     </div>
 </div>
 @endsection

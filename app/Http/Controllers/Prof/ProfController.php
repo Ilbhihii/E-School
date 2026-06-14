@@ -102,14 +102,9 @@ $classes = ClassRoom::all();
 
     public function getStudents($id)
     {
-        $classRoom = ClassRoom::findOrFail($id);
+$classRoom = ClassRoom::findOrFail($id);
 
-        // Récupérer les étudiants depuis les DEUX sources (class_id direct + pivot class_user)
-        $directStudents = $classRoom->users()->where('role', 'student')->select('id', 'name')->get();
-        $pivotStudents = $classRoom->students()->where('role', 'student')->select('users.id', 'users.name')->get();
-
-        // Fusionner sans doublons (préserver la clé id)
-        $students = $directStudents->concat($pivotStudents)->unique('id')->values();
+        $students = $classRoom->users()->where('role', 'student')->select('id', 'name')->get();
 
         return response()->json($students);
     }

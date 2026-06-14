@@ -1,106 +1,115 @@
 @extends('layouts.admin')
 
+@section('title', 'Gestion des Cours')
+@section('page_title', 'Cours')
+@section('breadcrumb', 'Gestion des cours')
+
 @section('content')
-<div class="admin-page">
-    <div class="admin-container">
 
-        <!-- HEADER -->
-        <div class="admin-header">
-            <div>
-                <h1 class="admin-header-title"><span class="gradient">📘 Gestion des Cours</span></h1>
-                <p class="admin-header-subtitle">Administration des contenus pédagogiques</p>
-            </div>
-            <a href="{{ route('admin.courses.create') }}" class="adm-btn adm-btn-primary">
-                <i class="bi bi-plus-lg"></i> Ajouter cours
-            </a>
-        </div>
-
-        <!-- STATS -->
-        <div class="stats-grid">
-            <div class="stat-card green adm-fade-up">
-                <div class="stat-card-icon green"><i class="bi bi-book-fill"></i></div>
-                <div>
-                    <div class="stat-card-value">{{ $courses->count() }}</div>
-                    <div class="stat-card-label">Total cours</div>
-                </div>
-            </div>
-            <div class="stat-card blue adm-fade-up">
-                <div class="stat-card-icon blue"><i class="bi bi-clock-history"></i></div>
-                <div>
-                    <div class="stat-card-value">{{ $courses->where('created_at','>',now()->subDays(7))->count() }}</div>
-                    <div class="stat-card-label">Cours récents (7j)</div>
-                </div>
-            </div>
-            <div class="stat-card purple adm-fade-up">
-                <div class="stat-card-icon purple"><i class="bi bi-bar-chart-fill"></i></div>
-                <div>
-                    <div class="stat-card-value">{{ $courses->where('created_at','>',now()->subDays(30))->count() }}</div>
-                    <div class="stat-card-label">Cours du mois</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TABLE -->
-        <div class="adm-card">
-            <div class="adm-card-header">
-                <div>
-                    <h3>Liste des cours</h3>
-                    <p>Tous les cours enregistrés</p>
-                </div>
-            </div>
-            <div class="adm-table-wrap">
-                <table class="adm-table">
-                    <thead>
-                        <tr>
-                            <th>Titre</th>
-                            <th>Classe</th>
-                            <th>Matière</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($courses as $course)
-                        <tr>
-                            <td><span style="font-weight:600;">{{ $course->title }}</span></td>
-                            <td><span class="adm-badge adm-badge-primary">{{ $course->classRoom->name ?? '---' }}</span></td>
-                            <td><span class="adm-badge adm-badge-purple">{{ $course->subject->name ?? '---' }}</span></td>
-                            <td><span class="adm-badge adm-badge-gray">{{ $course->created_at->format('d/m/Y') }}</span></td>
-                            <td>
-                                <div class="adm-actions">
-                                    <a href="{{ route('admin.courses.edit', $course->id) }}" class="adm-action-link adm-action-edit">
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </a>
-                                    <a href="{{ route('prof.devoir.create', $course->id) }}" class="adm-action-link adm-action-view">
-                                        <i class="bi bi-file-text-fill"></i> Devoir
-                                    </a>
-                                    <a href="{{ route('admin.lives.create', $course->class_id) }}" class="adm-action-link" style="background:#fce7f3;color:#9d174d;">
-                                        <i class="bi bi-camera-video-fill"></i>
-                                    </a>
-                                    <form method="POST" action="{{ route('admin.courses.destroy',$course->id) }}" onsubmit="return confirm('Supprimer ce cours ?')">
-                                        @csrf @method('DELETE')
-                                        <button class="adm-action-link adm-action-delete" style="border:none;cursor:pointer;">
-                                            <i class="bi bi-trash-fill"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="adm-empty">Aucun cours disponible</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if(method_exists($courses, 'links'))
-            <div class="adm-card-footer">
-                <div class="adm-pagination">{{ $courses->links() }}</div>
-            </div>
-            @endif
-        </div>
-
+<div class="adm-page-header">
+    <div>
+        <h1>Cours</h1>
+        <div class="subtitle">Administration des contenus pédagogiques</div>
     </div>
+    <div class="page-actions">
+        <a href="{{ route('admin.courses.create') }}" class="adm-btn adm-btn-primary">
+            <i class="bi bi-plus-lg"></i> Nouveau cours
+        </a>
+    </div>
+</div>
+
+<div class="adm-stats-grid">
+    <div class="adm-stat blue">
+        <div class="stat-top">
+            <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
+        </div>
+        <div class="stat-value">{{ $courses->count() }}</div>
+        <div class="stat-label">Total cours</div>
+    </div>
+    <div class="adm-stat green">
+        <div class="stat-top">
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+        </div>
+        <div class="stat-value">{{ $courses->where('created_at','>',now()->subDays(7))->count() }}</div>
+        <div class="stat-label">Cours récents (7j)</div>
+    </div>
+    <div class="adm-stat purple">
+        <div class="stat-top">
+            <div class="stat-icon"><i class="bi bi-folder-fill"></i></div>
+        </div>
+        <div class="stat-value">{{ $courses->groupBy('class_id')->count() }}</div>
+        <div class="stat-label">Classes concernées</div>
+    </div>
+</div>
+
+<div class="adm-card">
+    <div class="adm-card-header">
+        <h4><i class="bi bi-collection" style="color:rgba(255,255,255,0.35);"></i> Liste des cours</h4>
+        <div class="card-actions">
+            <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $courses->count() }} cours</span>
+        </div>
+    </div>
+    <div class="adm-card-body p-0">
+        <div class="adm-table-wrap">
+            <table class="adm-table">
+                <thead>
+                    <tr>
+                        <th>Titre</th>
+                        <th>Classe</th>
+                        <th>Matière</th>
+                        <th>Date</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($courses as $course)
+                    <tr>
+                        <td><span style="font-weight:500;">{{ $course->title }}</span></td>
+                        <td><span class="adm-badge adm-badge-info">{{ $course->classRoom->name ?? '—' }}</span></td>
+                        <td><span class="adm-badge adm-badge-primary">{{ $course->subject->name ?? '—' }}</span></td>
+                        <td style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $course->created_at->format('d/m/Y') }}</td>
+                        <td style="text-align:right;">
+                            <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                <a href="{{ route('admin.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{{ route('prof.devoir.create', $course->id) }}" class="adm-btn adm-btn-accent adm-btn-sm">
+                                    <i class="bi bi-file-text"></i> Devoir
+                                </a>
+                                <a href="{{ route('admin.lives.create', $course->class_id) }}" class="adm-btn adm-btn-danger adm-btn-sm">
+                                    <i class="bi bi-camera-video"></i> Live
+                                </a>
+                                <form method="POST" action="{{ route('admin.courses.destroy',$course->id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce cours ?')">
+                                    @csrf @method('DELETE')
+                                    <button class="adm-btn adm-btn-danger adm-btn-sm" type="submit">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5">
+                            <div class="adm-empty">
+                                <div class="adm-empty-icon"><i class="bi bi-inbox"></i></div>
+                                <h5>Aucun cours</h5>
+                                <p>Créez votre premier cours pour commencer.</p>
+                                <a href="{{ route('admin.courses.create') }}" class="adm-btn adm-btn-primary adm-btn-sm">
+                                    <i class="bi bi-plus-lg"></i> Créer un cours
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if(method_exists($courses, 'links'))
+    <div class="adm-card-footer">
+        {{ $courses->links() }}
+    </div>
+    @endif
 </div>
 @endsection

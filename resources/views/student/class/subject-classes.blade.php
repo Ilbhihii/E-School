@@ -1,40 +1,33 @@
 @extends('layouts.student')
-
 @section('content')
-<div class="st-page">
-  <div class="st-container">
-    <div class="st-hero st-hero-green st-fade-up st-flex-between">
-      <div>
-        <h1><i class="bi bi-mortarboard me-2"></i>{{ $subject->name }} — {{ $level->name }}</h1>
-        <p>Sélectionnez une classe</p>
-      </div>
-      <div style="font-size: 2.5rem; opacity: .6;">
-        <i class="bi bi-mortarboard-fill"></i>
-      </div>
-    </div>
 
-    <div class="row g-4">
-      @foreach($classes as $class)
-        <div class="col-md-4">
-          <a href="{{ route('student.courses', [$subject->id, $class->id]) }}" class="st-item st-item-{{ ['blue','green','purple','yellow','red','teal'][$loop->index % 6] }} st-fade-up" style="animation-delay: {{ $loop->index * 0.1 }}s;">
-            <div class="st-item-top">
-              <div class="st-item-icon"><i class="bi bi-mortarboard"></i></div>
-              <h5>{{ $class->name }}</h5>
-            </div>
-            <div class="st-item-bottom">
-              <span><i class="bi bi-arrow-right me-1"></i>Voir les cours</span>
-              <div class="st-arrow"><i class="bi bi-arrow-right"></i></div>
-            </div>
-          </a>
-        </div>
-      @endforeach
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-building" style="color:#7C3AED;"></i> Classes — {{ $subject->name }}</h1>
+        <div class="subtitle">Choisissez une classe pour voir les cours</div>
     </div>
-
-    <div class="st-mt-4">
-      <a href="{{ route('student.classes') }}" class="st-btn st-btn-outline">
-        <i class="bi bi-arrow-left me-1"></i>Retour aux classes
-      </a>
-    </div>
-  </div>
 </div>
+
+@if(isset($subject->classes) && $subject->classes->count() > 0)
+<div class="row g-3">
+    @foreach($subject->classes as $class)
+    <div class="col-sm-6 col-lg-4">
+        <a href="{{ route('student.courses', [$subject->id, $class->id]) }}" style="text-decoration:none;display:block;">
+            <div style="background:#1E293B;border:1px solid rgba(255,255,255,0.04);border-radius:12px;overflow:hidden;transition:all 0.2s ease;" onmouseover="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
+                <div style="height:100px;background:linear-gradient(135deg,hsl({{ ($loop->index * 60 + 240) % 360 }},55%,50%),hsl({{ ($loop->index * 60 + 270) % 360 }},50%,35%));display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-mortarboard-fill" style="font-size:2.5rem;color:rgba(255,255,255,0.25);"></i>
+                </div>
+                <div style="padding:1rem 1.25rem;text-align:center;">
+                    <h5 style="font-weight:700;color:#F1F5F9;margin-bottom:0.25rem;">{{ $class->name }}</h5>
+                    <p style="font-size:0.78rem;color:#64748B;margin:0;"><i class="bi bi-play-circle me-1"></i> Voir les cours <i class="bi bi-arrow-right ms-1"></i></p>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endforeach
+</div>
+@else
+<div class="pr-empty"><div class="pr-empty-icon"><i class="bi bi-building"></i></div><h5>Aucune classe disponible</h5><p>Aucune classe n'est associée à cette matière.</p><a href="{{ route('student.subjects.index') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-arrow-left me-1"></i> Retour aux matières</a></div>
+@endif
+
 @endsection

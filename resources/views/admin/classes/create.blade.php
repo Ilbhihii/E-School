@@ -1,36 +1,40 @@
 @extends('layouts.admin')
 
+@section('title', 'Ajouter une classe')
+@section('page_title', 'Nouvelle classe')
+@section('breadcrumb', 'Ajouter une classe')
+
 @section('content')
-<div class="admin-page">
-    <div class="admin-container" style="max-width:600px">
-
-        <!-- HEADER -->
-        <div class="admin-header">
-            <div>
-                <h1 class="admin-header-title"><span class="gradient">➕ Ajouter une classe</span></h1>
-                <p class="admin-header-subtitle">Créer une nouvelle classe pour organiser les cours</p>
-            </div>
-        </div>
-
-        <!-- FORM CARD -->
+<div class="row justify-content-center">
+    <div class="col-lg-6">
         <div class="adm-card">
+            <div class="adm-card-header">
+                <h4><i class="bi bi-plus-circle" style="color:rgba(255,255,255,0.35);"></i> Ajouter une classe</h4>
+            </div>
             <div class="adm-card-body">
                 <form method="POST" action="{{ route('admin.classes.store') }}">
                     @csrf
-
                     <div class="adm-form-group">
                         <label class="adm-form-label">Nom de la classe</label>
-                        <input type="text" name="name" class="adm-form-input" placeholder="Ex: Terminale A" required>
-                        @error('name') <div class="adm-form-error">{{ $message }}</div> @enderror
+                        <input type="text" name="name" class="adm-form-control" placeholder="Ex: Groupe A" required>
                     </div>
 
-                    <button type="submit" class="adm-btn adm-btn-primary adm-btn-lg" style="width:100%;">
+                    <div class="adm-form-group">
+                        <label class="adm-form-label">Niveau <span style="color:var(--adm-danger);">*</span></label>
+                        <select name="level_id" class="adm-form-select" required>
+                            <option value="">Choisir un niveau</option>
+                            @foreach($levels as $level)
+                                <option value="{{ $level->id }}" {{ old('level_id', $selectedLevelId ?? '') == $level->id ? 'selected' : '' }}>{{ $level->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button type="submit" class="adm-btn adm-btn-primary w-100">
                         <i class="bi bi-plus-lg"></i> Ajouter la classe
                     </button>
                 </form>
             </div>
         </div>
-
     </div>
 </div>
 @endsection

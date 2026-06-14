@@ -1,63 +1,35 @@
 @extends('layouts.student')
-
+@section('title', 'Cours')
 @section('content')
-<div class="st-page">
-  <div class="st-container">
 
-    <div class="st-hero st-hero-green st-fade-up st-flex-between">
-      <div>
-        <h1><i class="bi bi-play-circle me-2"></i>Cours de {{ $class->name }}</h1>
-        <p>{{ $subject->name }} — Explorez les leçons disponibles</p>
-      </div>
-      <div style="font-size: 2.5rem; opacity: .6;">
-        <i class="bi bi-book-half"></i>
-      </div>
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-play-circle" style="color:#059669;"></i> Cours de {{ $class->name ?? '' }}</h1>
+        <div class="subtitle">Explorez les leçons disponibles</div>
     </div>
-
-    @if($courses->count() > 0)
-      <div class="row g-4">
-        @foreach($courses as $course)
-          <div class="col-lg-4 col-md-6">
-            <a href="{{ route('student.course.show', $course->id) }}" class="text-decoration-none" style="display: block; height: 100%;">
-              <div class="st-course-card st-fade-up" style="animation-delay: {{ $loop->index * 0.1 }}s;">
-                <div class="st-course-banner" style="background: linear-gradient(135deg, {{ ['#20c997','#198754','#0ea5e9','#8b5cf6','#f59e0b','#ef4444'][$loop->index % 6] }}, {{ ['#0d9488','#15803d','#2563eb','#7c3aed','#d97706','#dc2626'][$loop->index % 6] }});">
-                  <i class="bi bi-journal-bookmark-fill"></i>
-                </div>
-                <div class="st-course-body">
-                  <h5>{{ Str::limit($course->title, 40) }}</h5>
-                  <div class="st-media-tags st-mb-2">
-                    @if($course->video)
-                      <span class="st-media-tag video"><i class="bi bi-play-circle-fill"></i> Vidéo</span>
-                    @endif
-                    @if($course->pdf)
-                      <span class="st-media-tag pdf"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</span>
-                    @endif
-                    @if(isset($course->devoirs_count) && $course->devoirs_count > 0)
-                      <span class="st-media-tag devoir"><i class="bi bi-pencil-fill"></i> {{ $course->devoirs_count }} devoir(s)</span>
-                    @endif
-                  </div>
-                  <div style="font-size: 12px; color: var(--st-primary); font-weight: 600;">
-                    <i class="bi bi-arrow-right-circle me-1"></i>Voir le cours
-                  </div>
-                </div>
-              </div>
-            </a>
-          </div>
-        @endforeach
-      </div>
-    @else
-      <div class="st-card st-fade-up">
-        <div class="st-empty">
-          <i class="bi bi-book"></i>
-          <h5>Aucun cours disponible</h5>
-          <p>Aucun cours n'est encore disponible pour cette classe et matière.</p>
-          <a href="{{ route('student.subjects', $class->id) }}" class="st-btn st-btn-outline">
-            <i class="bi bi-arrow-left me-1"></i> Retour aux matières
-          </a>
-        </div>
-      </div>
-    @endif
-
-  </div>
 </div>
+
+@if($courses->count() > 0)
+<div class="row g-3">
+    @foreach($courses as $course)
+        @php $hue = ($loop->index * 60 + 180) % 360; @endphp
+        <div class="col-lg-4 col-md-6">
+            <a href="{{ route('student.course.show', $course->id) }}" style="text-decoration:none;display:block;">
+                <div style="background:#1E293B;border:1px solid rgba(255,255,255,0.04);border-radius:12px;overflow:hidden;transition:all 0.2s ease;" onmouseover="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
+                    <div style="height:120px;background:linear-gradient(135deg,hsl({{ $hue }},55%,50%),hsl({{ $hue + 30 }},50%,35%));display:flex;align-items:center;justify-content:center;position:relative;">
+                        <i class="bi bi-play-circle" style="font-size:2.5rem;color:rgba(255,255,255,0.25);"></i>
+                    </div>
+                    <div style="padding:1rem 1.25rem;text-align:center;">
+                        <h4 style="font-weight:600;color:#F1F5F9;margin-bottom:0.5rem;font-size:0.95rem;">{{ Str::limit($course->title, 40) }}</h4>
+                        <span class="pr-badge pr-badge-purple"><i class="bi bi-file-earmark-text me-1"></i>{{ $course->devoirs_count ?? 0 }} devoir{{ ($course->devoirs_count ?? 0) > 1 ? 's' : '' }}</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+    @endforeach
+</div>
+@else
+<div class="pr-empty"><div class="pr-empty-icon"><i class="bi bi-book"></i></div><h5>Aucun cours disponible</h5><p>Aucun cours n'est encore disponible pour cette classe et matière.</p><a href="{{ route('student.subjects.index') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-arrow-left me-2"></i> Retour aux matières</a></div>
+@endif
+
 @endsection

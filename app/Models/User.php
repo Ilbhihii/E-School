@@ -11,7 +11,6 @@ use Spatie\Permission\Traits\HasRoles;
 use App\Models\ClassRoom;
 use App\Models\Classe;
 use App\Models\Absence;
-use App\Models\CourseView;
 
 class User extends Authenticatable
 {
@@ -37,7 +36,6 @@ class User extends Authenticatable
         'payment_date',
         'is_active',
         'test_passed',
-        'class_id',
     ];
 
 
@@ -58,11 +56,8 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'trial_ends_at' => 'datetime',
         'is_active' => 'boolean',
-        'is_paid' => 'boolean',
-        'is_subscribed' => 'boolean',
-        'role' => 'string',
+'role' => 'string',
         'test_passed' => 'boolean',
     ];
 
@@ -79,24 +74,6 @@ public function classes()
 public function absences()
 {
     return $this->hasMany(Absence::class);
-}
-
-public function courseViews()
-{
-    return $this->hasMany(CourseView::class);
-}
-
-public function hasActiveSubscription(): bool
-{
-    if ($this->is_paid || $this->is_subscribed) {
-        return true;
-    }
-
-    if ($this->trial_ends_at && now()->lessThanOrEqualTo($this->trial_ends_at)) {
-        return true;
-    }
-
-    return false;
 }
 
 public function isAdmin()

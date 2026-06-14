@@ -9,7 +9,11 @@ class Level extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'subject_id'];
+    protected $fillable = [
+        'name',
+        'description',
+        'subject_id'
+    ];
 
     public function subject()
     {

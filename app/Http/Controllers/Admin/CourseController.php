@@ -25,11 +25,13 @@ class CourseController extends Controller
     }
 
     // ================= CREATE =================
-    public function create()
+    public function create(Request $request)
     {
         $classes = ClassRoom::all();
         $subjects = Subject::with('classes')->get();
-        return view('admin.courses.create', compact('classes','subjects'));
+        $selectedClassId = $request->get('class_id');
+        $selectedSubjectId = $request->get('subject_id');
+        return view('admin.courses.create', compact('classes','subjects', 'selectedClassId', 'selectedSubjectId'));
     }
 
     // ================= STORE =================
@@ -100,8 +102,6 @@ class CourseController extends Controller
             'title' => 'required',
             'description' => 'nullable',
             'class_id' => 'required',
-            'subject_id' => 'required|exists:subjects,id',
-            'course_link' => 'nullable|url',
             'video' => 'nullable|file|mimes:mp4,mov,avi',
             'pdf' => 'nullable|file|mimes:pdf'
         ]);
