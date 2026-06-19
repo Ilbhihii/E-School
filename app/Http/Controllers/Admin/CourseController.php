@@ -6,19 +6,32 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\ClassRoom;
+use App\Models\Level;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
+    // ================= SHOW =================
+    public function show($id)
+    {
+        $course = Course::with(['classRoom', 'subject', 'devoirs'])->findOrFail($id);
+
+        if (!auth()->user()->isAdmin() && $course->user_id !== auth()->id()) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        return view('admin.courses.show', compact('course'));
+    }
+
     // ================= LISTE =================
     public function index()
     {
         if (auth()->user()->isAdmin()) {
-            $courses = Course::with(['classRoom', 'subject', 'assignments'])->paginate(10);
+            $courses = Course::with(['classRoom', 'subject', 'level', 'assignments'])->paginate(10);
         } else {
             $courses = Course::where('user_id', auth()->id())
-                ->with(['classRoom', 'subject', 'assignments'])
+                ->with(['classRoom', 'subject', 'level', 'assignments'])
                 ->paginate(10);
         }
         return view('admin.courses.index', compact('courses'));
@@ -27,11 +40,12 @@ class CourseController extends Controller
     // ================= CREATE =================
     public function create(Request $request)
     {
-        $classes = ClassRoom::all();
-        $subjects = Subject::with('classes')->get();
+        $levels = Level::with('classes')->get();
+        $classes = ClassRoom::with('level')->get();
+        $subjects = Subject::all()->unique('name');
         $selectedClassId = $request->get('class_id');
         $selectedSubjectId = $request->get('subject_id');
-        return view('admin.courses.create', compact('classes','subjects', 'selectedClassId', 'selectedSubjectId'));
+        return view('admin.courses.create', compact('levels', 'classes', 'subjects', 'selectedClassId', 'selectedSubjectId'));
     }
 
     // ================= STORE =================
@@ -62,10 +76,14 @@ class CourseController extends Controller
             $pdfPath = $request->file('pdf')->store('pdfs', 'public');
         }
 
+        // Récupérer le niveau depuis la classe
+        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
+
         Course::create([
             'title' => $request->title,
             'description' => $request->description,
             'class_id' => $request->class_id,
+            'level_id' => $classRoom->level->id,
             'subject_id' => $request->subject_id,
             'video' => $videoPath ?? null,
             'pdf' => $pdfPath ?? null,
@@ -87,10 +105,11 @@ class CourseController extends Controller
     public function edit($id)
     {
         $course = Course::findOrFail($id);
-        $classes = ClassRoom::all();
-        $subjects = Subject::with('classes')->get();
+        $levels = Level::with('classes')->get();
+        $classes = ClassRoom::with('level')->get();
+        $subjects = Subject::all()->unique('name');
 
-        return view('admin.courses.edit', compact('course', 'classes', 'subjects'));
+        return view('admin.courses.edit', compact('course', 'levels', 'classes', 'subjects'));
     }
 
     // ================= UPDATE =================
@@ -102,9 +121,15 @@ class CourseController extends Controller
             'title' => 'required',
             'description' => 'nullable',
             'class_id' => 'required',
+            'subject_id' => 'required|exists:subjects,id',
+            'course_link' => 'nullable|url',
             'video' => 'nullable|file|mimes:mp4,mov,avi',
             'pdf' => 'nullable|file|mimes:pdf'
         ]);
+
+        // Récupérer le niveau depuis la classe
+        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
+        $data['level_id'] = $classRoom->level->id;
 
         if($request->hasFile('video')){
             $data['video'] = $request->file('video')->store('videos','public');
@@ -120,6 +145,16 @@ class CourseController extends Controller
             ->with('success','Cours mis à jour avec succès');
     }
 
+
+    // ================= AJAX : matières par classe =================
+    public function getClassSubjects($classId)
+    {
+        $subjects = Subject::whereHas('classes', function($q) use ($classId) {
+            $q->where('class_room_id', $classId);
+        })->orderBy('name')->get(['id', 'name']);
+
+        return response()->json($subjects->values());
+    }
 
     // ================= DELETE =================
     public function destroy($id)

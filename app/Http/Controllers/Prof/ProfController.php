@@ -185,6 +185,17 @@ $classRoom = ClassRoom::findOrFail($id);
         return view('prof.lives.index', compact('lives', 'totalLives', 'recentLives'));
     }
 
+    public function show(Course $course)
+    {
+        if ($course->user_id !== auth()->id()) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        $course->load(['classRoom', 'subject', 'level', 'assignments']);
+
+        return view('prof.courses.show', compact('course'));
+    }
+
     public function courses()
     {
         $courses = Course::where('user_id', auth()->id())
@@ -194,11 +205,14 @@ $classRoom = ClassRoom::findOrFail($id);
         return view('prof.courses.index', compact('courses'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $levels = Level::all();
-        $subjects = Subject::with('classRoom')->get();
-        return view('prof.courses.create', compact('levels', 'subjects'));
+        $levels = Level::with('classes')->get();
+        $classes = ClassRoom::with('level')->get();
+        $subjects = Subject::all()->unique('name');
+        $selectedClassId = $request->get('class_id');
+        $selectedSubjectId = $request->get('subject_id');
+        return view('prof.courses.create', compact('levels', 'classes', 'subjects', 'selectedClassId', 'selectedSubjectId'));
     }
 
     public function store(Request $request)
@@ -210,12 +224,15 @@ $classRoom = ClassRoom::findOrFail($id);
         $request->validate([
             'title' => 'required',
             'description' => 'nullable|string',
-            'level_id' => 'required',
+            'class_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
             'course_link' => 'nullable|url',
             'video' => 'nullable|mimes:mp4,mov,avi|max:204800',
             'pdf' => 'nullable|mimes:pdf|max:20480',
         ]);
+
+        // Récupérer le niveau depuis la classe
+        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
 
         $videoPath = null;
         $pdfPath = null;
@@ -231,7 +248,8 @@ $classRoom = ClassRoom::findOrFail($id);
         $course = Course::create([
             'title' => $request->title,
             'description' => $request->description,
-            'level_id' => $request->level_id,
+            'class_id' => $request->class_id,
+            'level_id' => $classRoom->level->id,
             'subject_id' => $request->subject_id,
             'video' => $videoPath,
             'pdf' => $pdfPath,
@@ -268,9 +286,10 @@ $classRoom = ClassRoom::findOrFail($id);
             abort(403, 'Accès non autorisé');
         }
 
-        $levels = Level::all();
-        $subjects = Subject::with('classRoom')->get();
-        return view('prof.courses.edit', compact('course', 'levels', 'subjects'));
+        $levels = Level::with('classes')->get();
+        $classes = ClassRoom::with('level')->get();
+        $subjects = Subject::all()->unique('name');
+        return view('prof.courses.edit', compact('course', 'levels', 'classes', 'subjects'));
     }
 
     public function update(Request $request, Course $course)
@@ -282,14 +301,18 @@ $classRoom = ClassRoom::findOrFail($id);
         $request->validate([
             'title' => 'required',
             'description' => 'nullable',
-            'level_id' => 'required',
+            'class_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
             'course_link' => 'nullable|url',
             'video' => 'nullable|file|mimes:mp4,mov,avi|max:204800',
             'pdf' => 'nullable|file|mimes:pdf|max:20480',
         ]);
 
-        $data = $request->only(['title', 'description', 'level_id', 'subject_id', 'course_link']);
+        // Récupérer le niveau depuis la classe
+        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
+
+        $data = $request->only(['title', 'description', 'class_id', 'subject_id', 'course_link']);
+        $data['level_id'] = $classRoom->level->id;
 
         if ($request->hasFile('video')) {
             if ($course->video) {

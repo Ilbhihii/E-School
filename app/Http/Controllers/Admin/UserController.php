@@ -245,7 +245,8 @@ class UserController extends Controller
     public function assignClass()
     {
         $students = User::where('role', 'student')->get();
-        $classRooms = ClassRoom::all();
+        $classRooms = ClassRoom::with('level')->get();
+        $levels = Level::orderBy('name')->get();
 
         // Get assignments: students assigned to classes
         $assignments = DB::table('class_user')
@@ -255,7 +256,7 @@ class UserController extends Controller
                      'users.name as student_name', 'class_rooms.name as class_name')
             ->get();
 
-        return view('admin.assign-class', compact('students', 'classRooms', 'assignments'));
+        return view('admin.assign-class', compact('students', 'classRooms', 'levels', 'assignments'));
     }
 
     /**
@@ -274,6 +275,9 @@ class UserController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
+
+        // 🔥 Synchroniser users.class_id pour que $user->classRoom() fonctionne
+        User::where('id', $request->user_id)->update(['class_id' => $request->class_id]);
 
         return redirect()->back()->with('success', 'Étudiant assigné à la classe avec succès!');
     }
@@ -296,6 +300,9 @@ class UserController extends Controller
                 'updated_at' => now()
             ]);
 
+        // 🔥 Synchroniser users.class_id
+        User::where('id', $request->user_id)->update(['class_id' => $request->class_id]);
+
         return redirect()->back()->with('success', 'Assignation modifiée avec succès!');
     }
 
@@ -304,9 +311,16 @@ class UserController extends Controller
      */
     public function destroyAssignment($pivotId)
     {
+        $pivot = DB::table('class_user')->where('id', $pivotId)->first();
+
         DB::table('class_user')
             ->where('id', $pivotId)
             ->delete();
+
+        // 🔥 Effacer users.class_id si c'était la seule assignation
+        if ($pivot) {
+            User::where('id', $pivot->user_id)->update(['class_id' => null]);
+        }
 
         return redirect()->back()->with('success', 'Assignation supprimée avec succès!');
     }

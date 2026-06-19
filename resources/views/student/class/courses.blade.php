@@ -1,11 +1,27 @@
 @extends('layouts.student')
-@section('title', 'Cours')
+@section('title')
+Cours - {{ $subject->name ?? '' }}
+@endsection
 @section('content')
+
+<div class="breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:0.78rem;color:#64748B;flex-wrap:wrap;">
+    <a href="{{ route('student.dashboard') }}" style="color:#64748B;text-decoration:none;"><i class="bi bi-house me-1"></i>Accueil</a>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    @if($class && $class->level)
+    <span style="color:#94A3B8;font-weight:500;">{{ $class->level->name }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    <span style="color:#94A3B8;font-weight:500;">{{ $class->name }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+@endif
+    <span style="color:#94A3B8;font-weight:500;">{{ $subject->name ?? '' }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    <span style="color:#F1F5F9;font-weight:600;">Cours</span>
+</div>
 
 <div class="page-header">
     <div>
-        <h1><i class="bi bi-play-circle" style="color:#059669;"></i> Cours de {{ $class->name ?? '' }}</h1>
-        <div class="subtitle">Explorez les leçons disponibles</div>
+        <h1><i class="bi bi-play-circle" style="color:#059669;"></i> Cours de {{ $subject->name ?? '' }}</h1>
+        <div class="subtitle">{{ $class->name ?? '' }} — Explorez les leçons disponibles</div>
     </div>
 </div>
 

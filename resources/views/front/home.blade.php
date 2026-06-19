@@ -322,39 +322,43 @@
                     <span class="badge px-3 py-2 mb-3" style="background: rgba(0, 58, 143, 0.15); color: #2563EB; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
                         Qui sommes-nous ?
                     </span>
-                    <h2 class="section-title-3d mb-4">Révolutionner l'éducation <br>au Maroc et ailleurs</h2>
+                    <h2 class="section-title-3d mb-4">L'école à domicile <br>pour tous</h2>
+                    <p class="text-white-50 mb-3" style="line-height: 1.8; font-size: 1.05rem;">
+                        <strong class="text-white">E-SCHOOL</strong> est un projet porté par un ingénieur et un enseignant en programmation, 
+                        également doctorant en chimie et formateur d'enseignants. Il vise à transformer le temps passé 
+                        devant les écrans en une véritable opportunité d'apprentissage utile et efficace.
+                    </p>
                     <p class="text-white-50 mb-4" style="line-height: 1.8; font-size: 1.05rem;">
-                        E-School est une plateforme éducative innovante qui connecte les étudiants 
-                        avec des enseignants qualifiés pour une expérience d'apprentissage moderne, 
-                        interactive et accessible à tous.
+                        L'objectif est clair : <strong class="text-white">faire entrer l'école à domicile</strong>, pour qu'il n'y ait 
+                        plus d'excuse pour ne pas apprendre et progresser.
                     </p>
 
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex align-items-start gap-3">
                             <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(0, 58, 143, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-mortarboard-fill" style="color: #2563EB; font-size: 1rem;"></i>
+                                <i class="bi bi-broadcast" style="color: #2563EB; font-size: 1rem;"></i>
                             </span>
                             <div>
-                                <strong class="text-white">Enseignants qualifiés</strong>
-                                <p class="text-white-50 small mb-0">Des professeurs expérimentés passionnés par l'enseignement</p>
+                                <strong class="text-white">Cours interactifs en direct (lives)</strong>
+                                <p class="text-white-50 small mb-0">Enseignement en temps réel favorisant l'échange et l'implication des élèves</p>
                             </div>
                         </div>
                         <div class="d-flex align-items-start gap-3">
                             <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(124, 58, 237, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-layers-fill" style="color: #7C3AED; font-size: 1rem;"></i>
+                                <i class="bi bi-graph-up-arrow" style="color: #7C3AED; font-size: 1rem;"></i>
                             </span>
                             <div>
-                                <strong class="text-white">Plateforme interactive</strong>
-                                <p class="text-white-50 small mb-0">Cours en direct, quiz, devoirs et suivi personnalisé</p>
+                                <strong class="text-white">Suivi personnalisé & précis</strong>
+                                <p class="text-white-50 small mb-0">Analyse du niveau, détection des axes de progression et parcours adapté</p>
                             </div>
                         </div>
                         <div class="d-flex align-items-start gap-3">
                             <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 209, 102, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-clock-fill" style="color: #FFD166; font-size: 1rem;"></i>
+                                <i class="bi bi-arrow-up-circle-fill" style="color: #FFD166; font-size: 1rem;"></i>
                             </span>
                             <div>
-                                <strong class="text-white">Apprentissage flexible</strong>
-                                <p class="text-white-50 small mb-0">Étudiez à votre rythme, où et quand vous voulez</p>
+                                <strong class="text-white">Progrès visibles & amélioration continue</strong>
+                                <p class="text-white-50 small mb-0">Un suivi rigoureux pour des résultats concrets et durables</p>
                             </div>
                         </div>
                     </div>

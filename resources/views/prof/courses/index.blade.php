@@ -76,6 +76,9 @@
                         </td>
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                <a href="{{ route('prof.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir">
+                                    <i class="bi bi-eye"></i>
+                                </a>
                                 <a href="{{ route('prof.devoir.create', ['course_id'=>$course->id]) }}" class="adm-btn adm-btn-success adm-btn-sm" title="Ajouter un devoir">
                                     <i class="bi bi-plus"></i>
                                 </a>

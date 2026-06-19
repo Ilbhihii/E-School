@@ -28,22 +28,34 @@
                     </div>
 
                     <div class="row g-4">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="adm-form-group">
-                                <label class="adm-form-label">Classe</label>
-                                <select name="class_id" class="adm-form-select @error('class_id') error @enderror">
+                                <label class="adm-form-label">Niveau</label>
+                                <select class="adm-form-select" id="level_id" disabled>
+                                    <option value="">Sélectionner d'abord une classe...</option>
+                                    @foreach($levels as $level)
+                                        <option value="{{ $level->id }}">{{ $level->name }}</option>
+                                    @endforeach
+                                </select>
+                                <small style="color:var(--adm-text-muted);font-size:0.7rem;">Déduit automatiquement de la classe</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Classe <span style="color:var(--adm-danger);">*</span></label>
+                                <select name="class_id" class="adm-form-select @error('class_id') error @enderror" id="class_id" required>
                                     <option value="">-- Choisir --</option>
                                     @foreach($classes as $class)
-                                        <option value="{{ $class->id }}" {{ old('class_id', $course->class_id) == $class->id ? 'selected' : '' }}>{{ $class->name }}</option>
+                                        <option value="{{ $class->id }}" data-level-id="{{ $class->level_id }}" data-level-name="{{ $class->level->name ?? '' }}" {{ old('class_id', $course->class_id) == $class->id ? 'selected' : '' }}>{{ $class->level->name ?? '' }} — {{ $class->name }}</option>
                                     @endforeach
                                 </select>
                                 @error('class_id') <div class="adm-form-error">{{ $message }}</div> @enderror
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="adm-form-group">
-                                <label class="adm-form-label">Matière</label>
-                                <select name="subject_id" class="adm-form-select @error('subject_id') error @enderror">
+                                <label class="adm-form-label">Matière <span style="color:var(--adm-danger);">*</span></label>
+                                <select name="subject_id" class="adm-form-select @error('subject_id') error @enderror" id="subject_id" required>
                                     <option value="">-- Choisir --</option>
                                     @foreach($subjects as $subject)
                                         <option value="{{ $subject->id }}" {{ old('subject_id', $course->subject_id) == $subject->id ? 'selected' : '' }}>{{ $subject->name }}</option>
@@ -107,4 +119,71 @@
         </div>
     </div>
 </div>
+
+<script>
+function updateLevel() {
+    const classSelect = document.getElementById('class_id');
+    const levelSelect = document.getElementById('level_id');
+    const selectedOption = classSelect.options[classSelect.selectedIndex];
+    
+    if (selectedOption && selectedOption.dataset.levelId) {
+        levelSelect.value = selectedOption.dataset.levelId;
+    } else {
+        levelSelect.value = '';
+    }
+}
+
+function filterSubjectsByClass() {
+    const classSelect = document.getElementById('class_id');
+    const subjectSelect = document.getElementById('subject_id');
+    const classId = classSelect.value;
+    const currentSubject = '{{ $course->subject_id ?? '' }}';
+    
+    subjectSelect.disabled = true;
+    subjectSelect.innerHTML = '<option value="">Chargement...</option>';
+    
+    if (!classId) {
+        // Aucune classe → toutes les matières (serveur)
+        subjectSelect.innerHTML = '<option value="">-- Choisir --</option>';
+        @foreach($subjects as $subject)
+            subjectSelect.innerHTML += '<option value="{{ $subject->id }}" {{ old('subject_id', $course->subject_id) == $subject->id ? 'selected' : '' }}>{{ $subject->name }}</option>';
+        @endforeach
+        subjectSelect.disabled = false;
+        return;
+    }
+    
+    fetch('/admin/get-class-subjects/' + classId)
+        .then(response => response.json())
+        .then(subjects => {
+            subjectSelect.innerHTML = '<option value="">-- Choisir --</option>';
+            subjects.forEach(function(subject) {
+                const selected = (currentSubject == subject.id) ? 'selected' : '';
+                subjectSelect.innerHTML += '<option value="' + subject.id + '" ' + selected + '>' + escapeHtml(subject.name) + '</option>';
+            });
+            subjectSelect.disabled = false;
+        })
+        .catch(error => {
+            subjectSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            subjectSelect.disabled = false;
+            console.error('Erreur chargement matières:', error);
+        });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const classSelect = document.getElementById('class_id');
+    classSelect.addEventListener('change', function() {
+        updateLevel();
+        filterSubjectsByClass();
+    });
+    
+    updateLevel();
+    filterSubjectsByClass();
+});
+</script>
 @endsection

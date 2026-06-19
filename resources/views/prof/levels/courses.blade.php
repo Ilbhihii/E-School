@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('layouts.prof')
 
 @section('title', 'Cours - ' . $subject->name)
 @section('page_title', $subject->name)
@@ -9,30 +9,25 @@
 <div class="adm-page-header">
     <div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.8rem;color:var(--adm-text-muted);">
-            <a href="{{ route('admin.levels.index') }}" style="color:var(--adm-text-muted);text-decoration:none;"><i class="bi bi-layers me-1"></i>Niveaux</a>
+            <a href="{{ route('prof.levels.index') }}" style="color:var(--adm-text-muted);text-decoration:none;"><i class="bi bi-layers me-1"></i>Niveaux</a>
             <span>/</span>
-            <a href="{{ route('admin.levels.classes', $level) }}" style="color:var(--adm-text-muted);text-decoration:none;">{{ $level->name }}</a>
+            <a href="{{ route('prof.levels.classes', $level) }}" style="color:var(--adm-text-muted);text-decoration:none;">{{ $level->name }}</a>
             <span>/</span>
-            <a href="{{ route('admin.levels.subjects', [$level, $class]) }}" style="color:var(--adm-text-muted);text-decoration:none;">{{ $class->name }}</a>
+            <a href="{{ route('prof.levels.subjects', [$level, $class]) }}" style="color:var(--adm-text-muted);text-decoration:none;">{{ $class->name }}</a>
             <span>/</span>
             <span style="color:rgba(255,255,255,0.6);font-weight:500;">{{ $subject->name }}</span>
         </div>
         <h1><i class="bi bi-play-circle me-2" style="color:var(--adm-success);"></i> Cours — {{ $subject->name }}</h1>
         <div class="subtitle">{{ $class->name }} · {{ $level->name }} — {{ $courses->count() }} cours</div>
     </div>
-    <div class="page-actions">
-        <a href="{{ route('admin.courses.create') }}?class_id={{ $class->id }}&subject_id={{ $subject->id }}" class="adm-btn adm-btn-primary">
-            <i class="bi bi-plus-lg"></i> Nouveau cours
-        </a>
-        <a href="{{ route('admin.levels.subjects', [$level, $class]) }}" class="adm-btn adm-btn-ghost">
+    <div class="page-actions">                        <a href="{{ route('prof.courses.create') }}?class_id={{ $class->id }}&subject_id={{ $subject->id }}" class="adm-btn adm-btn-primary">
+                            <i class="bi bi-plus-lg"></i> Nouveau cours
+                        </a>
+        <a href="{{ route('prof.levels.subjects', [$level, $class]) }}" class="adm-btn adm-btn-ghost">
             <i class="bi bi-arrow-left me-1"></i> Retour
         </a>
     </div>
 </div>
-
-@if(session('success'))
-<div class="adm-alert adm-alert-success mb-4">{{ session('success') }}</div>
-@endif
 
 <div class="adm-stats-grid">
     <div class="adm-stat green">
@@ -101,13 +96,13 @@
                         <td style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $course->created_at->format('d/m/Y') }}</td>
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
-                                <a href="{{ route('admin.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir">
+                                <a href="{{ route('prof.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir le cours">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{{ route('admin.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
+                                <a href="{{ route('prof.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <form method="POST" action="{{ route('admin.courses.destroy', $course->id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce cours ?')">
+                                <form method="POST" action="{{ route('prof.courses.destroy', $course->id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce cours ?')">
                                     @csrf @method('DELETE')
                                     <button class="adm-btn adm-btn-danger adm-btn-sm" type="submit" title="Supprimer">
                                         <i class="bi bi-trash"></i>
@@ -125,7 +120,7 @@
             <div class="adm-empty-icon"><i class="bi bi-inbox"></i></div>
             <h5>Aucun cours pour cette matière</h5>
             <p>Créez votre premier cours pour {{ $subject->name }} dans la classe {{ $class->name }}.</p>
-            <a href="{{ route('admin.courses.create') }}?class_id={{ $class->id }}&subject_id={{ $subject->id }}" class="adm-btn adm-btn-primary adm-btn-sm">
+            <a href="{{ route('prof.courses.create') }}?class_id={{ $class->id }}&subject_id={{ $subject->id }}" class="adm-btn adm-btn-primary adm-btn-sm">
                 <i class="bi bi-plus-lg me-1"></i> Créer un cours
             </a>
         </div>

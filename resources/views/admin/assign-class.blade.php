@@ -32,14 +32,29 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="adm-form-group">
-                        <label class="adm-form-label">Classe</label>
-                        <select name="class_id" class="adm-form-select" required>
-                            <option value="">Sélectionner une classe</option>
-                            @foreach($classRooms as $classRoom)
-                            <option value="{{ $classRoom->id }}">{{ $classRoom->name }}</option>
-                            @endforeach
-                        </select>
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Niveau</label>
+                                <select class="adm-form-select" id="level_filter">
+                                    <option value="">Tous les niveaux</option>
+                                    @foreach($levels as $level)
+                                    <option value="{{ $level->id }}">{{ $level->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Classe</label>
+                                <select name="class_id" class="adm-form-select" id="class_id" required>
+                                    <option value="">Sélectionner une classe</option>
+                                    @foreach($classRooms as $classRoom)
+                                    <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}">{{ $classRoom->level->name ?? '' }} — {{ $classRoom->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     <button type="submit" class="adm-btn adm-btn-primary w-100">
                         <i class="bi bi-plus-lg"></i> Assigner à la classe
@@ -127,13 +142,29 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="adm-form-group">
-                    <label class="adm-form-label">Classe</label>
-                    <select name="class_id" id="edit_class_id" class="adm-form-select" required>
-                        @foreach($classRooms as $c)
-                        <option value="{{ $c->id }}">{{ $c->name }}</option>
-                        @endforeach
-                    </select>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">Niveau</label>
+                            <select class="adm-form-select" id="edit_level_filter">
+                                <option value="">Tous les niveaux</option>
+                                @foreach($levels as $level)
+                                <option value="{{ $level->id }}">{{ $level->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">Classe</label>
+                            <select name="class_id" id="edit_class_id" class="adm-form-select" required>
+                                <option value="">Sélectionner une classe</option>
+                                @foreach($classRooms as $c)
+                                <option value="{{ $c->id }}" data-level-id="{{ $c->level_id }}">{{ $c->level->name ?? '' }} — {{ $c->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="adm-modal-footer">
@@ -149,6 +180,14 @@ function editAssignment(userId, classId, pivotId) {
     document.getElementById('edit_assignment_id').value = pivotId;
     document.getElementById('edit_user_id').value = userId;
     document.getElementById('edit_class_id').value = classId;
+    
+    // Sync the level filter to the class's level
+    const classOption = document.querySelector('#edit_class_id option[value="' + classId + '"]');
+    if (classOption && classOption.dataset.levelId) {
+        document.getElementById('edit_level_filter').value = classOption.dataset.levelId;
+        filterClassesByLevel('edit_level_filter', 'edit_class_id');
+    }
+    
     const form = document.getElementById('editForm');
     form.action = form.action.replace('__PIVOT_ID__', pivotId);
     document.getElementById('editModal').style.display = 'flex';
@@ -159,5 +198,40 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
     document.body.style.overflow = 'auto';
 }
+
+function filterClassesByLevel(filterSelectId, classSelectId) {
+    const filter = document.getElementById(filterSelectId);
+    const classSelect = document.getElementById(classSelectId);
+    const levelId = filter.value;
+    
+    Array.from(classSelect.options).forEach(function(opt) {
+        if (!opt.value) return; // Skip placeholder
+        if (!levelId || opt.dataset.levelId == levelId) {
+            opt.style.display = '';
+        } else {
+            opt.style.display = 'none';
+        }
+    });
+    
+    // Reset selection if current option is hidden
+    if (classSelect.selectedIndex > 0) {
+        const selected = classSelect.options[classSelect.selectedIndex];
+        if (selected.style.display === 'none') {
+            classSelect.value = '';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Main form
+    document.getElementById('level_filter').addEventListener('change', function() {
+        filterClassesByLevel('level_filter', 'class_id');
+    });
+    
+    // Edit modal
+    document.getElementById('edit_level_filter').addEventListener('change', function() {
+        filterClassesByLevel('edit_level_filter', 'edit_class_id');
+    });
+});
 </script>
 @endsection

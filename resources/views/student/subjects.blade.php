@@ -6,6 +6,18 @@ Matières - {{ $level->name ?? '' }}
 
 @section('content')
 
+<div class="breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:0.78rem;color:#64748B;flex-wrap:wrap;">
+    <a href="{{ route('student.dashboard') }}" style="color:#64748B;text-decoration:none;"><i class="bi bi-house me-1"></i>Accueil</a>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    @if(isset($classRoom))
+    <span style="color:#94A3B8;font-weight:500;">{{ $classRoom->level->name ?? $level->name ?? '' }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    <span style="color:#94A3B8;font-weight:500;">{{ $classRoom->name ?? '' }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    @endif
+    <span style="color:#F1F5F9;font-weight:600;">Matières</span>
+</div>
+
 <div class="st-page-header">
     <div>
         <h1><i class="bi bi-book" style="color:#818CF8;"></i> Mes Matières</h1>

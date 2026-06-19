@@ -103,7 +103,8 @@ Route::middleware(['auth','adminOrProf'])
 
     Route::resource('courses', CourseController::class);
 
-    
+    // AJAX : récupérer les matières d'une classe
+    Route::get('/get-class-subjects/{classId}', [CourseController::class, 'getClassSubjects'])->name('get-class-subjects');
 
 });
 
@@ -195,9 +196,15 @@ Route::middleware(['auth','isProf'])
 
     Route::get('/dashboard', [ProfController::class,'dashboard'])->name('dashboard');
 
+    // Navigation hiérarchique : Niveaux → Classes → Matières → Cours
+    Route::get('/levels', [\App\Http\Controllers\Prof\ProfLevelController::class, 'index'])->name('levels.index');
+    Route::get('/levels/{level}/classes', [\App\Http\Controllers\Prof\ProfLevelController::class, 'classes'])->name('levels.classes');
+    Route::get('/levels/{level}/classes/{class}/subjects', [\App\Http\Controllers\Prof\ProfLevelController::class, 'subjects'])->name('levels.subjects');
+    Route::get('/levels/{level}/classes/{class}/subjects/{subject}/courses', [\App\Http\Controllers\Prof\ProfLevelController::class, 'courses'])->name('levels.courses');
+
     Route::get('/courses', [ProfController::class, 'courses'])->name('courses.index');
     
-    Route::resource('courses', ProfController::class)->except(['index', 'show']);
+    Route::resource('courses', ProfController::class)->except(['index']);
 
     Route::get('/profile', function () {
         return view('prof.profile');
@@ -280,6 +287,10 @@ Route::middleware(['auth'])
     ->group(function () {
 
     Route::get('/levels', [StudentController::class, 'levels'])->name('levels');
+
+    // Navigation hiérarchique : Niveaux → Classes → Matières → Cours
+    Route::get('/levels/{level}/classes', [StudentController::class, 'levelClasses'])->name('levels.classes');
+    Route::get('/levels/{level}/classes/{class}/subjects', [StudentController::class, 'levelSubjects'])->name('levels.subjects');
 
     Route::get('/subjects', [StudentController::class, 'indexSubjects'])->name('subjects.index');
 

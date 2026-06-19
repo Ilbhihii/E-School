@@ -55,6 +55,7 @@
                 <thead>
                     <tr>
                         <th>Titre</th>
+                        <th>Niveau</th>
                         <th>Classe</th>
                         <th>Matière</th>
                         <th>Date</th>
@@ -65,11 +66,15 @@
                     @forelse($courses as $course)
                     <tr>
                         <td><span style="font-weight:500;">{{ $course->title }}</span></td>
-                        <td><span class="adm-badge adm-badge-info">{{ $course->classRoom->name ?? '—' }}</span></td>
+                        <td><span class="adm-badge adm-badge-info">{{ $course->level->name ?? '—' }}</span></td>
+                        <td><span class="adm-badge" style="background:rgba(6,182,212,0.12);color:#67E8F9;">{{ $course->classRoom->name ?? '—' }}</span></td>
                         <td><span class="adm-badge adm-badge-primary">{{ $course->subject->name ?? '—' }}</span></td>
                         <td style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $course->created_at->format('d/m/Y') }}</td>
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                <a href="{{ route('admin.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir">
+                                    <i class="bi bi-eye"></i>
+                                </a>
                                 <a href="{{ route('admin.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
@@ -90,7 +95,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-inbox"></i></div>
                                 <h5>Aucun cours</h5>

@@ -25,7 +25,7 @@
             };
         @endphp
         <div class="col-lg-3 col-md-6">
-            <a href="{{ route('student.subjects', $level->id) }}" style="text-decoration:none;display:block;">
+            <a href="{{ route('student.levels.classes', $level->id) }}" style="text-decoration:none;display:block;">
                 <div style="background:#1E293B;border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:1.5rem 1.25rem;text-align:center;transition:all 0.2s ease;position:relative;overflow:hidden;" onmouseover="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
                     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:{{ $color['bg'] }};"></div>
                     <div style="width:56px;height:56px;border-radius:50%;background:rgba({{ $color['rgb'] }},0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;font-size:1.3rem;color:{{ $color['bg'] }};">

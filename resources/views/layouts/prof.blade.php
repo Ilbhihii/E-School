@@ -167,6 +167,10 @@
             </a>
 
             <div class="nav-heading">Gestion</div>
+            <a href="{{ route('prof.levels.index') }}" class="prof-nav-link {{ request()->routeIs('prof.levels*') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="bi bi-layers"></i></span>
+                <span>Niveaux <span style="font-size:0.6rem;color:var(--adm-text-muted);margin-left:auto;">→ Classes → Cours</span></span>
+            </a>
             <a href="{{ route('prof.courses.index') }}" class="prof-nav-link {{ request()->routeIs('prof.courses*') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="bi bi-book"></i></span>
                 <span>Cours</span>

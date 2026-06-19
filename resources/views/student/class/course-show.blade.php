@@ -137,6 +137,24 @@
 }
 </style>
 
+<div class="breadcrumb" style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:0.78rem;color:#64748B;flex-wrap:wrap;">
+    <a href="{{ route('student.dashboard') }}" style="color:#64748B;text-decoration:none;"><i class="bi bi-house me-1"></i>Accueil</a>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    @if($course->classRoom ?? false)
+    <span style="color:#94A3B8;font-weight:500;">{{ $course->classRoom->level->name ?? '' }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    <span style="color:#94A3B8;font-weight:500;">{{ $course->classRoom->name ?? '' }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    @endif
+    @if($course->subject ?? false)
+    <span style="color:#94A3B8;font-weight:500;">{{ $course->subject->name }}</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    @endif
+    <span style="color:#94A3B8;font-weight:500;">Cours</span>
+    <span style="color:rgba(255,255,255,0.12);">/</span>
+    <span style="color:#F1F5F9;font-weight:600;">{{ Str::limit($course->title, 30) }}</span>
+</div>
+
 <div class="course-show-hero">
     <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
         <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#06B6D4,#0891B2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:white;box-shadow:0 10px 30px rgba(6,182,212,0.3);flex-shrink:0;">
@@ -268,7 +286,7 @@
                 </div>
             </div>
             <div style="text-align:center;margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.05);">
-                <a href="{{ route('student.courses') }}" class="btn-course-action outline" style="width:100%;padding:10px;font-size:0.85rem;">
+                <a href="{{ route('student.courses', [$course->subject->id ?? '', $course->classRoom->id ?? '']) }}" class="btn-course-action outline" style="width:100%;padding:10px;font-size:0.85rem;">
                     <i class="bi bi-arrow-left"></i> Retour aux cours
                 </a>
             </div>
