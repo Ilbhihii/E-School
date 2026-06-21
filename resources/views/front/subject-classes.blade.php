@@ -18,7 +18,7 @@
 
         @forelse($subject->classes as $class)
         <div class="col-md-4">
-            <a href="{{ route('front.courses', [$subject->id, $class->id]) }}" 
+            <a href="{{ route('front.courses', [$subject->id, $class->level_id, $class->id]) }}" 
                class="text-decoration-none">
 
                 <div class="card class-card text-center p-4 h-100 border-0 shadow-sm">

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'E-School — Plateforme Éducative')</title>
+    <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -475,7 +475,7 @@
 
 <!-- ═══ PRELOADER ═══ -->
 <div class="preloader-3d" id="preloader">
-    <img src="{{ asset('images/Edu-School.png') }}" alt="" class="preloader-3d-logo">
+    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="" class="preloader-3d-logo">
     <div class="preloader-3d-bar">
         <div class="preloader-3d-bar-inner"></div>
     </div>
@@ -508,8 +508,8 @@
 <nav id="navbar3d" class="navbar navbar-expand-lg navbar-3d fixed-top">
     <div class="container">
         <a class="navbar-brand" href="{{ route('home') }}">
-            <img src="{{ asset('images/Edu-School.png') }}" width="34" height="34" alt="E-School" class="me-2" style="filter: brightness(10); border-radius: 8px;">
-            E-School
+            <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="44" height="44" alt="Smart School Academy" class="me-2" style="filter: brightness(10); border-radius: 8px;">
+            Smart School Academy
         </a>
 
         <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
@@ -525,11 +525,17 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('levels') }}">Niveaux</a>
+                    <a class="nav-link" href="{{ route('front.classes') }}">Matières</a>
                 </li>
 
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('front.lives') }}">Lives</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('appointment.create') }}" style="color: #FFD166;">
+                        <i class="bi bi-calendar-check me-1"></i>Rendez-vous
+                    </a>
                 </li>
 
                 <li class="nav-item">
@@ -553,7 +559,7 @@
                     </li>
                 @else
                     <li class="nav-item ms-lg-2">
-                        <a href="{{ route('login') }}" class="btn nav-btn-3d nav-btn-3d-outline">
+                        <a href="{{ route('login') }}" class="btn nav-btn-3d" style="background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 209, 102, 0.3);">
                             <i class="bi bi-person"></i> Connexion
                         </a>
                     </li>
@@ -583,9 +589,9 @@
 
             <div class="col-lg-4 col-md-6">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <img src="{{ asset('images/Edu-School.png') }}" width="42" height="42" alt="" style="filter: brightness(10); border-radius: 10px;">
+                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="54" height="54" alt="" style="filter: brightness(10); border-radius: 10px;">
                     <div>
-                        <h5 class="fw-bold mb-0" style="font-family: 'Poppins', sans-serif;">E-School</h5>
+                        <h5 class="fw-bold mb-0" style="font-family: 'Poppins', sans-serif;">Smart School Academy</h5>
                         <small style="color: rgba(255,255,255,0.3);">Apprentissage intelligent</small>
                     </div>
                 </div>
@@ -604,8 +610,9 @@
                 <h6 class="fw-bold mb-3 text-white" style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5;">Navigation</h6>
                 <div class="d-flex flex-column gap-2">
                     <a href="{{ route('home') }}" class="footer-link-3d">Accueil</a>
-                    <a href="{{ route('levels') }}" class="footer-link-3d">Niveaux</a>
+                    <a href="{{ route('front.classes') }}" class="footer-link-3d">Matières</a>
                     <a href="{{ route('front.lives') }}" class="footer-link-3d">Lives</a>
+                    <a href="{{ route('appointment.create') }}" class="footer-link-3d">Rendez-vous</a>
                     <a href="{{ route('plans') }}" class="footer-link-3d">Offres</a>
                 </div>
             </div>
@@ -648,7 +655,7 @@
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <small style="color: rgba(255,255,255,0.25);">
-                &copy; {{ date('Y') }} E-School. Tous droits réservés.
+                &copy; {{ date('Y') }} Smart School Academy. Tous droits réservés.
             </small>
             <small style="color: rgba(255,255,255,0.2);">
                 Fièrement conçu avec <i class="bi bi-heart-fill" style="color: #D90429;"></i> pour l'éducation
@@ -683,7 +690,7 @@
 </div>
 
 <!-- ═══ FLOATING CHAT ═══ -->
-<a href="https://wa.me/2125XXXXXXXX?text=Bonjour%20E-School%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
+<a href="https://wa.me/2125XXXXXXXX?text=Bonjour%20Smart%20School%20Academy%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
     <i class="bi bi-whatsapp"></i>
     <span class="chat-tooltip">Besoin d'aide ?</span>
 </a>

@@ -11,10 +11,10 @@
 
     <div class="row g-4">
 
-        @foreach($subject->levels as $level)
+        @foreach($levels as $level)
         <div class="col-md-4">
 
-            <a href="{{ route('front.level.courses', $level->id) }}" class="text-decoration-none">
+            <a href="{{ route('front.subject.level.classes', [$subject->id, $level->id]) }}" class="text-decoration-none">
 
                 <div class="card level-card text-center p-4 shadow">
 

@@ -84,6 +84,39 @@ class LevelController extends Controller
         return back()->with('success', 'Matière retirée de la classe');
     }
 
+    /**
+     * Affiche toutes les matières (entrée de la navigation Matières → Niveaux → Classes)
+     */
+    public function subjectsIndex()
+    {
+        $subjects = Subject::withCount('classes')->orderBy('name')->get();
+
+        return view('admin.subjects.index', compact('subjects'));
+    }
+
+    /**
+     * Affiche les niveaux disponibles pour une matière
+     */
+    public function subjectLevels(Subject $subject)
+    {
+        $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique()->filter();
+        $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
+
+        return view('admin.subjects.levels', compact('subject', 'levels'));
+    }
+
+    /**
+     * Affiche les classes d'un niveau pour une matière spécifique
+     */
+    public function subjectClasses(Subject $subject, Level $level)
+    {
+        $classes = ClassRoom::where('level_id', $level->id)
+            ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
+            ->get();
+
+        return view('admin.subjects.classes', compact('subject', 'level', 'classes'));
+    }
+
     public function store(Request $request)
     {
         $request->validate([

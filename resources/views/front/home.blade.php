@@ -1,6 +1,6 @@
 @extends('layouts.front')
 
-@section('title', 'E-School — Plateforme Éducative Intelligente')
+@section('title', 'Smart School Academy — Plateforme Éducative Intelligente')
 
 @section('content')
 
@@ -19,7 +19,7 @@
 
         <h1 class="hero-3d-title mb-4 mx-auto" style="max-width: 850px;">
             La plateforme intelligente<br>
-            pour <span class="gradient-text">réussir vos études</span>
+            <span class="gradient-text">La réussite est à portée de Clic</span>
         </h1>
 
         <p class="hero-3d-subtitle mx-auto mb-5" style="max-width: 600px; font-size: 1.15rem;">
@@ -32,6 +32,10 @@
                 <i class="bi bi-rocket-takeoff"></i>
                 Commencer gratuitement
                 <i class="bi bi-arrow-right"></i>
+            </a>
+            <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
+                <i class="bi bi-calendar-check"></i>
+                Test de niveau
             </a>
             <a href="{{ route('front.classes') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
                 <i class="bi bi-grid-3x3-gap"></i>
@@ -152,43 +156,57 @@
 </section>
 
 <!-- ══════════════════════════════════════════════════════
-     STATS SECTION — avec compteurs animés
+     HOW IT WORKS
      ══════════════════════════════════════════════════════ -->
-<section class="py-5" id="statsSection">
+<section class="py-5">
     <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge px-3 py-2 mb-3" style="background: rgba(22, 163, 74, 0.12); color: #4ADE80; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
+                Comment ça marche
+            </span>
+            <h2 class="section-title-3d">Commencez en 3 étapes simples</h2>
+            <p class="text-white-50 mt-3" style="max-width: 500px; margin: 0 auto;">
+                Pas de complicité. Créez votre compte, choisissez votre niveau et commencez à apprendre.
+            </p>
+        </div>
+
         <div class="row g-4">
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="1200" data-prefix="+" data-suffix="">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Étudiants actifs</span>
+            <div class="col-md-4">
+                <div class="step-3d reveal-3d">
+                    <div class="step-3d-number mx-auto">1</div>
+                    <h5 class="fw-bold text-white mt-3 mb-2">Créez votre compte</h5>
+                    <p class="text-white-50 small" style="line-height: 1.7;">
+                        Inscrivez-vous gratuitement en moins d'une minute. Aucune carte bancaire requise.
+                    </p>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="50" data-prefix="+" data-suffix="">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Cours disponibles</span>
+
+            <div class="col-md-4">
+                <div class="step-3d reveal-3d" style="transition-delay: 0.15s;">
+                    <div class="step-3d-number mx-auto" style="background: linear-gradient(135deg, #7C3AED, #FFD166);">2</div>
+                    <h5 class="fw-bold text-white mt-3 mb-2">Choisissez votre niveau</h5>
+                    <p class="text-white-50 small" style="line-height: 1.7;">
+                        Sélectionnez votre matière et votre niveau scolaire parmi nos nombreuses offres.
+                    </p>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="120" data-prefix="+" data-suffix="">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Lives organisés</span>
+
+            <div class="col-md-4">
+                <div class="step-3d reveal-3d" style="transition-delay: 0.3s;">
+                    <div class="step-3d-number mx-auto" style="background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B;">3</div>
+                    <h5 class="fw-bold text-white mt-3 mb-2">Commencez à apprendre</h5>
+                    <p class="text-white-50 small" style="line-height: 1.7;">
+                        Accédez à tous les cours, lives et ressources. Apprenez à votre rythme et réussissez !
+                    </p>
                 </div>
             </div>
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="95" data-prefix="" data-suffix="%">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Satisfaction</span>
-                </div>
-            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient" style="padding: 16px 44px; font-size: 1.1rem;">
+                <i class="bi bi-person-plus"></i>
+                Créer mon compte gratuit
+            </a>
         </div>
     </div>
 </section>
@@ -210,8 +228,8 @@
             </p>
         </div>
 
-        <div class="row g-4">
-            <div class="col-md-4">
+        <div class="row g-4 justify-content-center">
+            <div class="col-sm-6 col-md">
                 <div class="card-3d text-center h-100 reveal-3d">
                     <div class="card-3d-icon mx-auto">
                         <i class="bi bi-laptop"></i>
@@ -223,58 +241,44 @@
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-sm-6 col-md">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.1s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #7C3AED, #FFD166);">
-                        <i class="bi bi-broadcast"></i>
+                        <i class="bi bi-graph-up-arrow"></i>
                     </div>
-                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Lives interactifs</h5>
+                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Évolution</h5>
                     <p class="text-white-50 small mb-0" style="line-height: 1.7;">
-                        Cours en direct avec interaction en temps réel avec les enseignants et les autres étudiants.
+                        La plateforme utilise des outils intelligents pour détecter les axes d'amélioration et vous accompagner vers la perfection.
                     </p>
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-sm-6 col-md">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.2s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #FFD166, #FFB347);">
                         <i class="bi bi-cloud-arrow-down"></i>
                     </div>
                     <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Supports PDF & vidéos</h5>
                     <p class="text-white-50 small mb-0" style="line-height: 1.7;">
-                        Accédez à tous les cours, ressources PDF et vidéos téléchargeables à tout moment, même hors ligne.
+                        Accédez à tous les cours, ressources PDF et vidéos téléchargeables à tout moment.
                     </p>
                 </div>
             </div>
-        </div>
 
-        <div class="row g-4 mt-2">
-            <div class="col-md-4">
+            <div class="col-sm-6 col-md">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.3s;">
-                    <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #0891B2, #06B6D4);">
-                        <i class="bi bi-pencil-square"></i>
-                    </div>
-                    <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Quiz & évaluations</h5>
-                    <p class="text-white-50 small mb-0" style="line-height: 1.7;">
-                        Testez vos connaissances avec des quiz interactifs et suivez votre progression en temps réel.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.4s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #16A34A, #22C55E);">
                         <i class="bi bi-person-check"></i>
                     </div>
                     <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Suivi personnalisé</h5>
                     <p class="text-white-50 small mb-0" style="line-height: 1.7;">
-                        Un accompagnement sur mesure avec des enseignants dédiés pour vous aider à atteindre vos objectifs.
+                        Un accompagnement sur mesure avec des enseignants diplomer pour vous aider à atteindre vos objectifs.
                     </p>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.5s;">
+            <div class="col-sm-6 col-md">
+                <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.4s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #D90429, #EF4444);">
                         <i class="bi bi-phone"></i>
                     </div>
@@ -324,13 +328,12 @@
                     </span>
                     <h2 class="section-title-3d mb-4">L'école à domicile <br>pour tous</h2>
                     <p class="text-white-50 mb-3" style="line-height: 1.8; font-size: 1.05rem;">
-                        <strong class="text-white">E-SCHOOL</strong> est un projet porté par un ingénieur et un enseignant en programmation, 
+                        <strong class="text-white">Smart School Academy</strong> est un projet porté par un ingénieur et un enseignant en programmation, 
                         également doctorant en chimie et formateur d'enseignants. Il vise à transformer le temps passé 
                         devant les écrans en une véritable opportunité d'apprentissage utile et efficace.
                     </p>
                     <p class="text-white-50 mb-4" style="line-height: 1.8; font-size: 1.05rem;">
-                        L'objectif est clair : <strong class="text-white">faire entrer l'école à domicile</strong>, pour qu'il n'y ait 
-                        plus d'excuse pour ne pas apprendre et progresser.
+                        Un objectif simple : <strong class="text-white">rendre l'éducation accessible à domicile</strong>, pour que chacun puisse apprendre et progresser sans contrainte.
                     </p>
 
                     <div class="d-flex flex-column gap-3">
@@ -364,7 +367,7 @@
                     </div>
 
                     <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient mt-4">
-                        Rejoindre E-School <i class="bi bi-arrow-right"></i>
+                        Rejoindre Smart School Academy <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
             </div>
@@ -441,57 +444,43 @@
 <div class="section-divider"></div>
 
 <!-- ══════════════════════════════════════════════════════
-     HOW IT WORKS
+     STATS SECTION — avec compteurs animés
      ══════════════════════════════════════════════════════ -->
-<section class="py-5">
+<section class="py-5" id="statsSection">
     <div class="container">
-        <div class="text-center mb-5">
-            <span class="badge px-3 py-2 mb-3" style="background: rgba(22, 163, 74, 0.12); color: #4ADE80; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
-                Comment ça marche
-            </span>
-            <h2 class="section-title-3d">Commencez en 3 étapes simples</h2>
-            <p class="text-white-50 mt-3" style="max-width: 500px; margin: 0 auto;">
-                Pas de complicité. Créez votre compte, choisissez votre niveau et commencez à apprendre.
-            </p>
-        </div>
-
         <div class="row g-4">
-            <div class="col-md-4">
-                <div class="step-3d reveal-3d">
-                    <div class="step-3d-number mx-auto">1</div>
-                    <h5 class="fw-bold text-white mt-3 mb-2">Créez votre compte</h5>
-                    <p class="text-white-50 small" style="line-height: 1.7;">
-                        Inscrivez-vous gratuitement en moins d'une minute. Aucune carte bancaire requise.
-                    </p>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="1200" data-prefix="+" data-suffix="">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Étudiants actifs</span>
                 </div>
             </div>
-
-            <div class="col-md-4">
-                <div class="step-3d reveal-3d" style="transition-delay: 0.15s;">
-                    <div class="step-3d-number mx-auto" style="background: linear-gradient(135deg, #7C3AED, #FFD166);">2</div>
-                    <h5 class="fw-bold text-white mt-3 mb-2">Choisissez votre niveau</h5>
-                    <p class="text-white-50 small" style="line-height: 1.7;">
-                        Sélectionnez votre matière et votre niveau scolaire parmi nos nombreuses offres.
-                    </p>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="50" data-prefix="+" data-suffix="">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Cours disponibles</span>
                 </div>
             </div>
-
-            <div class="col-md-4">
-                <div class="step-3d reveal-3d" style="transition-delay: 0.3s;">
-                    <div class="step-3d-number mx-auto" style="background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B;">3</div>
-                    <h5 class="fw-bold text-white mt-3 mb-2">Commencez à apprendre</h5>
-                    <p class="text-white-50 small" style="line-height: 1.7;">
-                        Accédez à tous les cours, lives et ressources. Apprenez à votre rythme et réussissez !
-                    </p>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="120" data-prefix="+" data-suffix="">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Lives organisés</span>
                 </div>
             </div>
-        </div>
-
-        <div class="text-center mt-5">
-            <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient" style="padding: 16px 44px; font-size: 1.1rem;">
-                <i class="bi bi-person-plus"></i>
-                Créer mon compte gratuit
-            </a>
+            <div class="col-6 col-lg-3">
+                <div class="reveal-3d stat-3d">
+                    <span class="stat-3d-number counter-value" data-target="95" data-prefix="" data-suffix="%">
+                        <span class="counter-inner">0</span>
+                    </span>
+                    <span class="stat-3d-label">Satisfaction</span>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -509,7 +498,7 @@
                     🚀 Prêt à commencer ?
                 </span>
                 <h2 class="section-title-3d-light fw-bold mb-3" style="font-family: 'Poppins', sans-serif; font-size: 2.5rem;">
-                    Rejoignez des milliers d'étudiants <br>qui réussissent avec E-School
+                    Accélérez votre réussite dès aujourd'hui
                 </h2>
                 <p class="text-white-50 mb-4" style="font-size: 1.1rem; max-width: 550px; margin: 0 auto 1.5rem;">
                     Inscription gratuite. 7 jours d'essai. Annulation à tout moment. <br>Rejoignez l'aventure éducative dès aujourd'hui !
@@ -519,6 +508,10 @@
                         <i class="bi bi-rocket-takeoff"></i>
                         S'inscrire maintenant
                         <i class="bi bi-arrow-right"></i>
+                    </a>
+                    <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
+                        <i class="bi bi-calendar-check"></i>
+                        Test de niveau
                     </a>
                     <a href="{{ route('plans') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
                         <i class="bi bi-credit-card"></i>

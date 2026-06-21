@@ -36,7 +36,32 @@ $subjectsGrouped = [
     // Liste classes
     public function classes()
     {
-        $subjects = \App\Models\Subject::all();
+        $subjects = \App\Models\Subject::withCount(['courses', 'classes'])->get();
+
+        $subjects->each(function ($subject) {
+            if ($subject->courses_count > 0) {
+                $subject->status = 'disponible';
+                $subject->status_label = 'Disponible';
+                $subject->status_icon = 'bi-check-circle-fill';
+                $subject->status_color = '#4ADE80';
+                $subject->status_bg = 'rgba(34,197,94,0.15)';
+                $subject->status_border = 'rgba(34,197,94,0.2)';
+            } elseif ($subject->classes_count > 0) {
+                $subject->status = 'en_cours';
+                $subject->status_label = 'En cours';
+                $subject->status_icon = 'bi-hourglass-split';
+                $subject->status_color = '#FB923C';
+                $subject->status_bg = 'rgba(251,146,60,0.15)';
+                $subject->status_border = 'rgba(251,146,60,0.2)';
+            } else {
+                $subject->status = 'non_disponible';
+                $subject->status_label = 'Non disponible';
+                $subject->status_icon = 'bi-x-circle-fill';
+                $subject->status_color = '#FCA5A5';
+                $subject->status_bg = 'rgba(239,68,68,0.15)';
+                $subject->status_border = 'rgba(239,68,68,0.2)';
+            }
+        });
 
         return view('front.classes', compact('subjects'));
     }

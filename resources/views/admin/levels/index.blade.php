@@ -6,6 +6,41 @@
 
 @section('content')
 
+<style>
+@keyframes levelFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.level-card-outer {
+    opacity: 0;
+    animation: levelFadeIn 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    will-change: transform, opacity;
+}
+
+.level-card-outer:nth-child(1) { animation-delay: 0.05s; }
+.level-card-outer:nth-child(2) { animation-delay: 0.15s; }
+.level-card-outer:nth-child(3) { animation-delay: 0.25s; }
+.level-card-outer:nth-child(4) { animation-delay: 0.35s; }
+.level-card-outer:nth-child(5) { animation-delay: 0.45s; }
+.level-card-outer:nth-child(6) { animation-delay: 0.55s; }
+.level-card-outer:nth-child(7) { animation-delay: 0.65s; }
+.level-card-outer:nth-child(8) { animation-delay: 0.75s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .level-card-outer {
+        animation: none;
+        opacity: 1;
+    }
+}
+</style>
+
 <div class="adm-page-header">
     <div>
         <h1><i class="bi bi-layers me-2" style="color:var(--adm-primary);"></i> Navigation par Niveaux</h1>
@@ -44,33 +79,34 @@
             $gradient = $idx !== false ? $levelGradients[$idx] : 'linear-gradient(135deg, #003A8F, #2563EB)';
             $classCount = $level->classes->count();
         @endphp
-        <div class="col-lg-3 col-md-6">
+        <div class="col-lg-3 col-md-6 level-card-outer">
             <a href="{{ route('admin.levels.classes', $level) }}" class="text-decoration-none">
                 <div class="adm-card st-fade-up" style="cursor:pointer;height:100%;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
                     <div style="height:120px;background:{{ $gradient }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
                         <div style="position:absolute;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,0.06);top:-50px;right:-50px;"></div>
                         <div style="position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.04);bottom:-30px;left:-30px;"></div>
                         <i class="bi {{ $icon }}" style="font-size:3rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
-                    </div>                        <div class="adm-card-body text-center" style="padding:1.25rem;">
-                            <h4 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.5rem;">{{ $level->name }}</h4>
-                            <p style="color:var(--adm-text-muted);font-size:0.85rem;margin-bottom:1rem;">
-                                <i class="bi bi-building me-1"></i> {{ $classCount }} classe(s)
-                            </p>
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                <span class="adm-btn" style="background:{{ $gradient }};color:white;border:none;flex:1;">
-                                    <i class="bi bi-arrow-right me-1"></i> Voir
-                                </span>
-                                <button onclick="event.preventDefault();event.stopPropagation();document.getElementById('editModal{{ $level->id }}').style.display='flex'" class="adm-btn adm-btn-warning adm-btn-sm" style="padding:8px 12px;" title="Modifier">
-                                    <i class="bi bi-pencil"></i>
+                    </div>
+                    <div class="adm-card-body text-center" style="padding:1.25rem;">
+                        <h4 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.5rem;">{{ $level->name }}</h4>
+                        <p style="color:var(--adm-text-muted);font-size:0.85rem;margin-bottom:1rem;">
+                            <i class="bi bi-building me-1"></i> {{ $classCount }} classe(s)
+                        </p>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <span class="adm-btn" style="background:{{ $gradient }};color:white;border:none;flex:1;">
+                                <i class="bi bi-arrow-right me-1"></i> Voir
+                            </span>
+                            <button onclick="event.preventDefault();event.stopPropagation();document.getElementById('editModal{{ $level->id }}').style.display='flex'" class="adm-btn adm-btn-warning adm-btn-sm" style="padding:8px 12px;" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form action="{{ route('admin.levels.destroy', $level->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Supprimer le niveau {{ $level->name }} ?')" onclick="event.stopPropagation();">
+                                @csrf @method('DELETE')
+                                <button class="adm-btn adm-btn-danger adm-btn-sm" style="padding:8px 12px;" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
                                 </button>
-                                <form action="{{ route('admin.levels.destroy', $level->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Supprimer le niveau {{ $level->name }} ?')" onclick="event.stopPropagation();">
-                                    @csrf @method('DELETE')
-                                    <button class="adm-btn adm-btn-danger adm-btn-sm" style="padding:8px 12px;" title="Supprimer">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            </form>
                         </div>
+                    </div>
                 </div>
             </a>
         </div>

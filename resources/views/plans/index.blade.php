@@ -10,7 +10,7 @@
 
         <!-- HEADER -->
         <div class="text-center mb-5">
-            <h1 class="fw-bold">Choisissez votre abonnement</h1>
+            <h1 class="fw-bold text-black">Choisissez votre abonnement</h1>
             <p class="text-muted">Accès illimité aux cours premium</p>
         </div>
 
@@ -43,15 +43,8 @@
                     <!-- Boutons -->
                     <div class="d-grid gap-2">
 
-                        <form method="POST" action="{{ route('student.checkout') }}">
-                            @csrf
-                            <button class="btn btn-primary rounded-pill w-100">
-                                💳 Payer par carte
-                            </button>
-                        </form>
-
                         <a href="{{ route('student.payment') }}?method=paypal"
-                           class="btn btn-outline-primary rounded-pill">
+                           class="btn btn-primary rounded-pill">
                             🅿️ PayPal
                         </a>
 

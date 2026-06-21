@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>@yield('title', 'E-School — Plateforme Éducative')</title>
+    <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Bootstrap -->
@@ -209,11 +209,11 @@
 <!-- ═══ GUEST NAVBAR ═══ -->
 <nav id="guestNav" class="guest-nav-3d d-flex align-items-center justify-content-between px-4 py-3">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
-        <img src="{{ asset('images/Edu-School.png') }}" width="28" height="28" alt="" class="me-2" style="filter: brightness(10); border-radius: 6px;">
-        E-School
+        <img src="{{ asset('images/Edu-School.png') }}" width="36" height="36" alt="" class="me-2" style="filter: brightness(10); border-radius: 6px;">
+        Smart School Academy
     </a>
     <div class="d-flex gap-2">
-        <a href="{{ route('login') }}" class="btn nav-btn-3d nav-btn-3d-outline btn-sm px-3" style="font-size: 0.85rem;">
+        <a href="{{ route('login') }}" class="btn nav-btn-3d btn-sm px-3" style="font-size: 0.85rem; background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 209, 102, 0.3);">
             <i class="bi bi-person"></i> Connexion
         </a>
         <a href="{{ route('register') }}" class="btn nav-btn-3d nav-btn-3d-primary btn-sm px-3" style="font-size: 0.85rem;">
@@ -226,9 +226,9 @@
 <div class="auth-container-3d" style="padding-top: 100px; min-height: 100vh;">
     <div class="auth-card-3d">
         <div class="text-center mb-4">
-            <img src="{{ asset('images/Edu-School.png') }}" width="52" height="52" alt="" 
+            <img src="{{ asset('images/Edu-School.png') }}" width="64" height="64" alt="" 
                  style="border-radius: 14px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
-            <h4 class="auth-title-3d mt-3 mb-0" style="font-size: 1.3rem;">E-School</h4>
+            <h4 class="auth-title-3d mt-3 mb-0" style="font-size: 1.3rem;">Smart School Academy</h4>
             <small style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Plateforme éducative</small>
         </div>
         @yield('content')

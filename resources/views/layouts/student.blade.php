@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Espace Étudiant') — E-School</title>
+    <title>@yield('title', 'Espace Étudiant') — Smart School Academy</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,9 +60,9 @@
 
             <div class="st-sidebar-brand">
                 <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:42px;height:42px;object-fit:contain;filter:brightness(0) invert(1);">
+                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:54px;height:54px;object-fit:contain;filter:brightness(0) invert(1);">
                 </div>
-                <h3>Edu School</h3>
+                <h3>Smart School Academy</h3>
                 <div class="brand-sub">Espace Étudiant</div>
             </div>
 

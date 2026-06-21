@@ -43,7 +43,7 @@
 @endif
 
 <!-- ENVOYER UN DEVOIR -->
-<div class="st-card" style="background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
+<div id="envoyerDevoir" class="st-card" style="background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
     <div class="st-card-header">
         <h4><i class="bi bi-cloud-upload" style="color:#818CF8;"></i> Envoyer un devoir</h4>
         <span class="st-badge st-badge-primary">Nouveau</span>
@@ -87,6 +87,132 @@
         </form>
     </div>
 </div>
+
+<!-- TABLEAU DES DEVOIRS DU PROFESSEUR -->
+@if($profAssignments->count() > 0)
+<div class="st-card mt-4" style="border-left:3px solid #818CF8;">
+    <div class="st-card-header">
+        <h4><i class="bi bi-journal-bookmark-fill" style="color:#818CF8;"></i> Devoirs du professeur</h4>
+        <span class="st-badge st-badge-primary">{{ $profAssignments->count() }}</span>
+    </div>
+    <div class="st-card-body p-0">
+        <div class="st-table-wrap">
+            <table class="st-table">
+                <thead>
+                    <tr>
+                        <th style="width:25%;">Titre</th>
+                        <th style="width:13%;">Date</th>
+                        <th style="width:15%;">Date limite</th>
+                        <th style="width:15%;">Professeur</th>
+                        <th style="width:10%;text-align:center;">Fichier</th>
+                        <th style="width:12%;text-align:center;">Statut</th>
+                        <th style="width:10%;text-align:center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($profAssignments as $pa)
+                    @php
+                        $now = \Carbon\Carbon::now();
+                        $dueDate = $pa->due_date ? \Carbon\Carbon::parse($pa->due_date) : null;
+                        $isOverdue = $dueDate && $now->gt($dueDate) && !$pa->student_submitted;
+                        
+                        if ($pa->student_grade_status === 'acqui') {
+                            $statusLabel = 'Acquis';
+                            $statusIcon = 'bi-check-circle-fill';
+                            $statusColor = '#34D399';
+                            $statusBg = 'rgba(52,211,153,0.12)';
+                            $statusBorder = 'rgba(52,211,153,0.2)';
+                        } elseif ($pa->student_grade_status === 'en_cours') {
+                            $statusLabel = 'En cours d\'acquisition';
+                            $statusIcon = 'bi-arrow-repeat';
+                            $statusColor = '#FBBF24';
+                            $statusBg = 'rgba(251,191,36,0.12)';
+                            $statusBorder = 'rgba(251,191,36,0.2)';
+                        } else {
+                            $statusLabel = 'Non acquis';
+                            $statusIcon = 'bi-x-circle-fill';
+                            $statusColor = '#F87171';
+                            $statusBg = 'rgba(248,113,113,0.12)';
+                            $statusBorder = 'rgba(248,113,113,0.2)';
+                        }
+                    @endphp
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:28px;height:28px;border-radius:6px;background:rgba(129,140,248,0.08);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#818CF8;flex-shrink:0;">
+                                    <i class="bi bi-journal-text"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:500;color:#F1F5F9;font-size:0.82rem;">{{ Str::limit($pa->title, 35) }}</div>
+                                    @if($pa->description)
+                                    <div style="font-size:0.65rem;color:#64748B;">{{ Str::limit($pa->description, 45) }}</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-size:0.75rem;color:#64748B;">{{ $pa->created_at->format('d/m/Y') }}</span>
+                        </td>
+                        <td>
+                            @if($pa->due_date)
+                            <span style="font-size:0.75rem;color:{{ $isOverdue ? '#F87171' : '#94A3B8' }};font-weight:{{ $isOverdue ? '600' : '400' }};">
+                                {{ \Carbon\Carbon::parse($pa->due_date)->format('d/m/Y') }}
+                            </span>
+                            @if($isOverdue)
+                            <div style="font-size:0.6rem;color:#F87171;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">
+                                <i class="bi bi-exclamation-triangle"></i> En retard
+                            </div>
+                            @endif
+                            @else
+                            <span style="color:#475569;font-size:0.75rem;">—</span>
+                            @endif
+                        </td>
+                        <td>
+                            <span style="font-size:0.78rem;color:#94A3B8;">
+                                <i class="bi bi-person me-1" style="color:#818CF8;"></i>
+                                {{ $pa->user?->name ?? 'Professeur' }}
+                            </span>
+                        </td>
+                        <td style="text-align:center;">
+                            @if($pa->file)
+                            <a href="{{ asset('storage/'.$pa->file) }}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.04);color:#94A3B8;font-size:0.72rem;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='#F1F5F9'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='#94A3B8'">
+                                <i class="bi bi-download"></i> Télécharger
+                            </a>
+                            @else
+                            <span style="font-size:0.65rem;color:#475569;">—</span>
+                            @endif
+                        </td>
+                        <td style="text-align:center;">
+                            <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:600;background:{{ $statusBg }};color:{{ $statusColor }};border:1px solid {{ $statusBorder }};">
+                                <i class="bi {{ $statusIcon }}"></i>
+                                {{ $statusLabel }}
+                            </span>
+                            @if($pa->student_grade !== null)
+                            <div style="font-size:0.7rem;color:#64748B;margin-top:3px;">Note: {{ $pa->student_grade }}/20</div>
+                            @endif
+                        </td>
+                        <td style="text-align:center;">
+                            @if($pa->student_submitted)
+                            <span class="st-badge st-badge-success" style="font-size:0.65rem;"><i class="bi bi-check me-1"></i>Soumis</span>
+                            @elseif($pa->is_locked)
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:rgba(248,113,113,0.1);color:#F87171;font-size:0.65rem;font-weight:600;white-space:nowrap;">
+                                <i class="bi bi-lock-fill"></i> 
+                                @if(!$pa->has_file) Non disponible @else Verrouillé @endif
+                            </span>
+                            @else
+                            <a href="#envoyerDevoir" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;background:rgba(79,70,229,0.1);color:#818CF8;font-size:0.65rem;font-weight:600;text-decoration:none;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.background='rgba(79,70,229,0.2)'" onmouseout="this.style.background='rgba(79,70,229,0.1)'">
+                                <i class="bi bi-send-fill"></i> Soumettre
+                            </a>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endif
 
 <!-- TABLEAU DES DEVOIRS ENVOYÉS -->
 <div class="st-card mt-4">

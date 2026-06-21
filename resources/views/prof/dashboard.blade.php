@@ -28,17 +28,17 @@
     </div>
     <div class="adm-stat green">
         <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-book-half"></i></div>
+            <div class="stat-icon"><i class="bi bi-file-earmark-plus-fill"></i></div>
         </div>
-        <div class="stat-value">{{ $classesCount ?? 0 }}</div>
-        <div class="stat-label">Classes</div>
+        <div class="stat-value">{{ $myDevoirsCount ?? 0 }}</div>
+        <div class="stat-label">Mes Devoirs</div>
     </div>
     <div class="adm-stat orange">
         <div class="stat-top">
             <div class="stat-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
         </div>
         <div class="stat-value">{{ $assignmentsCount ?? 0 }}</div>
-        <div class="stat-label">Devoirs</div>
+        <div class="stat-label">Total Devoirs</div>
     </div>
     <div class="adm-stat red">
         <div class="stat-top">

@@ -14,22 +14,16 @@
                     <span style="color:var(--text);font-weight:600;">{{ $class->name }}</span>
                 </div>
                 <h1 class="admin-header-title"><span class="gradient">📡 Lives — {{ $class->name }}</span></h1>
-                <p class="admin-header-subtitle">Gérez les sessions en direct pour cette classe</p>
+                <p class="admin-header-subtitle">Consultez les sessions en direct programmées</p>
             </div>
-            <a href="{{ route('prof.lives.create') }}" class="adm-btn adm-btn-danger">
-                <i class="bi bi-plus-lg"></i> Nouveau Live
-            </a>
+            
         </div>
 
-        @if($lives->isEmpty())
-            <div class="adm-card">
+        @if($lives->isEmpty())                    <div class="adm-card">
                 <div class="adm-empty">
                     <i class="bi bi-camera-video-off"></i>
                     <h3>Aucun live</h3>
                     <p>Aucune session live n'a été planifiée pour cette classe.</p>
-                    <a href="{{ route('prof.lives.create') }}" class="adm-btn adm-btn-danger">
-                        <i class="bi bi-plus-circle me-1"></i> Planifier un live
-                    </a>
                 </div>
             </div>
         @else
@@ -56,13 +50,11 @@
                                 <td>{{ $live->start_time }} - {{ $live->end_time }}</td>
                                 <td><a href="{{ $live->stream_url }}" target="_blank" class="adm-btn adm-btn-sm adm-btn-ghost"><i class="bi bi-box-arrow-up-right"></i></a></td>
                                 <td>
-                                    <div class="adm-actions">
-                                        <a href="{{ route('prof.lives.edit', $live) }}" class="adm-action-link adm-action-edit"><i class="bi bi-pencil-fill"></i></a>
-                                        <form method="POST" action="{{ route('prof.lives.destroy', $live) }}" onsubmit="return confirm('Supprimer ?')">
-                                            @csrf @method('DELETE')
-                                            <button class="adm-action-link adm-action-delete" style="border:none;"><i class="bi bi-trash-fill"></i></button>
-                                        </form>
-                                    </div>
+                                    @if($live->stream_url)
+                                    <a href="{{ $live->stream_url }}" target="_blank" class="adm-btn adm-btn-sm adm-btn-primary"><i class="bi bi-box-arrow-up-right me-1"></i> Rejoindre</a>
+                                    @else
+                                    <span class="adm-badge adm-badge-gray">Lien à venir</span>
+                                    @endif
                                 </td>
                             </tr>
                             @endforeach

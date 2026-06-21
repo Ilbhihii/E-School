@@ -67,6 +67,25 @@
                         <td style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $live->created_at->format('d/m/Y') }}</td>
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                @if($live->live_date)
+                                @php
+                                    $liveDate = \Carbon\Carbon::parse($live->live_date);
+                                    $startTime = $live->start_time ? $live->start_time : '00:00';
+                                    $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
+                                    $startDt = $liveDate->format('Ymd\THis');
+                                    $endDt = \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis');
+                                    $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
+                                    $outlookUrl .= '&subject=' . urlencode($live->title);
+                                    $outlookUrl .= '&startdt=' . $startDt;
+                                    $outlookUrl .= '&enddt=' . $endDt;
+                                    $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
+                                    $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
+                                @endphp
+                                <a href="{{ $outlookUrl }}" target="_blank" class="adm-btn adm-btn-sm" style="background:rgba(2,132,199,0.12);color:#38BDF8;border:1px solid rgba(2,132,199,0.15);"
+                                   onmouseover="this.style.background='rgba(2,132,199,0.25)'" onmouseout="this.style.background='rgba(2,132,199,0.12)'">
+                                    <i class="bi bi-calendar-plus"></i>
+                                </a>
+                                @endif
                                 <a href="{{ route('admin.lives.edit', $live) }}" class="adm-btn adm-btn-warning adm-btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
@@ -96,200 +115,157 @@
     </div>
 </div>
 
-<!-- FullCalendar -->
+<!-- Outlook Calendar List -->
 <div class="adm-card mt-4">
     <div class="adm-card-header">
-        <h4><i class="bi bi-calendar-event" style="color:#FCA5A5;"></i> Calendrier des lives</h4>
+        <h4><i class="bi bi-calendar-plus" style="color:#FCA5A5;"></i> Ajouter au calendrier Outlook</h4>
+        <div class="card-actions">
+            <span style="color:var(--adm-text-muted);font-size:0.78rem;"><i class="bi bi-info-circle me-1"></i> Cliquez sur Outlook pour chaque live</span>
+        </div>
     </div>
-    <div class="adm-card-body">
-        <div id="calendar"></div>
+    <div class="adm-card-body p-0">
+        @forelse($lives as $live)
+        @php
+            $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
+            $startTime = $live->start_time ? $live->start_time : '00:00';
+            $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
+            $startDt = $liveDate ? $liveDate->format('Ymd\THis') : '';
+            $endDt = $liveDate ? \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis') : '';
+            $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
+            $outlookUrl .= '&subject=' . urlencode($live->title);
+            $outlookUrl .= '&startdt=' . $startDt;
+            $outlookUrl .= '&enddt=' . $endDt;
+            $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
+            $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
+        @endphp
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#DC2626,#EF4444);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-camera-video-fill" style="font-size:0.85rem;color:white;"></i>
+                </div>
+                <div style="min-width:0;">
+                    <div style="font-weight:500;font-size:0.85rem;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $live->title }}</div>
+                    @if($liveDate)
+                    <div style="color:var(--adm-text-muted);font-size:0.72rem;margin-top:2px;">
+                        <i class="bi bi-calendar3 me-1"></i>{{ $liveDate->format('d/m/Y') }}
+                        @if($live->start_time) <i class="bi bi-clock ms-2 me-1"></i>{{ $live->start_time }} @endif
+                        <span class="adm-badge adm-badge-danger" style="font-size:0.6rem;margin-left:8px;">{{ $live->classRoom->name ?? '-' }}</span>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @if($live->live_date)
+            <a href="{{ $outlookUrl }}" target="_blank"
+               style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-size:0.78rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;"
+               onmouseover="this.style.background='rgba(2,132,199,0.15)';this.style.borderColor='rgba(2,132,199,0.2)';this.style.color='#38BDF8'"
+               onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.5)'">
+                <i class="bi bi-calendar-plus"></i> Outlook
+            </a>
+            @endif
+        </div>
+        @empty
+        <div class="adm-empty">
+            <div class="adm-empty-icon"><i class="bi bi-calendar-plus"></i></div>
+            <h5>Aucun live à ajouter</h5>
+            <p>Les lives apparaîtront ici pour les ajouter à votre calendrier Outlook.</p>
+        </div>
+        @endforelse
     </div>
 </div>
 
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/locales/fr.global.min.js"></script>
+<!-- CALENDAR -->
+<div class="adm-card mt-4">
+    <div class="adm-card-header">
+        <h4><i class="bi bi-calendar3" style="color:#EF4444;"></i> Calendrier des Lives</h4>
+        <div class="card-actions">
+            <span style="color:var(--adm-text-muted);font-size:0.78rem;"><i class="bi bi-info-circle me-1"></i> Cliquez sur un live pour rejoindre</span>
+        </div>
+    </div>
+    <div class="adm-card-body">
+        <div id="livesCalendar"></div>
+    </div>
+</div>
 
+@push('head')
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
 <style>
-/* FullCalendar dark theme overrides */
-#calendar {
-    max-width: 100%;
-}
-.fc {
-    background: transparent;
-    color: rgba(255,255,255,0.85);
-}
-.fc .fc-toolbar-title {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 700;
-    font-size: 1.15rem !important;
-    color: rgba(255,255,255,0.9);
-}
-.fc .fc-button {
-    background: rgba(255,255,255,0.08) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: rgba(255,255,255,0.7) !important;
-    border-radius: 9px !important;
-    padding: 6px 14px !important;
+#livesCalendar { min-height: 480px; }
+.fc { color: rgba(255,255,255,0.85); font-family: 'Inter', sans-serif; }
+.fc-toolbar-title { font-family: 'Poppins', sans-serif; font-weight: 700 !important; font-size: 1.2rem !important; color: rgba(255,255,255,0.9) !important; }
+.fc .fc-button-primary {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    color: rgba(255,255,255,0.8) !important;
+    border-radius: 8px !important;
     font-weight: 500 !important;
-    font-size: 0.8rem !important;
-    transition: all 0.2s ease !important;
-    text-transform: capitalize !important;
-    box-shadow: none !important;
-}
-.fc .fc-button:hover {
-    background: rgba(255,255,255,0.12) !important;
-    color: white !important;
-}
-.fc .fc-button-primary:not(:disabled).fc-button-active,
-.fc .fc-button-primary:not(:disabled):active {
-    background: rgba(239,68,68,0.2) !important;
-    border-color: rgba(239,68,68,0.3) !important;
-    color: #FCA5A5 !important;
-}
-.fc .fc-daygrid-day {
-    border-color: rgba(255,255,255,0.05) !important;
-}
-.fc .fc-daygrid-day-number {
-    color: rgba(255,255,255,0.6);
-    font-size: 0.85rem;
-    padding: 6px 8px !important;
-}
-.fc .fc-col-header-cell {
-    border-color: rgba(255,255,255,0.06) !important;
-}
-.fc .fc-col-header-cell-cushion {
-    color: rgba(255,255,255,0.5);
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 10px 4px;
-}
-.fc .fc-day-today {
-    background: rgba(239,68,68,0.06) !important;
-}
-.fc .fc-day-today .fc-daygrid-day-number {
-    color: #FCA5A5;
-    font-weight: 700;
-}
-.fc .fc-day-other .fc-daygrid-day-top {
-    opacity: 0.3;
-}
-.fc .fc-daygrid-event {
-    background: rgba(239,68,68,0.15) !important;
-    border: 1px solid rgba(239,68,68,0.2) !important;
-    border-left: 3px solid #EF4444 !important;
-    border-radius: 6px !important;
-    padding: 3px 6px !important;
-    font-size: 0.78rem !important;
-    color: #FCA5A5 !important;
     transition: all 0.2s ease;
 }
-.fc .fc-daygrid-event:hover {
-    background: rgba(239,68,68,0.25) !important;
-    transform: translateY(-1px);
-}
-.fc .fc-daygrid-event .fc-event-title {
-    font-weight: 600;
-    padding: 0 2px;
-}
-.fc .fc-scrollgrid {
-    border-color: rgba(255,255,255,0.06) !important;
-}
-.fc .fc-scrollgrid-section > td {
-    border-color: rgba(255,255,255,0.06) !important;
-}
-.fc .fc-timegrid-axis {
-    border-color: rgba(255,255,255,0.06) !important;
-}
-.fc .fc-timegrid-slot {
-    border-color: rgba(255,255,255,0.04) !important;
-}
-.fc .fc-timegrid-axis-cushion {
-    color: rgba(255,255,255,0.4);
-    font-size: 0.75rem;
-}
-.fc .fc-timegrid-slot-label-cushion {
-    color: rgba(255,255,255,0.4);
-    font-size: 0.75rem;
-}
-.fc .fc-popover {
-    background: rgba(15,23,42,0.98) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.4) !important;
-}
-.fc .fc-popover-header {
-    background: rgba(255,255,255,0.04) !important;
-    padding: 10px 14px !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
-    border-radius: 12px 12px 0 0 !important;
-}
-.fc .fc-popover-title {
-    color: rgba(255,255,255,0.8) !important;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-.fc .fc-popover-close {
-    color: rgba(255,255,255,0.4) !important;
-}
-.fc .fc-more-popover .fc-daygrid-day-events {
-    padding: 8px;
-}
-.fc .fc-non-business {
-    background: transparent !important;
-}
-.fc .fc-highlight {
-    background: rgba(124,58,237,0.1) !important;
-}
+.fc .fc-button-primary:hover { background: rgba(255,255,255,0.1) !important; }
+.fc .fc-button-primary:not(:disabled).fc-button-active { background: linear-gradient(135deg,#DC2626,#EF4444) !important; border-color: transparent !important; color: white !important; }
+.fc-daygrid-day { background: rgba(255,255,255,0.02); transition: background 0.2s; cursor: pointer; }
+.fc-daygrid-day:hover { background: rgba(255,255,255,0.05); }
+.fc .fc-day-other { background: rgba(255,255,255,0.01); }
+.fc-col-header-cell { background: rgba(255,255,255,0.04); }
+.fc-theme-standard td, .fc-theme-standard th { border-color: rgba(255,255,255,0.06); }
+.fc .fc-daygrid-day-number { color: rgba(255,255,255,0.7); padding: 6px 8px; font-size: 0.85rem; }
+.fc .fc-col-header-cell-cushion { color: rgba(255,255,255,0.6); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 4px; }
+.fc .fc-scrollgrid { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.fc .fc-today-button { font-weight: 600 !important; }
+.fc-daygrid-event { border-radius: 6px !important; padding: 2px 6px !important; font-size: 0.75rem !important; font-weight: 500 !important; border: none !important; }
+.fc-h-event .fc-event-title { font-weight: 600 !important; }
+.fc .fc-day-today { background: rgba(220,38,38,0.04) !important; }
+.fc .fc-popover { background: #1E293B !important; border: 1px solid rgba(255,255,255,0.06) !important; border-radius: 10px !important; }
+.fc .fc-popover-header { background: rgba(255,255,255,0.04) !important; color: rgba(255,255,255,0.85) !important; padding: 8px 12px !important; border-radius: 10px 10px 0 0 !important; }
+.fc .fc-popover-body { padding: 4px !important; }
+@media (max-width: 768px) { .fc-toolbar { flex-direction: column; gap: 0.75rem; } #livesCalendar { min-height: 320px; } }
 </style>
+@endpush
 
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var calendarEl = document.getElementById('calendar');
-    if (!calendarEl) return;
-
-    var calendar = new FullCalendar.Calendar(calendarEl, {
+    let calEl = document.getElementById('livesCalendar');
+    if (!calEl) return;
+    let calendar = new FullCalendar.Calendar(calEl, {
         initialView: 'dayGridMonth',
-        height: 'auto',
+        locale: 'fr',
+        firstDay: 1,
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek'
+            right: 'dayGridMonth,dayGridWeek,listWeek'
         },
-        buttonText: {
-            today: 'Aujourd\'hui',
-            month: 'Mois',
-            week: 'Semaine'
-        },
-        locale: 'fr',
-        firstDay: 1,
+        buttonText: { today: "Aujourd'hui", month: 'Mois', week: 'Semaine', list: 'Liste' },
         events: [
             @foreach($lives as $live)
+            @if($live->live_date)
             {
-                title: "{{ $live->title }}",
-                start: "{{ $live->live_date }}T{{ $live->start_time }}",
-                end: "{{ $live->live_date }}T{{ $live->end_time }}",
-                url: "{{ $live->stream_url }}",
-                className: 'fc-live-event'
+                id: '{{ $live->id }}',
+                title: '{{ \Illuminate\Support\Str::limit($live->title, 30) }}',
+                start: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->start_time ?? '00:00' }}',
+                end: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->end_time ?? date('H:i', strtotime(($live->start_time ?? '00:00') . ' +1 hour')) }}',
+                url: '{{ $live->stream_url ?? '#' }}',
+                backgroundColor: '#DC2626',
+                borderColor: '#EF4444',
+                textColor: '#FFF',
+                extendedProps: {
+                    class: '{{ $live->classRoom?->name ?? "-" }}',
+                    stream: '{{ $live->stream_url ?? "" }}'
+                }
             },
+            @endif
             @endforeach
         ],
         eventClick: function(info) {
-            info.jsEvent.preventDefault();
-            if (info.event.url) {
+            if (info.event.url && info.event.url !== '#') {
                 window.open(info.event.url, '_blank');
-            }
-        },
-        loading: function(isLoading) {
-            if (!isLoading) {
-                // Calendar loaded
             }
         }
     });
-
     calendar.render();
 });
 </script>
+@endpush
+
 @endsection

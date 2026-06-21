@@ -19,13 +19,16 @@ use App\Http\Controllers\Prof\ProfController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Prof\ScheduleController;
 use App\Http\Controllers\Prof\TestController as ProfTestController;
-use App\Http\Controllers\Prof\LiveController as ProfLiveController;
 use App\Http\Controllers\Prof\DevoirController as ProfDevoirController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\FrontController;
 use App\Http\Controllers\Admin\DevoirController;
 use App\Http\Controllers\Front\LearningController;
 
+
+
+
+use App\Http\Controllers\AppointmentController;
 
 
 
@@ -36,16 +39,23 @@ use App\Http\Controllers\Front\LearningController;
 */
 Route::get('/', [HomeController::class,'index'])->name('home');
 
+// Rendez-vous pour test
+Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appointment.create');
+Route::post('/rendez-vous', [AppointmentController::class, 'store'])->name('appointment.store');
+
 Route::get('/classes', [\App\Http\Controllers\Front\HomeController::class, 'classes'])->name('front.classes');
 
 Route::get('/matieres/{id}/classes', [FrontController::class, 'subjectClasses'])
     ->name('front.subject.classes');
 
-Route::get('/matieres/{subject_id}/classes/{class_id}/courses', [FrontController::class, 'courses'])
-    ->name('front.courses');
-
 Route::get('/matieres/{id}/levels', [FrontController::class, 'subjectLevels'])
     ->name('front.subject.levels');
+
+Route::get('/matieres/{subject}/levels/{level}/classes', [FrontController::class, 'levelClasses'])
+    ->name('front.subject.level.classes');
+
+Route::get('/matieres/{subject}/levels/{level}/classes/{class}/courses', [FrontController::class, 'courses'])
+    ->name('front.courses');
 
 Route::get('/levels/{id}/courses', [FrontController::class, 'levelCourses'])
     ->name('front.level.courses');
@@ -124,7 +134,12 @@ Route::middleware(['auth','isAdmin'])
 
     Route::resource('classes', ClassController::class);
 
-    // Navigation hiérarchique : Niveaux → Classes → Matières → Cours
+    // Navigation hiérarchique : Matières → Niveaux → Classes → Cours
+    Route::get('/subjects', [LevelController::class, 'subjectsIndex'])->name('subjects.index');
+    Route::get('/subjects/{subject}/levels', [LevelController::class, 'subjectLevels'])->name('subjects.levels');
+    Route::get('/subjects/{subject}/levels/{level}/classes', [LevelController::class, 'subjectClasses'])->name('subjects.classes');
+
+    // Ancienne navigation Niveaux → Classes (conservée pour la rétrocompatibilité)
     Route::get('/levels/{level}/classes', [LevelController::class, 'classes'])->name('levels.classes');
     Route::get('/levels/{level}/classes/{class}/subjects', [LevelController::class, 'subjects'])->name('levels.subjects');
     Route::get('/levels/{level}/classes/{class}/subjects/{subject}/courses', [LevelController::class, 'courses'])->name('levels.courses');
@@ -171,6 +186,12 @@ Route::middleware(['auth','isAdmin'])
     Route::post('/prof-assignments', [UserController::class, 'storeProfAssignment'])->name('users.store-prof-assignment');
     Route::delete('/prof-assignments/{id}', [UserController::class, 'destroyProfAssignment'])->name('users.destroy-prof-assignment');
 
+    // Rendez-vous
+    Route::get('/appointments', [\App\Http\Controllers\AppointmentController::class, 'index'])->name('appointments.index');
+    Route::patch('/appointments/{appointment}/confirm', [\App\Http\Controllers\AppointmentController::class, 'confirm'])->name('appointments.confirm');
+    Route::patch('/appointments/{appointment}/cancel', [\App\Http\Controllers\AppointmentController::class, 'cancel'])->name('appointments.cancel');
+    Route::delete('/appointments/{appointment}', [\App\Http\Controllers\AppointmentController::class, 'destroy'])->name('appointments.destroy');
+
     Route::get('/profile', function () {
         return view('admin.profile');
     })->name('profile');
@@ -195,16 +216,6 @@ Route::middleware(['auth','isProf'])
     ->group(function(){
 
     Route::get('/dashboard', [ProfController::class,'dashboard'])->name('dashboard');
-
-    // Navigation hiérarchique : Niveaux → Classes → Matières → Cours
-    Route::get('/levels', [\App\Http\Controllers\Prof\ProfLevelController::class, 'index'])->name('levels.index');
-    Route::get('/levels/{level}/classes', [\App\Http\Controllers\Prof\ProfLevelController::class, 'classes'])->name('levels.classes');
-    Route::get('/levels/{level}/classes/{class}/subjects', [\App\Http\Controllers\Prof\ProfLevelController::class, 'subjects'])->name('levels.subjects');
-    Route::get('/levels/{level}/classes/{class}/subjects/{subject}/courses', [\App\Http\Controllers\Prof\ProfLevelController::class, 'courses'])->name('levels.courses');
-
-    Route::get('/courses', [ProfController::class, 'courses'])->name('courses.index');
-    
-    Route::resource('courses', ProfController::class)->except(['index']);
 
     Route::get('/profile', function () {
         return view('prof.profile');
@@ -251,7 +262,11 @@ Route::middleware(['auth','isProf'])
         ->name('absences.update');
         
     Route::get('/lives', [ProfController::class, 'livesIndex'])->name('lives.index');
-    Route::resource('lives', ProfLiveController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+
+    // Navigation hiérarchique : Matières → Niveaux → Classes
+    Route::get('/subjects', [ProfController::class, 'subjectsList'])->name('subjects.list');
+    Route::get('/subjects/{subject}/levels', [ProfController::class, 'subjectLevels'])->name('subjects.levels');
+    Route::get('/subjects/{subject}/levels/{level}/classes', [ProfController::class, 'subjectClasses'])->name('subjects.classes');
 
     Route::resource('devoir', ProfDevoirController::class)->except(['show'])->names([
                     'index' => 'devoir.index',
@@ -293,6 +308,11 @@ Route::middleware(['auth'])
     Route::get('/levels/{level}/classes/{class}/subjects', [StudentController::class, 'levelSubjects'])->name('levels.subjects');
 
     Route::get('/subjects', [StudentController::class, 'indexSubjects'])->name('subjects.index');
+
+    // Navigation hiérarchique : Matières → Niveaux → Classes → Cours
+    Route::get('/subjects/{subject}/levels', [StudentController::class, 'subjectLevels'])->name('subjects.levels');
+    Route::get('/subjects/{subject}/levels/{level}/classes', [StudentController::class, 'subjectClasses'])->name('subjects.classes');
+    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [StudentController::class, 'subjectCourses'])->name('subjects.courses');
 
     Route::get('/subjects/{level}', [StudentController::class, 'subjects'])->name('subjects');
 

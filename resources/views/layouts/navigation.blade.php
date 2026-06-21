@@ -1,7 +1,7 @@
 <nav class="navbar-3d px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
     <a href="{{ route('dashboard') }}" class="navbar-brand mb-0">
         <i class="bi bi-mortarboard-fill me-2"></i>
-        E-School
+        Smart School Academy
     </a>
 
     <div class="d-flex align-items-center gap-3 flex-wrap">

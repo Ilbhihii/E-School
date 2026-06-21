@@ -7,14 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\Assignment;
 use App\Models\Absence;
 use App\Models\ClassRoom;
-use App\Models\Classe;
 use App\Models\Level;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use App\Models\Course;
-use App\Models\Subject;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Test;
 
 
@@ -25,13 +22,14 @@ class ProfController extends Controller
 
     public function dashboard()
     {
-        $classesCount = \App\Models\ClassRoom::count();
         $studentsCount = \App\Models\User::where('role', 'student')->count();
         $assignmentsCount = \App\Models\Assignment::count();
+        $myDevoirsCount = \App\Models\Assignment::where('user_id', auth()->id())->count();
         $absencesCount = \App\Models\Absence::where('present', 0)->count();
         $testsCount = Test::where('create_by', auth()->id())->count();
+        $livesCount = \App\Models\Live::count();
 
-        return view('prof.dashboard', compact('classesCount', 'studentsCount', 'assignmentsCount', 'absencesCount', 'testsCount'));
+        return view('prof.dashboard', compact('studentsCount', 'assignmentsCount', 'myDevoirsCount', 'absencesCount', 'testsCount', 'livesCount'));
     }
 
     public function assignments()
@@ -45,12 +43,23 @@ class ProfController extends Controller
         $assignment = Assignment::findOrFail($request->id);
 
         $status = $request->status;
-        $assignment->grade = ($status === 'bien') ? 20 : 0;
+        $assignment->grade = match($status) {
+            'acquis' => 20,
+            'en_cours' => 10,
+            'non_acquis' => 0,
+            default => 0,
+        };
         $assignment->comment = $request->comment ?? '';
 
         $assignment->save();
 
-        return back()->with('success','Devoir corrigé avec succès!');
+        $label = match($assignment->grade) {
+            20 => 'Acquis',
+            10 => 'En cours d\'acquisition',
+            default => 'Non acquis',
+        };
+
+        return back()->with('success', "Devoir corrigé : {$label}");
     }
 
     public function absences()
@@ -164,191 +173,44 @@ $classRoom = ClassRoom::findOrFail($id);
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
     }
 
-    public function index()
-    {
-        return $this->courses();
-    }
-
     public function livesIndex()
     {
-        $lives = \App\Models\Live::where('user_id', auth()->id())
-            ->with('classRoom')
+        $lives = \App\Models\Live::with('classRoom')
             ->latest()
             ->paginate(15);
         
-        $totalLives = \App\Models\Live::where('user_id', auth()->id())->count();
-        $recentLives = \App\Models\Live::where('user_id', auth()->id())
-            ->latest()
+        $totalLives = \App\Models\Live::count();
+        $recentLives = \App\Models\Live::latest()
             ->limit(5)
             ->get();
+        $upcomingLives = \App\Models\Live::where('live_date', '>=', now())
+            ->orWhereNull('live_date')
+            ->count();
         
-        return view('prof.lives.index', compact('lives', 'totalLives', 'recentLives'));
+        return view('prof.lives.index', compact('lives', 'totalLives', 'recentLives', 'upcomingLives'));
     }
 
-    public function show(Course $course)
+    // ═══ Navigation hiérarchique : Matières → Niveaux → Classes ═══
+
+    public function subjectsList()
     {
-        if ($course->user_id !== auth()->id()) {
-            abort(403, 'Accès non autorisé');
-        }
-
-        $course->load(['classRoom', 'subject', 'level', 'assignments']);
-
-        return view('prof.courses.show', compact('course'));
+        $subjects = Subject::withCount('classes')->orderBy('name')->get();
+        return view('prof.subjects.index', compact('subjects'));
     }
 
-    public function courses()
+    public function subjectLevels(Subject $subject)
     {
-        $courses = Course::where('user_id', auth()->id())
-            ->with(['level', 'subject'])
-            ->latest()
-            ->paginate(15);
-        return view('prof.courses.index', compact('courses'));
+        $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique()->filter();
+        $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
+        return view('prof.subjects.levels', compact('subject', 'levels'));
     }
 
-    public function create(Request $request)
+    public function subjectClasses(Subject $subject, Level $level)
     {
-        $levels = Level::with('classes')->get();
-        $classes = ClassRoom::with('level')->get();
-        $subjects = Subject::all()->unique('name');
-        $selectedClassId = $request->get('class_id');
-        $selectedSubjectId = $request->get('subject_id');
-        return view('prof.courses.create', compact('levels', 'classes', 'subjects', 'selectedClassId', 'selectedSubjectId'));
+        $classes = ClassRoom::where('level_id', $level->id)
+            ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
+            ->get();
+        return view('prof.subjects.classes', compact('subject', 'level', 'classes'));
     }
 
-    public function store(Request $request)
-    {
-        if(!in_array(auth()->user()->role, ['admin','prof'])){
-            abort(403);
-        }
-
-        $request->validate([
-            'title' => 'required',
-            'description' => 'nullable|string',
-            'class_id' => 'required|exists:class_rooms,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'course_link' => 'nullable|url',
-            'video' => 'nullable|mimes:mp4,mov,avi|max:204800',
-            'pdf' => 'nullable|mimes:pdf|max:20480',
-        ]);
-
-        // Récupérer le niveau depuis la classe
-        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
-
-        $videoPath = null;
-        $pdfPath = null;
-
-        if ($request->hasFile('video')) {
-            $videoPath = $request->file('video')->store('videos', 'public');
-        }
-
-        if ($request->hasFile('pdf')) {
-            $pdfPath = $request->file('pdf')->store('pdfs', 'public');
-        }
-
-        $course = Course::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'class_id' => $request->class_id,
-            'level_id' => $classRoom->level->id,
-            'subject_id' => $request->subject_id,
-            'video' => $videoPath,
-            'pdf' => $pdfPath,
-            'course_link' => $request->course_link,
-            'user_id' => auth()->id(),
-            'admin_id' => auth()->id(),
-        ]);
-
-        // 🔥 4. SI devoir rempli → créer devoir
-        if($request->assignment_title){
-
-            $filePath = null;
-            if($request->hasFile('assignment_file')){
-                $filePath = $request->file('assignment_file')->store('assignments','public');
-            }
-
-            Assignment::create([
-                'title' => $request->assignment_title,
-                'description' => $request->assignment_description,
-                'due_date' => $request->assignment_due_date,
-                'file' => $filePath ?? null,
-                'course_id' => $course->id,
-                'user_id' => auth()->id(),
-            ]);
-        }
-
-        return redirect()->route('prof.courses.index')
-            ->with('success','Cours + devoir créés avec succès');
-    }
-
-    public function edit(Course $course)
-    {
-        if ($course->user_id !== auth()->id()) {
-            abort(403, 'Accès non autorisé');
-        }
-
-        $levels = Level::with('classes')->get();
-        $classes = ClassRoom::with('level')->get();
-        $subjects = Subject::all()->unique('name');
-        return view('prof.courses.edit', compact('course', 'levels', 'classes', 'subjects'));
-    }
-
-    public function update(Request $request, Course $course)
-    {
-        if ($course->user_id !== auth()->id()) {
-            abort(403, 'Accès non autorisé');
-        }
-
-        $request->validate([
-            'title' => 'required',
-            'description' => 'nullable',
-            'class_id' => 'required|exists:class_rooms,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'course_link' => 'nullable|url',
-            'video' => 'nullable|file|mimes:mp4,mov,avi|max:204800',
-            'pdf' => 'nullable|file|mimes:pdf|max:20480',
-        ]);
-
-        // Récupérer le niveau depuis la classe
-        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
-
-        $data = $request->only(['title', 'description', 'class_id', 'subject_id', 'course_link']);
-        $data['level_id'] = $classRoom->level->id;
-
-        if ($request->hasFile('video')) {
-            if ($course->video) {
-                Storage::disk('public')->delete($course->video);
-            }
-            $data['video'] = $request->file('video')->store('videos', 'public');
-        }
-
-        if ($request->hasFile('pdf')) {
-            if ($course->pdf) {
-                Storage::disk('public')->delete($course->pdf);
-            }
-            $data['pdf'] = $request->file('pdf')->store('pdfs', 'public');
-        }
-
-        $course->update($data);
-
-        return redirect()->route('prof.courses.index')->with('success', 'Cours mis à jour');
-    }
-
-    public function destroy(Course $course)
-    {
-        if ($course->user_id !== auth()->id()) {
-            abort(403, 'Accès non autorisé');
-        }
-
-        if ($course->video) {
-            Storage::disk('public')->delete($course->video);
-        }
-
-        if ($course->pdf) {
-            Storage::disk('public')->delete($course->pdf);
-        }
-
-        $course->delete();
-
-        return back()->with('success', 'Cours supprimé avec succès');
-    }
 }

@@ -22,7 +22,10 @@
                         <div class="card-3d-icon mx-auto">
                             <i class="bi bi-book"></i>
                         </div>
-                        <h5 class="fw-bold text-white mb-1" style="font-family: 'Poppins', sans-serif;">{{ $subject->name }}</h5>
+                        <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">{{ $subject->name }}</h5>
+                        <span class="badge px-3 py-1 mb-2" style="background: {{ $subject->status_bg }}; color: {{ $subject->status_color }}; border: 1px solid {{ $subject->status_border }}; border-radius: 20px; font-weight: 500; font-size: 0.75rem;">
+                            <i class="bi {{ $subject->status_icon }} me-1"></i> {{ $subject->status_label }}
+                        </span>
                         <p class="text-white-50 small mb-0">Voir les niveaux disponibles <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i></p>
                     </div>
                 </a>

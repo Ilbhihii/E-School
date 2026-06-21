@@ -20,7 +20,7 @@
 
             @forelse($subjects as $subject)
             <div class="col-md-4">
-                <a href="{{ route('front.subject.classes', $subject->id) }}"
+                <a href="{{ route('front.subject.levels', $subject->id) }}"
                    class="text-decoration-none text-dark">
 
                     <div class="card shadow rounded-4 text-center p-4 h-100">

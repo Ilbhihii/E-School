@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'E-School')</title>
+    <title>@yield('title', 'Smart School Academy')</title>
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -104,8 +104,8 @@
 <!-- ═══ NAVBAR ═══ -->
 <nav class="navbar-3d d-flex align-items-center justify-content-between px-4 py-3 flex-wrap gap-3">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
-        <img src="{{ asset('images/Edu-School.png') }}" width="28" height="28" alt="" class="me-2" style="filter: brightness(10); border-radius: 6px;">
-        E-School
+        <img src="{{ asset('images/Edu-School.png') }}" width="36" height="36" alt="" class="me-2" style="filter: brightness(10); border-radius: 6px;">
+        Smart School Academy
     </a>
 
     <div class="app-nav d-flex flex-wrap align-items-center gap-1">

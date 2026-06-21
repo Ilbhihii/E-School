@@ -175,8 +175,52 @@ $course = Course::with(['subject', 'classRoom', 'devoirs'])->findOrFail($id);
         $courses = $classRoom?->courses ?? collect([]);
         $subjects = $classRoom?->subjects ?? collect([]);
 
-        return view('student.assignments', compact('assignments', 'courses', 'classRoom', 'subjects'));
+        // Devoirs postés par les professeurs pour cette classe
+        $profAssignments = collect([]);
+        if ($classRoom) {
+            $profAssignments = Assignment::where('class_room_id', $classRoom->id)
+                ->whereHas('user', function($q) {
+                    $q->where('role', 'prof');
+                })
+                ->with('user')
+                ->orderBy('created_at', 'desc')
+                ->get();
 
+            $now = now();
+            // Pour chaque devoir du prof, vérifier si l'étudiant a soumis
+            $profAssignments->each(function($pa) use ($now) {
+                $dueDate = $pa->due_date ? \Carbon\Carbon::parse($pa->due_date) : null;
+                $isOverdue = $dueDate && $now->gt($dueDate);
+
+                $studentSubmission = Assignment::where('user_id', auth()->id())
+                    ->where(function($q) use ($pa) {
+                        $q->where('course_id', $pa->course_id);
+                        if ($pa->title) {
+                            $q->orWhere('title', 'like', '%' . $pa->title . '%');
+                        }
+                    })
+                    ->first();
+
+                // Vérifier si le devoir a assez d'informations pour être soumis
+                $pa->has_file = !empty($pa->file);
+                $pa->is_locked = $isOverdue || !$pa->has_file;
+
+                if ($studentSubmission) {
+                    $pa->student_submitted = true;
+                    if ($studentSubmission->grade !== null) {
+                        $pa->student_grade = $studentSubmission->grade;
+                        $pa->student_grade_status = $studentSubmission->grade >= 10 ? 'acqui' : 'non_acquis';
+                    } else {
+                        $pa->student_grade_status = 'en_cours';
+                    }
+                } else {
+                    $pa->student_submitted = false;
+                    $pa->student_grade_status = 'non_acquis';
+                }
+            });
+        }
+
+        return view('student.assignments', compact('assignments', 'courses', 'classRoom', 'subjects', 'profAssignments'));
     }
 
 
@@ -280,9 +324,7 @@ public function settings()
         ]);
         auth()->user()->update(['password' => Hash::make($request->password)]);
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
-    }
-
-public function indexSubjects()
+    }    public function indexSubjects()
 {
     $user = auth()->user();
     $classRoom = $user->classRoom()->with('level', 'subjects')->first();
@@ -296,7 +338,36 @@ public function indexSubjects()
     // Ne montrer que les matières liées à la classe de l'étudiant
     $subjects = $classRoom->subjects;
     
-    return view('student.subjects', compact('subjects', 'level', 'classRoom'));
+    return view('student.subjects.index', compact('subjects', 'level', 'classRoom'));
+}
+
+// ═══ Navigation hiérarchique : Matières → Niveaux → Classes → Cours ═══
+
+public function subjectLevels(Subject $subject)
+{
+    $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique()->filter();
+    $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
+
+    return view('student.subjects.levels', compact('subject', 'levels'));
+}
+
+public function subjectClasses(Subject $subject, Level $level)
+{
+    $classes = ClassRoom::where('level_id', $level->id)
+        ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
+        ->get();
+
+    return view('student.subjects.classes', compact('subject', 'level', 'classes'));
+}
+
+public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
+{
+    $courses = Course::where('subject_id', $subject->id)
+        ->where('class_id', $class->id)
+        ->withCount('devoirs')
+        ->get();
+
+    return view('student.subjects.courses', compact('subject', 'level', 'class', 'courses'));
 }
 
 public function waiting()

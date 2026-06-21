@@ -1,6 +1,8 @@
 @extends('layouts.student')
 
-@section('title', 'Chat - {{ $subject->name ?? '' }}')
+@section('title')
+    Chat - {{ $subject->name ?? '' }}
+@endsection
 @section('page_title', 'Chat')
 
 @section('content')

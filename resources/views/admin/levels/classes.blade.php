@@ -30,6 +30,129 @@
 <div class="adm-alert adm-alert-success mb-4">{{ session('success') }}</div>
 @endif
 
+<!-- Classes en ligne unique -->
+<style>
+.class-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.25rem 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    -webkit-overflow-scrolling: touch;
+}
+.class-row::-webkit-scrollbar { height: 6px; }
+.class-row::-webkit-scrollbar-track { background: transparent; }
+.class-row::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+.class-row::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+@keyframes classFadeIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.class-card-wrap {
+    flex: 1 1 0;
+    min-width: 280px;
+    max-width: 440px;
+    opacity: 0;
+    animation: classFadeIn 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    will-change: transform, opacity;
+}
+.class-card-wrap:nth-child(1) { animation-delay: 0.05s; }
+.class-card-wrap:nth-child(2) { animation-delay: 0.15s; }
+.class-card-wrap:nth-child(3) { animation-delay: 0.25s; }
+.class-card-wrap:nth-child(4) { animation-delay: 0.35s; }
+.class-card-wrap:nth-child(5) { animation-delay: 0.45s; }
+.class-card-wrap:nth-child(6) { animation-delay: 0.55s; }
+.class-card-wrap:nth-child(7) { animation-delay: 0.65s; }
+.class-card-wrap:nth-child(8) { animation-delay: 0.75s; }
+@media (prefers-reduced-motion: reduce) {
+    .class-card-wrap { animation: none; opacity: 1; }
+}
+
+.class-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.35rem 1.5rem;
+    background: var(--adm-bg-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--adm-border-card);
+    border-radius: 18px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    height: 100%;
+    overflow: hidden;
+}
+.class-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--adm-border-card-hover);
+    box-shadow: 0 20px 48px rgba(0,0,0,0.4);
+}
+.class-card:active {
+    transform: translateY(-1px) scale(1.01);
+}
+
+.class-card-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.class-card:hover .class-card-icon {
+    transform: scale(1.08) rotate(-4deg);
+}
+
+.class-card-content {
+    flex: 1;
+    min-width: 0;
+}
+.class-card-content h4 {
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    margin: 0 0 0.3rem;
+    font-size: 1.15rem;
+    line-height: 1.3;
+}
+.class-card-content .class-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--adm-text-muted);
+    font-size: 0.85rem;
+}
+.class-card-content .class-meta i {
+    font-size: 0.75rem;
+}
+
+.class-arrow {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.2);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+.class-card:hover .class-arrow {
+    color: rgba(255,255,255,0.6);
+    transform: translateX(4px);
+}
+</style>
+
 @if($classes->isEmpty())
     <div class="adm-card">
         <div class="adm-empty" style="padding:4rem 2rem;">
@@ -42,37 +165,48 @@
         </div>
     </div>
 @else
-    <div class="row g-4">
+    @php
+        $gradients = [
+            'linear-gradient(135deg, #16A34A, #22C55E)',
+            'linear-gradient(135deg, #003A8F, #2563EB)',
+            'linear-gradient(135deg, #D97706, #FFB347)',
+            'linear-gradient(135deg, #7C3AED, #A78BFA)',
+            'linear-gradient(135deg, #D90429, #EF4444)',
+            'linear-gradient(135deg, #06B6D4, #0891B2)',
+        ];
+        $iconColors = ['#4ADE80', '#60A5FA', '#FCD34D', '#A78BFA', '#FCA5A5', '#67E8F9'];
+        $iconBgs = [
+            'rgba(22,163,74,0.2)',
+            'rgba(0,58,143,0.2)',
+            'rgba(217,119,6,0.2)',
+            'rgba(124,58,237,0.2)',
+            'rgba(217,4,41,0.2)',
+            'rgba(6,182,212,0.2)',
+        ];
+    @endphp
+    <div class="class-row">
         @foreach($classes as $class)
             @php
                 $subjectCount = $class->subjects->count();
-                $gradients = [
-                    'linear-gradient(135deg, #16A34A, #22C55E)',
-                    'linear-gradient(135deg, #003A8F, #2563EB)',
-                    'linear-gradient(135deg, #D97706, #FFB347)',
-                    'linear-gradient(135deg, #7C3AED, #A78BFA)',
-                    'linear-gradient(135deg, #D90429, #EF4444)',
-                    'linear-gradient(135deg, #06B6D4, #0891B2)',
-                ];
                 $gIdx = $loop->index % count($gradients);
             @endphp
-            <div class="col-lg-4 col-md-6">
-                <a href="{{ route('admin.levels.subjects', [$level, $class]) }}" class="text-decoration-none">
-                    <div class="adm-card st-fade-up" style="cursor:pointer;height:100%;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                        <div style="height:100px;background:{{ $gradients[$gIdx] }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-                            <div style="position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);top:-40px;right:-40px;"></div>
-                            <i class="bi bi-mortarboard-fill" style="font-size:2.5rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
-                        </div>
-                        <div class="adm-card-body text-center" style="padding:1.5rem;">
-                            <h5 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.5rem;">{{ $class->name }}</h5>
-                            <p style="color:var(--adm-text-muted);font-size:0.8rem;margin-bottom:1rem;">
-                                <i class="bi bi-book me-1"></i> {{ $subjectCount }} matière(s)
-                            </p>
-                            <span class="adm-btn" style="background:{{ $gradients[$gIdx] }};color:white;border:none;width:100%;">
-                                <i class="bi bi-book me-1"></i> Voir les matières
-                            </span>
+            <div class="class-card-wrap">
+                <a href="{{ route('admin.levels.subjects', [$level, $class]) }}" class="class-card">
+                    <div class="class-card-icon" style="background:{{ $iconBgs[$gIdx] }};color:{{ $iconColors[$gIdx] }};">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <div class="class-card-content">
+                        <h4>{{ $class->name }}</h4>
+                        <div class="class-meta">
+                            <i class="bi bi-book"></i>
+                            <span>{{ $subjectCount }} matière{{ $subjectCount > 1 ? 's' : '' }}</span>
                         </div>
                     </div>
+                    <div class="class-arrow">
+                        <i class="bi bi-chevron-right"></i>
+                    </div>
+                    <!-- Barre latérale colorée -->
+                    <div style="position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:18px 0 0 18px;background:{{ $gradients[$gIdx] }};"></div>
                 </a>
             </div>
         @endforeach

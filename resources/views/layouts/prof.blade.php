@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>@yield('title', 'Espace Professeur') — E-School</title>
+    <title>@yield('title', 'Espace Professeur') — Smart School Academy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -153,9 +153,9 @@
     <aside class="prof-sidebar" id="profSidebar">
         <div class="prof-sidebar-brand">
             <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:42px;height:42px;object-fit:contain;filter:brightness(0) invert(1);">
+                <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:54px;height:54px;object-fit:contain;filter:brightness(0) invert(1);">
             </div>
-            <h3>E-School</h3>
+            <h3>Smart School Academy</h3>
             <div class="brand-sub">Espace enseignant</div>
         </div>
 
@@ -167,13 +167,9 @@
             </a>
 
             <div class="nav-heading">Gestion</div>
-            <a href="{{ route('prof.levels.index') }}" class="prof-nav-link {{ request()->routeIs('prof.levels*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-layers"></i></span>
-                <span>Niveaux <span style="font-size:0.6rem;color:var(--adm-text-muted);margin-left:auto;">→ Classes → Cours</span></span>
-            </a>
-            <a href="{{ route('prof.courses.index') }}" class="prof-nav-link {{ request()->routeIs('prof.courses*') ? 'active' : '' }}">
+            <a href="{{ route('prof.subjects.list') }}" class="prof-nav-link {{ request()->routeIs('prof.subjects*') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="bi bi-book"></i></span>
-                <span>Cours</span>
+                <span>Matières <span style="font-size:0.6rem;color:rgba(255,255,255,0.2);">→ Niveaux → Classes</span></span>
             </a>
             <a href="{{ route('prof.lives.index') }}" class="prof-nav-link {{ request()->routeIs('prof.lives*') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="bi bi-camera-video"></i></span>

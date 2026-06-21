@@ -24,9 +24,24 @@ class FrontController extends Controller
 
     public function subjectLevels($id)
     {
-        $subject = Subject::with('levels')->findOrFail($id);
+        $subject = Subject::findOrFail($id);
 
-        return view('front.subject-levels', compact('subject'));
+        // Les niveaux sont reliés aux matières via : Subject → classes (pivot) → ClassRoom.level_id → Level
+        $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique();
+        $levels = Level::whereIn('id', $levelIds)->get();
+
+        return view('front.subject-levels', compact('subject', 'levels'));
+    }
+
+    public function levelClasses($subjectId, $levelId)
+    {
+        $subject = Subject::findOrFail($subjectId);
+        $level = Level::findOrFail($levelId);
+        $classes = \App\Models\ClassRoom::where('level_id', $levelId)
+            ->whereHas('subjects', fn($q) => $q->where('subject_id', $subjectId))
+            ->get();
+
+        return view('front.level-classes', compact('subject', 'level', 'classes'));
     }
 
     public function levelCourses($id)
@@ -43,9 +58,10 @@ class FrontController extends Controller
         return view('front.course-show', compact('course'));
     }
 
-    public function courses($subject_id, $class_id)
+    public function courses($subject_id, $level_id, $class_id)
     {
         $courses = Course::where('subject_id', $subject_id)
+            ->where('level_id', $level_id)
             ->where('class_id', $class_id)
             ->get();
 

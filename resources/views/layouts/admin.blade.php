@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Admin Panel') — E-School</title>
+    <title>@yield('title', 'Admin Panel') — Smart School Academy</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -71,9 +71,9 @@
 
             <div class="adm-sidebar-brand">
                 <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:42px;height:42px;object-fit:contain;filter:brightness(0) invert(1);">
+                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:54px;height:54px;object-fit:contain;filter:brightness(0) invert(1);">
                 </div>
-                <h3>Edu School</h3>
+                <h3>Smart School Academy</h3>
                 <div class="brand-sub">Administration</div>
             </div>
 
@@ -96,6 +96,12 @@
                    class="adm-nav-link {{ preg_match('/users/', $route ?? '') ? 'active' : '' }}">
                     <span class="nav-link-icon"><i class="bi bi-people"></i></span>
                     <span>Utilisateurs</span>
+                </a>
+
+                <a href="{{ route('admin.subjects.index') }}"
+                   class="adm-nav-link {{ preg_match('/subjects/', $route ?? '') ? 'active' : '' }}">
+                    <span class="nav-link-icon"><i class="bi bi-book"></i></span>
+                    <span>Matières <span style="font-size:0.6rem;color:var(--adm-text-muted);margin-left:auto;">→ Niveaux → Classes</span></span>
                 </a>
 
                 <a href="{{ route('admin.levels.index') }}"
@@ -126,6 +132,12 @@
                    class="adm-nav-link {{ preg_match('/absence/', $route ?? '') ? 'active' : '' }}">
                     <span class="nav-link-icon"><i class="bi bi-calendar-x"></i></span>
                     <span>Absences</span>
+                </a>
+
+                <a href="{{ route('admin.appointments.index') }}"
+                   class="adm-nav-link {{ preg_match('/appointment/', $route ?? '') ? 'active' : '' }}">
+                    <span class="nav-link-icon"><i class="bi bi-calendar-check"></i></span>
+                    <span>Rendez-vous</span>
                 </a>
 
                 <div class="nav-heading">Communication</div>

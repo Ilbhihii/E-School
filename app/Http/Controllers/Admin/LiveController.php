@@ -42,7 +42,7 @@ class LiveController extends Controller
         $request->validate([
             'title' => 'required',
             'class_id' => 'required',
-            'stream_url' => 'required|url',
+            'stream_url' => 'nullable|url',
             'live_date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required',
