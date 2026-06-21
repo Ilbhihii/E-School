@@ -154,7 +154,17 @@ Route::middleware(['auth','isAdmin'])
     Route::put('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
     Route::put('users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
 
-    Route::resource('lives', LiveController::class);
+    // Navigation hiérarchique : Matières → Niveaux → Classes → Lives
+    Route::get('/lives/subjects/{subject}/levels/{level}/classes/{class}', [LiveController::class, 'classLives'])->name('lives.class-lives');
+    Route::get('/lives/subjects/{subject}/levels/{level}/classes', [LiveController::class, 'subjectClasses'])->name('lives.subject-classes');
+    Route::get('/lives/subjects/{subject}/levels', [LiveController::class, 'subjectLevels'])->name('lives.subject-levels');
+
+    Route::get('/lives', [LiveController::class, 'index'])->name('lives.index');
+    Route::get('/lives/create', [LiveController::class, 'create'])->name('lives.create');
+    Route::post('/lives', [LiveController::class, 'store'])->name('lives.store');
+    Route::get('/lives/{live}/edit', [LiveController::class, 'edit'])->name('lives.edit');
+    Route::put('/lives/{live}', [LiveController::class, 'update'])->name('lives.update');
+    Route::delete('/lives/{live}', [LiveController::class, 'destroy'])->name('lives.destroy');
     
     Route::get('/schedule', [AdminScheduleController::class, 'index'])->name('schedule.index');
     Route::post('/schedule', [AdminScheduleController::class, 'store'])->name('schedule.store');

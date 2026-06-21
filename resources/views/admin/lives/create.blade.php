@@ -32,11 +32,41 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="adm-form-group" style="margin-bottom:0;">
+                                    <label class="adm-form-label" style="font-size:0.75rem;">Matière</label>
+                                    <select id="outlook_subject_id" class="adm-form-select" style="font-size:0.85rem;">
+                                        <option value="">Choisir une matière...</option>
+                                        @foreach($subjects as $subject)
+                                            <option value="{{ $subject->id }}">{{ $subject->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <div class="adm-form-group" style="margin-bottom:0;">
+                                    <label class="adm-form-label" style="font-size:0.75rem;">Niveau</label>
+                                    <select id="outlook_level_id" class="adm-form-select" style="font-size:0.85rem;">
+                                        <option value="">D'abord choisir une matière</option>
+                                        @foreach($levels as $level)
+                                            @php $subjectIds = $levelSubjectMap[$level->id] ?? []; @endphp
+                                            <option value="{{ $level->id }}" data-subject-ids="{{ implode(',', $subjectIds) }}">{{ $level->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="adm-form-group" style="margin-bottom:0;">
                                     <label class="adm-form-label" style="font-size:0.75rem;">Classe</label>
                                     <select id="outlook_class_id" class="adm-form-select" style="font-size:0.85rem;">
-                                        <option value="">Sélectionner...</option>
+                                        <option value="">D'abord choisir un niveau</option>
                                         @foreach($classes as $class)
-                                            <option value="{{ $class->id }}">{{ $class->name }}</option>
+                                            <option value="{{ $class->id }}"
+                                                data-level="{{ $class->level_id }}"
+                                                data-subject-ids="{{ $class->subjects->pluck('id')->join(',') }}">
+                                                {{ $class->name }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -126,11 +156,41 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="adm-form-group">
+                                    <label class="adm-form-label">Matière</label>
+                                    <select id="manual_subject_id" class="adm-form-select" required>
+                                        <option value="">Choisir une matière...</option>
+                                        @foreach($subjects as $subject)
+                                            <option value="{{ $subject->id }}">{{ $subject->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="adm-form-group">
+                                    <label class="adm-form-label">Niveau</label>
+                                    <select id="manual_level_id" class="adm-form-select" required>
+                                        <option value="">D'abord choisir une matière</option>
+                                        @foreach($levels as $level)
+                                            @php $subjectIds = $levelSubjectMap[$level->id] ?? []; @endphp
+                                            <option value="{{ $level->id }}" data-subject-ids="{{ implode(',', $subjectIds) }}">{{ $level->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="adm-form-group">
                                     <label class="adm-form-label">Classe</label>
-                                    <select name="class_id" class="adm-form-select @error('class_id') error @enderror" required>
-                                        <option value="">Choisir une classe</option>
+                                    <select name="class_id" id="manual_class_id" class="adm-form-select @error('class_id') error @enderror" required>
+                                        <option value="">D'abord choisir un niveau</option>
                                         @foreach($classes as $class)
-                                            <option value="{{ $class->id }}">{{ $class->name }}</option>
+                                            <option value="{{ $class->id }}"
+                                                data-level="{{ $class->level_id }}"
+                                                data-subject-ids="{{ $class->subjects->pluck('id')->join(',') }}">
+                                                {{ $class->name }}
+                                            </option>
                                         @endforeach
                                     </select>
                                     @error('class_id') <div class="adm-form-error">{{ $message }}</div> @enderror
@@ -188,6 +248,85 @@
 
     window.generateRoomId = generateRoomId;
 
+    // ─── Cascading filters ───
+
+    function filterLevels(prefix, selectedSubjectId) {
+        const levelSelect = document.getElementById(prefix + '_level_id');
+        const options = levelSelect.querySelectorAll('option');
+        let hasVisible = false;
+
+        options.forEach(opt => {
+            if (opt.value === '') {
+                opt.hidden = false;
+                opt.text = selectedSubjectId ? 'Choisir un niveau...' : 'D\'abord choisir une matière';
+                return;
+            }
+            const subjectIds = (opt.getAttribute('data-subject-ids') || '').split(',').filter(Boolean);
+            const matches = !selectedSubjectId || subjectIds.includes(selectedSubjectId);
+            opt.hidden = !matches;
+            if (matches && opt.value) hasVisible = true;
+        });
+
+        if (levelSelect.selectedOptions[0]?.hidden) {
+            levelSelect.value = '';
+        }
+
+        // Trigger class filter
+        filterClasses(prefix, levelSelect.value);
+    }
+
+    function filterClasses(prefix, selectedLevelId) {
+        const classSelect = document.getElementById(prefix + '_class_id');
+        const subjectSelect = document.getElementById(prefix + '_subject_id');
+        const selectedSubjectId = subjectSelect ? subjectSelect.value : '';
+        const options = classSelect.querySelectorAll('option');
+        let hasVisible = false;
+
+        options.forEach(opt => {
+            if (opt.value === '') {
+                opt.hidden = false;
+                opt.text = selectedLevelId ? 'Choisir une classe...' : 'D\'abord choisir un niveau';
+                return;
+            }
+            const levelId = opt.getAttribute('data-level');
+            const subjectIds = (opt.getAttribute('data-subject-ids') || '').split(',').filter(Boolean);
+            const matchesLevel = !selectedLevelId || levelId === selectedLevelId;
+            const matchesSubject = !selectedSubjectId || subjectIds.includes(selectedSubjectId);
+            const matches = matchesLevel && matchesSubject;
+            opt.hidden = !matches;
+            if (matches && opt.value) hasVisible = true;
+        });
+
+        if (classSelect.selectedOptions[0]?.hidden) {
+            classSelect.value = '';
+        }
+    }
+
+    // Attach cascading handlers for Outlook
+    document.addEventListener('DOMContentLoaded', function() {
+        ['outlook', 'manual'].forEach(prefix => {
+            const subjectEl = document.getElementById(prefix + '_subject_id');
+            const levelEl = document.getElementById(prefix + '_level_id');
+            const classEl = document.getElementById(prefix + '_class_id');
+
+            if (subjectEl) {
+                subjectEl.addEventListener('change', function() {
+                    filterLevels(prefix, this.value);
+                    if (prefix === 'outlook') syncFields();
+                });
+            }
+            if (levelEl) {
+                levelEl.addEventListener('change', function() {
+                    filterClasses(prefix, this.value);
+                    if (prefix === 'outlook') syncFields();
+                });
+            }
+            if (classEl && prefix === 'outlook') {
+                classEl.addEventListener('change', syncFields);
+            }
+        });
+    });
+
     // Sync Outlook fields to manual form
     function syncFields() {
         let title = document.getElementById('outlook_title')?.value || '';
@@ -218,6 +357,10 @@
         let streamUrl = document.getElementById('outlook_url')?.value || '';
         let classSelect = document.getElementById('outlook_class_id');
         let className = classSelect?.options[classSelect.selectedIndex]?.text || '';
+        let subjectSelect = document.getElementById('outlook_subject_id');
+        let subjectName = subjectSelect?.options[subjectSelect.selectedIndex]?.text || '';
+        let levelSelect = document.getElementById('outlook_level_id');
+        let levelName = levelSelect?.options[levelSelect.selectedIndex]?.text || '';
 
         let hasMin = title && liveDate && startTime && classSelect?.value;
         let btn = document.getElementById('outlookMainBtn');
@@ -227,7 +370,7 @@
         if (!hasMin) {
             btn.style.pointerEvents = 'none';
             btn.style.opacity = '0.4';
-            if (status) status.textContent = 'Remplissez titre, classe, date et heure';
+            if (status) status.textContent = 'Remplissez titre, matière, niveau, classe, date et heure';
             return;
         }
 
@@ -246,10 +389,18 @@
 
         let startDt = liveDate.replace(/-/g, '') + 'T' + startTime.replace(/:/g, '');
         let endDt = liveDate.replace(/-/g, '') + 'T' + endTime.replace(/:/g, '');
-        let body = 'Live : ' + title + '\\nClasse : ' + className + '\\n\\nLien : ' + streamUrl;
+        let fullSubject = title;
+        if (subjectName) fullSubject += ' - ' + subjectName;
+        if (levelName) fullSubject += ' (' + levelName + ')';
+
+        let body = 'Live : ' + title;
+        body += '\\nMatière : ' + (subjectName || '-');
+        body += '\\nNiveau : ' + (levelName || '-');
+        body += '\\nClasse : ' + (className || '-');
+        body += '\\n\\nLien : ' + (streamUrl || '-');
 
         let url = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-        url += '&subject=' + encodeURIComponent(title);
+        url += '&subject=' + encodeURIComponent(fullSubject);
         url += '&startdt=' + startDt;
         url += '&enddt=' + endDt;
         url += '&body=' + encodeURIComponent(body);
@@ -262,7 +413,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        let fields = ['outlook_title', 'outlook_class_id', 'outlook_date', 'outlook_start', 'outlook_end'];
+        let fields = ['outlook_title', 'outlook_subject_id', 'outlook_level_id', 'outlook_class_id', 'outlook_date', 'outlook_start', 'outlook_end'];
         fields.forEach(id => {
             let el = document.getElementById(id);
             if (el) {

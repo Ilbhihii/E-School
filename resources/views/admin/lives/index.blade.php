@@ -8,8 +8,8 @@
 
 <div class="adm-page-header">
     <div>
-        <h1>Lives</h1>
-        <div class="subtitle">Gérez les sessions live de votre plateforme</div>
+        <h1><i class="bi bi-camera-video me-2" style="color:var(--adm-danger);"></i> Lives</h1>
+        <div class="subtitle">Parcourez la hiérarchie : Matière → Niveau → Classe → Lives</div>
     </div>
     <div class="page-actions">
         <a href="{{ route('admin.lives.create') }}" class="adm-btn adm-btn-danger">
@@ -23,7 +23,7 @@
         <div class="stat-top">
             <div class="stat-icon"><i class="bi bi-camera-video-fill"></i></div>
         </div>
-        <div class="stat-value">{{ $totalLives ?? $lives->count() }}</div>
+        <div class="stat-value">{{ $totalLives ?? 0 }}</div>
         <div class="stat-label">Total lives</div>
     </div>
     <div class="adm-stat orange">
@@ -37,9 +37,82 @@
 
 <div class="adm-card">
     <div class="adm-card-header">
-        <h4><i class="bi bi-collection" style="color:rgba(255,255,255,0.35);"></i> Tous les lives</h4>
+        <h4><i class="bi bi-book" style="color:var(--adm-primary);"></i> Matières avec des lives</h4>
         <div class="card-actions">
-            <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $lives->count() }} live(s)</span>
+            <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $subjects->count() }} matière(s)</span>
+        </div>
+    </div>
+</div>
+
+@if($subjects->isEmpty())
+    <div class="adm-card mt-3">
+        <div class="adm-empty" style="padding:4rem 2rem;">
+            <div class="adm-empty-icon"><i class="bi bi-camera-video"></i></div>
+            <h5>Aucun live</h5>
+            <p>Créez votre premier live pour commencer.</p>
+            <a href="{{ route('admin.lives.create') }}" class="adm-btn adm-btn-danger mt-3">
+                <i class="bi bi-plus-lg"></i> Créer un live
+            </a>
+        </div>
+    </div>
+@else
+    <div class="row g-4 mt-2">
+        @php
+            $icons = ['book','calculator','flask','translate','globe','palette','music-note-beamed','cpu','graph-up','pencil','journal','robot'];
+            $gradients = [
+                'linear-gradient(135deg, #7C3AED, #A78BFA)',
+                'linear-gradient(135deg, #059669, #22C55E)',
+                'linear-gradient(135deg, #D97706, #FFB347)',
+                'linear-gradient(135deg, #2563EB, #60A5FA)',
+                'linear-gradient(135deg, #DC2626, #EF4444)',
+                'linear-gradient(135deg, #0891B2, #06B6D4)',
+                'linear-gradient(135deg, #9333EA, #C084FC)',
+                'linear-gradient(135deg, #16A34A, #4ADE80)',
+            ];
+        @endphp
+        @foreach($subjects as $subject)
+            @php
+                $icon = $icons[$loop->index % count($icons)];
+                $gradient = $gradients[$loop->index % count($gradients)];
+                $liveCount = $subjectLiveCounts[$subject->id] ?? 0;
+                $classCount = $subject->classes_count ?? $subject->classes->count();
+            @endphp
+            <div class="col-lg-3 col-md-6">
+                <a href="{{ route('admin.lives.subject-levels', $subject) }}" class="text-decoration-none">
+                    <div class="adm-card st-fade-up" style="cursor:pointer;height:100%;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                        <div style="height:120px;background:{{ $gradient }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+                            <div style="position:absolute;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,0.06);top:-50px;right:-50px;"></div>
+                            <div style="position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.04);bottom:-30px;left:-30px;"></div>
+                            <i class="bi bi-{{ $icon }}" style="font-size:3rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
+                        </div>
+                        <div class="adm-card-body text-center" style="padding:1.25rem;">
+                            <h4 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.5rem;">{{ $subject->name }}</h4>
+                            <div style="display:flex;gap:12px;justify-content:center;margin-bottom:1rem;">
+                                <span style="color:var(--adm-text-muted);font-size:0.8rem;">
+                                    <i class="bi bi-camera-video me-1" style="color:#EF4444;"></i> {{ $liveCount }} live(s)
+                                </span>
+                                <span style="color:var(--adm-text-muted);font-size:0.8rem;">
+                                    <i class="bi bi-building me-1"></i> {{ $classCount }} classe(s)
+                                </span>
+                            </div>
+                            <span class="adm-btn" style="background:{{ $gradient }};color:white;border:none;width:100%;">
+                                <i class="bi bi-layers me-1"></i> Voir les niveaux
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        @endforeach
+    </div>
+@endif
+
+<!-- ALL LIVES TABLE (optional overview) -->
+@if($allLives->count() > 0)
+<div class="adm-card mt-4">
+    <div class="adm-card-header">
+        <h4><i class="bi bi-collection" style="color:rgba(255,255,255,0.35);"></i> Tous les lives <span style="font-size:0.75rem;color:var(--adm-text-muted);font-weight:400;margin-left:6px;">(vue d'ensemble)</span></h4>
+        <div class="card-actions">
+            <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $allLives->count() }} live(s)</span>
         </div>
     </div>
     <div class="adm-card-body p-0">
@@ -55,37 +128,35 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($lives as $live)
+                    @forelse($allLives->take(10) as $live)
                     <tr>
                         <td><span style="font-weight:500;">{{ $live->title }}</span></td>
-                        <td><span class="adm-badge adm-badge-danger">{{ $live->classRoom->name ?? '-' }}</span></td>
                         <td>
+                            @if($live->classRoom && $live->classRoom->level)
+                                <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name ?? '-' }}</span>
+                                <span style="color:var(--adm-text-muted);font-size:0.7rem;margin-left:4px;">({{ $live->classRoom->level->name ?? '' }})</span>
+                            @else
+                                <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name ?? '-' }}</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if($live->stream_url)
                             <a href="{{ $live->stream_url }}" target="_blank" class="adm-btn adm-btn-ghost adm-btn-sm">
                                 <i class="bi bi-box-arrow-up-right"></i> Ouvrir
                             </a>
+                            @else
+                            <span style="color:var(--adm-text-muted);font-size:0.75rem;">—</span>
+                            @endif
                         </td>
-                        <td style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $live->created_at->format('d/m/Y') }}</td>
+                        <td style="color:var(--adm-text-muted);font-size:0.8rem;">
+                            @if($live->live_date)
+                                {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
+                            @else
+                                {{ $live->created_at->format('d/m/Y') }}
+                            @endif
+                        </td>
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
-                                @if($live->live_date)
-                                @php
-                                    $liveDate = \Carbon\Carbon::parse($live->live_date);
-                                    $startTime = $live->start_time ? $live->start_time : '00:00';
-                                    $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-                                    $startDt = $liveDate->format('Ymd\THis');
-                                    $endDt = \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis');
-                                    $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-                                    $outlookUrl .= '&subject=' . urlencode($live->title);
-                                    $outlookUrl .= '&startdt=' . $startDt;
-                                    $outlookUrl .= '&enddt=' . $endDt;
-                                    $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
-                                    $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
-                                @endphp
-                                <a href="{{ $outlookUrl }}" target="_blank" class="adm-btn adm-btn-sm" style="background:rgba(2,132,199,0.12);color:#38BDF8;border:1px solid rgba(2,132,199,0.15);"
-                                   onmouseover="this.style.background='rgba(2,132,199,0.25)'" onmouseout="this.style.background='rgba(2,132,199,0.12)'">
-                                    <i class="bi bi-calendar-plus"></i>
-                                </a>
-                                @endif
                                 <a href="{{ route('admin.lives.edit', $live) }}" class="adm-btn adm-btn-warning adm-btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
@@ -104,7 +175,6 @@
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-camera-video"></i></div>
                                 <h5>Aucun live</h5>
-                                <p>Créez votre premier live pour commencer.</p>
                             </div>
                         </td>
                     </tr>
@@ -114,64 +184,7 @@
         </div>
     </div>
 </div>
-
-<!-- Outlook Calendar List -->
-<div class="adm-card mt-4">
-    <div class="adm-card-header">
-        <h4><i class="bi bi-calendar-plus" style="color:#FCA5A5;"></i> Ajouter au calendrier Outlook</h4>
-        <div class="card-actions">
-            <span style="color:var(--adm-text-muted);font-size:0.78rem;"><i class="bi bi-info-circle me-1"></i> Cliquez sur Outlook pour chaque live</span>
-        </div>
-    </div>
-    <div class="adm-card-body p-0">
-        @forelse($lives as $live)
-        @php
-            $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
-            $startTime = $live->start_time ? $live->start_time : '00:00';
-            $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-            $startDt = $liveDate ? $liveDate->format('Ymd\THis') : '';
-            $endDt = $liveDate ? \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis') : '';
-            $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-            $outlookUrl .= '&subject=' . urlencode($live->title);
-            $outlookUrl .= '&startdt=' . $startDt;
-            $outlookUrl .= '&enddt=' . $endDt;
-            $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
-            $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
-        @endphp
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
-                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#DC2626,#EF4444);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-camera-video-fill" style="font-size:0.85rem;color:white;"></i>
-                </div>
-                <div style="min-width:0;">
-                    <div style="font-weight:500;font-size:0.85rem;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $live->title }}</div>
-                    @if($liveDate)
-                    <div style="color:var(--adm-text-muted);font-size:0.72rem;margin-top:2px;">
-                        <i class="bi bi-calendar3 me-1"></i>{{ $liveDate->format('d/m/Y') }}
-                        @if($live->start_time) <i class="bi bi-clock ms-2 me-1"></i>{{ $live->start_time }} @endif
-                        <span class="adm-badge adm-badge-danger" style="font-size:0.6rem;margin-left:8px;">{{ $live->classRoom->name ?? '-' }}</span>
-                    </div>
-                    @endif
-                </div>
-            </div>
-            @if($live->live_date)
-            <a href="{{ $outlookUrl }}" target="_blank"
-               style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-size:0.78rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;"
-               onmouseover="this.style.background='rgba(2,132,199,0.15)';this.style.borderColor='rgba(2,132,199,0.2)';this.style.color='#38BDF8'"
-               onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.5)'">
-                <i class="bi bi-calendar-plus"></i> Outlook
-            </a>
-            @endif
-        </div>
-        @empty
-        <div class="adm-empty">
-            <div class="adm-empty-icon"><i class="bi bi-calendar-plus"></i></div>
-            <h5>Aucun live à ajouter</h5>
-            <p>Les lives apparaîtront ici pour les ajouter à votre calendrier Outlook.</p>
-        </div>
-        @endforelse
-    </div>
-</div>
+@endif
 
 <!-- CALENDAR -->
 <div class="adm-card mt-4">
@@ -238,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         buttonText: { today: "Aujourd'hui", month: 'Mois', week: 'Semaine', list: 'Liste' },
         events: [
-            @foreach($lives as $live)
+            @foreach($allLives as $live)
             @if($live->live_date)
             {
                 id: '{{ $live->id }}',

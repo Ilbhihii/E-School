@@ -5,31 +5,129 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Live;
 use App\Models\ClassRoom;
+use App\Models\Subject;
+use App\Models\Level;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 
 class LiveController extends Controller
 {
-    // Afficher tous les lives
+    /**
+     * Affiche la liste des matières avec le nombre de lives (entrée de la navigation hiérarchique)
+     */
     public function index()
     {
-        // Tous les lives
-        $lives = Live::with('classRoom')->orderBy('created_at', 'desc')->get();
+        // Tous les lives globaux pour les stats
+        $allLives = Live::with('classRoom')->orderBy('created_at', 'desc')->get();
 
         // Stats
-        $totalLives = $lives->count();
-        $recentLives = $lives->take(5); // 5 derniers lives
+        $totalLives = $allLives->count();
+        $recentLives = $allLives->take(5);
 
-        return view('admin.lives.index', compact('lives', 'totalLives', 'recentLives'));
+        // Sujets qui ont des lives via leurs classes
+        $subjects = Subject::whereHas('classes', function($q) {
+            $q->whereHas('lives');
+        })->withCount(['classes' => function($q) {
+            $q->whereHas('lives');
+        }])->orderBy('name')->get();
+
+        // Compter les lives par sujet
+        $subjectLiveCounts = [];
+        foreach ($subjects as $subject) {
+            $subjectLiveCounts[$subject->id] = Live::whereHas('classRoom.subjects', function($q) use ($subject) {
+                $q->where('subject_id', $subject->id);
+            })->count();
+        }
+
+        return view('admin.lives.index', compact('subjects', 'totalLives', 'recentLives', 'subjectLiveCounts', 'allLives'));
     }
 
+    /**
+     * Affiche les niveaux disponibles pour une matière
+     */
+    public function subjectLevels(Subject $subject)
+    {
+        // Niveaux qui ont des classes avec des lives pour cette matière
+        $levelIds = $subject->classes()
+            ->whereHas('lives')
+            ->pluck('class_rooms.level_id')
+            ->unique()
+            ->filter();
+        $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
+
+        // Compter les lives par niveau pour cette matière
+        $levelLiveCounts = [];
+        foreach ($levels as $level) {
+            $levelLiveCounts[$level->id] = Live::whereHas('classRoom', function($q) use ($subject, $level) {
+                $q->where('level_id', $level->id)
+                  ->whereHas('subjects', fn($sq) => $sq->where('subject_id', $subject->id));
+            })->count();
+        }
+
+        // Compter les classes par niveau pour cette matière
+        $levelClassCounts = [];
+        foreach ($levels as $level) {
+            $levelClassCounts[$level->id] = ClassRoom::where('level_id', $level->id)
+                ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
+                ->whereHas('lives')
+                ->count();
+        }
+
+        return view('admin.lives.levels', compact('subject', 'levels', 'levelLiveCounts', 'levelClassCounts'));
+    }
+
+    /**
+     * Affiche les classes d'un niveau pour une matière spécifique
+     */
+    public function subjectClasses(Subject $subject, Level $level)
+    {
+        $classes = ClassRoom::where('level_id', $level->id)
+            ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
+            ->whereHas('lives')
+            ->withCount('lives')
+            ->get();
+
+        return view('admin.lives.classes', compact('subject', 'level', 'classes'));
+    }
+
+    /**
+     * Affiche les lives d'une classe spécifique
+     */
+    public function classLives(Subject $subject, Level $level, ClassRoom $class)
+    {
+        $lives = Live::where('class_id', $class->id)
+            ->with('classRoom')
+            ->orderBy('live_date', 'desc')
+            ->orderBy('start_time', 'desc')
+            ->get();
+
+        $totalLives = $lives->count();
+
+        return view('admin.lives.class-lives', compact('subject', 'level', 'class', 'lives', 'totalLives'));
+    }
 
     // Formulaire création
     public function create()
     {
-        $classes = ClassRoom::all();
-        return view('admin.lives.create', compact('classes'));
+        $subjects = Subject::orderBy('name')->get();
+        $levels = Level::orderBy('name')->get();
+        $classes = ClassRoom::with('level', 'subjects')->orderBy('name')->get();
+
+        // Construire la correspondance Niveau → Matières (via les classes liées)
+        $levelSubjectMap = [];
+        foreach ($classes as $class) {
+            if (!isset($levelSubjectMap[$class->level_id])) {
+                $levelSubjectMap[$class->level_id] = [];
+            }
+            foreach ($class->subjects as $subject) {
+                if (!in_array($subject->id, $levelSubjectMap[$class->level_id])) {
+                    $levelSubjectMap[$class->level_id][] = $subject->id;
+                }
+            }
+        }
+
+        return view('admin.lives.create', compact('subjects', 'levels', 'classes', 'levelSubjectMap'));
     }
 
     // Enregistrer un live
@@ -70,10 +168,8 @@ class LiveController extends Controller
             'end_time' => $request->end_time,
         ]);
 
-        return redirect()->route('admin.lives.index')->with('success', 'Live créé avec succès');
+        return redirect()->to(url()->previous())->with('success', 'Live créé avec succès');
     }
-
-
 
     // Formulaire édition
     public function edit($id)
@@ -100,7 +196,7 @@ class LiveController extends Controller
         ]);
 
 
-        return redirect()->route('admin.lives.index')
+        return redirect()->to(url()->previous())
                          ->with('success', 'Live modifié avec succès');
     }
 
@@ -109,7 +205,7 @@ class LiveController extends Controller
     {
         Live::destroy($id);
 
-        return redirect()->route('admin.lives.index')
+        return redirect()->to(url()->previous())
                          ->with('success', 'Live supprimé avec succès');
     }
 }
