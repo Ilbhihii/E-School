@@ -13,7 +13,7 @@
                 <h1 class="text-3xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">Résultats de Tests - {{ $user->name }}</h1>
                 <p class="text-xl text-gray-600">Performance académique complète</p>
             </div>
-            <a href="{{ route('admin.users') }}" class="px-8 py-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
+            <a href="{{ route('admin.users.index') }}" class="px-8 py-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                 </svg>
@@ -75,7 +75,7 @@
                             <td class="px-6 py-4 font-bold text-lg text-blue-600">{{ $result->percentage }}%</td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $result->created_at->format('d/m/Y H:i') }}</td>
                             <td class="px-6 py-4">
-                                <a href="{{ route('admin.users.tests-result.show', [$user->id, $result->test_id]) }}" class="inline-flex items-center px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                                <a href="{{ route('admin.users.test-result', [$user->id, $result->test_id]) }}" class="inline-flex items-center px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     </svg>
@@ -95,7 +95,7 @@
             </svg>
             <h3 class="text-2xl font-bold text-gray-700 mb-4">Aucun résultat de test</h3>
             <p class="text-lg text-gray-500 mb-8">Ce étudiant n'a pas encore passé de tests</p>
-            <a href="{{ route('admin.users') }}" class="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300">
+            <a href="{{ route('admin.users.index') }}" class="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300">
                 Voir tous les étudiants
             </a>
         </div>

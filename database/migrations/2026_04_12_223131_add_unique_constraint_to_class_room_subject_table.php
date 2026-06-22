@@ -8,25 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('class_room_subject', function (Blueprint $table) {
-            $table->dropPrimary('id');
-            $table->dropColumn('id');
-            $table->foreignId('class_room_id')->change()->constrained('class_rooms')->cascadeOnDelete();
-            $table->foreignId('subject_id')->change()->constrained('subjects')->cascadeOnDelete();
-            $table->primary(['class_room_id', 'subject_id']);
-            $table->timestamps();
-        });
+        // Table already correctly created with unique constraint and timestamps
+        // by 2026_01_05_000000_create_class_room_subject_table.php
+        if (!Schema::hasTable('class_room_subject')) {
+            Schema::create('class_room_subject', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('class_room_id')->constrained('class_rooms')->onDelete('cascade');
+                $table->foreignId('subject_id')->constrained('subjects')->onDelete('cascade');
+                $table->timestamps();
+                $table->unique(['class_room_id', 'subject_id']);
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('class_room_subject', function (Blueprint $table) {
-            $table->dropForeign(['class_room_id']);
-            $table->dropForeign(['subject_id']);
-            $table->dropPrimary(['class_room_id', 'subject_id']);
-            $table->dropTimestamps();
-            $table->id()->change();
-        });
+        Schema::dropIfExists('class_room_subject');
     }
 };
-

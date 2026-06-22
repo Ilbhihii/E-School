@@ -59,14 +59,14 @@
 
 <div class="row g-4">
     @php
-        $levelNames = ['Débutant', 'Pré-intermédiaire', 'Intermédiaire', 'Avancé'];
-        $levelIcons = ['bi-emoji-smile', 'bi-emoji-neutral', 'bi-emoji-wink', 'bi-emoji-star-eyes'];
-        $levelColors = ['#22C55E', '#60A5FA', '#FFB347', '#A78BFA'];
+        $levelNames = ['N1 Apprendre l\'arabe', 'N2 Apprendre à lire', 'N3 Apprendre les règles de tajwid', 'N4 Sciences de l\'islam'];
+        $levelIcons = ['bi-book', 'bi-bookmark-star', 'bi-music-note-beamed', 'bi-stars'];
+        $levelColors = ['#059669', '#7C3AED', '#D97706', '#1E40AF'];
         $levelGradients = [
-            'linear-gradient(135deg, #16A34A, #22C55E)',
-            'linear-gradient(135deg, #003A8F, #60A5FA)',
-            'linear-gradient(135deg, #D97706, #FFB347)',
+            'linear-gradient(135deg, #059669, #34D399)',
             'linear-gradient(135deg, #7C3AED, #A78BFA)',
+            'linear-gradient(135deg, #D97706, #FBBF24)',
+            'linear-gradient(135deg, #1E40AF, #60A5FA)',
         ];
     @endphp
 
@@ -137,13 +137,12 @@
             </div>
             <div class="adm-modal-body">
                 <div class="adm-form-group">
-                    <label class="adm-form-label">Nom du niveau</label>
-                    <select name="name" class="adm-form-select" required>
+                    <label class="adm-form-label">Nom du niveau</label>                        <select name="name" class="adm-form-select" required>
                         <option value="">Choisir un niveau...</option>
-                        <option value="Débutant">Débutant</option>
-                        <option value="Pré-intermédiaire">Pré-intermédiaire</option>
-                        <option value="Intermédiaire">Intermédiaire</option>
-                        <option value="Avancé">Avancé</option>
+                        <option value="N1 Apprendre l\'arabe">N1 Apprendre l&#39;arabe</option>
+                        <option value="N2 Apprendre à lire">N2 Apprendre à lire</option>
+                        <option value="N3 Apprendre les règles de tajwid">N3 Apprendre les règles de tajwid</option>
+                        <option value="N4 Sciences de l\'islam">N4 Sciences de l&#39;islam</option>
                     </select>
                 </div>
                 <div class="adm-form-group">
@@ -173,10 +172,10 @@
                 <div class="adm-form-group">
                     <label class="adm-form-label">Nom du niveau</label>
                     <select name="name" class="adm-form-select" required>
-                        <option value="Débutant" {{ $level->name == 'Débutant' ? 'selected' : '' }}>Débutant</option>
-                        <option value="Pré-intermédiaire" {{ $level->name == 'Pré-intermédiaire' ? 'selected' : '' }}>Pré-intermédiaire</option>
-                        <option value="Intermédiaire" {{ $level->name == 'Intermédiaire' ? 'selected' : '' }}>Intermédiaire</option>
-                        <option value="Avancé" {{ $level->name == 'Avancé' ? 'selected' : '' }}>Avancé</option>
+                        <option value="N1 Apprendre l\'arabe" {{ $level->name == 'N1 Apprendre l\'arabe' ? 'selected' : '' }}>N1 Apprendre l&#39;arabe</option>
+                        <option value="N2 Apprendre à lire" {{ $level->name == 'N2 Apprendre à lire' ? 'selected' : '' }}>N2 Apprendre à lire</option>
+                        <option value="N3 Apprendre les règles de tajwid" {{ $level->name == 'N3 Apprendre les règles de tajwid' ? 'selected' : '' }}>N3 Apprendre les règles de tajwid</option>
+                        <option value="N4 Sciences de l\'islam" {{ $level->name == 'N4 Sciences de l\'islam' ? 'selected' : '' }}>N4 Sciences de l&#39;islam</option>
                     </select>
                 </div>
                 <div class="adm-form-group">

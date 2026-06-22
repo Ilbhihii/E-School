@@ -14,7 +14,7 @@
             <span style="color:rgba(255,255,255,0.6);font-weight:500;">{{ $subject->name }}</span>
         </div>
         <h1><i class="bi bi-layers me-2" style="color:var(--adm-primary);"></i> Niveaux — {{ $subject->name }}</h1>
-        <div class="subtitle">Sélectionnez un niveau pour voir les classes disponibles</div>
+        <div class="subtitle">Gérez les niveaux et leurs classes pour cette matière</div>
     </div>
     <div class="page-actions">
         <a href="{{ route('admin.subjects.index') }}" class="adm-btn adm-btn-ghost">
@@ -22,6 +22,10 @@
         </a>
     </div>
 </div>
+
+@if(session('success'))
+<div class="adm-alert adm-alert-success mb-4">{{ session('success') }}</div>
+@endif
 
 @if($levels->isEmpty())
     <div class="adm-card">
@@ -32,45 +36,123 @@
         </div>
     </div>
 @else
-    <div class="row g-4">
+    @php
+        $levelGradients = [
+            'linear-gradient(135deg, #059669, #34D399)',
+            'linear-gradient(135deg, #7C3AED, #A78BFA)',
+            'linear-gradient(135deg, #D97706, #FBBF24)',
+            'linear-gradient(135deg, #1E40AF, #60A5FA)',
+        ];
+        $classGradients = [
+            'linear-gradient(135deg, #16A34A, #22C55E)',
+            'linear-gradient(135deg, #003A8F, #2563EB)',
+            'linear-gradient(135deg, #D97706, #FFB347)',
+            'linear-gradient(135deg, #7C3AED, #A78BFA)',
+            'linear-gradient(135deg, #D90429, #EF4444)',
+            'linear-gradient(135deg, #06B6D4, #0891B2)',
+        ];
+    @endphp
+
+    @foreach($levels as $level)
         @php
-            $levelIcons = ['bi-emoji-smile', 'bi-emoji-neutral', 'bi-emoji-wink', 'bi-emoji-star-eyes'];
-            $levelColors = ['#22C55E', '#60A5FA', '#FFB347', '#A78BFA'];
-            $levelGradients = [
-                'linear-gradient(135deg, #16A34A, #22C55E)',
-                'linear-gradient(135deg, #003A8F, #60A5FA)',
-                'linear-gradient(135deg, #D97706, #FFB347)',
-                'linear-gradient(135deg, #7C3AED, #A78BFA)',
-            ];
+            $idx = $loop->index % 4;
+            $gradient = $levelGradients[$idx];
+            $classes = $level->classes;
         @endphp
-        @foreach($levels as $level)
-            @php
-                $idx = $loop->index % 4;
-                $icon = $levelIcons[$idx];
-                $gradient = $levelGradients[$idx];
-                $classCount = $level->classes()->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))->count();
-            @endphp
-            <div class="col-lg-3 col-md-6">
-                <a href="{{ route('admin.subjects.classes', [$subject, $level]) }}" class="text-decoration-none">
-                    <div class="adm-card st-fade-up" style="cursor:pointer;height:100%;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                        <div style="height:100px;background:{{ $gradient }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-                            <div style="position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);top:-40px;right:-40px;"></div>
-                            <i class="bi {{ $icon }}" style="font-size:2.5rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
+        <div class="adm-card mb-4">
+            <div class="adm-card-header" style="background:{{ $gradient }};border-radius:18px 18px 0 0;">
+                <h4 style="color:white;margin:0;">
+                    <i class="bi bi-layers me-2"></i> {{ $level->name }}
+                    <span style="font-size:0.85rem;opacity:0.7;margin-left:8px;">— {{ $classes->count() }} classe(s)</span>
+                </h4>
+                <div class="card-actions">
+                    <button class="adm-btn" style="background:rgba(255,255,255,0.15);color:white;border:none;" onclick="document.getElementById('addClassModal{{ $level->id }}').style.display='flex'">
+                        <i class="bi bi-plus-lg me-1"></i> Ajouter une classe
+                    </button>
+                </div>
+            </div>
+            <div class="adm-card-body">
+                @if($classes->isNotEmpty())
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                        @foreach($classes as $class)
+                            @php
+                                $gIdx = $loop->index % count($classGradients);
+                                $courseCount = $class->courses()->where('subject_id', $subject->id)->count();
+                            @endphp
+                            <div style="flex:1;min-width:250px;max-width:350px;">
+                                <a href="{{ route('admin.levels.courses', [$level, $class, $subject]) }}" class="text-decoration-none">
+                                    <div class="adm-card" style="cursor:pointer;transition:all 0.3s ease;height:100%;">
+                                        <div class="adm-card-body" style="padding:1rem;display:flex;align-items:center;gap:12px;">
+                                            <div style="width:48px;height:48px;border-radius:12px;background:{{ $classGradients[$gIdx] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                                <i class="bi bi-mortarboard-fill" style="font-size:1.3rem;color:rgba(255,255,255,0.4);"></i>
+                                            </div>
+                                            <div style="flex:1;min-width:0;">
+                                                <h5 style="font-weight:700;color:rgba(255,255,255,0.9);margin:0 0 2px;font-size:0.95rem;">{{ $class->name }}</h5>
+                                                <small style="color:var(--adm-text-muted);">
+                                                    <i class="bi bi-play-circle me-1"></i> {{ $courseCount }} cours
+                                                </small>
+                                            </div>
+                                            <i class="bi bi-chevron-right" style="color:rgba(255,255,255,0.2);flex-shrink:0;"></i>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="adm-empty" style="padding:2rem;">
+                        <div class="adm-empty-icon" style="font-size:2rem;"><i class="bi bi-building"></i></div>
+                        <h5 style="font-size:1rem;">Aucune classe</h5>
+                        <p style="font-size:0.85rem;">Ajoutez une classe à ce niveau pour {{ $subject->name }}.</p>
+                        <button class="adm-btn adm-btn-primary adm-btn-sm" onclick="document.getElementById('addClassModal{{ $level->id }}').style.display='flex'">
+                            <i class="bi bi-plus-lg me-1"></i> Ajouter une classe
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- ═══ ADD CLASS MODAL for {{ $level->name }} ═══ -->
+        <div class="adm-modal-overlay" id="addClassModal{{ $level->id }}" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+            <div class="adm-modal">
+                <form method="POST" action="{{ route('admin.classes.store') }}">
+                    @csrf
+                    <input type="hidden" name="level_id" value="{{ $level->id }}">
+                    <input type="hidden" name="subject_id" value="{{ $subject->id }}">
+                    <div class="adm-modal-header">
+                        <h5><i class="bi bi-plus-circle me-2"></i> Ajouter une classe à {{ $level->name }}</h5>
+                        <button type="button" class="adm-modal-close" onclick="document.getElementById('addClassModal{{ $level->id }}').style.display='none'">&times;</button>
+                    </div>
+                    <div class="adm-modal-body">
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">Nom de la classe <span style="color:var(--adm-danger);">*</span></label>
+                            <input type="text" name="name" class="adm-form-control" placeholder="Ex: Groupe A, Classe 1..." required>
                         </div>
-                        <div class="adm-card-body text-center" style="padding:1.5rem;">
-                            <h5 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.5rem;">{{ $level->name }}</h5>
-                            <p style="color:var(--adm-text-muted);font-size:0.8rem;margin-bottom:1rem;">
-                                <i class="bi bi-building me-1"></i> {{ $classCount }} classe(s)
-                            </p>
-                            <span class="adm-btn" style="background:{{ $gradient }};color:white;border:none;width:100%;">
-                                <i class="bi bi-building me-1"></i> Voir les classes
-                            </span>
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">Niveau</label>
+                            <input type="text" class="adm-form-control" value="{{ $level->name }}" disabled>
                         </div>
                     </div>
-                </a>
+                    <div class="adm-modal-footer">
+                        <button type="button" class="adm-btn adm-btn-ghost" onclick="document.getElementById('addClassModal{{ $level->id }}').style.display='none'">Annuler</button>
+                        <button type="submit" class="adm-btn adm-btn-primary">Créer la classe</button>
+                    </div>
+                </form>
             </div>
-        @endforeach
-    </div>
+        </div>
+    @endforeach
 @endif
+
+<!-- ═══════════════ MODAL SCRIPT ═══════════════ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-adm-modal]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = document.getElementById(this.getAttribute('data-adm-modal'));
+            if (target) target.style.display = 'flex';
+        });
+    });
+});
+</script>
 
 @endsection

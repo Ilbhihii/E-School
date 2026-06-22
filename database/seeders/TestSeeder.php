@@ -19,15 +19,17 @@ class TestSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        $level = Level::create();
+        // Create a level (LevelSeeder already runs first and creates real levels)
+        $level = Level::factory()->create();
 
         $classroom = ClassRoom::factory()->create([
             'level_id' => $level->id
         ]);
 
-        $subject = Subject::factory()->create([
-            'class_id' => $classroom->id
-        ]);
+        // Create subject (class_id column was dropped from subjects, use pivot instead)
+        $subject = Subject::factory()->create();
+        // Link subject to classroom via pivot table
+        $classroom->subjects()->attach($subject->id);
 
         $prof = User::factory()->prof()->create([
             'class_id' => $classroom->id
@@ -40,8 +42,9 @@ class TestSeeder extends Seeder
             'admin_id' => $prof->id,
         ]);
 
+        // course_id was renamed to subject_id in the tests table
         $test = Test::factory()->create([
-            'course_id' => $course->id,
+            'subject_id' => $subject->id,
             'create_by' => $prof->id,
         ]);
 

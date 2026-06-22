@@ -9,8 +9,12 @@ return new class extends Migration
     public function up()
     {
         Schema::table('courses', function (Blueprint $table) {
-            $table->foreignId('subject_id')->constrained()->cascadeOnDelete()->after('description');
-            $table->foreignId('class_id')->constrained('class_rooms')->cascadeOnDelete()->after('subject_id');
+            if (!Schema::hasColumn('courses', 'subject_id')) {
+                $table->foreignId('subject_id')->constrained()->cascadeOnDelete()->after('description');
+            }
+            if (!Schema::hasColumn('courses', 'class_id')) {
+                $table->foreignId('class_id')->constrained('class_rooms')->cascadeOnDelete()->after('subject_id');
+            }
         });
     }
 

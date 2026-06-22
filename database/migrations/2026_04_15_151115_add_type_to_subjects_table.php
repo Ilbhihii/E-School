@@ -13,9 +13,11 @@ class AddTypeToSubjectsTable extends Migration
      */
     public function up()
     {
-        Schema::table('subjects', function (Blueprint $table) {
-            $table->enum('type', ['religieux', 'scolaire'])->default('scolaire')->after('name');
-        });
+        if (!Schema::hasColumn('subjects', 'type')) {
+            Schema::table('subjects', function (Blueprint $table) {
+                $table->enum('type', ['religieux', 'scolaire'])->default('scolaire')->after('name');
+            });
+        }
     }
 
     /**

@@ -9,28 +9,35 @@ class LevelSeeder extends Seeder
 {
     public function run(): void
     {
-        $levels = [
-            '1ère année primaire',
-            '2ème année primaire',
-            '3ème année primaire',
-            '4ème année primaire',
-            '5ème année primaire',
-            '6ème année primaire',
-            '1ère année collège',
-            '2ème année collège',
-            '3ème année collège',
-            '1ère année lycée',
-            '2ème année lycée',
-            '3ème année lycée',
+        $newLevels = [
+            [
+                'name' => 'N1 Apprendre l\'arabe',
+                'description' => 'Apprentissage de la langue arabe pour débutants',
+            ],
+            [
+                'name' => 'N2 Apprendre à lire',
+                'description' => 'Apprentissage de la lecture en arabe',
+            ],
+            [
+                'name' => 'N3 Apprendre les règles de tajwid',
+                'description' => 'Apprentissage des règles de récitation coranique',
+            ],
+            [
+                'name' => 'N4 Sciences de l\'islam',
+                'description' => 'Étude approfondie des sciences islamiques',
+            ],
         ];
 
-        foreach ($levels as $name) {
-            Level::firstOrCreate(
-                ['name' => $name],
-                [
-                    'description' => 'Niveau éducatif standard',
-                    'subject_id' => 1
-                ]
+        $newNames = array_column($newLevels, 'name');
+
+        // Supprimer les anciens niveaux qui ne sont plus dans la liste
+        Level::whereNotIn('name', $newNames)->delete();
+
+        // Créer ou mettre à jour les nouveaux niveaux
+        foreach ($newLevels as $level) {
+            Level::updateOrCreate(
+                ['name' => $level['name']],
+                ['description' => $level['description']]
             );
         }
     }

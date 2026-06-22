@@ -10,6 +10,7 @@ use App\Models\Assignment;
 use App\Models\Live;
 use App\Models\Absence;
 use App\Models\Level;
+use App\Models\Result;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -368,12 +369,25 @@ public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
         ->get();
 
     return view('student.subjects.courses', compact('subject', 'level', 'class', 'courses'));
-}
-
-public function waiting()
-{
-    return view('student.waiting');
-}
+}    public function waiting()
+    {
+        $user = auth()->user();
+        
+        // Get the latest test result for this user
+        $latestResult = Result::where('user_id', $user->id)
+            ->with('test')
+            ->latest()
+            ->first();
+        
+        $score = $latestResult?->score ?? 0;
+        $total = $latestResult?->total_questions ?? 0;
+        $percentage = $latestResult?->percentage ?? 0;
+        $testTitle = $latestResult?->test?->title ?? null;
+        
+        return view('student.waiting', compact(
+            'latestResult', 'score', 'total', 'percentage', 'testTitle'
+        ));
+    }
 
 public function levels()
 {

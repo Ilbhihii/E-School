@@ -85,12 +85,22 @@ public function assignForm()
         $request->validate([
             'name' => 'required|string|max:255',
             'level_id' => 'required|exists:levels,id',
+            'subject_id' => 'nullable|exists:subjects,id',
         ]);
 
-        ClassRoom::create([
+        $class = ClassRoom::create([
             'name' => $request->name,
             'level_id' => $request->level_id,
         ]);
+
+        // Lier la classe à la matière via la table pivot
+        if ($request->subject_id) {
+            $class->subjects()->syncWithoutDetaching([$request->subject_id]);
+        }
+
+        if ($request->has('subject_id') && $request->subject_id) {
+            return back()->with('success', 'Classe ajoutée et liée à la matière avec succès');
+        }
 
         return redirect()->route('admin.classes.index')
                          ->with('success', 'Classe ajoutée avec succès');

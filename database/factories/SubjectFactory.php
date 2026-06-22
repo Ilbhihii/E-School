@@ -15,7 +15,6 @@ class SubjectFactory extends Factory
         return [
             'name' => $this->faker->words(2, true),
             'type' => $this->faker->randomElement(['religieux', 'scolaire']),
-            'class_id' => ClassRoom::factory(),
         ];
     }
 }

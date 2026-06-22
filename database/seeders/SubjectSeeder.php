@@ -28,10 +28,12 @@ class SubjectSeeder extends Seeder
         ];
 
         foreach ($subjects as $subject) {
-            Subject::create([
-                'name' => $subject,
-                'type' => in_array($subject, ['Arabe', 'Français']) ? 'religieux' : 'scolaire',
-            ]);
+            Subject::firstOrCreate(
+                ['name' => $subject],
+                [
+                    'type' => in_array($subject, ['Arabe', 'Français']) ? 'religieux' : 'scolaire',
+                ]
+            );
         }
     }
 }

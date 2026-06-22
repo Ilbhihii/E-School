@@ -104,11 +104,6 @@
                     <span>Matières <span style="font-size:0.6rem;color:var(--adm-text-muted);margin-left:auto;">→ Niveaux → Classes</span></span>
                 </a>
 
-                <a href="{{ route('admin.levels.index') }}"
-                   class="adm-nav-link {{ preg_match('/levels/', $route ?? '') ? 'active' : '' }}">
-                    <span class="nav-link-icon"><i class="bi bi-layers"></i></span>
-                    <span>Niveaux <span style="font-size:0.6rem;color:var(--adm-text-muted);margin-left:auto;">→ Classes → Cours</span></span>
-                </a>
 
                 <a href="{{ route('admin.courses.index') }}"
                    class="adm-nav-link {{ preg_match('/courses/', $route ?? '') ? 'active' : '' }}">

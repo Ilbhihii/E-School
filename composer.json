@@ -13,6 +13,7 @@
         "laravel/framework": "^8.75",
         "laravel/sanctum": "^2.15",
         "laravel/tinker": "^2.5",
+        "openai-php/client": "^0.20.0",
         "phpoffice/phpword": "^1.4",
         "pusher/pusher-php-server": "^7.2",
         "smalot/pdfparser": "^2.12",
@@ -66,7 +67,10 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.3.28"
+        }
     },
     "minimum-stability": "dev",
     "prefer-stable": true

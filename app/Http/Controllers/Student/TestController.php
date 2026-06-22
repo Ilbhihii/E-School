@@ -106,7 +106,7 @@ class TestController extends Controller
         $user->save();
 
         return redirect()->route('student.waiting')
-            ->with('success', 'Test envoyé. En attente de validation par l\'admin.');
+            ->with('success', "Score: {$score}/{$total} — Test envoyé. En attente de validation par l'admin.");
     }
 
 }

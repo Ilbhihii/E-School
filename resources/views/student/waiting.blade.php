@@ -71,21 +71,21 @@
                 <h2 class="fw-bold mb-2" style="color:#1F2937;">Test complété avec succès !</h2>
                 <p class="text-muted mb-4">Votre test a été enregistré. Un administrateur va examiner vos résultats.</p>
 
-                @if (session('success'))
-                    @php
-                        preg_match('/Score:\s*(\d+)\/(\d+)/', session('success'), $matches);
-                        $score = $matches[1] ?? 0;
-                        $total = $matches[2] ?? 0;
-                        $percentage = $total > 0 ? round(($score / $total) * 100, 1) : 0;
-                    @endphp
+                @if($latestResult)
                     <div class="score-card">
                         <h3 class="fw-bold mb-3" style="font-size:1.1rem;opacity:0.9;">Votre Score</h3>
+                        @if($testTitle)
+                            <div style="font-size:0.9rem;opacity:0.8;margin-bottom:0.5rem;">{{ $testTitle }}</div>
+                        @endif
                         <div style="font-size:3rem;font-weight:800;line-height:1;">{{ $score }} / {{ $total }}</div>
                         <div style="font-size:1.3rem;font-weight:600;margin-top:0.5rem;opacity:0.95;">{{ $percentage }}%</div>
                         <div class="progress-bar-track">
                             <div class="progress-bar-fill" style="width: {{ $percentage }}%"></div>
                         </div>
                     </div>
+                @endif
+
+                @if (session('success'))
                     <div class="alert alert-success mb-4" style="border-radius:12px;">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         {{ session('success') }}

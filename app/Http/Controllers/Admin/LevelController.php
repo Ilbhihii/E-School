@@ -12,13 +12,12 @@ use Illuminate\Http\Request;
 class LevelController extends Controller
 {
     /**
-     * Affiche tous les niveaux (entrée de la navigation hiérarchique)
+     * Redirige vers la page des matières (les niveaux sont gérés via Matières → Niveaux → Classes)
      */
     public function index()
     {
-        $levels = Level::with('classes')->latest()->get();
-
-        return view('admin.levels.index', compact('levels'));
+        return redirect()->route('admin.subjects.index')
+            ->with('info', 'Les niveaux sont maintenant gérés depuis la page des matières.');
     }
 
     /**
@@ -90,8 +89,9 @@ class LevelController extends Controller
     public function subjectsIndex()
     {
         $subjects = Subject::withCount('classes')->orderBy('name')->get();
+        $levels = Level::with('classes')->orderBy('name')->get();
 
-        return view('admin.subjects.index', compact('subjects'));
+        return view('admin.subjects.index', compact('subjects', 'levels'));
     }
 
     /**
@@ -99,8 +99,12 @@ class LevelController extends Controller
      */
     public function subjectLevels(Subject $subject)
     {
-        $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique()->filter();
-        $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
+        // Charger TOUS les niveaux, avec leurs classes filtrées par matière
+        $levels = Level::with(['classes' => function($q) use ($subject) {
+                $q->whereHas('subjects', fn($sq) => $sq->where('subject_id', $subject->id));
+            }])
+            ->orderBy('name')
+            ->get();
 
         return view('admin.subjects.levels', compact('subject', 'levels'));
     }

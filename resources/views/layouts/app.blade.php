@@ -114,7 +114,7 @@
                 <a href="{{ route('admin.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
                 <a href="{{ route('admin.users.index') }}"><i class="bi bi-people me-1"></i>Utilisateurs</a>
                 <a href="{{ route('admin.courses.index') }}"><i class="bi bi-book me-1"></i>Cours</a>
-                <a href="{{ route('admin.levels.index') }}"><i class="bi bi-layers me-1"></i>Niveaux</a>
+                <a href="{{ route('admin.subjects.index') }}"><i class="bi bi-book me-1"></i>Matières</a>
             @endif
 
             @if(auth()->user()->role === 'prof')

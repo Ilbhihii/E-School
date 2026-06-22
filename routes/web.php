@@ -29,6 +29,7 @@ use App\Http\Controllers\Front\LearningController;
 
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\Front\AIChatbotController;
 
 
 
@@ -68,6 +69,9 @@ Route::get('/religieux', [FrontController::class, 'religieux'])
 
 Route::get('/all-classes-courses', [HomeController::class,'allClassesCourses'])->name('front.all-classes-courses');
 Route::get('/lives', [HomeController::class,'lives'])->name('front.lives');
+
+// AI Chatbot for visitors (throttled: 30 requests per minute)
+Route::post('/ai-chatbot', [AIChatbotController::class, 'chat'])->name('ai.chatbot')->middleware('throttle:30,1');
 
 Route::get('/account/blocked', function () {
     return view('auth.account-blocked');

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
 
     <!-- Bootstrap -->
@@ -689,11 +690,14 @@
     </div>
 </div>
 
-<!-- ═══ FLOATING CHAT ═══ -->
+<!-- ═══ FLOATING WHATSAPP ═══ -->
 <a href="https://wa.me/2125XXXXXXXX?text=Bonjour%20Smart%20School%20Academy%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
     <i class="bi bi-whatsapp"></i>
     <span class="chat-tooltip">Besoin d'aide ?</span>
 </a>
+
+<!-- ═══ AI CHATBOT ═══ -->
+<x-ai-chatbot />
 
 <!-- JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

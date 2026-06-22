@@ -34,4 +34,9 @@ return [
         'secret_key' => env('STRIPE_SECRET_KEY'),
         'key' => env('STRIPE_KEY'),
     ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-3.5-turbo'),
+    ],
 ];
