@@ -12,8 +12,8 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use App\Models\Test;
-
+use App\Models\Course;
+use App\Models\Live;
 
 
 class ProfController extends Controller
@@ -26,10 +26,9 @@ class ProfController extends Controller
         $assignmentsCount = \App\Models\Assignment::count();
         $myDevoirsCount = \App\Models\Assignment::where('user_id', auth()->id())->count();
         $absencesCount = \App\Models\Absence::where('present', 0)->count();
-        $testsCount = Test::where('create_by', auth()->id())->count();
         $livesCount = \App\Models\Live::count();
 
-        return view('prof.dashboard', compact('studentsCount', 'assignmentsCount', 'myDevoirsCount', 'absencesCount', 'testsCount', 'livesCount'));
+        return view('prof.dashboard', compact('studentsCount', 'assignmentsCount', 'myDevoirsCount', 'absencesCount', 'livesCount'));
     }
 
     public function assignments()
@@ -173,9 +172,27 @@ $classRoom = ClassRoom::findOrFail($id);
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
     }
 
+    public function browseLives(Level $level, ClassRoom $class)
+    {
+        $lives = Live::where('class_id', $class->id)
+            ->latest()
+            ->get();
+        return view('prof.lives.browse', compact('level', 'class', 'lives'));
+    }
+
+    public function browseDevoirs(Level $level, ClassRoom $class, Subject $subject)
+    {
+        $courses = Course::where('subject_id', $subject->id)
+            ->where('class_id', $class->id)
+            ->where('user_id', auth()->id())
+            ->with('devoirs')
+            ->get();
+        return view('prof.devoir.browse', compact('level', 'class', 'subject', 'courses'));
+    }
+
     public function livesIndex()
     {
-        $lives = \App\Models\Live::with('classRoom')
+        $lives = Live::with('classRoom')
             ->latest()
             ->paginate(15);
         

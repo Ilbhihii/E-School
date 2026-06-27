@@ -11,6 +11,7 @@ class TestAppointment extends Model
         'last_name',
         'phone',
         'email',
+        'type',
         'status',
     ];
 
@@ -18,9 +19,29 @@ class TestAppointment extends Model
     const STATUS_CONFIRMED = 'confirmed';
     const STATUS_CANCELLED = 'cancelled';
 
+    const TYPE_TEST = 'test';
+    const TYPE_INFORMATION = 'information';
+    const TYPE_COMMUNICATION = 'communication';
+    const TYPE_OTHER = 'other';
+
+    public static function getTypes(): array
+    {
+        return [
+            self::TYPE_TEST          => 'Test de niveau / Entretien',
+            self::TYPE_INFORMATION   => 'Prendre des informations',
+            self::TYPE_COMMUNICATION => 'Communication avec l\'administration',
+            self::TYPE_OTHER         => 'Autre',
+        ];
+    }
+
     public function getFullNameAttribute(): string
     {
         return $this->first_name . ' ' . $this->last_name;
+    }
+
+    public function getTypeLabelAttribute(): string
+    {
+        return self::getTypes()[$this->type] ?? $this->type;
     }
 
     public function scopePending($query)

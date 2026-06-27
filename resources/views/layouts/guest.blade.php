@@ -209,7 +209,7 @@
 <!-- ═══ GUEST NAVBAR ═══ -->
 <nav id="guestNav" class="guest-nav-3d d-flex align-items-center justify-content-between px-4 py-3">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
-        <img src="{{ asset('images/Edu-School.png') }}" width="36" height="36" alt="" class="me-2" style="filter: brightness(10); border-radius: 6px;">
+        <img src="{{ asset('images/logoSSA.jpeg') }}" width="48" height="48" alt="" class="me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
         Smart School Academy
     </a>
     <div class="d-flex gap-2">
@@ -226,8 +226,8 @@
 <div class="auth-container-3d" style="padding-top: 100px; min-height: 100vh;">
     <div class="auth-card-3d">
         <div class="text-center mb-4">
-            <img src="{{ asset('images/Edu-School.png') }}" width="64" height="64" alt="" 
-                 style="border-radius: 14px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
+            <img src="{{ asset('images/logoSSA.jpeg') }}" width="80" height="80" alt="" 
+                 style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
             <h4 class="auth-title-3d mt-3 mb-0" style="font-size: 1.3rem;">Smart School Academy</h4>
             <small style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Plateforme éducative</small>
         </div>

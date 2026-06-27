@@ -325,22 +325,25 @@ public function settings()
         ]);
         auth()->user()->update(['password' => Hash::make($request->password)]);
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
-    }    public function indexSubjects()
-{
-    $user = auth()->user();
-    $classRoom = $user->classRoom()->with('level', 'subjects')->first();
-    
-    if (!$classRoom || !$classRoom->level) {
-        return redirect()->route('student.levels')
-            ->with('warning', 'Aucune classe ou niveau assigné. Choisissez un niveau.');
     }
-    
-    $level = $classRoom->level;
-    // Ne montrer que les matières liées à la classe de l'étudiant
-    $subjects = $classRoom->subjects;
-    
-    return view('student.subjects.index', compact('subjects', 'level', 'classRoom'));
-}
+
+    public function indexSubjects()
+    {
+        $user = auth()->user();
+        $classRoom = $user->classRoom()->with('level', 'subjects')->first();
+
+        if ($classRoom && $classRoom->level && $classRoom->subjects->isNotEmpty()) {
+            // Afficher les matières liées à la classe de l'étudiant
+            $level = $classRoom->level;
+            $subjects = $classRoom->subjects;
+        } else {
+            // Fallback : afficher toutes les matières disponibles
+            $level = $classRoom?->level;
+            $subjects = Subject::orderBy('name')->get();
+        }
+
+        return view('student.subjects.index', compact('subjects', 'level', 'classRoom'));
+    }
 
 // ═══ Navigation hiérarchique : Matières → Niveaux → Classes → Cours ═══
 

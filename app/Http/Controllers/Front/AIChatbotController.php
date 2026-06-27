@@ -19,7 +19,7 @@ class AIChatbotController extends Controller
         $conversation = $request->input('conversation', []);
 
         try {
-            $response = $this->callOpenAI($userMessage, $conversation);
+            $response = $this->callGemini($userMessage, $conversation);
             return response()->json([
                 'success' => true,
                 'message' => $response,
@@ -33,20 +33,16 @@ class AIChatbotController extends Controller
         }
     }
 
-    private function callOpenAI(string $userMessage, array $conversation): string
+    private function callGemini(string $userMessage, array $conversation): string
     {
-        $apiKey = config('services.openai.api_key');
-        $model = config('services.openai.model', 'gpt-3.5-turbo');
+        $apiKey = config('services.gemini.key');
 
         if (!$apiKey) {
-            throw new \Exception('OPENAI_API_KEY is not configured.');
+            throw new \Exception('GEMINI_API_KEY is not configured.');
         }
 
-        // Build messages array with system prompt and conversation history
-        $messages = [
-            [
-                'role' => 'system',
-                'content' => "Tu es un assistant virtuel de **Smart School Academy**, une plateforme éducative intelligente marocaine.
+        // Build the system instruction
+        $systemInstruction = "Tu es un assistant virtuel de **Smart School Academy**, une plateforme éducative intelligente marocaine.
 
 RÈGLES STRICTES :
 - Réponds TOUJOURS en français, de façon chaleureuse et professionnelle.
@@ -57,7 +53,6 @@ INFORMATIONS SUR LA PLATEFORME :
 - **Smart School Academy** est une plateforme d'apprentissage en ligne marocaine.
 - Services : Cours interactifs, sessions live, quiz/QCM, suivi personnalisé, supports PDF téléchargeables.
 - Matières scolaires (français, maths, physique, etc.) et religieuses.
-- Inscription gratuite avec 7 jours d'essai offerts.
 - Les étudiants passent un test de niveau pour être orientés.
 - Rendez-vous disponible pour test de niveau personnalisé.
 - Paiement sécurisé via PayPal et Stripe.
@@ -67,42 +62,52 @@ QUAND ON TE DEMANDE DE T'AIDER :
 - Propose un rendez-vous pour test de niveau : « Je vous propose de prendre rendez-vous pour un test de niveau personnalisé ! »
 - Suggère l'inscription gratuite.
 
-SOIS ACCUEILLANT ET SYMPA, mais reste professionnel.",
-            ],
-        ];
+SOIS ACCUEILLANT ET SYMPA, mais reste professionnel.";
 
-        // Add conversation history (last 10 messages max to stay within token limits)
+        // Build conversation contents
+        $contents = [];
+
+        // Add conversation history (last 10 messages max)
         $history = array_slice($conversation, -10);
         foreach ($history as $msg) {
-            $role = isset($msg['role']) && $msg['role'] === 'assistant' ? 'assistant' : 'user';
-            $messages[] = [
+            $role = isset($msg['role']) && $msg['role'] === 'assistant' ? 'model' : 'user';
+            $contents[] = [
                 'role' => $role,
-                'content' => $msg['content'] ?? $msg['message'] ?? '',
+                'parts' => [
+                    ['text' => $msg['content'] ?? $msg['message'] ?? ''],
+                ],
             ];
         }
 
         // Add current user message
-        $messages[] = [
+        $contents[] = [
             'role' => 'user',
-            'content' => $userMessage,
+            'parts' => [
+                ['text' => $userMessage],
+            ],
         ];
 
-        $response = Http::withToken($apiKey)
-            ->timeout(30)
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $model,
-                'messages' => $messages,
-                'max_tokens' => 300,
-                'temperature' => 0.7,
+        $model = 'gemini-2.0-flash';
+
+        $response = Http::timeout(30)
+            ->post('https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . $apiKey, [
+                'system_instruction' => [
+                    'parts' => [['text' => $systemInstruction]],
+                ],
+                'contents' => $contents,
+                'generationConfig' => [
+                    'maxOutputTokens' => 300,
+                    'temperature' => 0.7,
+                ],
             ]);
 
         if (!$response->successful()) {
             $error = $response->json();
-            $errorMsg = $error['error']['message'] ?? 'Erreur API OpenAI';
-            throw new \Exception('OpenAI API error: ' . $errorMsg);
+            $errorMsg = $error['error']['message'] ?? 'Erreur API Gemini';
+            throw new \Exception('Gemini API error: ' . $errorMsg);
         }
 
         $data = $response->json();
-        return $data['choices'][0]['message']['content'] ?? 'Désolé, je n\'ai pas compris. Pouvez-vous reformuler ?';
+        return $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Désolé, je n\'ai pas compris. Pouvez-vous reformuler ?';
     }
 }

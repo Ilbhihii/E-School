@@ -9,13 +9,6 @@
      ══════════════════════════════════════════════════════ -->
 <section class="hero-3d text-center" style="padding: 140px 0 100px;">
     <div class="container hero-3d-content">
-        <!-- Badge -->
-        <div class="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-pill mb-4"
-             style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; color: rgba(255,255,255,0.6);">
-            <span class="badge" style="background: linear-gradient(135deg, #22C55E, #16A34A); font-size: 0.65rem; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase;">Nouveau</span>
-            Inscription gratuite — 7 jours d'essai offerts
-            <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
-        </div>
 
         <h1 class="hero-3d-title mb-4 mx-auto" style="max-width: 850px;">
             La plateforme intelligente<br>
@@ -229,7 +222,7 @@
         </div>
 
         <div class="row g-4 justify-content-center">
-            <div class="col-sm-6 col-md">
+            <div class="col">
                 <div class="card-3d text-center h-100 reveal-3d">
                     <div class="card-3d-icon mx-auto">
                         <i class="bi bi-laptop"></i>
@@ -241,7 +234,7 @@
                 </div>
             </div>
 
-            <div class="col-sm-6 col-md">
+            <div class="col">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.1s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #7C3AED, #FFD166);">
                         <i class="bi bi-graph-up-arrow"></i>
@@ -253,7 +246,7 @@
                 </div>
             </div>
 
-            <div class="col-sm-6 col-md">
+            <div class="col">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.2s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #FFD166, #FFB347);">
                         <i class="bi bi-cloud-arrow-down"></i>
@@ -265,7 +258,7 @@
                 </div>
             </div>
 
-            <div class="col-sm-6 col-md">
+            <div class="col">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.3s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #16A34A, #22C55E);">
                         <i class="bi bi-person-check"></i>
@@ -277,7 +270,7 @@
                 </div>
             </div>
 
-            <div class="col-sm-6 col-md">
+            <div class="col">
                 <div class="card-3d text-center h-100 reveal-3d" style="transition-delay: 0.4s;">
                     <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, #D90429, #EF4444);">
                         <i class="bi bi-phone"></i>
@@ -314,7 +307,7 @@
                             <i class="bi bi-check-circle-fill" style="color: #22C55E; font-size: 1.2rem;"></i>
                             <div>
                                 <small class="fw-bold text-white" style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7;">Depuis</small>
-                                <div class="fw-bold text-white">2024</div>
+                                <div class="fw-bold text-white">2026</div>
                             </div>
                         </div>
                     </div>
@@ -333,7 +326,8 @@
                         devant les écrans en une véritable opportunité d'apprentissage utile et efficace.
                     </p>
                     <p class="text-white-50 mb-4" style="line-height: 1.8; font-size: 1.05rem;">
-                        Un objectif simple : <strong class="text-white">rendre l'éducation accessible à domicile</strong>, pour que chacun puisse apprendre et progresser sans contrainte.
+                        L'objectif simple : <strong class="text-white">rendre l'éducation accessible à domicile</strong>, pour que chacun puisse  
+                        apprendre et progresser sans contrainte.
                     </p>
 
                     <div class="d-flex flex-column gap-3">
@@ -498,7 +492,7 @@
                     🚀 Prêt à commencer ?
                 </span>
                 <h2 class="section-title-3d-light fw-bold mb-3" style="font-family: 'Poppins', sans-serif; font-size: 2.5rem;">
-                    Accélérez votre réussite dès aujourd'hui
+                    Rejoignez des milliers d'étudiants <br>qui réussissent avec Smart School Academy
                 </h2>
                 <p class="text-white-50 mb-4" style="font-size: 1.1rem; max-width: 550px; margin: 0 auto 1.5rem;">
                     Inscription gratuite. 7 jours d'essai. Annulation à tout moment. <br>Rejoignez l'aventure éducative dès aujourd'hui !

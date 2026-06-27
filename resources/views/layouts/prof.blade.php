@@ -153,7 +153,7 @@
     <aside class="prof-sidebar" id="profSidebar">
         <div class="prof-sidebar-brand">
             <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:54px;height:54px;object-fit:contain;filter:brightness(0) invert(1);">
+                <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" style="width:64px;height:64px;object-fit:contain;">
             </div>
             <h3>Smart School Academy</h3>
             <div class="brand-sub">Espace enseignant</div>
@@ -183,10 +183,7 @@
                 <span class="nav-icon"><i class="bi bi-file-earmark-text"></i></span>
                 <span>Devoirs Étudiants</span>
             </a>
-            <a href="{{ route('prof.tests.index') }}" class="prof-nav-link {{ request()->routeIs('prof.tests*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-clipboard-check"></i></span>
-                <span>Tests</span>
-            </a>
+
 
             <div class="nav-heading">Communication</div>
             <a href="{{ route('prof.chat.subjects') }}" class="prof-nav-link {{ request()->routeIs('prof.chat*') ? 'active' : '' }}">

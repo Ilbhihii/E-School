@@ -71,7 +71,7 @@
 
             <div class="adm-sidebar-brand">
                 <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" style="width:54px;height:54px;object-fit:contain;filter:brightness(0) invert(1);">
+                    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" style="width:64px;height:64px;object-fit:contain;">
                 </div>
                 <h3>Smart School Academy</h3>
                 <div class="brand-sub">Administration</div>

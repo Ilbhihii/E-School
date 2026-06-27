@@ -31,6 +31,35 @@
     color: #FCA5A5;
     border: 1px solid rgba(239,68,68,0.2);
 }
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.type-test {
+    background: rgba(124,58,237,0.15);
+    color: #A78BFA;
+    border: 1px solid rgba(124,58,237,0.2);
+}
+.type-information {
+    background: rgba(6,182,212,0.15);
+    color: #22D3EE;
+    border: 1px solid rgba(6,182,212,0.2);
+}
+.type-communication {
+    background: rgba(251,146,60,0.15);
+    color: #FB923C;
+    border: 1px solid rgba(251,146,60,0.2);
+}
+.type-other {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+}
 </style>
 
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
@@ -49,6 +78,7 @@
                 <th>Nom</th>
                 <th>Téléphone</th>
                 <th>Email</th>
+                <th>Type</th>
                 <th>Statut</th>
                 <th>Date</th>
                 <th>Actions</th>
@@ -69,6 +99,20 @@
                     <a href="mailto:{{ $appointment->email }}" style="color: rgba(255,255,255,0.7); text-decoration: none;">
                         <i class="bi bi-envelope me-1" style="color: rgba(255,255,255,0.3);"></i>{{ $appointment->email }}
                     </a>
+                </td>
+                <td>
+                    <span class="type-badge type-{{ $appointment->type }}">
+                        @if($appointment->type === 'test')
+                            <i class="bi bi-pencil-square"></i>
+                        @elseif($appointment->type === 'information')
+                            <i class="bi bi-info-circle"></i>
+                        @elseif($appointment->type === 'communication')
+                            <i class="bi bi-chat-dots"></i>
+                        @else
+                            <i class="bi bi-three-dots"></i>
+                        @endif
+                        {{ $appointment->type_label }}
+                    </span>
                 </td>
                 <td>
                     <span class="status-badge status-{{ $appointment->status }}">
@@ -110,7 +154,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" class="text-center py-5" style="color: rgba(255,255,255,0.3);">
+                <td colspan="9" class="text-center py-5" style="color: rgba(255,255,255,0.3);">
                     <i class="bi bi-inbox" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
                     Aucun rendez-vous pour le moment
                 </td>

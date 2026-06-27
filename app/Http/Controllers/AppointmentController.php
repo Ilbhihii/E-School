@@ -10,9 +10,11 @@ class AppointmentController extends Controller
     /**
      * Afficher le formulaire de prise de rendez-vous (public)
      */
-    public function create()
+    public function create(Request $request)
     {
-        return view('front.appointment');
+        $type = $request->query('type', '');
+        $user = auth()->user();
+        return view('front.appointment', compact('type', 'user'));
     }
 
     /**
@@ -20,20 +22,30 @@ class AppointmentController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'phone'      => 'required|string|max:20',
             'email'      => 'required|email|max:255',
-        ]);
+            'type'       => 'required|string|in:' . implode(',', array_keys(TestAppointment::getTypes())),
+        ];
+
+        $validated = $request->validate($rules);
 
         TestAppointment::create([
             'first_name' => $validated['first_name'],
             'last_name'  => $validated['last_name'],
             'phone'      => $validated['phone'],
             'email'      => $validated['email'],
+            'type'       => $validated['type'],
             'status'     => TestAppointment::STATUS_PENDING,
         ]);
+
+        $redirect = $request->query('redirect', 'back');
+
+        if ($redirect === 'student.dashboard' && auth()->check()) {
+            return redirect()->route('student.dashboard')->with('success', '✅ Votre demande de rendez-vous a été envoyée avec succès ! Nous vous contacterons rapidement.');
+        }
 
         return redirect()->back()->with('success', '✅ Votre demande de rendez-vous a été envoyée avec succès ! Nous vous contacterons rapidement.');
     }

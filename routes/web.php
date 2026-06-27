@@ -18,7 +18,7 @@ use App\Http\Controllers\Student\TestController as StudentTestController;
 use App\Http\Controllers\Prof\ProfController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Prof\ScheduleController;
-use App\Http\Controllers\Prof\TestController as ProfTestController;
+
 use App\Http\Controllers\Prof\DevoirController as ProfDevoirController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\FrontController;
@@ -282,6 +282,11 @@ Route::middleware(['auth','isProf'])
     Route::get('/subjects/{subject}/levels', [ProfController::class, 'subjectLevels'])->name('subjects.levels');
     Route::get('/subjects/{subject}/levels/{level}/classes', [ProfController::class, 'subjectClasses'])->name('subjects.classes');
 
+    // Browse routes (cours, lives, devoirs) à partir des classes
+    Route::get('/browse/{level}/{class}/courses/{subject}', [ProfLevelController::class, 'courses'])->name('browse.courses');
+    Route::get('/browse/{level}/{class}/lives', [ProfController::class, 'browseLives'])->name('browse.lives');
+    Route::get('/browse/{level}/{class}/devoirs/{subject}', [ProfController::class, 'browseDevoirs'])->name('browse.devoirs');
+
     Route::resource('devoir', ProfDevoirController::class)->except(['show'])->names([
                     'index' => 'devoir.index',
                     'create' => 'devoir.create',
@@ -291,11 +296,6 @@ Route::middleware(['auth','isProf'])
                     'destroy' => 'devoir.destroy',
                 ]);
 
-    Route::resource('tests', ProfTestController::class);
-    Route::post('tests/{test}/generate-ai', [ProfTestController::class, 'generateAI'])
-        ->name('tests.generate-ai');
-    Route::get('tests/{test}/student/{user}', [ProfTestController::class, 'studentResult'])
-        ->name('tests.result.details');
 
     Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule');
     Route::get('/schedule/data', [ScheduleController::class, 'data'])->name('schedule.data');

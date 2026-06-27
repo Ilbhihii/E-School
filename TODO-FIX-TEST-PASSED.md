@@ -1,1 +1,0 @@
-# Fix test_passed Column Error\n\n- [ ] 1. `php artisan migrate` (safe, idempotent)\n- [ ] 2. Verify: `php artisan tinker --execute=\"Schema::hasColumn('users', 'test_passed') ? '✅ Exists' : '❌ Missing'\"`\n- [ ] 3. Test: http://127.0.0.1:8000/admin/users/3/activate\n- [ ] 4. Clear: `php artisan route:clear config:clear`

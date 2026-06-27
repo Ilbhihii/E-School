@@ -9,7 +9,7 @@
         "barryvdh/laravel-dompdf": "^2.2",
         "doctrine/dbal": "^3.10",
         "fruitcake/laravel-cors": "^2.0",
-        "guzzlehttp/guzzle": "^7.0.1",
+        "guzzlehttp/guzzle": "7.10.x-dev",
         "laravel/framework": "^8.75",
         "laravel/sanctum": "^2.15",
         "laravel/tinker": "^2.5",
@@ -70,6 +70,9 @@
         "sort-packages": true,
         "platform": {
             "php": "8.3.28"
+        },
+        "allow-plugins": {
+            "php-http/discovery": true
         }
     },
     "minimum-stability": "dev",

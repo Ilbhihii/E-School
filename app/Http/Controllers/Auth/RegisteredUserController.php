@@ -64,8 +64,7 @@ $user = User::create([
 
         Auth::login($user);
 
-        return redirect()->route('student.tests.index');
-
-        return redirect(RouteServiceProvider::HOME);
+        // Rediriger vers le formulaire de rendez-vous pour un test de niveau
+        return redirect()->route('appointment.create', ['type' => 'test', 'from' => 'registration']);
     }
 }

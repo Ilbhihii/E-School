@@ -13,3 +13,9 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+
+# Laravel storage cached views
+/storage/framework/views/*
+# TODO/notes files
+TODO*.md
+CLASS_ROOMS_FIX.md

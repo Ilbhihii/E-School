@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Smart School Academy')</title>
+    <title>@yield('title', 'SChool bridge')</title>
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -104,8 +104,8 @@
 <!-- ═══ NAVBAR ═══ -->
 <nav class="navbar-3d d-flex align-items-center justify-content-between px-4 py-3 flex-wrap gap-3">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
-        <img src="{{ asset('images/Edu-School.png') }}" width="36" height="36" alt="" class="me-2" style="filter: brightness(10); border-radius: 6px;">
-        Smart School Academy
+        <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="48" height="48" alt="" class="me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        SChool bridge
     </a>
 
     <div class="app-nav d-flex flex-wrap align-items-center gap-1">
@@ -122,7 +122,6 @@
                 <a href="{{ route('prof.courses.index') }}"><i class="bi bi-book me-1"></i>Mes Cours</a>
                 <a href="{{ route('prof.lives.index') }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
                 <a href="{{ route('prof.devoir.index') }}"><i class="bi bi-file-earmark-check me-1"></i>Devoirs</a>
-                <a href="{{ route('prof.tests.index') }}"><i class="bi bi-clipboard-check me-1"></i>Tests</a>
             @endif
 
             @if(auth()->user()->role === 'student')

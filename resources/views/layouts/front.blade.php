@@ -12,7 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- 3D Design System -->
-    <link rel="stylesheet" href="{{ asset('css/layouts-3d.css') }}">        <style>
+    <link rel="stylesheet" href="{{ asset('css/layouts-3d.css') }}">
+    <style>
         /* ══════════════════════════════════════════════════════════════
            DARK MODE 3D — FRONT LAYOUT
            ══════════════════════════════════════════════════════════════ */
@@ -32,22 +33,24 @@
         /* ── BADGE NAV ── */
         .badge-nav {
             position: absolute;
-            top: -6px;
-            right: -8px;
-            background: linear-gradient(135deg, #FFD166, #FFB347);
-            color: #1E293B;
-            font-size: 0.6rem;
-            font-weight: 800;
-            padding: 2px 8px;
-            border-radius: 20px;
-            text-transform: uppercase;
+            bottom: -11px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fbbf24;
+            color: #78350f;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 4px;
+            white-space: nowrap;
             letter-spacing: 0.05em;
-            box-shadow: 0 4px 15px rgba(255, 209, 102, 0.4);
+            text-transform: uppercase;
+            pointer-events: none;
             animation: badgePulse 2s ease-in-out infinite;
         }
         @keyframes badgePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.08); }
         }
 
         /* ── PULSE GLOW ON REGISTER BTN ── */
@@ -195,8 +198,8 @@
             pointer-events: none;
         }
         .preloader-3d-logo {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             border-radius: 16px;
             animation: preloaderPulse 1.5s ease-in-out infinite;
         }
@@ -429,12 +432,12 @@
             transform: translateY(0);
         }
 
-        /* ── GLOW TEXT (utile pour les vues enfants) ── */
+        /* ── GLOW TEXT ── */
         .glow-text {
             text-shadow: 0 0 40px rgba(0, 58, 143, 0.3), 0 0 80px rgba(124, 58, 237, 0.15);
         }
 
-        /* ── REVEAL 3D override (cohérent avec layouts-3d.css) ── */
+        /* ── REVEAL 3D ── */
         .reveal-3d {
             opacity: 0;
             transform: translateY(40px) rotateX(-10deg);
@@ -447,7 +450,7 @@
 
         /* ── NAVBAR OVERRIDES ── */
         .navbar-3d {
-            background: rgba(8, 12, 20, 0.6) !important;
+            background: rgba(153, 153, 215, 0) !important;
         }
         .navbar-3d.scrolled {
             background: rgba(8, 12, 20, 0.92) !important;
@@ -476,7 +479,7 @@
 
 <!-- ═══ PRELOADER ═══ -->
 <div class="preloader-3d" id="preloader">
-    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="" class="preloader-3d-logo">
+    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="" class="preloader-3d-logo">
     <div class="preloader-3d-bar">
         <div class="preloader-3d-bar-inner"></div>
     </div>
@@ -509,7 +512,7 @@
 <nav id="navbar3d" class="navbar navbar-expand-lg navbar-3d fixed-top">
     <div class="container">
         <a class="navbar-brand" href="{{ route('home') }}">
-            <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="44" height="44" alt="Smart School Academy" class="me-2" style="filter: brightness(10); border-radius: 8px;">
+            <img src="{{ asset('images/logoSSA.jpeg') }}" width="60" height="60" alt="Smart School Academy" class="me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             Smart School Academy
         </a>
 
@@ -535,7 +538,7 @@
 
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('appointment.create') }}" style="color: #FFD166;">
-                        <i class="bi bi-calendar-check me-1"></i>Rendez-vous
+                        Rendez-vous
                     </a>
                 </li>
 
@@ -565,8 +568,10 @@
                         </a>
                     </li>
 
-                    <li class="nav-item ms-lg-1" style="position: relative; overflow: visible;">
-                        <a href="{{ route('register') }}" class="btn nav-btn-3d nav-btn-3d-primary pulse-glow">
+                    <li class="nav-item ms-lg-1" style="position: relative; overflow: visible; padding-bottom: 8px;">
+                        <a href="{{ route('register') }}"
+                           class="btn nav-btn-3d nav-btn-3d-primary pulse-glow"
+                           style="position: relative; overflow: visible;">
                             <i class="bi bi-person-plus"></i> Inscription
                             <span class="badge-nav">Gratuit</span>
                         </a>
@@ -590,7 +595,7 @@
 
             <div class="col-lg-4 col-md-6">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="54" height="54" alt="" style="filter: brightness(10); border-radius: 10px;">
+                    <img src="{{ asset('images/logoSSA.jpeg') }}" width="64" height="64" alt="" style="border-radius: 12px;">
                     <div>
                         <h5 class="fw-bold mb-0" style="font-family: 'Poppins', sans-serif;">Smart School Academy</h5>
                         <small style="color: rgba(255,255,255,0.3);">Apprentissage intelligent</small>
@@ -764,7 +769,6 @@
                 cursorDot.style.top = mouseY + 'px';
             });
 
-            // Smooth cursor follow
             function animateCursor() {
                 cursorX += (mouseX - cursorX) * 0.12;
                 cursorY += (mouseY - cursorY) * 0.12;
@@ -774,7 +778,6 @@
             }
             animateCursor();
 
-            // Hover effect on interactive elements
             document.querySelectorAll('a, button, .card-3d, .btn, .nav-link').forEach(el => {
                 el.addEventListener('mouseenter', () => cursor.classList.add('active'));
                 el.addEventListener('mouseleave', () => cursor.classList.remove('active'));
@@ -784,7 +787,6 @@
         // ── FLOATING CTA ──
         const floatingCta = document.getElementById('floatingCta');
         if (floatingCta) {
-            // Vérifier si l'utilisateur a déjà fermé la bannière
             const ctaDismissed = localStorage.getItem('ctaDismissed');
             if (ctaDismissed === 'true') {
                 floatingCta.style.display = 'none';
@@ -797,7 +799,6 @@
                     }
                 }, { passive: true });
 
-                // Fermeture persistante
                 const closeBtn = floatingCta.querySelector('.floating-cta-close');
                 if (closeBtn) {
                     closeBtn.addEventListener('click', () => {
@@ -860,8 +861,6 @@
                 }
             });
         });
-
-        // ── SOCIAL ICONS hover géré via CSS uniquement ──
 
     })();
 </script>

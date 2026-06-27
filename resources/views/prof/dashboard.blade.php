@@ -47,13 +47,7 @@
         <div class="stat-value">{{ $absencesCount ?? 0 }}</div>
         <div class="stat-label">Absences</div>
     </div>
-    <div class="adm-stat purple">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-clipboard-check"></i></div>
-        </div>
-        <div class="stat-value">{{ $testsCount ?? 0 }}</div>
-        <div class="stat-label">Tests</div>
-    </div>
+
     <div class="adm-stat cyan">
         <div class="stat-top">
             <div class="stat-icon"><i class="bi bi-camera-video"></i></div>
@@ -96,15 +90,7 @@
             <span class="action-count">Répondre étudiants</span>
         </a>
     </div>
-    <div class="col-md-3 col-sm-6">
-        <a href="{{ route('prof.tests.index') }}" class="adm-action-card">
-            <div class="action-icon" style="background:rgba(124,58,237,0.15);color:#A78BFA;">
-                <i class="bi bi-clipboard-check"></i>
-            </div>
-            <span class="action-title">Tests</span>
-            <span class="action-count">Créer / Gérer</span>
-        </a>
-    </div>
+
 </div>
 
 <!-- Recent Activity -->
