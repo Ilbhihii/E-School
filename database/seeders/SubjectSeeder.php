@@ -7,15 +7,21 @@ use App\Models\Subject;
 
 class SubjectSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-
     public function run()
     {
+        $islamicSubjects = [
+            'Coran',
+            'Tajwid',
+            'Fiqh',
+            'Aqida',
+            'Hadith',
+            'Sira',
+            'Tafsir',
+            'Langue Arabe Islamique',
+        ];
+
         $subjects = [
+            // Matières scolaires
             'Français',
             'Arabe',
             'Maths',
@@ -24,14 +30,24 @@ class SubjectSeeder extends Seeder
             'Histoire',
             'Anglais',
             'Administration',
-            'Informatique'
+            'Informatique',
+
+            // Matières islamiques
+            'Coran',
+            'Tajwid',
+            'Fiqh',
+            'Aqida',
+            'Hadith',
+            'Sira',
+            'Tafsir',
+            'Langue Arabe Islamique',
         ];
 
         foreach ($subjects as $subject) {
             Subject::firstOrCreate(
                 ['name' => $subject],
                 [
-                    'type' => in_array($subject, ['Arabe', 'Français']) ? 'religieux' : 'scolaire',
+                    'type' => in_array($subject, $islamicSubjects) ? 'religieux' : 'scolaire',
                 ]
             );
         }

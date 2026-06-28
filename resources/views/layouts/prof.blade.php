@@ -153,7 +153,7 @@
     <aside class="prof-sidebar" id="profSidebar">
         <div class="prof-sidebar-brand">
             <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" style="width:64px;height:64px;object-fit:contain;">
+                <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
             </div>
             <h3>Smart School Academy</h3>
             <div class="brand-sub">Espace enseignant</div>

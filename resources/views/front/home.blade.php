@@ -23,7 +23,7 @@
         <div class="d-flex flex-wrap justify-content-center gap-3 mb-5">
             <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 16px 40px; font-size: 1.05rem;">
                 <i class="bi bi-rocket-takeoff"></i>
-                Commencer gratuitement
+                Commencer
                 <i class="bi bi-arrow-right"></i>
             </a>
             <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
@@ -198,7 +198,7 @@
         <div class="text-center mt-5">
             <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient" style="padding: 16px 44px; font-size: 1.1rem;">
                 <i class="bi bi-person-plus"></i>
-                Créer mon compte gratuit
+                Créer mon compte
             </a>
         </div>
     </div>
@@ -495,7 +495,7 @@
                     Rejoignez des milliers d'étudiants <br>qui réussissent avec Smart School Academy
                 </h2>
                 <p class="text-white-50 mb-4" style="font-size: 1.1rem; max-width: 550px; margin: 0 auto 1.5rem;">
-                    Inscription gratuite. 7 jours d'essai. Annulation à tout moment. <br>Rejoignez l'aventure éducative dès aujourd'hui !
+                    Inscription gratuite. Annulation à tout moment. <br>Rejoignez l'aventure éducative dès aujourd'hui !
                 </p>
                 <div class="d-flex flex-wrap justify-content-center gap-3">
                     <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 16px 44px; font-size: 1.1rem;">
