@@ -539,6 +539,118 @@ document.addEventListener('DOMContentLoaded', function () {
 .fc-theme-standard td, .fc-theme-standard th { border-color: rgba(255,255,255,0.04); }
 .fc-daygrid-day-number { color: #64748B; font-size: 0.6rem; }
 .fc .fc-day-other { background: rgba(255,255,255,0.01); }
+
+/* ══════════════════════════════════════════════════════════════
+   MODE CLAIR — Student Dashboard (page-specific)
+   ══════════════════════════════════════════════════════════════ */
+html.light-mode .dash-hero {
+    background: rgba(255,255,255,0.92) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .dash-hero h1 {
+    color: #1e293b !important;
+}
+html.light-mode .dash-hero span[style*="color:#64748B"] {
+    color: #94a3b8 !important;
+}
+html.light-mode .dash-hero a[style*="color:#64748B"] {
+    color: #64748b !important;
+}
+html.light-mode .dash-hero a[style*="color:#64748B"]:hover {
+    color: #1e293b !important;
+}
+html.light-mode .avatar-inner {
+    background: #f0f2f5 !important;
+    color: #1e293b !important;
+}
+html.light-mode .metrics-row {
+    background: rgba(0,0,0,0.02) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .metric-cell:hover {
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .mc-label {
+    color: #94a3b8 !important;
+}
+html.light-mode .dash-tabs {
+    border-bottom-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .dash-tab {
+    color: #94a3b8 !important;
+}
+html.light-mode .dash-tab:hover {
+    color: #64748b !important;
+}
+html.light-mode .dash-tab.active {
+    color: #1e293b !important;
+}
+html.light-mode .dash-tab.active::after {
+    background: #4F46E5 !important;
+}
+html.light-mode .action-link div[style*="color:#F1F5F9"] {
+    color: #1e293b !important;
+}
+html.light-mode .action-link i[style*="color:#475569"] {
+    color: #94a3b8 !important;
+}
+html.light-mode .progress-ring-text .pct {
+    color: #1e293b !important;
+}
+html.light-mode .progress-ring-text .lbl {
+    color: #64748b !important;
+}
+html.light-mode .activity-item div[style*="color:#F1F5F9"] {
+    color: #1e293b !important;
+}
+html.light-mode .activity-item div[style*="color:#475569"] {
+    color: #94a3b8 !important;
+}
+html.light-mode .action-link div[style*="color:#F1F5F9"] {
+    color: #1e293b !important;
+}
+html.light-mode div[style*="border:1px solid rgba(255,255,255,0.04)"] {
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode div[style*="background:rgba(255,255,255,0.02)"] {
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .pr-card-body div[style*="color:#F1F5F9"] {
+    color: #1e293b !important;
+}
+html.light-mode .activity-item div[style*="color:#64748B"] {
+    color: #94a3b8 !important;
+}
+html.light-mode .st-content div[style*="color:#64748B"]:not(.fc *) {
+    color: #94a3b8 !important;
+}
+html.light-mode .dash-hero a[style*="background:rgba(255,255,255,0.04)"] {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    color: #64748b !important;
+}
+html.light-mode .dash-hero a[style*="background:rgba(255,255,255,0.04)"]:hover {
+    background: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .fc-toolbar-title {
+    color: #1e293b !important;
+}
+html.light-mode .fc-col-header-cell {
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .fc-theme-standard td,
+html.light-mode .fc-theme-standard th {
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .fc-daygrid-day-number {
+    color: #64748b !important;
+}
+html.light-mode .fc .fc-day-other {
+    background: rgba(0,0,0,0.01) !important;
+}
+html.light-mode .fc {
+    color: #64748b !important;
+}
 </style>
 
 @endsection

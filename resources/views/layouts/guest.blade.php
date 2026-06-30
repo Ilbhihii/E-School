@@ -189,6 +189,130 @@
             margin: 0;
         }
 
+        /* ── LOGO THEME SWITCH ── */
+        .logo-theme-dark { display: inline-block; }
+        .logo-theme-light { display: none; }
+        html.light-mode .logo-theme-dark { display: none; }
+        html.light-mode .logo-theme-light { display: inline-block; }
+
+        /* ── TOGGLE BUTTON STYLES ── */
+        .theme-toggle-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .theme-toggle-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            color: var(--3d-gold);
+            border-color: rgba(255,209,102,0.3);
+            box-shadow: 0 8px 25px rgba(255,209,102,0.1);
+        }
+        .theme-toggle-btn .icon-sun { display: none; }
+        .theme-toggle-btn .icon-moon { display: inline; }
+
+        /* ══════════════════════════════════════════════════════════════
+           MODE CLAIR — Guest Layout
+           ══════════════════════════════════════════════════════════════ */
+        html.light-mode body {
+            background: #f0f2f5;
+            color: #1e293b;
+        }
+        html.light-mode .cosmic-bg {
+            background: radial-gradient(ellipse at 20% 50%, #e0e7ff, #f0f2f5 60%, #f8fafc);
+        }
+        html.light-mode .cosmic-bg::before {
+            background: radial-gradient(circle, rgba(0,58,143,0.06), transparent 70%);
+        }
+        html.light-mode .cosmic-bg::after {
+            background: radial-gradient(circle, rgba(124,58,237,0.04), transparent 70%);
+        }
+        html.light-mode .cosmic-nebula {
+            background: radial-gradient(circle, rgba(255,209,102,0.06), transparent 60%);
+        }
+        html.light-mode .orb { opacity: 0.04; }
+        html.light-mode .star { background: #94a3b8; }
+        html.light-mode .guest-nav-3d {
+            background: rgba(255,255,255,0.75) !important;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        html.light-mode .guest-nav-3d.scrolled {
+            background: rgba(255,255,255,0.92) !important;
+        }
+        html.light-mode .auth-card-3d {
+            background: rgba(255,255,255,0.92);
+            border-color: rgba(0,0,0,0.08);
+        }
+        html.light-mode .auth-card-3d::before {
+            opacity: 0.4;
+        }
+        html.light-mode .auth-card-3d small {
+            color: rgba(0,0,0,0.3) !important;
+        }
+        html.light-mode .auth-input-3d {
+            background: rgba(0,0,0,0.03);
+            border-color: rgba(0,0,0,0.1);
+            color: #1e293b;
+        }
+        html.light-mode .auth-input-3d:focus {
+            border-color: rgba(124,58,237,0.4);
+            background: rgba(0,0,0,0.05);
+        }
+        html.light-mode .auth-input-3d::placeholder {
+            color: rgba(0,0,0,0.3);
+        }
+        html.light-mode .auth-label-3d {
+            color: #475569;
+        }
+        html.light-mode .auth-link-3d {
+            color: #64748b;
+        }
+        html.light-mode .auth-link-3d:hover {
+            color: #003A8F;
+        }
+        html.light-mode .theme-toggle-btn {
+            border-color: rgba(0,0,0,0.1);
+            background: rgba(0,0,0,0.03);
+            color: #64748b;
+        }
+        html.light-mode .theme-toggle-btn:hover {
+            color: #003A8F;
+            border-color: rgba(0,58,143,0.2);
+        }
+        html.light-mode .theme-toggle-btn .icon-sun { display: inline; }
+        html.light-mode .theme-toggle-btn .icon-moon { display: none; }
+
+        /* ── Auth page inline white text overrides ── */
+        html.light-mode .auth-card-3d span[style*="color: rgba(255,255,255,"],
+        html.light-mode .auth-card-3d span[style*="color: rgba(255, 255, 255,"] {
+            color: #64748b !important;
+        }
+        html.light-mode .auth-card-3d .form-check-input {
+            background: rgba(0,0,0,0.04) !important;
+            border-color: rgba(0,0,0,0.15) !important;
+        }
+        html.light-mode .auth-card-3d .form-check-label {
+            color: #64748b !important;
+        }
+        html.light-mode .auth-card-3d .auth-title-3d {
+            color: #1e293b !important;
+        }
+
+        /* ── Login/Register error alert ── */
+        html.light-mode .alert-danger {
+            background: rgba(239,68,68,0.08) !important;
+            color: #b91c1c !important;
+            border-color: rgba(239,68,68,0.15) !important;
+        }
+
         @media (max-width: 768px) {
             .shooting-star { display: none; }
         }
@@ -209,10 +333,15 @@
 <!-- ═══ GUEST NAVBAR ═══ -->
 <nav id="guestNav" class="guest-nav-3d d-flex align-items-center justify-content-between px-4 py-3">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
-        <img src="{{ asset('images/logoSSA.jpeg') }}" width="48" height="48" alt="" class="me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <img src="{{ asset('images/logoSSA.jpeg') }}" width="48" height="48" alt="" class="logo-theme-dark me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="48" height="48" alt="" class="logo-theme-light me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
         Smart School Academy
     </a>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 align-items-center">
+        <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème">
+            <i class="bi bi-moon-fill icon-moon"></i>
+            <i class="bi bi-sun-fill icon-sun"></i>
+        </button>
         <a href="{{ route('login') }}" class="btn nav-btn-3d btn-sm px-3" style="font-size: 0.85rem; background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 209, 102, 0.3);">
             <i class="bi bi-person"></i> Connexion
         </a>
@@ -227,7 +356,9 @@
     <div class="auth-card-3d">
         <div class="text-center mb-4">
             <img src="{{ asset('images/logoSSA.jpeg') }}" width="80" height="80" alt="" 
-                 style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
+                 class="logo-theme-dark" style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
+            <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="80" height="80" alt="" 
+                 class="logo-theme-light" style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
             <h4 class="auth-title-3d mt-3 mb-0" style="font-size: 1.3rem;">Smart School Academy</h4>
             <small style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Plateforme éducative</small>
         </div>
@@ -285,6 +416,8 @@
     }
 })();
 </script>
+
+@include('partials.theme-toggle-js')
 
 @stack('scripts')
 

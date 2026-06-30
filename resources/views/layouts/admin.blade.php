@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Admin Panel') — Smart School Academy</title>
 
+    <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+    <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
@@ -57,6 +60,134 @@
             from { opacity: 0; transform: translateX(20px); }
             to { opacity: 1; transform: translateX(0); }
         }
+
+        /* ── TOGGLE ICONS ── */
+        .theme-toggle-btn .icon-sun { display: none; }
+        .theme-toggle-btn .icon-moon { display: inline; }
+        html.light-mode .theme-toggle-btn .icon-sun { display: inline; }
+        html.light-mode .theme-toggle-btn .icon-moon { display: none; }
+        html.light-mode .theme-toggle-btn {
+            border-color: rgba(0,0,0,0.1) !important;
+            background: rgba(0,0,0,0.03) !important;
+            color: #64748b !important;
+        }
+        html.light-mode .theme-toggle-btn:hover {
+            color: #003A8F !important;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           MODE CLAIR — Admin Layout
+           ══════════════════════════════════════════════════════════════ */
+        html.light-mode body {
+            background: #f0f2f5;
+            color: #1e293b;
+        }
+        html.light-mode .adm-wrapper {
+            background: #f0f2f5;
+        }
+        html.light-mode .adm-sidebar {
+            background: rgba(255,255,255,0.98) !important;
+            border-right: 1px solid rgba(0,0,0,0.06);
+        }
+        html.light-mode .adm-sidebar-brand h3 {
+            color: #1e293b !important;
+            -webkit-text-fill-color: #1e293b !important;
+        }
+        html.light-mode .adm-sidebar-brand .brand-sub {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .adm-nav-link {
+            color: #475569 !important;
+        }
+        html.light-mode .adm-nav-link:hover {
+            color: #1e293b !important;
+            background: rgba(0,0,0,0.03) !important;
+        }
+        html.light-mode .adm-nav-link .nav-link-icon {
+            background: rgba(0,0,0,0.04) !important;
+            color: #64748b !important;
+        }
+        html.light-mode .adm-nav-link.active {
+            background: linear-gradient(135deg, rgba(0,58,143,0.08), rgba(37,99,235,0.04)) !important;
+            color: #003A8F !important;
+        }
+        html.light-mode .adm-nav-link.active .nav-link-icon {
+            background: linear-gradient(135deg, #003A8F, #2563EB) !important;
+            color: white !important;
+        }
+        html.light-mode .adm-sidebar-nav .nav-heading {
+            color: rgba(0,0,0,0.25) !important;
+        }
+        html.light-mode .adm-sidebar-footer {
+            border-color: rgba(0,0,0,0.06);
+        }
+        html.light-mode .adm-topbar {
+            background: rgba(255,255,255,0.85) !important;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        html.light-mode .adm-topbar-page-title {
+            color: #1e293b !important;
+        }
+        html.light-mode .adm-topbar-breadcrumb,
+        html.light-mode .adm-topbar-breadcrumb a {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .adm-topbar-breadcrumb a:hover {
+            color: #1e293b !important;
+        }
+        html.light-mode .adm-user-trigger {
+            background: rgba(0,0,0,0.03) !important;
+        }
+        html.light-mode .adm-user-name {
+            color: #1e293b !important;
+        }
+        html.light-mode .adm-user-avatar {
+            background: linear-gradient(135deg, #003A8F, #2563EB) !important;
+            color: white !important;
+        }
+        html.light-mode .adm-content {
+            background: #f0f2f5;
+        }
+        html.light-mode .adm-alert-success {
+            background: rgba(34,197,94,0.1) !important;
+            color: #15803d !important;
+            border-color: rgba(34,197,94,0.15) !important;
+        }
+        html.light-mode .adm-alert-danger {
+            background: rgba(239,68,68,0.1) !important;
+            color: #b91c1c !important;
+            border-color: rgba(239,68,68,0.15) !important;
+        }
+        html.light-mode .adm-dropdown {
+            background: rgba(255,255,255,0.98) !important;
+            border-color: rgba(0,0,0,0.08) !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1) !important;
+        }
+        html.light-mode .adm-dropdown-item {
+            color: #475569 !important;
+        }
+        html.light-mode .adm-dropdown-item:hover {
+            background: rgba(0,0,0,0.04) !important;
+            color: #1e293b !important;
+        }
+        html.light-mode .adm-dropdown-divider {
+            border-color: rgba(0,0,0,0.06) !important;
+        }
+        html.light-mode ::-webkit-scrollbar-track {
+            background: #f0f2f5 !important;
+        }
+
+        @media (max-width: 768px) {
+            html.light-mode .adm-sidebar:not(.open) {
+                background: rgba(255,255,255,0.98) !important;
+            }
+        }
+
+        /* ── LOGO THEME SWITCH ── */
+        .logo-theme-dark { display: inline-block; }
+        .logo-theme-light { display: none; }
+        html.light-mode .logo-theme-dark { display: none; }
+        html.light-mode .logo-theme-light { display: inline-block; }
     </style>
 </head>
 <body>
@@ -71,7 +202,8 @@
 
             <div class="adm-sidebar-brand">
                 <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
+                    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" class="logo-theme-dark" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
+                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" class="logo-theme-light" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
                 </div>
                 <h3>Smart School Academy</h3>
                 <div class="brand-sub">Administration</div>
@@ -203,6 +335,13 @@
                 </div>
 
                 <div class="adm-topbar-actions">
+                    <!-- ═══ THEME TOGGLE ═══ -->
+                    <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème"
+                            style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.3s ease;flex-shrink:0;">
+                        <i class="bi bi-moon-fill icon-moon"></i>
+                        <i class="bi bi-sun-fill icon-sun"></i>
+                    </button>
+
                     @auth
                     <div class="position-relative" style="cursor:pointer;">
                         <button class="adm-user-trigger" onclick="toggleUserMenu()" id="userMenuBtn">
@@ -282,6 +421,8 @@
         });
     });
     </script>
+
+    @include('partials.theme-toggle-js')
 
     @stack('scripts')
 

@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="min-vh-100 position-relative d-flex align-items-center overflow-hidden"
+<div class="plans-wrapper min-vh-100 position-relative d-flex align-items-center overflow-hidden"
      style="background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);">
 
     <!-- Particules flottantes décoratives -->
@@ -222,6 +222,96 @@
 @media (max-width: 576px) {
     .plan-card { padding: 2rem 1.5rem !important; }
     .display-3 { font-size: 3.5rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODE CLAIR — PLANS PAGE
+   ══════════════════════════════════════════════════════════════ */
+html.light-mode .plans-wrapper {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8edf5 50%, #f5f7fa 100%) !important;
+}
+
+html.light-mode .plans-wrapper .opacity-25,
+html.light-mode .plans-wrapper .opacity-20,
+html.light-mode .plans-wrapper .opacity-15 {
+    opacity: 0.08 !important;
+}
+
+html.light-mode .plans-wrapper div[style*="radial-gradient(circle,#667eea"] {
+    background: radial-gradient(circle, #a0b8ff, transparent) !important;
+}
+html.light-mode .plans-wrapper div[style*="radial-gradient(circle,#764ba2"] {
+    background: radial-gradient(circle, #c084e0, transparent) !important;
+}
+html.light-mode .plans-wrapper div[style*="radial-gradient(circle,#f093fb"] {
+    background: radial-gradient(circle, #f5b8fd, transparent) !important;
+}
+
+/* Header badge */
+html.light-mode .plans-wrapper .badge.bg-white.bg-opacity-10 {
+    background: rgba(0, 58, 143, 0.08) !important;
+    border-color: rgba(0, 58, 143, 0.15) !important;
+    color: #003A8F !important;
+}
+
+/* Header titles — restaurés en foncé car le fond est clair */
+html.light-mode .plans-wrapper h1.text-white {
+    color: #1e293b !important;
+}
+html.light-mode .plans-wrapper .text-white-50 {
+    color: #64748b !important;
+}
+
+/* Plan card — fond blanc */
+html.light-mode .plans-wrapper .plan-card {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06) !important;
+}
+html.light-mode .plans-wrapper .plan-card:hover {
+    box-shadow: 0 30px 60px rgba(0, 58, 143, 0.12) !important;
+    border-color: rgba(0, 58, 143, 0.15) !important;
+}
+html.light-mode .plans-wrapper .plan-card::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 58, 143, 0.03), transparent);
+}
+
+/* Card text */
+html.light-mode .plans-wrapper .plan-card .text-white {
+    color: #1e293b !important;
+}
+html.light-mode .plans-wrapper .plan-card .text-white-50 {
+    color: #64748b !important;
+}
+html.light-mode .plans-wrapper .plan-card h3.text-white {
+    color: #1e293b !important;
+}
+
+/* Prix */
+html.light-mode .plans-wrapper .plan-card .display-3 {
+    color: #1e293b !important;
+}
+
+/* Features list */
+html.light-mode .plans-wrapper .plan-card li.text-white {
+    color: #334155 !important;
+}
+
+/* Bouton Virement bancaire — version claire */
+html.light-mode .plans-wrapper .btn-bank {
+    background: rgba(0, 0, 0, 0.03) !important;
+    color: #334155 !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+}
+html.light-mode .plans-wrapper .btn-bank:hover {
+    background: rgba(0, 0, 0, 0.06) !important;
+    border-color: #003A8F !important;
+    color: #003A8F !important;
+}
+
+/* Paiement sécurisé texte */
+html.light-mode .plans-wrapper .opacity-75.text-white-50 {
+    color: #94a3b8 !important;
 }
 </style>
 

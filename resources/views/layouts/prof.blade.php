@@ -5,6 +5,9 @@
     <title>@yield('title', 'Espace Professeur') — Smart School Academy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+    <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
@@ -105,6 +108,113 @@
             border-top: 1px solid rgba(255,255,255,0.04);
         }
 
+        /* ── TOGGLE ICONS ── */
+        .theme-toggle-btn .icon-sun { display: none; }
+        .theme-toggle-btn .icon-moon { display: inline; }
+        html.light-mode .theme-toggle-btn .icon-sun { display: inline; }
+        html.light-mode .theme-toggle-btn .icon-moon { display: none; }
+        html.light-mode .theme-toggle-btn {
+            border-color: rgba(0,0,0,0.1) !important;
+            background: rgba(0,0,0,0.03) !important;
+            color: #64748b !important;
+        }
+        html.light-mode .theme-toggle-btn:hover {
+            color: #003A8F !important;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           MODE CLAIR — Prof Layout
+           ══════════════════════════════════════════════════════════════ */
+        html.light-mode body {
+            background: #f0f2f5;
+            color: #1e293b;
+        }
+        html.light-mode .prof-sidebar {
+            background: rgba(255,255,255,0.98) !important;
+            border-right: 1px solid rgba(0,0,0,0.06);
+        }
+        html.light-mode .prof-sidebar-brand h3 {
+            color: #1e293b !important;
+            -webkit-text-fill-color: #1e293b !important;
+        }
+        html.light-mode .prof-sidebar-brand .brand-sub {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .prof-nav-link {
+            color: #475569 !important;
+        }
+        html.light-mode .prof-nav-link:hover {
+            color: #1e293b !important;
+            background: rgba(0,0,0,0.03) !important;
+        }
+        html.light-mode .prof-nav-link .nav-icon {
+            background: rgba(0,0,0,0.04) !important;
+            color: #64748b !important;
+        }
+        html.light-mode .prof-nav-link.active {
+            background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(167,139,250,0.04)) !important;
+            color: #7C3AED !important;
+            border-color: rgba(124,58,237,0.1) !important;
+        }
+        html.light-mode .prof-nav-link.active .nav-icon {
+            background: linear-gradient(135deg, #7C3AED, #A78BFA) !important;
+            color: white !important;
+            box-shadow: 0 3px 10px rgba(124,58,237,0.2) !important;
+        }
+        html.light-mode .prof-nav .nav-heading {
+            color: rgba(0,0,0,0.25) !important;
+        }
+        html.light-mode .prof-sidebar-footer {
+            border-color: rgba(0,0,0,0.06);
+        }
+        html.light-mode .prof-topbar {
+            background: rgba(255,255,255,0.85) !important;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        html.light-mode .prof-topbar-title {
+            color: #1e293b !important;
+        }
+        html.light-mode .prof-topbar-breadcrumb,
+        html.light-mode .prof-topbar-breadcrumb a {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .prof-topbar-breadcrumb a:hover {
+            color: #1e293b !important;
+        }
+        html.light-mode .prof-main {
+            background: #f0f2f5;
+        }
+        html.light-mode ::-webkit-scrollbar-track {
+            background: #f0f2f5 !important;
+        }
+
+        /* Prof content inherits from admin style alerts */
+        html.light-mode .adm-alert-success {
+            background: rgba(34,197,94,0.1) !important;
+            color: #15803d !important;
+            border-color: rgba(34,197,94,0.15) !important;
+        }
+        html.light-mode .adm-alert-danger {
+            background: rgba(239,68,68,0.1) !important;
+            color: #b91c1c !important;
+            border-color: rgba(239,68,68,0.15) !important;
+        }
+        html.light-mode .adm-dropdown {
+            background: rgba(255,255,255,0.98) !important;
+            border-color: rgba(0,0,0,0.08) !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1) !important;
+        }
+        html.light-mode .adm-dropdown-item {
+            color: #475569 !important;
+        }
+        html.light-mode .adm-dropdown-item:hover {
+            background: rgba(0,0,0,0.04) !important;
+            color: #1e293b !important;
+        }
+        html.light-mode .adm-dropdown-divider {
+            border-color: rgba(0,0,0,0.06) !important;
+        }
+
         /* Prof topbar */
         .prof-topbar {
             display: flex; align-items: center; justify-content: space-between;
@@ -144,6 +254,12 @@
             .prof-content { padding: 1rem; }
             .prof-topbar { padding: 0.65rem 1rem; }
         }
+
+        /* ── LOGO THEME SWITCH ── */
+        .logo-theme-dark { display: inline-block; }
+        .logo-theme-light { display: none; }
+        html.light-mode .logo-theme-dark { display: none; }
+        html.light-mode .logo-theme-light { display: inline-block; }
     </style>
 </head>
 <body>
@@ -153,7 +269,8 @@
     <aside class="prof-sidebar" id="profSidebar">
         <div class="prof-sidebar-brand">
             <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
+                <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" class="logo-theme-dark" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
+                <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" class="logo-theme-light" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
             </div>
             <h3>Smart School Academy</h3>
             <div class="brand-sub">Espace enseignant</div>
@@ -236,6 +353,13 @@
             </div>
 
             <div class="d-flex align-items-center gap-3 position-relative">
+                <!-- ═══ THEME TOGGLE ═══ -->
+                <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème"
+                        style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.3s ease;flex-shrink:0;">
+                    <i class="bi bi-moon-fill icon-moon"></i>
+                    <i class="bi bi-sun-fill icon-sun"></i>
+                </button>
+
                 <div style="display:flex;align-items:center;gap:10px;padding:5px 10px 5px 5px;border-radius:11px;cursor:pointer;transition:all 0.25s;border:1px solid transparent;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" onclick="toggleProfMenu()" id="profUserBtn">
                     <div class="adm-user-avatar" style="background:linear-gradient(135deg,#7C3AED,#A78BFA);">
                         {{ strtoupper(substr(auth()->user()->name ?? 'P', 0, 1)) }}
@@ -289,6 +413,8 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
+
+@include('partials.theme-toggle-js')
 
 @stack('scripts')
 

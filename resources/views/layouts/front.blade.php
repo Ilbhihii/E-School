@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
 
+    <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+    <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -472,6 +475,410 @@
         }
     </style>
 
+
+    <style>
+        /* ══════════════════════════════════════════════════════════════
+           THÈME CLAIR (LIGHT MODE) — Overrides
+           ══════════════════════════════════════════════════════════════ */
+        html.light-mode body {
+            background: #f0f2f5;
+            color: #1e293b;
+        }
+
+        html.light-mode .cosmic-bg {
+            background: radial-gradient(ellipse at 20% 50%, #e0e7ff, #f0f2f5 60%, #f8fafc);
+        }
+
+        html.light-mode .cosmic-bg::before {
+            background: radial-gradient(circle, rgba(0, 58, 143, 0.06), transparent 70%);
+        }
+
+        html.light-mode .cosmic-bg::after {
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.04), transparent 70%);
+        }
+
+        html.light-mode .cosmic-nebula {
+            background: radial-gradient(circle, rgba(255, 209, 102, 0.06), transparent 60%);
+        }
+
+        html.light-mode .orb {
+            opacity: 0.04;
+        }
+
+        html.light-mode .star {
+            background: #94a3b8;
+        }
+        html.light-mode .star.size-lg {
+            box-shadow: 0 0 6px rgba(148, 163, 184, 0.3);
+        }
+
+        html.light-mode .shooting-star {
+            background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.5));
+        }
+        html.light-mode .shooting-star::after {
+            background: #94a3b8;
+            box-shadow: 0 0 10px rgba(148, 163, 184, 0.3);
+        }
+
+        html.light-mode .preloader-3d {
+            background: #f0f2f5;
+        }
+
+        html.light-mode .glow-text {
+            text-shadow: 0 0 40px rgba(0, 58, 143, 0.08), 0 0 80px rgba(124, 58, 237, 0.04);
+        }
+
+        /* ── NAVBAR LIGHT ── */
+        html.light-mode .navbar-3d {
+            background: rgba(255, 255, 255, 0.75) !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        html.light-mode .navbar-3d.scrolled {
+            background: rgba(255, 255, 255, 0.92) !important;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.06);
+        }
+
+        html.light-mode .navbar-3d .nav-link {
+            color: #334155 !important;
+        }
+        html.light-mode .navbar-3d .nav-link:hover {
+            color: #0f172a !important;
+        }
+        html.light-mode .navbar-3d .nav-link::before {
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        html.light-mode .navbar-toggler {
+            background: rgba(0, 0, 0, 0.04) !important;
+        }
+        html.light-mode .navbar-toggler i {
+            color: #334155 !important;
+        }
+
+        html.light-mode .nav-btn-3d-outline {
+            border-color: rgba(0, 0, 0, 0.15) !important;
+            color: #334155 !important;
+        }
+        html.light-mode .nav-btn-3d-outline:hover {
+            background: rgba(0, 0, 0, 0.04) !important;
+            border-color: #334155 !important;
+        }
+
+        html.light-mode .navbar-3d .nav-link[style*="#FFD166"] {
+            color: #b8860b !important;
+        }
+
+        /* ── FOOTER LIGHT ── */
+        html.light-mode .footer-3d {
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        html.light-mode .footer-3d .text-white-50 {
+            color: #64748b !important;
+        }
+        html.light-mode .footer-3d h5,
+        html.light-mode .footer-3d h6 {
+            color: #1e293b !important;
+        }
+        html.light-mode .footer-3d h6 {
+            opacity: 0.6 !important;
+        }
+        html.light-mode .footer-3d small {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .footer-link-3d {
+            color: #64748b;
+        }
+        html.light-mode .footer-link-3d:hover {
+            color: #003A8F;
+        }
+        html.light-mode .footer-3d hr {
+            border-color: rgba(0, 0, 0, 0.06) !important;
+        }
+        html.light-mode .social-icon-3d {
+            border-color: rgba(0, 0, 0, 0.08);
+            background: rgba(0, 0, 0, 0.02);
+            color: #64748b;
+        }
+        html.light-mode .social-icon-3d:hover {
+            color: #003A8F;
+            border-color: rgba(0, 58, 143, 0.2);
+            background: rgba(0, 58, 143, 0.04);
+        }
+
+        /* ── FLOATING CTA LIGHT ── */
+        html.light-mode .floating-cta {
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
+        }
+        html.light-mode .floating-cta .fw-semibold {
+            color: #1e293b !important;
+        }
+        html.light-mode .floating-cta-close {
+            background: rgba(0, 0, 0, 0.04);
+            color: rgba(0, 0, 0, 0.3);
+        }
+        html.light-mode .floating-cta-close:hover {
+            background: rgba(0, 0, 0, 0.08);
+            color: #1e293b;
+        }
+
+        /* ── BACK TO TOP LIGHT ── */
+        html.light-mode .back-to-top-3d {
+            box-shadow: 0 8px 25px rgba(0, 58, 143, 0.25);
+        }
+
+        /* ── CURSOR LIGHT ── */
+        html.light-mode .cursor-3d {
+            border-color: rgba(0, 58, 143, 0.3);
+        }
+        html.light-mode .cursor-3d.active {
+            border-color: rgba(0, 58, 143, 0.5);
+            background: rgba(0, 58, 143, 0.04);
+        }
+
+        /* ── SECTION DIVIDER LIGHT ── */
+        html.light-mode .section-divider {
+            background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
+        }
+
+        /* ── RESPONSIVE LIGHT ── */
+        @media (max-width: 768px) {
+            html.light-mode .navbar-3d .navbar-collapse {
+                background: rgba(255, 255, 255, 0.98);
+                border: 1px solid rgba(0, 0, 0, 0.06);
+            }
+        }
+
+        /* ── LOGO THEME SWITCH ── */
+        .logo-theme-dark { display: inline-block; }
+        .logo-theme-light { display: none; }
+        html.light-mode .logo-theme-dark { display: none; }
+        html.light-mode .logo-theme-light { display: inline-block; }
+
+        /* ── TOGGLE BUTTON STYLES ── */
+        .theme-toggle-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            color: var(--3d-gold);
+            border-color: rgba(255, 209, 102, 0.3);
+            box-shadow: 0 8px 25px rgba(255, 209, 102, 0.1);
+        }
+
+        html.light-mode .theme-toggle-btn {
+            border-color: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.03);
+            color: #64748b;
+        }
+
+        html.light-mode .theme-toggle-btn:hover {
+            color: #003A8F;
+            border-color: rgba(0, 58, 143, 0.2);
+            box-shadow: 0 8px 25px rgba(0, 58, 143, 0.08);
+        }
+
+        .theme-toggle-btn .icon-sun {
+            display: none;
+        }
+        .theme-toggle-btn .icon-moon {
+            display: inline;
+        }
+
+        html.light-mode .theme-toggle-btn .icon-sun {
+            display: inline;
+        }
+        html.light-mode .theme-toggle-btn .icon-moon {
+            display: none;
+        }
+
+        /* ── CUSTOM SCROLLBAR LIGHT ── */
+        html.light-mode ::-webkit-scrollbar-track {
+            background: #f0f2f5;
+        }
+
+        /* ── CARDS 3D LIGHT ── */
+        html.light-mode .card-3d {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+        html.light-mode .card-3d:hover {
+            box-shadow: 0 20px 60px rgba(0, 58, 143, 0.12);
+        }
+
+        /* ── PRELOADER TEXT LIGHT ── */
+        html.light-mode .preloader-3d small {
+            color: rgba(0, 0, 0, 0.25) !important;
+        }
+
+        /* ── BTN-3D OUTLINE LIGHT ── */
+        html.light-mode .btn-3d-outline {
+            border-color: rgba(0, 0, 0, 0.15);
+            color: #334155;
+        }
+        html.light-mode .btn-3d-outline:hover {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: #334155;
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           CORRECTION DES TEXTES BLANCS → FONCÉS EN MODE CLAIR
+           ══════════════════════════════════════════════════════════════ */
+
+        /* ── .text-white / .text-white-50 dans les cartes 3D ── */
+        html.light-mode .card-3d .text-white {
+            color: #1e293b !important;
+        }
+        html.light-mode .card-3d .text-white-50 {
+            color: #64748b !important;
+        }
+        html.light-mode .card-3d h5.fw-bold,
+        html.light-mode .card-3d h4.fw-bold,
+        html.light-mode .card-3d h3.fw-bold {
+            color: #1e293b !important;
+        }
+        html.light-mode .card-3d p,
+        html.light-mode .card-3d .small,
+        html.light-mode .card-3d small {
+            color: #64748b !important;
+        }
+
+        /* ── .text-white / .text-white-50 dans les steps ── */
+        html.light-mode .step-3d .text-white {
+            color: #1e293b !important;
+        }
+        html.light-mode .step-3d .text-white-50 {
+            color: #64748b !important;
+        }
+
+        /* ── Navbar brand (Smart School Academy) ── */
+        html.light-mode .navbar-3d .navbar-brand {
+            color: #1e293b !important;
+            -webkit-text-fill-color: #1e293b !important;
+            background: none !important;
+        }
+
+        /* ── Hero title (blanc → foncé) ── */
+        html.light-mode .hero-3d-title {
+            color: #1e293b !important;
+        }
+
+        /* ── Hero subtitle (blanc → foncé) ── */
+        html.light-mode .hero-3d-subtitle {
+            color: #4b5563 !important;
+        }
+
+        /* ── Stats ── */
+        html.light-mode .stat-3d-label {
+            color: #64748b !important;
+        }
+
+        /* ── Badges avec textes blancs ── */
+        html.light-mode .card-3d .badge {
+            color: inherit;
+        }
+
+        /* ── Liens de fil d'Ariane (breadcrumb) avec style inline blanc ── */
+        html.light-mode .front-content a[style*="color: rgba(255,255,255,"],
+        html.light-mode .front-content a[style*="color: rgba(255, 255, 255,"] {
+            color: #64748b !important;
+        }
+        html.light-mode .front-content a[style*="color: rgba(255,255,255,"]:hover,
+        html.light-mode .front-content a[style*="color: rgba(255, 255, 255,"]:hover {
+            color: #1e293b !important;
+        }
+
+        /* ── Lien retour avec couleur blanche ── */
+        html.light-mode .front-content a[style*="rgba(255,255,255,0.5)"] {
+            color: #64748b !important;
+        }
+        html.light-mode .front-content a[style*="rgba(255,255,255,0.5)"]:hover {
+            color: #1e293b !important;
+        }
+
+        /* ── Inputs dans les cartes (formulaires) ── */
+        html.light-mode .card-3d input.form-control,
+        html.light-mode .card-3d select.form-control {
+            background: rgba(0, 0, 0, 0.03) !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+            color: #1e293b !important;
+        }
+        html.light-mode .card-3d .form-label {
+            color: #475569 !important;
+        }
+
+        /* ── Texte 'Aucun live' ── */
+        html.light-mode .card-3d h5.text-white[style*="opacity: 0.5"] {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
+
+        /* ── Petits textes 'color: rgba(255,255,255,0.4)' dans les cartes de lives ── */
+        html.light-mode .card-3d div[style*="color: rgba(255,255,255,0.4)"] {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .card-3d div[style*="color: rgba(255,255,255,0.3)"] {
+            color: #94a3b8 !important;
+        }
+        html.light-mode .card-3d small[style*="color: rgba(255,255,255,0.4)"] {
+            color: #94a3b8 !important;
+        }
+
+        /* ── .text-white / .text-white-50 général (en dehors des cartes) ── */
+        html.light-mode .container .text-white {
+            color: #1e293b !important;
+        }
+        html.light-mode .container .text-white-50 {
+            color: #64748b !important;
+        }
+        html.light-mode .hero-3d .btn-3d-outline {
+            color: #334155 !important;
+            border-color: rgba(0, 0, 0, 0.2) !important;
+        }
+        html.light-mode .hero-3d .btn-3d-outline:hover {
+            background: rgba(0, 0, 0, 0.04) !important;
+            border-color: #334155 !important;
+        }
+
+        /* Restauration du blanc pour la section CTA qui garde son fond sombre */
+        html.light-mode .cta-3d .text-white-50 {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        html.light-mode .cta-3d .text-white {
+            color: white !important;
+        }
+        html.light-mode .cta-3d .btn-3d-outline {
+            color: white !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
+        }
+        html.light-mode .cta-3d .btn-3d-outline:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: white !important;
+        }
+
+        /* ── Badge 'En direct' / stats lives ── */
+        html.light-mode .card-3d div[style*="color: rgba(255,255,255,0.4)"][style*="text-transform: uppercase"] {
+            color: #94a3b8 !important;
+        }
+    </style>
+
     @stack('head')
 </head>
 
@@ -479,7 +886,8 @@
 
 <!-- ═══ PRELOADER ═══ -->
 <div class="preloader-3d" id="preloader">
-    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="" class="preloader-3d-logo">
+    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="" class="preloader-3d-logo logo-theme-dark">
+    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="" class="preloader-3d-logo logo-theme-light">
     <div class="preloader-3d-bar">
         <div class="preloader-3d-bar-inner"></div>
     </div>
@@ -512,7 +920,8 @@
 <nav id="navbar3d" class="navbar navbar-expand-lg navbar-3d fixed-top">
     <div class="container">
         <a class="navbar-brand" href="{{ route('home') }}">
-            <img src="{{ asset('images/logoSSA.jpeg') }}" width="60" height="60" alt="Smart School Academy" class="me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <img src="{{ asset('images/logoSSA.jpeg') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-dark me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-light me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             Smart School Academy
         </a>
 
@@ -544,6 +953,14 @@
 
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('plans') }}">Offres</a>
+                </li>
+
+                <!-- ═══ THEME TOGGLE ═══ -->
+                <li class="nav-item d-flex align-items-center ms-lg-1">
+                    <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème">
+                        <i class="bi bi-moon-fill icon-moon"></i>
+                        <i class="bi bi-sun-fill icon-sun"></i>
+                    </button>
                 </li>
 
                 @auth
@@ -595,7 +1012,8 @@
 
             <div class="col-lg-4 col-md-6">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <img src="{{ asset('images/logoSSA.jpeg') }}" width="64" height="64" alt="" style="border-radius: 12px;">
+                    <img src="{{ asset('images/logoSSA.jpeg') }}" width="64" height="64" alt="" class="logo-theme-dark" style="border-radius: 12px;">
+                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="64" height="64" alt="" class="logo-theme-light" style="border-radius: 12px;">
                     <div>
                         <h5 class="fw-bold mb-0" style="font-family: 'Poppins', sans-serif;">Smart School Academy</h5>
                         <small style="color: rgba(255,255,255,0.3);">Apprentissage intelligent</small>
@@ -861,6 +1279,55 @@
                 }
             });
         });
+
+        // ══════════════════════════════════════════════════════════════
+        // THÈME SOMBRE / CLAIR — TOGGLE
+        // ══════════════════════════════════════════════════════════════
+
+        (function initTheme() {
+            const html = document.documentElement;
+            const toggleBtn = document.getElementById('themeToggle');
+            const STORAGE_KEY = 'front-theme-preference';
+
+            // ── Fonction pour appliquer le thème ──
+            function setTheme(mode) {
+                if (mode === 'light') {
+                    html.classList.add('light-mode');
+                } else {
+                    html.classList.remove('light-mode');
+                }
+                localStorage.setItem(STORAGE_KEY, mode);
+            }
+
+            // ── Fonction pour basculer ──
+            function toggleTheme() {
+                const isLight = html.classList.contains('light-mode');
+                setTheme(isLight ? 'dark' : 'light');
+                // Petite animation sur le bouton
+                toggleBtn.style.transform = 'rotate(180deg) scale(0.8)';
+                setTimeout(() => {
+                    toggleBtn.style.transform = '';
+                }, 300);
+            }
+
+            // ── Restaurer la préférence ──
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved === 'light') {
+                setTheme('light');
+            } else if (saved === 'dark') {
+                setTheme('dark');
+            } else {
+                // Pas de préférence → mode sombre par défaut (actuel)
+                // On peut aussi détecter le préférence système:
+                // const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                // setTheme(prefersDark ? 'dark' : 'light');
+            }
+
+            // ── Attacher l'event ──
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleTheme);
+            }
+        })();
 
     })();
 </script>

@@ -846,6 +846,174 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
+   MODE CLAIR — Student Components
+   ══════════════════════════════════════════════════════════════ */
+html.light-mode .st-wrapper {
+    background: #f0f2f5;
+}
+html.light-mode .st-card {
+    background: rgba(255,255,255,0.92) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .st-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04) !important;
+}
+html.light-mode .st-card-header {
+    border-bottom-color: rgba(0,0,0,0.04) !important;
+}
+html.light-mode .st-card-header h4 {
+    color: #1e293b !important;
+}
+html.light-mode .st-stat {
+    background: rgba(255,255,255,0.92) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .st-stat:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06) !important;
+}
+html.light-mode .st-stat .stat-value {
+    color: #1e293b !important;
+}
+html.light-mode .st-stat .stat-label {
+    color: #64748b !important;
+}
+html.light-mode .st-table {
+    color: #334155 !important;
+}
+html.light-mode .st-table thead th {
+    color: #64748b !important;
+    border-bottom-color: rgba(0,0,0,0.06) !important;
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .st-table tbody td {
+    border-bottom-color: rgba(0,0,0,0.04) !important;
+}
+html.light-mode .st-table tbody tr:hover {
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .st-empty h5 {
+    color: #64748b !important;
+}
+html.light-mode .st-empty p {
+    color: #94a3b8 !important;
+}
+html.light-mode .st-form-control {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    color: #1e293b !important;
+}
+html.light-mode .st-form-control::placeholder {
+    color: rgba(0,0,0,0.3) !important;
+}
+html.light-mode .st-form-label {
+    color: #475569 !important;
+}
+html.light-mode .st-form-select {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    color: #1e293b !important;
+}
+html.light-mode .st-btn-ghost {
+    background: rgba(0,0,0,0.03) !important;
+    color: #475569 !important;
+    border-color: rgba(0,0,0,0.1) !important;
+}
+html.light-mode .st-btn-ghost:hover {
+    background: rgba(0,0,0,0.06) !important;
+    color: #1e293b !important;
+}
+
+/* Compatibility aliases (pr-*) — same overrides */
+html.light-mode .pr-card {
+    background: rgba(255,255,255,0.92) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .pr-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04) !important;
+}
+html.light-mode .pr-card-header {
+    border-bottom-color: rgba(0,0,0,0.04) !important;
+}
+html.light-mode .pr-card-header h4 {
+    color: #1e293b !important;
+}
+html.light-mode .pr-stat {
+    background: rgba(255,255,255,0.92) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .pr-stat:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06) !important;
+}
+html.light-mode .pr-stat-value {
+    color: #1e293b !important;
+}
+html.light-mode .pr-stat-label {
+    color: #64748b !important;
+}
+html.light-mode .pr-table {
+    color: #334155 !important;
+}
+html.light-mode .pr-table thead th {
+    color: #64748b !important;
+    border-bottom-color: rgba(0,0,0,0.06) !important;
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .pr-table tbody td {
+    border-bottom-color: rgba(0,0,0,0.04) !important;
+}
+html.light-mode .pr-table tbody tr:hover {
+    background: rgba(0,0,0,0.02) !important;
+}
+html.light-mode .pr-empty h5 {
+    color: #64748b !important;
+}
+html.light-mode .pr-empty p {
+    color: #94a3b8 !important;
+}
+html.light-mode .pr-alert-success {
+    color: #15803d !important;
+}
+html.light-mode .pr-alert-danger {
+    color: #b91c1c !important;
+}
+html.light-mode .pr-input {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    color: #1e293b !important;
+}
+html.light-mode .pr-input:focus {
+    border-color: rgba(124,58,237,0.4) !important;
+    background: rgba(0,0,0,0.05) !important;
+}
+html.light-mode .pr-select {
+    background: rgba(0,0,0,0.03) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    color: #1e293b !important;
+}
+html.light-mode .pr-label {
+    color: #475569 !important;
+}
+html.light-mode .pr-section-title {
+    color: #1e293b !important;
+    border-bottom-color: rgba(0,0,0,0.04) !important;
+}
+html.light-mode .pr-divider {
+    background: rgba(0,0,0,0.06) !important;
+}
+html.light-mode .pr-metric-label {
+    color: #64748b !important;
+}
+html.light-mode .pr-btn-ghost {
+    background: rgba(0,0,0,0.03) !important;
+    color: #475569 !important;
+    border-color: rgba(0,0,0,0.1) !important;
+}
+html.light-mode .pr-btn-ghost:hover {
+    background: rgba(0,0,0,0.06) !important;
+    color: #1e293b !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
    COMPATIBILITY ALIASES (pr-* → st-*) — for existing views
    ══════════════════════════════════════════════════════════════ */
 .pr-card { background: var(--st-bg-card); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--st-border-card); border-radius: var(--st-radius-lg); overflow: hidden; transition: all 0.3s ease; }
