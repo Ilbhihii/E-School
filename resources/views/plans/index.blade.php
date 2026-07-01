@@ -52,29 +52,59 @@
                     </div>
 
                     <!-- Features avec icônes -->
-                    <ul class="list-unstyled text-start mx-auto mb-4" style="max-width:220px;">
+                    <ul class="list-unstyled text-start mx-auto mb-4" style="max-width:320px;">
+
                         <li class="d-flex align-items-center gap-3 text-white mb-3">
                             <span class="feature-check">✓</span>
                             Accès à tous les cours
                         </li>
+
                         <li class="d-flex align-items-center gap-3 text-white mb-3">
                             <span class="feature-check">✓</span>
-                            Lives illimités
+                            Lives interactifs illimités
                         </li>
+
+                        <li class="d-flex align-items-center gap-3 text-white mb-3">
+                            <span class="feature-check">✓</span>
+                            Accès direct aux enseignants
+                        </li>
+
+                        <li class="d-flex align-items-center gap-3 text-white mb-3">
+                            <span class="feature-check">✓</span>
+                            Chat privé avec les professeurs
+                        </li>
+
+                        <li class="d-flex align-items-center gap-3 text-white mb-3">
+                            <span class="feature-check">✓</span>
+                            Accompagnement personnalisé
+                        </li>
+
+                        <li class="d-flex align-items-center gap-3 text-white mb-3">
+                            <span class="feature-check">✓</span>
+                            Suivi pédagogique complet
+                        </li>
+
+                        <li class="d-flex align-items-center gap-3 text-white mb-3">
+                            <span class="feature-check">✓</span>
+                            Exercices + Quiz interactifs
+                        </li>
+
                         <li class="d-flex align-items-center gap-3 text-white mb-3">
                             <span class="feature-check">✓</span>
                             Téléchargement PDF
                         </li>
+
                         <li class="d-flex align-items-center gap-3 text-white mb-3">
                             <span class="feature-check">✓</span>
                             Support prioritaire
                         </li>
+
                         <li class="d-flex align-items-center gap-3 text-white mb-3">
                             <span class="feature-check">✓</span>
                             Certificat inclus
                         </li>
-                    </ul>
 
+                    </ul>
                     <!-- Boutons -->
                     <div class="d-grid gap-3">
 

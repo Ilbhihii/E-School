@@ -67,6 +67,9 @@ Route::get('/course/{id}', [FrontController::class, 'showCourse'])
 Route::get('/religieux', [FrontController::class, 'religieux'])
     ->name('front.religieux');
 
+Route::get('/scolaires', [FrontController::class, 'scolaires'])
+    ->name('front.scolaires');
+
 Route::get('/all-classes-courses', [HomeController::class,'allClassesCourses'])->name('front.all-classes-courses');
 Route::get('/lives', [HomeController::class,'lives'])->name('front.lives');
 

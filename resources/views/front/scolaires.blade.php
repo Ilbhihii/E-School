@@ -1,16 +1,16 @@
 @extends('layouts.front')
 
-@section('title', 'Cours Religieux')
+@section('title', 'Cours Scolaires')
 
 @section('content')
 
 <section class="py-5">
     <div class="container text-center mb-5">
-        <span class="badge px-3 py-2 mb-3" style="background: rgba(155,89,182,0.15); color: #D7A1F9; border-radius: 20px; font-weight: 500; font-size: 0.8rem;">
-            🕌 Matières religieuses
+        <span class="badge px-3 py-2 mb-3" style="background: rgba(52,152,219,0.15); color: #7DD3FC; border-radius: 20px; font-weight: 500; font-size: 0.8rem;">
+            📚 Matières scolaires
         </span>
-        <h2 class="section-title-3d">Cours Religieux</h2>
-        <p class="text-white-50" style="max-width: 500px; margin: 0 auto;">Apprenez le Quran et la lecture facilement</p>
+        <h2 class="section-title-3d">Cours Scolaires</h2>
+        <p class="text-white-50" style="max-width: 500px; margin: 0 auto;">Maîtrisez les matières fondamentales avec des cours adaptés</p>
     </div>
 
     <div class="container">
@@ -28,8 +28,8 @@
                             <i class="bi {{ $subject->status_icon }} me-1"></i> {{ $subject->status_label }}
                         </span>
                         <p class="text-white-50 small mb-0">
-                            <span class="badge" style="background: rgba(155,89,182,0.2); color: #D7A1F9; border-radius: 20px; font-size: 0.7rem;">
-                                🕌 Religieux
+                            <span class="badge" style="background: rgba(52,152,219,0.2); color: #7DD3FC; border-radius: 20px; font-size: 0.7rem;">
+                                📚 Scolaire
                             </span>
                             <span class="ms-2">Voir les niveaux <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i></span>
                         </p>
@@ -39,7 +39,7 @@
             @empty
             <div class="col-12 text-center">
                 <div class="alert" style="background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.2); border-radius: 12px;">
-                    Aucune matière religieuse trouvée
+                    Aucune matière scolaire trouvée
                 </div>
             </div>
             @endforelse

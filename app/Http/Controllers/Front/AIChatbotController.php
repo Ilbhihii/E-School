@@ -56,7 +56,7 @@ INFORMATIONS SUR LA PLATEFORME :
 - Les étudiants passent un test de niveau pour être orientés.
 - Rendez-vous disponible pour test de niveau personnalisé.
 - Paiement sécurisé via PayPal et Stripe.
-- Contact : Casablanca, Maroc — email: contact@e-school.com
+- Contact : AIN EL AOUDA, Maroc — email: contact@e-school.com
 
 QUAND ON TE DEMANDE DE T'AIDER :
 - Propose un rendez-vous pour test de niveau : « Je vous propose de prendre rendez-vous pour un test de niveau personnalisé ! »

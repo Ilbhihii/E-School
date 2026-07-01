@@ -1045,7 +1045,7 @@
                 <h6 class="fw-bold mb-3 text-white" style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5;">Matières</h6>
                 <div class="d-flex flex-column gap-2">
                     <a href="{{ route('front.religieux') }}" class="footer-link-3d">Religieuses</a>
-                    <a href="{{ route('front.classes') }}" class="footer-link-3d">Scolaires</a>
+                    <a href="{{ route('front.scolaires') }}" class="footer-link-3d">Scolaires</a>
                 </div>
             </div>
 
@@ -1062,13 +1062,13 @@
                         <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <i class="bi bi-telephone" style="font-size: 0.85rem;"></i>
                         </span>
-                        +212 5XX XX XX XX
+                        +212707678821
                     </span>
                     <span class="d-flex align-items-center gap-2">
                         <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <i class="bi bi-geo-alt" style="font-size: 0.85rem;"></i>
                         </span>
-                        Casablanca, Maroc
+                        AIN EL AOUDA, Maroc
                     </span>
                 </div>
             </div>
@@ -1114,7 +1114,7 @@
 </div>
 
 <!-- ═══ FLOATING WHATSAPP ═══ -->
-<a href="https://wa.me/2125XXXXXXXX?text=Bonjour%20Smart%20School%20Academy%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
+<a href="https://wa.me/212707678821?text=Bonjour%20Smart%20School%20Academy%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
     <i class="bi bi-whatsapp"></i>
     <span class="chat-tooltip">Besoin d'aide ?</span>
 </a>
@@ -1281,7 +1281,38 @@
         });
 
         // ══════════════════════════════════════════════════════════════
-        // THÈME SOMBRE / CLAIR — TOGGLE
+        // DÉTECTION DU TYPE D'APPAREIL (mobile / tablette / desktop)
+        // ══════════════════════════════════════════════════════════════
+
+        (function detectDevice() {
+            const html = document.documentElement;
+
+            function updateDevice() {
+                const width = window.innerWidth;
+                // Supprimer les classes précédentes
+                html.classList.remove('device-mobile', 'device-tablet', 'device-desktop');
+
+                if (width < 768) {
+                    html.classList.add('device-mobile');
+                } else if (width < 1024) {
+                    html.classList.add('device-tablet');
+                } else {
+                    html.classList.add('device-desktop');
+                }
+            }
+
+            updateDevice();
+
+            // Écouter le redimensionnement (debounced)
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(updateDevice, 150);
+            }, { passive: true });
+        })();
+
+        // ══════════════════════════════════════════════════════════════
+        // THÈME SOMBRE / CLAIR — DÉTECTION SYSTÈME + TOGGLE
         // ══════════════════════════════════════════════════════════════
 
         (function initTheme() {
@@ -1296,34 +1327,62 @@
                 } else {
                     html.classList.remove('light-mode');
                 }
-                localStorage.setItem(STORAGE_KEY, mode);
+                try {
+                    localStorage.setItem(STORAGE_KEY, mode);
+                } catch (e) { /* localStorage indisponible */ }
             }
 
             // ── Fonction pour basculer ──
             function toggleTheme() {
                 const isLight = html.classList.contains('light-mode');
                 setTheme(isLight ? 'dark' : 'light');
-                // Petite animation sur le bouton
-                toggleBtn.style.transform = 'rotate(180deg) scale(0.8)';
-                setTimeout(() => {
-                    toggleBtn.style.transform = '';
-                }, 300);
+                // Marquer que l'utilisateur a fait un choix manuel
+                try {
+                    localStorage.setItem(STORAGE_KEY + '-source', 'manual');
+                } catch (e) { /* localStorage indisponible */ }
+                // Petite rotation sur le bouton
+                if (toggleBtn) {
+                    toggleBtn.style.transform = 'rotate(180deg) scale(0.8)';
+                    setTimeout(() => {
+                        toggleBtn.style.transform = '';
+                    }, 300);
+                }
             }
 
-            // ── Restaurer la préférence ──
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved === 'light') {
-                setTheme('light');
-            } else if (saved === 'dark') {
-                setTheme('dark');
+            // ── Restaurer la préférence utilisateur ou détecter le système ──
+            let saved;
+            let source; // 'manual' si l'utilisateur a cliqué, absent si auto
+            try {
+                saved = localStorage.getItem(STORAGE_KEY);
+                source = localStorage.getItem(STORAGE_KEY + '-source');
+            } catch (e) { /* localStorage indisponible */ }
+
+            if (source === 'manual' && (saved === 'light' || saved === 'dark')) {
+                // Choix manuel explicite de l'utilisateur → respecter
+                setTheme(saved);
             } else {
-                // Pas de préférence → mode sombre par défaut (actuel)
-                // On peut aussi détecter le préférence système:
-                // const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                // setTheme(prefersDark ? 'dark' : 'light');
+                // Pas de choix manuel → détecter le thème du système d'exploitation
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+                setTheme(prefersDark.matches ? 'dark' : 'light');
+
+                // Écouter les changements de thème OS en temps réel
+                function onSystemThemeChange(e) {
+                    let currentSource;
+                    try {
+                        currentSource = localStorage.getItem(STORAGE_KEY + '-source');
+                    } catch (ex) { /* ignore */ }
+                    if (currentSource !== 'manual') {
+                        setTheme(e.matches ? 'dark' : 'light');
+                    }
+                }
+                if (prefersDark.addEventListener) {
+                    prefersDark.addEventListener('change', onSystemThemeChange);
+                } else if (prefersDark.addListener) {
+                    prefersDark.addListener(onSystemThemeChange);
+                }
             }
 
-            // ── Attacher l'event ──
+            // ── Attacher l'événement au bouton ──
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', toggleTheme);
             }

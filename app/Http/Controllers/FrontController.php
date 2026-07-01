@@ -70,8 +70,63 @@ class FrontController extends Controller
 
     public function religieux()
     {
-        $subjects = \App\Models\Subject::where('type', 'religieux')->get();
+        $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
+            ->where('type', 'religieux')
+            ->get();
+
+        $subjects->each(function ($subject) {
+            if ($subject->courses_count > 0) {
+                $subject->status_label = 'Disponible';
+                $subject->status_icon = 'bi-check-circle-fill';
+                $subject->status_color = '#4ADE80';
+                $subject->status_bg = 'rgba(34,197,94,0.15)';
+                $subject->status_border = 'rgba(34,197,94,0.2)';
+            } elseif ($subject->classes_count > 0) {
+                $subject->status_label = 'En cours';
+                $subject->status_icon = 'bi-hourglass-split';
+                $subject->status_color = '#FB923C';
+                $subject->status_bg = 'rgba(251,146,60,0.15)';
+                $subject->status_border = 'rgba(251,146,60,0.2)';
+            } else {
+                $subject->status_label = 'Non disponible';
+                $subject->status_icon = 'bi-x-circle-fill';
+                $subject->status_color = '#FCA5A5';
+                $subject->status_bg = 'rgba(239,68,68,0.15)';
+                $subject->status_border = 'rgba(239,68,68,0.2)';
+            }
+        });
 
         return view('front.religieux', compact('subjects'));
+    }
+
+    public function scolaires()
+    {
+        $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
+            ->where('type', 'scolaire')
+            ->get();
+
+        $subjects->each(function ($subject) {
+            if ($subject->courses_count > 0) {
+                $subject->status_label = 'Disponible';
+                $subject->status_icon = 'bi-check-circle-fill';
+                $subject->status_color = '#4ADE80';
+                $subject->status_bg = 'rgba(34,197,94,0.15)';
+                $subject->status_border = 'rgba(34,197,94,0.2)';
+            } elseif ($subject->classes_count > 0) {
+                $subject->status_label = 'En cours';
+                $subject->status_icon = 'bi-hourglass-split';
+                $subject->status_color = '#FB923C';
+                $subject->status_bg = 'rgba(251,146,60,0.15)';
+                $subject->status_border = 'rgba(251,146,60,0.2)';
+            } else {
+                $subject->status_label = 'Non disponible';
+                $subject->status_icon = 'bi-x-circle-fill';
+                $subject->status_color = '#FCA5A5';
+                $subject->status_bg = 'rgba(239,68,68,0.15)';
+                $subject->status_border = 'rgba(239,68,68,0.2)';
+            }
+        });
+
+        return view('front.scolaires', compact('subjects'));
     }
 }

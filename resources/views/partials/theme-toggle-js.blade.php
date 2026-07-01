@@ -18,6 +18,8 @@
     function toggleTheme() {
         const isLight = html.classList.contains('light-mode');
         setTheme(isLight ? 'dark' : 'light');
+        // Marquer que l'utilisateur a fait un choix manuel
+        try { localStorage.setItem(STORAGE_KEY + '-source', 'manual'); } catch(e) {}
         if (toggleBtn) {
             toggleBtn.style.transform = 'rotate(180deg) scale(0.8)';
             setTimeout(() => { toggleBtn.style.transform = ''; }, 300);
@@ -25,25 +27,28 @@
     }
 
     let saved;
-    try { saved = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+    let source;
+    try {
+        saved = localStorage.getItem(STORAGE_KEY);
+        source = localStorage.getItem(STORAGE_KEY + '-source');
+    } catch(e) {}
 
-    if (saved === 'light' || saved === 'dark') {
-        // Préférence explicite sauvegardée → l'utiliser
+    if (source === 'manual' && (saved === 'light' || saved === 'dark')) {
+        // Choix manuel explicite de l'utilisateur → respecter
         setTheme(saved);
     } else {
-        // Aucune préférence → détecter le thème système
+        // Pas de choix manuel → détecter le thème du système d'exploitation
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
         setTheme(prefersDark.matches ? 'dark' : 'light');
 
-        // Écouter les changements de thème système (lorsque l'utilisateur change dans l'OS)
+        // Écouter les changements de thème système (OS)
         function onSystemThemeChange(e) {
-            let currentSaved;
-            try { currentSaved = localStorage.getItem(STORAGE_KEY); } catch(ex) {}
-            if (!currentSaved) {
+            let currentSource;
+            try { currentSource = localStorage.getItem(STORAGE_KEY + '-source'); } catch(ex) {}
+            if (currentSource !== 'manual') {
                 setTheme(e.matches ? 'dark' : 'light');
             }
         }
-        // Support à la fois l'API moderne et l'ancienne (Safari < 14)
         if (prefersDark.addEventListener) {
             prefersDark.addEventListener('change', onSystemThemeChange);
         } else if (prefersDark.addListener) {
