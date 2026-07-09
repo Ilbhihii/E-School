@@ -21,11 +21,6 @@
         </p>
 
         <div class="d-flex flex-wrap justify-content-center gap-3 mb-5">
-            <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 16px 40px; font-size: 1.05rem;">
-                <i class="bi bi-rocket-takeoff"></i>
-                Commencer
-                <i class="bi bi-arrow-right"></i>
-            </a>
             <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
                 <i class="bi bi-calendar-check"></i>
                 prise de contact
