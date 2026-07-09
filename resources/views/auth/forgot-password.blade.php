@@ -18,7 +18,7 @@
     </div>
 @endif
 
-<p style="color: rgba(255,255,255,0.5); font-size: 0.875rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: center;">
+<p style="color: rgba(0, 0, 0, 0.5); font-size: 0.875rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: center;">
     Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
 </p>
 

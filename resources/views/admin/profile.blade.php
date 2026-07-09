@@ -48,7 +48,7 @@
                 <i class="bi bi-gear"></i> Modifier le profil
             </a>
             <a href="{{ route('admin.dashboard') }}" class="adm-btn adm-btn-ghost ms-2">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-speedometer2"></i> Tableau de bord
             </a>
         </div>
     </div>

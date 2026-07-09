@@ -39,7 +39,7 @@
     <div class="pr-empty-icon"><i class="bi bi-inbox"></i></div>
     <h5>Aucune classe disponible</h5>
     <p>Vous n'êtes assigné à aucune classe pour le moment.</p>
-    <a href="{{ route('student.dashboard') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-house me-2"></i> Retour au Dashboard</a>
+    <a href="{{ route('student.dashboard') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-house me-2"></i> Retour au tableau de bord</a>
 </div>
 @endif
 

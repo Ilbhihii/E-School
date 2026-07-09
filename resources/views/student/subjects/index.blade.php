@@ -74,7 +74,7 @@
     <div class="pr-empty-icon"><i class="bi bi-book"></i></div>
     <h5>Aucune matière disponible</h5>
     <p>Aucune matière n'est disponible pour le moment.</p>
-    <a href="{{ route('student.dashboard') }}" class="st-btn st-btn-ghost st-btn-sm"><i class="bi bi-arrow-left me-1"></i> Retour au dashboard</a>
+    <a href="{{ route('student.dashboard') }}" class="st-btn st-btn-ghost st-btn-sm"><i class="bi bi-arrow-left me-1"></i> Retour au tableau de bord</a>
 </div>
 @endif
 

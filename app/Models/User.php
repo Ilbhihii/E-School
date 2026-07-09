@@ -36,6 +36,7 @@ class User extends Authenticatable
         'payment_date',
         'is_active',
         'test_passed',
+        'is_paid',
     ];
 
 
@@ -57,6 +58,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
+        'is_paid' => 'boolean',
 'role' => 'string',
         'test_passed' => 'boolean',
     ];

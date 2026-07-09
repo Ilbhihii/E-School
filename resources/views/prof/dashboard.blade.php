@@ -1,13 +1,13 @@
 @extends('layouts.prof')
 
-@section('page_title', 'Dashboard')
+@section('page_title', 'Tableau de bord')
 @section('breadcrumb', 'Vue d\'ensemble')
 
 @section('content')
 
 <div class="adm-page-header">
     <div>
-        <h1>Dashboard Professeur</h1>
+        <h1>Tableau de bord Professeur</h1>
         <div class="subtitle">👋 Bienvenue {{ auth()->user()->name }}</div>
     </div>
     <div class="page-actions">

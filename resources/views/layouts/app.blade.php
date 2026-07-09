@@ -171,21 +171,21 @@
 
         @auth
             @if(auth()->user()->role === 'admin')
-                <a href="{{ route('admin.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                <a href="{{ route('admin.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
                 <a href="{{ route('admin.users.index') }}"><i class="bi bi-people me-1"></i>Utilisateurs</a>
                 <a href="{{ route('admin.courses.index') }}"><i class="bi bi-book me-1"></i>Cours</a>
                 <a href="{{ route('admin.subjects.index') }}"><i class="bi bi-book me-1"></i>Matières</a>
             @endif
 
             @if(auth()->user()->role === 'prof')
-                <a href="{{ route('prof.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                <a href="{{ route('prof.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
                 <a href="{{ route('prof.courses.index') }}"><i class="bi bi-book me-1"></i>Mes Cours</a>
                 <a href="{{ route('prof.lives.index') }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
                 <a href="{{ route('prof.devoir.index') }}"><i class="bi bi-file-earmark-check me-1"></i>Devoirs</a>
             @endif
 
             @if(auth()->user()->role === 'student')
-                <a href="{{ route('student.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                <a href="{{ route('student.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
                 <a href="{{ route('student.subjects') }}"><i class="bi bi-book me-1"></i>Matières</a>
                 <a href="{{ route('student.lives') }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
                 <a href="{{ route('student.courses.index') }}"><i class="bi bi-collection me-1"></i>Cours</a>

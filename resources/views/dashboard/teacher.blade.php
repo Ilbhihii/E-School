@@ -6,6 +6,6 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>Dashboard Prof</h1>
+    <h1>Tableau de bord Prof</h1>
 </body>
 </html>

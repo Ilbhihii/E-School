@@ -220,7 +220,7 @@
                 <a href="{{ route('student.dashboard') }}"
                    class="st-nav-link {{ str_contains($route ?? '', 'dashboard') ? 'active' : '' }}">
                     <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
-                    <span>Dashboard</span>
+                    <span>Tableau de bord</span>
                 </a>
 
                 <a href="{{ route('student.subjects.index') }}"
@@ -296,12 +296,12 @@
                     </button>
                     <div>
                         <h2 class="st-topbar-page-title">
-                            @yield('page_title', 'Dashboard')
+                            @yield('page_title', 'Tableau de bord')
                         </h2>
                         <div class="st-topbar-breadcrumb">
                             <a href="{{ route('student.dashboard') }}">Accueil</a>
                             <span>/</span>
-                            <span>@yield('breadcrumb', 'Dashboard')</span>
+                            <span>@yield('breadcrumb', 'Tableau de bord')</span>
                         </div>
                     </div>
                 </div>

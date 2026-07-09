@@ -26,7 +26,7 @@
                 </div>
 
                 <div class="card-3d p-4">
-                    <form method="POST" action="{{ route('appointment.store') }}{{ request()->query('from') ? '?' . http_build_query(['redirect' => 'student.dashboard']) : '' }}">
+                    <form method="POST" action="{{ route('appointment.store') }}{{ request()->query('from') ? '?' . http_build_query(['redirect' => 'student.waiting']) : '' }}">
                         @csrf
 
                         @if(session('success'))

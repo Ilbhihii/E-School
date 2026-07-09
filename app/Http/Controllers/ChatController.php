@@ -12,17 +12,34 @@ class ChatController extends Controller
         STUDENT
     ========================= */
 
-    // Liste des matières
+    // Liste des matières (filtrée par classe pour les étudiants)
     public function subjects()
     {
-$subjects = Subject::all()->unique('name');
+        $user = auth()->user();
+
+        if ($user->isStudent()) {
+            $classRoom = $user->classRoom()->with('subjects')->first();
+            $subjects = $classRoom?->subjects ?? collect([]);
+        } else {
+            $subjects = Subject::all()->unique('name');
+        }
+
         return view('student.chats', compact('subjects'));
     }
 
-    // Chat pour une matière (used by route:chat)
-public function index($subject_id)
+    // Chat pour une matière (used by route:chat) — accès vérifié pour les étudiants
+    public function index($subject_id)
     {
         $subject = Subject::findOrFail($subject_id);
+        $user = auth()->user();
+
+        // 🔒 Vérifier que l'étudiant a bien accès à cette matière
+        if ($user->isStudent()) {
+            $classRoom = $user->classRoom;
+            if (!$classRoom || !$classRoom->subjects()->where('subject_id', $subject->id)->exists()) {
+                abort(403, 'Cette matière ne fait pas partie de votre programme.');
+            }
+        }
 
         $messages = Message::where('subject_id', $subject_id)
             ->with('user')

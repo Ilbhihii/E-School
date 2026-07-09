@@ -17,10 +17,8 @@ class CheckPayment
     public function handle($request, Closure $next)
     {
 
-        if(!auth()->user()->is_paid){
-
-        return redirect()->route('payment');
-
+        if (!auth()->user()->is_paid) {
+            return redirect()->route('student.payment');
         }
 
         return $next($request);

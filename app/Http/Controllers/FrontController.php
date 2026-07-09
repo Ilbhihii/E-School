@@ -24,13 +24,21 @@ class FrontController extends Controller
 
     public function subjectLevels($id)
     {
-        $subject = Subject::findOrFail($id);
+        $subject = Subject::withCount('courses')->findOrFail($id);
 
         // Les niveaux sont reliés aux matières via : Subject → classes (pivot) → ClassRoom.level_id → Level
         $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique();
-        $levels = Level::whereIn('id', $levelIds)->get();
+        $levels = Level::whereIn('id', $levelIds)
+            ->withCount('courses')
+            ->get();
 
-        return view('front.subject-levels', compact('subject', 'levels'));
+        // Autres matières de la même famille (même type : religieux / scolaire)
+        $sameFamilySubjects = Subject::where('type', $subject->type)
+            ->where('id', '!=', $subject->id)
+            ->withCount('courses')
+            ->get();
+
+        return view('front.subject-levels', compact('subject', 'levels', 'sameFamilySubjects'));
     }
 
     public function levelClasses($subjectId, $levelId)
@@ -53,9 +61,19 @@ class FrontController extends Controller
 
     public function showCourse($id)
     {
-        $course = Course::with('learningTests')->findOrFail($id);
+        $course = Course::with(['learningTests', 'subject', 'level', 'classRoom'])->findOrFail($id);
 
-        return view('front.course-show', compact('course'));
+        // Autres matières de la même famille (même type : religieux / scolaire)
+        $sameFamilySubjects = collect([]);
+        if ($course->subject) {
+            $sameFamilySubjects = Subject::where('type', $course->subject->type)
+                ->where('id', '!=', $course->subject->id)
+                ->withCount('courses')
+                ->limit(4)
+                ->get();
+        }
+
+        return view('front.course-show', compact('course', 'sameFamilySubjects'));
     }
 
     public function courses($subject_id, $level_id, $class_id)

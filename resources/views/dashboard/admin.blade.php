@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-bold">
-            Dashboard Admin
+            Tableau de bord Admin
         </h2>
     </x-slot>
 

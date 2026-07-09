@@ -48,7 +48,7 @@
                         <i class="bi bi-pencil me-1"></i> Modifier
                     </a>
                     <a href="{{ route('prof.dashboard') }}" class="adm-btn adm-btn-ghost">
-                        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                        <i class="bi bi-speedometer2 me-1"></i> Tableau de bord
                     </a>
                 </div>
             </div>

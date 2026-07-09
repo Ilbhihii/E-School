@@ -1,6 +1,6 @@
 @extends('layouts.student')
 
-@section('title', 'Dashboard')
+@section('title', 'Tableau de bord')
 @section('content')
 
 <style>

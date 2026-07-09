@@ -43,8 +43,8 @@ class AppointmentController extends Controller
 
         $redirect = $request->query('redirect', 'back');
 
-        if ($redirect === 'student.dashboard' && auth()->check()) {
-            return redirect()->route('student.dashboard')->with('success', '✅ Votre demande de rendez-vous a été envoyée avec succès ! Nous vous contacterons rapidement.');
+        if ($redirect === 'student.waiting' && auth()->check()) {
+            return redirect()->route('student.waiting')->with('success', '✅ Votre demande de rendez-vous a été envoyée avec succès ! Nous vous contacterons rapidement pour fixer la date.');
         }
 
         return redirect()->back()->with('success', '✅ Votre demande de rendez-vous a été envoyée avec succès ! Nous vous contacterons rapidement.');

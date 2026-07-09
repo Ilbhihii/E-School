@@ -219,7 +219,7 @@
                 <a href="{{ route('admin.dashboard') }}"
                    class="adm-nav-link {{ preg_match('/dashboard/', $route ?? '') ? 'active' : '' }}">
                     <span class="nav-link-icon"><i class="bi bi-speedometer2"></i></span>
-                    <span>Dashboard</span>
+                    <span>Tableau de bord</span>
                 </a>
 
                 <div class="nav-heading">Gestion</div>
@@ -324,12 +324,12 @@
                     </button>
                     <div>
                         <h2 class="adm-topbar-page-title">
-                            @yield('page_title', 'Dashboard')
+                            @yield('page_title', 'Tableau de bord')
                         </h2>
                         <div class="adm-topbar-breadcrumb">
                             <a href="{{ route('admin.dashboard') }}">Accueil</a>
                             <span>/</span>
-                            <span>@yield('breadcrumb', 'Dashboard')</span>
+                            <span>@yield('breadcrumb', 'Tableau de bord')</span>
                         </div>
                     </div>
                 </div>

@@ -30,7 +30,7 @@ class StudentController extends Controller
         $classRoom = $user->classRoom()->with('subjects')->first();
         $subjects = $classRoom?->subjects ?? collect([]);
         $coursesCount = $classRoom?->courses()->count() ?? 0;
-        $livesCount = Live::count();
+        $livesCount = Live::where('class_id', $user->class_id)->count();
 
         $recentCourses = $classRoom?->courses()->latest()->take(4)->get() ?? collect([]);
 
@@ -130,7 +130,9 @@ class StudentController extends Controller
     {
         $user = auth()->user();
 
-        $lives = Live::latest()->get();
+        // 🔒 Filtrer les lives par la classe de l'étudiant
+        $lives = Live::where('class_id', $user->class_id)->latest()->get();
+
         return view('student.lives', compact('lives'));
     }
 

@@ -313,68 +313,64 @@ Route::middleware(['auth','isProf'])
 | STUDENT (PROTECTED READ-ONLY)
 |--------------------------------------------------------------------------
 */
+// Routes étudiantes SANS vérification de paiement (waiting, tests, paiement)
 Route::middleware(['auth'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
 
     Route::get('/levels', [StudentController::class, 'levels'])->name('levels');
-
-    // Navigation hiérarchique : Niveaux → Classes → Matières → Cours
     Route::get('/levels/{level}/classes', [StudentController::class, 'levelClasses'])->name('levels.classes');
     Route::get('/levels/{level}/classes/{class}/subjects', [StudentController::class, 'levelSubjects'])->name('levels.subjects');
 
     Route::get('/subjects', [StudentController::class, 'indexSubjects'])->name('subjects.index');
-
-    // Navigation hiérarchique : Matières → Niveaux → Classes → Cours
     Route::get('/subjects/{subject}/levels', [StudentController::class, 'subjectLevels'])->name('subjects.levels');
     Route::get('/subjects/{subject}/levels/{level}/classes', [StudentController::class, 'subjectClasses'])->name('subjects.classes');
     Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [StudentController::class, 'subjectCourses'])->name('subjects.courses');
-
     Route::get('/subjects/{level}', [StudentController::class, 'subjects'])->name('subjects');
-
     Route::get('/classes/{subject}/{level}', [StudentController::class, 'classes'])->name('classes');
 
-    Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');
-
-    Route::get('/course/{id}', [StudentController::class, 'showCourse'])->name('course.show');
-
-    // Profile
-    Route::get('/profile', [StudentController::class, 'profile'])->name('profile');
-    
-    // Settings  
-    Route::get('/settings', [StudentController::class, 'settings'])->name('settings');
-    
-    // Profile updates
-    Route::put('/settings/profile', [StudentController::class, 'updateProfile'])->name('settings.profile.update');
-    Route::put('/settings/password', [StudentController::class, 'updatePassword'])->name('settings.password.update');
-    
-    // Dashboard
-    Route::get('/dashboard', [StudentController::class, 'dashboard'])->name('dashboard');
-    
-    // Lives
-    Route::get('/lives', [StudentController::class, 'lives'])->name('lives');
-    
-    // Chats
-    Route::get('/chats', [ChatController::class, 'subjects'])->name('chats');
-    Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
-    Route::get('/chat/{subject}', [ChatController::class, 'index'])->name('student.chat');
-    Route::delete('/chat/delete', [ChatController::class, 'delete'])->name('chat.delete');
-    
-    // Assignments
-    Route::get('/assignments', [StudentController::class, 'assignments'])->name('assignments');
-    Route::post('/assignments/send', [StudentController::class, 'sendAssignment'])->name('assignments.send');
-    
-    // Absences
-    Route::get('/absences', [StudentController::class, 'absences'])->name('absences');
-
-    // Waiting (test completed / account pending activation)
+    // Waiting
     Route::get('/waiting', [StudentController::class, 'waiting'])->name('waiting');
 
     // Tests
     Route::get('/tests', [StudentTestController::class, 'index'])->name('tests.index');
     Route::get('/tests/{test}', [StudentTestController::class, 'show'])->name('tests.show');
     Route::post('/tests/{test}', [StudentTestController::class, 'submit'])->name('tests.submit');
+
+});
+
+// Routes étudiantes AVEC vérification de paiement (dashboard, cours, lives, chat, etc.)
+Route::middleware(['auth', 'paid'])
+    ->prefix('student')
+    ->name('student.')
+    ->group(function () {
+
+    Route::get('/dashboard', [StudentController::class, 'dashboard'])->name('dashboard');
+    Route::get('/lives', [StudentController::class, 'lives'])->name('lives');
+
+    // Cours
+    Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');
+    Route::get('/course/{id}', [StudentController::class, 'showCourse'])->name('course.show');
+
+    // Chats
+    Route::get('/chats', [ChatController::class, 'subjects'])->name('chats');
+    Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
+    Route::get('/chat/{subject}', [ChatController::class, 'index'])->name('student.chat');
+    Route::delete('/chat/delete', [ChatController::class, 'delete'])->name('chat.delete');
+
+    // Assignments
+    Route::get('/assignments', [StudentController::class, 'assignments'])->name('assignments');
+    Route::post('/assignments/send', [StudentController::class, 'sendAssignment'])->name('assignments.send');
+
+    // Absences
+    Route::get('/absences', [StudentController::class, 'absences'])->name('absences');
+
+    // Profile & Settings
+    Route::get('/profile', [StudentController::class, 'profile'])->name('profile');
+    Route::get('/settings', [StudentController::class, 'settings'])->name('settings');
+    Route::put('/settings/profile', [StudentController::class, 'updateProfile'])->name('settings.profile.update');
+    Route::put('/settings/password', [StudentController::class, 'updatePassword'])->name('settings.password.update');
 
 });
 

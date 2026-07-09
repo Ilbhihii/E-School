@@ -280,7 +280,7 @@
             <div class="nav-heading">Principal</div>
             <a href="{{ route('prof.dashboard') }}" class="prof-nav-link {{ request()->routeIs('prof.dashboard') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
-                <span>Dashboard</span>
+                <span>Tableau de bord</span>
             </a>
 
             <div class="nav-heading">Gestion</div>
@@ -348,7 +348,7 @@
                 <div class="prof-topbar-breadcrumb">
                     <a href="{{ route('prof.dashboard') }}">Accueil</a>
                     <span>/</span>
-                    <span>@yield('breadcrumb', 'Dashboard')</span>
+                    <span>@yield('breadcrumb', 'Tableau de bord')</span>
                 </div>
             </div>
 

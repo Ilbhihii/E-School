@@ -57,6 +57,23 @@
     border-radius: 10px;
     transition: width 1.5s ease;
 }
+.btn-3d-waiting {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    font-family: inherit;
+}
+.btn-3d-waiting:hover {
+    transform: translateY(-3px);
+}
 </style>
 
 <div class="container py-5">
@@ -68,10 +85,11 @@
                     <i class="bi bi-hourglass-split"></i>
                 </div>
 
-                <h2 class="fw-bold mb-2" style="color:#1F2937;">Test complété avec succès !</h2>
-                <p class="text-muted mb-4">Votre test a été enregistré. Un administrateur va examiner vos résultats.</p>
-
                 @if($latestResult)
+                    <!-- Apres avoir passe le test -->
+                    <h2 class="fw-bold mb-2" style="color:#1F2937;">Test complété avec succès !</h2>
+                    <p class="text-muted mb-4">Votre test a été enregistré. Un administrateur va examiner vos résultats.</p>
+
                     <div class="score-card">
                         <h3 class="fw-bold mb-3" style="font-size:1.1rem;opacity:0.9;">Votre Score</h3>
                         @if($testTitle)
@@ -83,30 +101,57 @@
                             <div class="progress-bar-fill" style="width: {{ $percentage }}%"></div>
                         </div>
                     </div>
+                @else
+                    <!-- Avant de passer le test (juste apres inscription + rendez-vous) -->
+                    <h2 class="fw-bold mb-2" style="color:#1F2937;">Inscription reçue !</h2>
+                    <p class="text-muted mb-4">Votre demande de rendez-vous a été envoyée avec succès. Nous vous contacterons rapidement pour programmer votre test de niveau.</p>
+
+                    <div style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 16px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; text-align: left;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:0.75rem;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="bi bi-info-circle" style="color:#2563EB;font-size:1rem;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;color:#1E293B;font-size:0.88rem;">Prochaines étapes</div>
+                            </div>
+                        </div>
+                        <ol style="margin:0;padding-left:1.25rem;color:#475569;font-size:0.82rem;line-height:1.8;">
+                            <li>Un administrateur vous contactera pour fixer la date de votre test de niveau</li>
+                            <li>Vous passerez le test pour évaluer votre niveau</li>
+                            <li>Une fois le test réussi, vous pourrez choisir une offre et commencer votre apprentissage</li>
+                        </ol>
+                    </div>
                 @endif
 
                 @if (session('success'))
-                    <div class="alert alert-success mb-4" style="border-radius:12px;">
+                    <div class="alert" style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:14px 18px;font-size:0.92rem;margin-bottom:1.5rem;">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         {{ session('success') }}
                     </div>
                 @endif
 
-                <div class="alert alert-info mb-4" style="border-radius:12px;background:#F0F9FF;border:1px solid #BAE6FD;color:#0369A1;">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Vous serez notifié par email dès que votre compte sera activé.
-                </div>
+                @if(!$latestResult)
+                    <div class="alert" style="background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;border-radius:12px;padding:14px 18px;font-size:0.9rem;margin-bottom:1.5rem;text-align:left;">
+                        <div style="display:flex;align-items:flex-start;gap:8px;">
+                            <i class="bi bi-clock-history" style="font-size:1.1rem;margin-top:1px;flex-shrink:0;"></i>
+                            <span>Votre compte est en attente de validation. Vous serez notifié dès qu'un administrateur aura traité votre demande.</span>
+                        </div>
+                    </div>
+                @else
+                    <div class="alert" style="background:#F0F9FF;border:1px solid #BAE6FD;color:#0369A1;border-radius:12px;padding:14px 18px;font-size:0.9rem;margin-bottom:1.5rem;">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Vous serez notifié par email dès que votre compte sera activé.
+                    </div>
+                @endif
 
+                <!-- Deux boutons : Accueil + Offres -->
                 <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-                    @if(auth()->user()->is_active)
-                        <a href="{{ route('plans') }}" class="btn btn-lg px-5" style="background:linear-gradient(135deg,#F59E0B,#D97706);color:white;border:none;border-radius:12px;font-weight:700;">
-                            <i class="bi bi-credit-card me-2"></i> Aller aux plans
-                        </a>
-                    @else
-                        <a href="{{ route('home') }}" class="btn btn-lg px-5" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8);color:white;border:none;border-radius:12px;font-weight:700;">
-                            <i class="bi bi-house me-2"></i> Retour à l'accueil
-                        </a>
-                    @endif
+                    <a href="{{ route('home') }}" class="btn-3d-waiting" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8);color:white;box-shadow:0 8px 25px rgba(59,130,246,0.3);">
+                        <i class="bi bi-house"></i> Retour à l'accueil
+                    </a>
+                    <a href="{{ route('plans') }}" class="btn-3d-waiting" style="background:linear-gradient(135deg,#F59E0B,#D97706);color:white;box-shadow:0 8px 25px rgba(245,158,11,0.3);">
+                        <i class="bi bi-credit-card"></i> Voir les offres
+                    </a>
                 </div>
             </div>
         </div>

@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard Admin')
-@section('page_title', 'Dashboard')
+@section('title', 'Tableau de bord Admin')
+@section('page_title', 'Tableau de bord')
 @section('breadcrumb', 'Vue d\'ensemble')
 
 @section('content')

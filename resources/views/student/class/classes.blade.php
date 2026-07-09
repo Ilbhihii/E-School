@@ -10,7 +10,7 @@
 </div>
 
 @if($classes->isEmpty())
-<div class="pr-empty"><div class="pr-empty-icon"><i class="bi bi-building"></i></div><h5>Aucune classe disponible</h5><p>Vous n'êtes assigné à aucune classe pour le moment.</p><a href="{{ route('student.dashboard') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-house me-1"></i> Retour au dashboard</a></div>
+<div class="pr-empty"><div class="pr-empty-icon"><i class="bi bi-building"></i></div><h5>Aucune classe disponible</h5><p>Vous n'êtes assigné à aucune classe pour le moment.</p><a href="{{ route('student.dashboard') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-house me-1"></i> Retour au tableau de bord</a></div>
 @else
 <div class="row g-3">
     @foreach($classes as $class)

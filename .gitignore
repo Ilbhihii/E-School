@@ -19,3 +19,6 @@ yarn-error.log
 # TODO/notes files
 TODO*.md
 CLASS_ROOMS_FIX.md
+
+cacert.pem
+nul
