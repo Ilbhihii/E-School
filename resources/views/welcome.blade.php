@@ -222,7 +222,7 @@
 
             <div class="col-md-4">
                 <h1 class="text-success">2</h1>
-                <h5>Test Niveau</h5>
+                <h5>Prise de contact</h5>
                 <p class="text-muted">
                 Passe le test pour valider ton niveau
                 </p>

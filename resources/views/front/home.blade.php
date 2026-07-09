@@ -28,7 +28,7 @@
             </a>
             <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
                 <i class="bi bi-calendar-check"></i>
-                Test de niveau
+                prise de contact
             </a>
             <a href="{{ route('front.classes') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
                 <i class="bi bi-grid-3x3-gap"></i>
@@ -505,7 +505,7 @@
                     </a>
                     <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
                         <i class="bi bi-calendar-check"></i>
-                        Test de niveau
+                        prise de contact
                     </a>
                     <a href="{{ route('plans') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
                         <i class="bi bi-credit-card"></i>
