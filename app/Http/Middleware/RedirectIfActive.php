@@ -16,7 +16,8 @@ class RedirectIfActive
      */
     public function handle(Request $request, Closure $next)
     {
-        if(auth()->check() && auth()->user()->is_active){
+        // Ne rediriger que les étudiants actifs vers leur tableau de bord
+        if(auth()->check() && auth()->user()->role === 'student' && auth()->user()->is_active){
             return redirect()->route('student.dashboard');
         }
 

@@ -341,7 +341,7 @@ Route::middleware(['auth'])
 });
 
 // Routes étudiantes AVEC vérification de paiement (dashboard, cours, lives, chat, etc.)
-Route::middleware(['auth', 'paid'])
+Route::middleware(['auth'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {

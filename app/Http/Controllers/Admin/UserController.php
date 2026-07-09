@@ -119,6 +119,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $user->is_active = true;
         $user->test_passed = true;
+        $user->is_paid = true;
         $user->save();
 
         // Send activation email

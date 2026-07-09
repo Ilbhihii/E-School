@@ -23,7 +23,8 @@ class StudentController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user->is_active) {
+        // Seuls les étudiants inactifs sont redirigés
+        if ($user->role === 'student' && !$user->is_active) {
             return redirect()->route('student.waiting');
         }
 
