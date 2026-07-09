@@ -340,8 +340,8 @@ Route::middleware(['auth'])
 
 });
 
-// Routes étudiantes AVEC vérification de paiement (dashboard, cours, lives, chat, etc.)
-Route::middleware(['auth'])
+// Routes étudiantes protégées (nécessite un compte actif)
+Route::middleware(['auth', 'active'])
     ->prefix('student')
     ->name('student.')
     ->group(function () {
