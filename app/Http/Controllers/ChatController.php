@@ -20,6 +20,9 @@ class ChatController extends Controller
         if ($user->isStudent()) {
             $classRoom = $user->classRoom()->with('subjects')->first();
             $subjects = $classRoom?->subjects ?? collect([]);
+
+            // + Matières assignées individuellement via class_user.subject_id
+            $subjects = $subjects->merge($user->individuallyAssignedSubjects())->unique('id');
         } else {
             $subjects = Subject::all()->unique('name');
         }
@@ -35,8 +38,24 @@ class ChatController extends Controller
 
         // 🔒 Vérifier que l'étudiant a bien accès à cette matière
         if ($user->isStudent()) {
+            $hasAccess = false;
             $classRoom = $user->classRoom;
-            if (!$classRoom || !$classRoom->subjects()->where('subject_id', $subject->id)->exists()) {
+
+            // Via la classe
+            if ($classRoom && $classRoom->subjects()->where('subject_id', $subject->id)->exists()) {
+                $hasAccess = true;
+            }
+
+            // Via assignation individuelle
+            if (!$hasAccess) {
+                $assigned = \DB::table('class_user')
+                    ->where('user_id', $user->id)
+                    ->where('subject_id', $subject->id)
+                    ->exists();
+                $hasAccess = $assigned;
+            }
+
+            if (!$hasAccess) {
                 abort(403, 'Cette matière ne fait pas partie de votre programme.');
             }
         }

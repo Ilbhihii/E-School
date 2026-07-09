@@ -245,42 +245,65 @@ class UserController extends Controller
      */
     public function assignClass()
     {
-        $students = User::where('role', 'student')->get();
-        $classRooms = ClassRoom::with('level')->get();
+        $students = User::where('role', 'student')->orderBy('name')->get();
+        $classRooms = ClassRoom::with('level')->orderBy('name')->get();
         $levels = Level::orderBy('name')->get();
+        $subjects = Subject::with('classes')->orderBy('name')->get();
 
         // Get assignments: students assigned to classes
         $assignments = DB::table('class_user')
             ->join('users', 'class_user.user_id', '=', 'users.id')
             ->join('class_rooms', 'class_user.class_id', '=', 'class_rooms.id')
-            ->select('class_user.id as pivot_id', 'class_user.user_id', 'class_user.class_id', 
-                     'users.name as student_name', 'class_rooms.name as class_name')
+            ->leftJoin('subjects', 'class_user.subject_id', '=', 'subjects.id')
+            ->select('class_user.id as pivot_id', 'class_user.user_id', 'class_user.class_id',
+                     'class_user.subject_id',
+                     'users.name as student_name', 'class_rooms.name as class_name',
+                     'subjects.name as subject_name')
             ->get();
 
-        return view('admin.assign-class', compact('students', 'classRooms', 'levels', 'assignments'));
+        return view('admin.assign-class', compact('students', 'classRooms', 'levels', 'subjects', 'assignments'));
     }
 
     /**
-     * Store new student-class assignment
+     * Store new student-class assignment (one row per subject)
      */
     public function storeAssignment(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id|unique:class_user,user_id',
-            'class_id' => 'required|exists:class_rooms,id'
+            'user_id' => 'required|exists:users,id',
+            'class_id' => 'required|exists:class_rooms,id',
+            'subject_ids' => 'required|array',
+            'subject_ids.*' => 'exists:subjects,id',
         ]);
 
-        DB::table('class_user')->insert([
-            'user_id' => $request->user_id,
-            'class_id' => $request->class_id,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        $inserted = 0;
+        foreach ($request->subject_ids as $subjectId) {
+            // Éviter les doublons (même étudiant + même matière)
+            $exists = DB::table('class_user')
+                ->where('user_id', $request->user_id)
+                ->where('subject_id', $subjectId)
+                ->exists();
+
+            if (!$exists) {
+                DB::table('class_user')->insert([
+                    'user_id' => $request->user_id,
+                    'class_id' => $request->class_id,
+                    'subject_id' => $subjectId,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                $inserted++;
+            }
+        }
 
         // 🔥 Synchroniser users.class_id pour que $user->classRoom() fonctionne
         User::where('id', $request->user_id)->update(['class_id' => $request->class_id]);
 
-        return redirect()->back()->with('success', 'Étudiant assigné à la classe avec succès!');
+        if ($inserted > 0) {
+            return redirect()->back()->with('success', "$inserted matière(s) assignée(s) avec succès!");
+        }
+
+        return redirect()->back()->with('info', 'Ces matières sont déjà assignées à cet étudiant.');
     }
 
     /**
@@ -290,7 +313,8 @@ class UserController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:class_rooms,id'
+            'class_id' => 'required|exists:class_rooms,id',
+            'subject_id' => 'nullable|exists:subjects,id',
         ]);
 
         DB::table('class_user')
@@ -298,6 +322,7 @@ class UserController extends Controller
             ->update([
                 'user_id' => $request->user_id,
                 'class_id' => $request->class_id,
+                'subject_id' => $request->subject_id,
                 'updated_at' => now()
             ]);
 
@@ -320,7 +345,15 @@ class UserController extends Controller
 
         // 🔥 Effacer users.class_id si c'était la seule assignation
         if ($pivot) {
-            User::where('id', $pivot->user_id)->update(['class_id' => null]);
+            // Check if user has other assignments before clearing class_id
+            $otherAssignments = DB::table('class_user')
+                ->where('user_id', $pivot->user_id)
+                ->where('id', '!=', $pivotId)
+                ->exists();
+
+            if (!$otherAssignments) {
+                User::where('id', $pivot->user_id)->update(['class_id' => null]);
+            }
         }
 
         return redirect()->back()->with('success', 'Assignation supprimée avec succès!');

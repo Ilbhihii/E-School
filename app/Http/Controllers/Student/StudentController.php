@@ -30,6 +30,9 @@ class StudentController extends Controller
 
         $classRoom = $user->classRoom()->with('subjects')->first();
         $subjects = $classRoom?->subjects ?? collect([]);
+
+        // + Matières assignées individuellement via class_user.subject_id
+        $subjects = $subjects->merge($user->individuallyAssignedSubjects())->unique('id');
         $coursesCount = $classRoom?->courses()->count() ?? 0;
         $livesCount = Live::where('class_id', $user->class_id)->count();
 
@@ -131,8 +134,18 @@ class StudentController extends Controller
     {
         $user = auth()->user();
 
-        // 🔒 Filtrer les lives par la classe de l'étudiant
-        $lives = Live::where('class_id', $user->class_id)->latest()->get();
+        // 🔒 Classes accessibles : classe principale + classes via class_user (assignations individuelles)
+        $classIds = collect([$user->class_id])->filter();
+
+        $assignedClassIds = \DB::table('class_user')
+            ->where('user_id', $user->id)
+            ->whereNotNull('class_id')
+            ->pluck('class_id')
+            ->unique();
+
+        $classIds = $classIds->merge($assignedClassIds)->unique()->values();
+
+        $lives = Live::whereIn('class_id', $classIds)->latest()->get();
 
         return view('student.lives', compact('lives'));
     }
@@ -335,15 +348,16 @@ public function settings()
         $user = auth()->user();
         $classRoom = $user->classRoom()->with('level', 'subjects')->first();
 
-        if ($classRoom && $classRoom->level && $classRoom->subjects->isNotEmpty()) {
-            // Afficher les matières liées à la classe de l'étudiant
-            $level = $classRoom->level;
+        // Matières liées à la classe de l'étudiant
+        $subjects = collect();
+        if ($classRoom && $classRoom->subjects->isNotEmpty()) {
             $subjects = $classRoom->subjects;
-        } else {
-            // Fallback : afficher toutes les matières disponibles
-            $level = $classRoom?->level;
-            $subjects = Subject::orderBy('name')->get();
         }
+
+        // + Matières assignées individuellement via class_user.subject_id
+        $subjects = $subjects->merge($user->individuallyAssignedSubjects())->unique('id');
+
+        $level = $classRoom?->level;
 
         return view('student.subjects.index', compact('subjects', 'level', 'classRoom'));
     }

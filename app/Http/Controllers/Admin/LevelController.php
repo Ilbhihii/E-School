@@ -88,10 +88,54 @@ class LevelController extends Controller
      */
     public function subjectsIndex()
     {
-        $subjects = Subject::withCount('classes')->orderBy('name')->get();
-        $levels = Level::with('classes')->orderBy('name')->get();
+        $subjects = Subject::orderBy('name')->get();
 
-        return view('admin.subjects.index', compact('subjects', 'levels'));
+        // Niveaux avec leurs classes et les matières liées à chaque classe
+        $levels = Level::with(['classes' => function ($q) {
+            $q->orderBy('name');
+        }, 'classes.subjects'])->orderBy('name')->get();
+
+        // Tous les cours groupés par (subject_id + '-' + class_id)
+        $allCourses = Course::select('id', 'title', 'subject_id', 'class_id', 'level_id', 'order')
+            ->orderBy('order')
+            ->get()
+            ->groupBy(fn($c) => $c->subject_id . '-' . $c->class_id);
+
+        // Construire l'arbre hiérarchique
+        $tree = [];
+        foreach ($subjects as $subject) {
+            $subjectLevels = [];
+            foreach ($levels as $level) {
+                $levelClasses = $level->classes->filter(function ($class) use ($subject) {
+                    return $class->subjects->contains('id', $subject->id);
+                });
+
+                if ($levelClasses->isNotEmpty()) {
+                    $classData = [];
+                    foreach ($levelClasses as $class) {
+                        $courseKey = $subject->id . '-' . $class->id;
+                        $classCourses = $allCourses->get($courseKey, collect());
+
+                        $classData[] = [
+                            'class' => $class,
+                            'courses' => $classCourses,
+                        ];
+                    }
+
+                    $subjectLevels[] = [
+                        'level' => $level,
+                        'classes' => $classData,
+                    ];
+                }
+            }
+
+            $tree[] = [
+                'subject' => $subject,
+                'levels' => $subjectLevels,
+            ];
+        }
+
+        return view('admin.subjects.index', compact('tree', 'subjects', 'levels'));
     }
 
     /**

@@ -91,13 +91,27 @@ public function isProf()
 public function isStudent()
 {
     return $this->role === static::ROLE_STUDENT;
-}
+}    public function results()
+    {
+        return $this->hasMany(\App\Models\Result::class);
+    }
 
-public function results()
-{
-    return $this->hasMany(\App\Models\Result::class);
-}
+    /**
+     * Récupère les matières assignées individuellement à l'étudiant via class_user.subject_id.
+     */
+    public function individuallyAssignedSubjects()
+    {
+        $subjectIds = \DB::table('class_user')
+            ->where('user_id', $this->id)
+            ->whereNotNull('subject_id')
+            ->pluck('subject_id')
+            ->unique();
 
+        if ($subjectIds->isNotEmpty()) {
+            return \App\Models\Subject::whereIn('id', $subjectIds)->get();
+        }
 
+        return collect();
+    }
 
 }
