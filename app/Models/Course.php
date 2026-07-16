@@ -20,6 +20,7 @@ class Course extends Model
         'description',
         'subject_id',
         'level_id',
+        'module_id',
         'class_id',
         'video',
         'pdf',
@@ -44,6 +45,11 @@ class Course extends Model
     public function level()
     {
         return $this->belongsTo(Level::class);
+    }
+
+    public function module()
+    {
+        return $this->belongsTo(Module::class);
     }
 
     public function admin()

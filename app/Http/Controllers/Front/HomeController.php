@@ -33,7 +33,23 @@ $subjectsGrouped = [
         return view('front.home', compact('classes','courses','lives', 'subjectsGrouped'));
     }
 
-    // Liste classes
+    // Liste des niveaux
+    public function niveaux()
+    {
+        $levels = \App\Models\Level::withCount(['classes as class_count'])
+            ->with(['classes' => function($q) {
+                $q->withCount('subjects');
+            }])
+            ->orderBy('order')
+            ->get();
+
+        $totalClasses = $levels->sum('class_count');
+        $totalCourses = \App\Models\Course::count();
+
+        return view('front.public-levels', compact('levels', 'totalClasses', 'totalCourses'));
+    }
+
+    // Liste des matières
     public function classes()
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])->get();

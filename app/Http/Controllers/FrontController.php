@@ -86,6 +86,46 @@ class FrontController extends Controller
         return view('front.class-courses', compact('courses'));
     }
 
+    /**
+     * Affiche les classes d'un niveau (navigation publique)
+     */
+    public function publicClasses(Level $level)
+    {
+        $classes = \App\Models\ClassRoom::where('level_id', $level->id)
+            ->withCount('subjects')
+            ->get();
+
+        return view('front.public-classes', compact('level', 'classes'));
+    }
+
+    /**
+     * Affiche les matières d'une classe (navigation publique)
+     */
+    public function publicSubjects(Level $level, \App\Models\ClassRoom $class_room)
+    {
+        $class = $class_room;
+        $subjects = Subject::whereHas('classes', fn($q) => $q->where('class_room_id', $class->id))
+            ->withCount('courses')
+            ->get();
+
+        return view('front.public-subjects', compact('level', 'class', 'subjects'));
+    }
+
+    /**
+     * Affiche les cours d'une matière dans une classe (navigation publique)
+     */
+    public function publicCourses(Level $level, \App\Models\ClassRoom $class_room, Subject $subject)
+    {
+        $class = $class_room;
+        $courses = Course::where('subject_id', $subject->id)
+            ->where('class_id', $class->id)
+            ->where('level_id', $level->id)
+            ->withCount('learningTests')
+            ->get();
+
+        return view('front.public-courses', compact('level', 'class', 'subject', 'courses'));
+    }
+
     public function religieux()
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])

@@ -29,10 +29,6 @@ use App\Http\Controllers\Front\LearningController;
 
 
 use App\Http\Controllers\AppointmentController;
-use App\Http\Controllers\Front\AIChatbotController;
-
-
-
 /*
 |--------------------------------------------------------------------------
 | Public
@@ -45,6 +41,7 @@ Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appo
 Route::post('/rendez-vous', [AppointmentController::class, 'store'])->name('appointment.store');
 
 Route::get('/classes', [\App\Http\Controllers\Front\HomeController::class, 'classes'])->name('front.classes');
+Route::get('/niveaux', [\App\Http\Controllers\Front\HomeController::class, 'niveaux'])->name('front.niveaux');
 
 Route::get('/matieres/{id}/classes', [FrontController::class, 'subjectClasses'])
     ->name('front.subject.classes');
@@ -64,6 +61,14 @@ Route::get('/levels/{id}/courses', [FrontController::class, 'levelCourses'])
 Route::get('/course/{id}', [FrontController::class, 'showCourse'])
     ->name('front.course.show');
 
+// Navigation publique : Niveaux → Classes → Matières → Cours
+Route::get('/classes/{level}/classes', [FrontController::class, 'publicClasses'])
+    ->name('front.public.classes');
+Route::get('/classes/{level}/classes/{class_room}/subjects', [FrontController::class, 'publicSubjects'])
+    ->name('front.public.subjects');
+Route::get('/classes/{level}/classes/{class_room}/subjects/{subject}/courses', [FrontController::class, 'publicCourses'])
+    ->name('front.public.courses');
+
 Route::get('/religieux', [FrontController::class, 'religieux'])
     ->name('front.religieux');
 
@@ -72,9 +77,6 @@ Route::get('/scolaires', [FrontController::class, 'scolaires'])
 
 Route::get('/all-classes-courses', [HomeController::class,'allClassesCourses'])->name('front.all-classes-courses');
 Route::get('/lives', [HomeController::class,'lives'])->name('front.lives');
-
-// AI Chatbot for visitors (throttled: 30 requests per minute)
-Route::post('/ai-chatbot', [AIChatbotController::class, 'chat'])->name('ai.chatbot')->middleware('throttle:30,1');
 
 Route::get('/account/blocked', function () {
     return view('auth.account-blocked');

@@ -116,7 +116,7 @@
                     <!-- Step 1: Level -->
                     <div class="adm-form-group">
                         <label class="adm-form-label">
-                            <i class="bi bi-layers me-1" style="color:#A78BFA;"></i> 1. Niveau
+                            <i class="bi bi-layers me-1" style="color:#A78BFA;"></i>Niveau
                         </label>
                         <select class="adm-form-select" id="level_filter">
                             <option value="">Choisir un niveau</option>
@@ -129,12 +129,12 @@
                     <!-- Step 2: Class -->
                     <div class="adm-form-group">
                         <label class="adm-form-label">
-                            <i class="bi bi-building me-1" style="color:#34D399;"></i> 2. Classe
+                            <i class="bi bi-building me-1" style="color:#34D399;"></i>Classe
                         </label>
                         <select name="class_id" class="adm-form-select" id="class_id" required>
                             <option value="">D'abord choisir un niveau</option>
                             @foreach($classRooms as $classRoom)
-                            <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}">{{ $classRoom->name }}</option>
+                            <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}">{{ $classRoom->level?->name ?? '—' }} — {{ $classRoom->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -142,7 +142,7 @@
                     <!-- Step 3: Subjects (checkboxes multiples) -->
                     <div class="adm-form-group">
                         <label class="adm-form-label">
-                            <i class="bi bi-book me-1" style="color:#FBBF24;"></i> 3. Matières
+                            <i class="bi bi-book me-1" style="color:#FBBF24;"></i>Matières
                         </label>
                         <div id="subjects_container" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:0.75rem;max-height:240px;overflow-y:auto;">
                             <div class="subject-placeholder" style="text-align:center;padding:1.5rem;color:var(--adm-text-muted);font-size:0.85rem;">

@@ -938,7 +938,7 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('front.classes') }}">Matières</a>
+                    <a class="nav-link" href="{{ route('front.niveaux') }}">Niveaux</a>
                 </li>
 
                 <li class="nav-item">
@@ -1119,7 +1119,7 @@
     <span class="chat-tooltip">Besoin d'aide ?</span>
 </a>
 
-<!-- ═══ AI CHATBOT ═══ -->
+<!-- ═══ TELEGRAM BOUTON ═══ -->
 <x-ai-chatbot />
 
 <!-- JS -->

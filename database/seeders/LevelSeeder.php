@@ -4,41 +4,79 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Level;
+use App\Models\Subject;
 
 class LevelSeeder extends Seeder
 {
     public function run(): void
     {
-        $newLevels = [
-            [
-                'name' => 'N1 Apprendre l\'arabe',
-                'description' => 'Apprentissage de la langue arabe pour débutants',
-            ],
-            [
-                'name' => 'N2 Apprendre à lire',
-                'description' => 'Apprentissage de la lecture en arabe',
-            ],
-            [
-                'name' => 'N3 Apprendre les règles de tajwid',
-                'description' => 'Apprentissage des règles de récitation coranique',
-            ],
-            [
-                'name' => 'N4 Sciences de l\'islam',
-                'description' => 'Étude approfondie des sciences islamiques',
-            ],
-        ];
+        // ──────────────────────────────────────────────
+        // 📖 Niveaux liés au Coran
+        // ──────────────────────────────────────────────
+        $coran = Subject::where('name', 'Coran')->first();
+        if ($coran) {
+            $coranLevels = [
+                [
+                    'name' => 'Niveau 1 – Apprendre les règles',
+                    'description' => 'Apprendre les bases de la lecture correcte du Coran',
+                    'subject_id' => $coran->id,
+                    'order' => 1,
+                ],
+                [
+                    'name' => 'Niveau 2 – Tajwid et Hifd',
+                    'description' => 'Perfectionnement en tajwid et mémorisation du Coran',
+                    'subject_id' => $coran->id,
+                    'order' => 2,
+                ],
+            ];
 
-        $newNames = array_column($newLevels, 'name');
-
-        // Supprimer les anciens niveaux qui ne sont plus dans la liste
-        Level::whereNotIn('name', $newNames)->delete();
-
-        // Créer ou mettre à jour les nouveaux niveaux
-        foreach ($newLevels as $level) {
-            Level::updateOrCreate(
-                ['name' => $level['name']],
-                ['description' => $level['description']]
-            );
+            foreach ($coranLevels as $level) {
+                Level::updateOrCreate(
+                    ['name' => $level['name'], 'subject_id' => $level['subject_id']],
+                    ['description' => $level['description'], 'order' => $level['order']]
+                );
+            }
         }
+
+        // ──────────────────────────────────────────────
+        // 📚 Niveaux liés à l'Arabe
+        // ──────────────────────────────────────────────
+        $arabe = Subject::where('name', 'Arabe')->first();
+        if ($arabe) {
+            $arabeLevels = [
+                [
+                    'name' => 'Niveau 1 – Découverte de l\'alphabet',
+                    'description' => 'Lire et écrire l\'alphabet arabe (Débutant)',
+                    'subject_id' => $arabe->id,
+                    'order' => 1,
+                ],
+                [
+                    'name' => 'Niveau 2 – Lecture et communication',
+                    'description' => 'Comprendre et produire des phrases simples (Élémentaire)',
+                    'subject_id' => $arabe->id,
+                    'order' => 2,
+                ],
+                [
+                    'name' => 'Niveau 3 – Maîtrise intermédiaire',
+                    'description' => 'S\'exprimer avec aisance sur des sujets variés',
+                    'subject_id' => $arabe->id,
+                    'order' => 3,
+                ],
+                [
+                    'name' => 'Niveau 4 – Expression écrite et orale avancée',
+                    'description' => 'Rédiger des textes et communiquer de manière autonome',
+                    'subject_id' => $arabe->id,
+                    'order' => 4,
+                ],
+            ];
+
+            foreach ($arabeLevels as $level) {
+                Level::updateOrCreate(
+                    ['name' => $level['name'], 'subject_id' => $level['subject_id']],
+                    ['description' => $level['description'], 'order' => $level['order']]
+                );
+            }
+        }
+
     }
 }

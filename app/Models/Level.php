@@ -12,7 +12,8 @@ class Level extends Model
     protected $fillable = [
         'name',
         'description',
-        'subject_id'
+        'subject_id',
+        'order'
     ];
 
     public function subject()
@@ -23,6 +24,11 @@ class Level extends Model
     public function courses()
     {
         return $this->hasMany(Course::class);
+    }
+
+    public function modules()
+    {
+        return $this->hasMany(Module::class);
     }
 
     public function classes()

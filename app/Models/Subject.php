@@ -10,9 +10,7 @@ class Subject extends Model
 
     public $timestamps = false;
     // note: column renamed from class_room_id to class_id for consistency
-    protected $fillable = ['name', 'type'];
-
-    // Removed conflicting belongsTo - using belongsToMany via pivot instead
+    protected $fillable = ['name', 'type', 'description', 'image'];
 
     public function levels()
     {
