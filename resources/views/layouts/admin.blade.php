@@ -189,6 +189,8 @@
         html.light-mode .logo-theme-dark { display: none; }
         html.light-mode .logo-theme-light { display: inline-block; }
     </style>
+    <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
+    <script src="{{ asset('js/global-theme-sync.js') }}"></script>
 </head>
 <body>
 

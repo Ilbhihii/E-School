@@ -1,0 +1,147 @@
+/* Global light theme: admin, professor, student and public front. */
+:root {
+    color-scheme: light;
+    --adm-bg: #ffffff;
+    --adm-surface: #ffffff;
+    --adm-surface-2: #f8fafc;
+    --adm-card: #ffffff;
+    --adm-text: #111111;
+    --adm-text-muted: #4b5563;
+    --text: #111111;
+    --muted: #4b5563;
+    --surface: #ffffff;
+    --card: #ffffff;
+}
+
+html, body,
+.adm-main, .adm-content, .adm-page, .admin-page, .admin-container,
+.prof-main, .prof-content, .student-main, .student-content,
+.st-main, .st-content, main, section {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+body, body * { border-color: #dbe2ea; }
+
+body, p, span, small, label, li, td, th,
+h1, h2, h3, h4, h5, h6,
+.adm-page-header h1, .adm-page-header .subtitle,
+.prof-topbar-title, .st-topbar-title,
+.admin-header-title, .admin-header-subtitle,
+.card-title, .card-text, .form-label {
+    color: #111111 !important;
+}
+
+.adm-sidebar, .prof-sidebar, .student-sidebar, .st-sidebar,
+.adm-topbar, .prof-topbar, .student-topbar, .st-topbar,
+.navbar, header, footer {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-color: #dbe2ea !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07) !important;
+}
+
+.adm-card, .pr-card, .st-card, .card, .subject-card, .live-card,
+.class-card, .level-card, .course-card, .stat-card, .metric-card,
+.card-3d, .hero-3d, .cta-3d, .step-3d, .feature-card,
+.front-content, .front-section, .footer-3d, .navbar-3d,
+.adm-modal, .modal-content, details, summary,
+.dropdown-menu, .list-group-item, .accordion-item, .table-responsive {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-color: #dbe2ea !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07) !important;
+}
+
+.hero-3d, .cta-3d, .front-content, .front-section,
+.navbar-3d, .footer-3d, .card-3d, .step-3d {
+    background: #ffffff !important;
+    background-image: none !important;
+}
+
+.hero-3d-title, .hero-3d-subtitle, .stat-3d-label,
+.navbar-3d .navbar-brand, .navbar-3d .nav-link,
+.footer-3d a, .footer-3d p, .footer-3d span {
+    color: #111111 !important;
+}
+
+.adm-card-header, .adm-card-body, .adm-card-footer,
+.pr-card-header, .pr-card-body, .card-header, .card-body, .card-footer,
+.modal-header, .modal-body, .modal-footer,
+.table, .adm-table, table, thead, tbody, tr, td, th {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+input, select, textarea,
+.form-control, .form-select, .adm-form-control, .adm-form-select,
+.subjects-search input {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+}
+
+input::placeholder, textarea::placeholder { color: #6b7280 !important; }
+input:focus, select:focus, textarea:focus,
+.form-control:focus, .form-select:focus, .adm-form-control:focus, .adm-form-select:focus {
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-color: #111111 !important;
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08) !important;
+}
+
+a, .nav-link, .dropdown-item,
+.adm-nav-link, .prof-nav-link, .student-nav-link, .st-nav-link {
+    color: #111111 !important;
+}
+
+.adm-nav-link:hover, .adm-nav-link.active,
+.prof-nav-link:hover, .prof-nav-link.active,
+.student-nav-link:hover, .student-nav-link.active,
+.st-nav-link:hover, .st-nav-link.active,
+.nav-link:hover, .nav-link.active, .dropdown-item:hover {
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+}
+
+.adm-nav-link .nav-icon, .prof-nav-link .nav-icon,
+.student-nav-link .nav-icon, .st-nav-link .nav-icon {
+    background: #f1f5f9 !important;
+    color: #111111 !important;
+}
+
+.btn, .adm-btn, .pr-btn, button {
+    border-color: #111111 !important;
+}
+.btn:not(.btn-danger):not(.btn-success):not(.btn-warning),
+.adm-btn:not(.adm-btn-danger):not(.adm-btn-success):not(.adm-btn-warning),
+.pr-btn:not(.pr-btn-danger) {
+    background: #ffffff !important;
+    color: #111111 !important;
+}
+
+.text-white, .text-light, .text-white-50,
+[style*="color:white"], [style*="color: white"],
+[style*="color:#F1F5F9"], [style*="color: #F1F5F9"],
+[style*="color:rgba(255,255,255"] {
+    color: #111111 !important;
+}
+
+[style*="background:rgba(255,255,255"],
+[style*="background: rgba(255,255,255"],
+[style*="background:#0"], [style*="background: #0"] {
+    background-color: #ffffff !important;
+}
+
+.text-muted, [class*="text-muted"],
+.adm-form-label, .subtitle, .brand-sub { color: #4b5563 !important; }
+
+.adm-sidebar-overlay, .modal-backdrop { background: rgba(15, 23, 42, 0.25) !important; }
+::-webkit-scrollbar-thumb { background: #cbd5e1 !important; }
+
+@media (max-width: 768px) {
+    .adm-sidebar, .prof-sidebar, .student-sidebar, .st-sidebar {
+        background: #ffffff !important;
+    }
+}

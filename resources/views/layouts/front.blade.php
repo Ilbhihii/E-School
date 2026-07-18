@@ -880,6 +880,8 @@
     </style>
 
     @stack('head')
+    <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
+    <script src="{{ asset('js/global-theme-sync.js') }}"></script>
 </head>
 
 <body>
