@@ -141,9 +141,16 @@
                         </td>
                         <td>
                             @if($live->stream_url)
-                            <a href="{{ $live->stream_url }}" target="_blank" class="adm-btn adm-btn-ghost adm-btn-sm">
-                                <i class="bi bi-box-arrow-up-right"></i> Ouvrir
-                            </a>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <a href="{{ $live->stream_url }}" target="_blank" rel="noopener noreferrer" class="adm-btn adm-btn-ghost adm-btn-sm">
+                                    <i class="bi bi-globe2"></i> Web
+                                </a>
+                                @if($live->teams_app_url)
+                                <a href="{{ $live->teams_app_url }}" class="adm-btn adm-btn-primary adm-btn-sm" title="Contourner un problème du navigateur en ouvrant directement Microsoft Teams">
+                                    <i class="bi bi-microsoft-teams"></i> Application Teams
+                                </a>
+                                @endif
+                            </div>
                             @else
                             <span style="color:var(--adm-text-muted);font-size:0.75rem;">—</span>
                             @endif

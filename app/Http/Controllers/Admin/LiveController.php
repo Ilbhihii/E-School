@@ -144,13 +144,27 @@ class LiveController extends Controller
         }
 
         $request->validate([
-            'title' => 'required',
-            'class_id' => 'required',
+            'title' => 'required|string|max:255',
+            'class_id' => 'required|exists:class_rooms,id',
+            'provider' => 'required|in:teams,google_meet',
             'stream_url' => 'required|url',
             'live_date' => 'required|date',
             'start_time' => 'required',
-            'end_time' => 'required',
+            'end_time' => 'required|after:start_time',
         ]);
+
+        $meetingHost = strtolower((string) parse_url($request->stream_url, PHP_URL_HOST));
+        $validProviderLink = $request->provider === 'teams'
+            ? in_array($meetingHost, ['teams.microsoft.com', 'teams.live.com'], true)
+            : $meetingHost === 'meet.google.com';
+
+        if (!$validProviderLink) {
+            $providerName = $request->provider === 'teams' ? 'Microsoft Teams' : 'Google Meet';
+
+            return back()->withInput()->withErrors([
+                'stream_url' => "Le lien doit être un lien {$providerName} valide.",
+            ]);
+        }
 
         // 🔥 Vérifier conflit
         $conflict = Live::where('live_date', $request->live_date)
@@ -168,6 +182,7 @@ class LiveController extends Controller
             'title' => $request->title,
             'class_id' => $request->class_id,
             'stream_url' => $request->stream_url,
+            'provider' => $request->provider,
             'admin_id' => auth()->id(),
             'live_date' => $request->live_date,
             'start_time' => $request->start_time,
@@ -190,7 +205,7 @@ class LiveController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'class_id' => 'required|exists:classes,id',
+            'class_id' => 'required|exists:class_rooms,id',
             'stream_url' => 'required|url'
         ]);
 

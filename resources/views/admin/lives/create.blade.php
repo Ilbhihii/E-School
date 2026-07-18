@@ -8,20 +8,34 @@
 <div class="row justify-content-center">
     <div class="col-lg-10">
 
-        <!-- OUTLOOK FIRST -->
+        @if($errors->any())
+        <div class="adm-alert adm-alert-danger mb-4">
+            <span class="adm-alert-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>
+            <span>{{ $errors->first() }}</span>
+        </div>
+        @endif
+
+        <!-- MEETING PROVIDER FIRST -->
         <div class="adm-card" style="border-left:4px solid #38BDF8;margin-bottom:1.5rem;">
             <div class="adm-card-header" style="background:linear-gradient(135deg, rgba(2,132,199,0.08), rgba(14,165,233,0.03));">
-                <h4><i class="bi bi-calendar-plus" style="color:#38BDF8;"></i> Créer via Outlook</h4>
+                <h4><i class="bi bi-camera-video" style="color:#38BDF8;"></i> Créer une réunion en ligne</h4>
                 <span style="color:#64748B;font-size:0.75rem;">Recommandé</span>
             </div>
             <div class="adm-card-body">
                 <div style="display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;">
                     <div style="flex:1;min-width:240px;">
                         <p style="color:#94A3B8;font-size:0.85rem;margin-bottom:1rem;">
-                            Remplissez les informations ci-dessous, puis cliquez sur 
-                            <strong style="color:#F1F5F9;">Créer dans Outlook</strong> pour ajouter l'événement 
-                            à votre calendrier Outlook. Ensuite, validez dans Laravel.
+                            Choisissez Microsoft Teams ou Google Meet, créez la réunion, puis collez son lien.
+                            Les informations seront automatiquement reprises dans le live Laravel.
                         </p>
+
+                        <div class="adm-form-group" style="margin-bottom:1rem;">
+                            <label class="adm-form-label" style="font-size:0.75rem;">Plateforme</label>
+                            <select id="meeting_provider" class="adm-form-select" style="font-size:0.85rem;">
+                                <option value="teams" @selected(old('provider') === 'teams')>Microsoft Teams</option>
+                                <option value="google_meet" @selected(old('provider', 'google_meet') === 'google_meet')>Google Meet</option>
+                            </select>
+                        </div>
 
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -97,13 +111,13 @@
                         <div class="adm-form-group mt-2" style="margin-bottom:0;">
                             <label class="adm-form-label" style="font-size:0.75rem;">
                                 Lien de la réunion 
-                                <span style="color:#EF4444;font-size:0.7rem;font-weight:400;">(obligatoire — à coller après création Outlook)</span>
+                                <span style="color:#EF4444;font-size:0.7rem;font-weight:400;">(obligatoire — à coller après création)</span>
                             </label>
                             <div style="display:flex;gap:6px;flex-direction:column;">
                                 <input type="url" id="outlook_url" class="adm-form-control" placeholder="https://meet.google.com/xxx-xxxx-xxx" style="font-size:0.85rem;flex:1;">
                                 <div style="font-size:0.7rem;color:#64748B;display:flex;align-items:center;gap:6px;">
                                     <i class="bi bi-info-circle"></i>
-                                    Collez ici le lien de réunion après avoir créé l'événement dans Outlook
+                                    Créez la réunion sur la plateforme choisie, copiez son lien puis collez-le ici
                                 </div>
                             </div>
                         </div>
@@ -118,9 +132,12 @@
                            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(2,132,199,0.35)'"
                            onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 16px rgba(2,132,199,0.2)'">
                             <i class="bi bi-plus-circle" style="font-size:1.1rem;"></i>
-                            Créer dans Outlook
+                            Créer la réunion
                         </a>
                         <span id="outlookStatus" style="font-size:0.7rem;color:#64748B;text-align:center;">Remplissez les champs (titre, date, heure, classe)</span>
+                        <button type="button" id="saveLiveBtn" class="adm-btn adm-btn-success" style="width:100%;pointer-events:none;opacity:0.4;" onclick="saveLive()">
+                            <i class="bi bi-save me-1"></i> Enregistrer le live
+                        </button>
                     </div>
                 </div>
             </div>
@@ -146,6 +163,7 @@
 
                     <form method="POST" action="{{ route('admin.lives.store') }}" id="manualForm">
                         @csrf
+                        <input type="hidden" name="provider" value="{{ old('provider', 'google_meet') }}">
 
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -204,7 +222,7 @@
                             <input type="url" name="stream_url" value="{{ old('stream_url') }}" class="adm-form-control @error('stream_url') error @enderror" placeholder="https://meet.google.com/xxx-xxxx-xxx">
                             <div style="font-size:0.7rem;color:#64748B;margin-top:0.35rem;">
                                 <i class="bi bi-info-circle"></i>
-                                Utilisez un lien de Google Meet, Zoom, Microsoft Teams ou YouTube Live
+                                Utilisez un lien Google Meet ou Microsoft Teams correspondant à la plateforme choisie ci-dessus
                             </div>
                             @error('stream_url') <div class="adm-form-error">{{ $message }}</div> @enderror
                         </div>
@@ -410,86 +428,71 @@
         });
     });
 
-    // Sync Outlook fields to manual form
+    // Synchroniser le bloc principal avec le formulaire Laravel.
     function syncFields() {
-        let title = document.getElementById('outlook_title')?.value || '';
-        let classId = document.getElementById('outlook_class_id')?.value || '';
-        let date = document.getElementById('outlook_date')?.value || '';
-        let start = document.getElementById('outlook_start')?.value || '';
-        let end = document.getElementById('outlook_end')?.value || '';
-        let url = document.getElementById('outlook_url')?.value || '';
-
-        let mf = document.getElementById('manualForm');
-        if (mf) {
-            mf.querySelector('[name="title"]').value = title;
-            mf.querySelector('[name="class_id"]').value = classId;
-            mf.querySelector('[name="live_date"]').value = date;
-            mf.querySelector('[name="start_time"]').value = start;
-            mf.querySelector('[name="end_time"]').value = end;
-            mf.querySelector('[name="stream_url"]').value = url;
+        const form = document.getElementById('manualForm');
+        if (form) {
+            form.querySelector('[name="title"]').value = document.getElementById('outlook_title')?.value || '';
+            form.querySelector('[name="class_id"]').value = document.getElementById('outlook_class_id')?.value || '';
+            form.querySelector('[name="live_date"]').value = document.getElementById('outlook_date')?.value || '';
+            form.querySelector('[name="start_time"]').value = document.getElementById('outlook_start')?.value || '';
+            form.querySelector('[name="end_time"]').value = document.getElementById('outlook_end')?.value || '';
+            form.querySelector('[name="stream_url"]').value = document.getElementById('outlook_url')?.value || '';
+            form.querySelector('[name="provider"]').value = document.getElementById('meeting_provider')?.value || 'google_meet';
         }
 
         generateOutlookUrl();
     }
 
     function generateOutlookUrl() {
-        let title = document.getElementById('outlook_title')?.value || 'Live';
-        let liveDate = document.getElementById('outlook_date')?.value || '';
-        let startTime = document.getElementById('outlook_start')?.value || '00:00';
-        let endTime = document.getElementById('outlook_end')?.value || '';
-        let streamUrl = document.getElementById('outlook_url')?.value || '';
-        let classSelect = document.getElementById('outlook_class_id');
-        let className = classSelect?.options[classSelect.selectedIndex]?.text || '';
-        let subjectSelect = document.getElementById('outlook_subject_id');
-        let subjectName = subjectSelect?.options[subjectSelect.selectedIndex]?.text || '';
-        let levelSelect = document.getElementById('outlook_level_id');
-        let levelName = levelSelect?.options[levelSelect.selectedIndex]?.text || '';
-
-        let hasMin = title && liveDate && startTime && classSelect?.value;
-        let btn = document.getElementById('outlookMainBtn');
-        let status = document.getElementById('outlookStatus');
+        const provider = document.getElementById('meeting_provider')?.value || 'google_meet';
+        const streamUrl = document.getElementById('outlook_url')?.value || '';
+        const classSelect = document.getElementById('outlook_class_id');
+        const subjectSelect = document.getElementById('outlook_subject_id');
+        const levelSelect = document.getElementById('outlook_level_id');
+        const hasDetails = document.getElementById('outlook_title')?.value
+            && document.getElementById('outlook_date')?.value
+            && document.getElementById('outlook_start')?.value
+            && document.getElementById('outlook_end')?.value
+            && classSelect?.value && subjectSelect?.value && levelSelect?.value;
+        const config = provider === 'teams'
+            ? { name: 'Microsoft Teams', url: 'https://teams.microsoft.com/', host: /(^|\.)teams\.(microsoft|live)\.com$/i, color: '#6264A7' }
+            : { name: 'Google Meet', url: 'https://meet.google.com/', host: /^meet\.google\.com$/i, color: '#0F9D58' };
+        const btn = document.getElementById('outlookMainBtn');
+        const saveBtn = document.getElementById('saveLiveBtn');
+        const status = document.getElementById('outlookStatus');
         if (!btn) return;
 
-        if (!hasMin) {
-            btn.style.pointerEvents = 'none';
-            btn.style.opacity = '0.4';
-            if (status) status.textContent = 'Remplissez titre, matière, niveau, classe, date et heure';
-            return;
+        btn.href = config.url;
+        btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Ouvrir ' + config.name;
+        btn.style.background = config.color;
+        btn.style.pointerEvents = hasDetails ? 'auto' : 'none';
+        btn.style.opacity = hasDetails ? '1' : '0.4';
+
+        let validMeetingUrl = false;
+        try {
+            validMeetingUrl = config.host.test(new URL(streamUrl).hostname);
+        } catch (e) {}
+
+        const canSave = hasDetails && validMeetingUrl;
+        if (saveBtn) {
+            saveBtn.style.pointerEvents = canSave ? 'auto' : 'none';
+            saveBtn.style.opacity = canSave ? '1' : '0.4';
         }
-
-        if (!endTime) {
-            let [h, m] = startTime.split(':').map(Number);
-            h = (h + 1) % 24;
-            endTime = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+        if (status) {
+            status.innerHTML = hasDetails
+                ? '<span style="color:#34D399;"><i class="bi bi-check-circle me-1"></i> Ouvrez ' + config.name + ', créez la réunion puis collez son lien</span>'
+                : 'Remplissez titre, matière, niveau, classe, date et heure';
         }
+    }
 
-        let startDt = liveDate + 'T' + startTime + ':00Z';
-        let endDt = liveDate + 'T' + endTime + ':00Z';
-        let fullSubject = title;
-        if (subjectName) fullSubject += ' - ' + subjectName;
-        if (levelName) fullSubject += ' (' + levelName + ')';
-
-        let body = 'Live : ' + title;
-        body += '\\nMatière : ' + (subjectName || '-');
-        body += '\\nNiveau : ' + (levelName || '-');
-        body += '\\nClasse : ' + (className || '-');
-        body += '\\n\\nLien : ' + (streamUrl || '-');
-
-        let url = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-        url += '&subject=' + encodeURIComponent(fullSubject);
-        url += '&startdt=' + startDt;
-        url += '&enddt=' + endDt;
-        url += '&body=' + encodeURIComponent(body);
-        if (streamUrl) url += '&location=' + encodeURIComponent(streamUrl);
-
-        btn.href = url;
-        btn.style.pointerEvents = 'auto';
-        btn.style.opacity = '1';
-        if (status) status.innerHTML = '<span style="color:#34D399;"><i class="bi bi-check-circle me-1"></i> Prêt ! Cliquez pour ouvrir Outlook</span>';
+    function saveLive() {
+        syncFields();
+        document.getElementById('manualForm')?.requestSubmit();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        let fields = ['outlook_title', 'outlook_subject_id', 'outlook_level_id', 'outlook_class_id', 'outlook_date', 'outlook_start', 'outlook_end'];
+        let fields = ['meeting_provider', 'outlook_title', 'outlook_subject_id', 'outlook_level_id', 'outlook_class_id', 'outlook_date', 'outlook_start', 'outlook_end', 'outlook_url'];
         fields.forEach(id => {
             let el = document.getElementById(id);
             if (el) {
