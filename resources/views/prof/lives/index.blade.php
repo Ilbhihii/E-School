@@ -77,25 +77,6 @@
                             @else
                             <span class="adm-badge adm-badge-gray" style="font-size:0.72rem;">Lien à venir</span>
                             @endif
-                            @if($live->live_date)
-                            @php
-                                $liveDate = \Carbon\Carbon::parse($live->live_date);
-                                $startTime = $live->start_time ? $live->start_time : '00:00';
-                                $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-                                $startDt = $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z';
-                                $endDt = $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z';
-                                $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-                                $outlookUrl .= '&subject=' . urlencode($live->title);
-                                $outlookUrl .= '&startdt=' . $startDt;
-                                $outlookUrl .= '&enddt=' . $endDt;
-                                $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
-                                $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
-                            @endphp
-                            <a href="{{ $outlookUrl }}" target="_blank" class="adm-btn adm-btn-sm" style="background:rgba(2,132,199,0.12);color:#38BDF8;border:1px solid rgba(2,132,199,0.15);"
-                               onmouseover="this.style.background='rgba(2,132,199,0.25)'" onmouseout="this.style.background='rgba(2,132,199,0.12)'">
-                                <i class="bi bi-calendar-plus"></i> Outlook
-                            </a>
-                            @endif
                             </div>
                         </td>
                     </tr>
@@ -121,28 +102,23 @@
     @endif
 </div>
 
-<!-- Outlook Calendar List -->
+<!-- Meeting platform list -->
 <div class="adm-card">
     <div class="adm-card-header">
-        <h4><i class="bi bi-calendar-plus" style="color:rgba(255,255,255,0.35);"></i> Ajouter au calendrier Outlook</h4>
+        <h4><i class="bi bi-camera-video" style="color:rgba(255,255,255,0.35);"></i> Plateforme des lives</h4>
         <div class="card-actions">
-            <span style="color:var(--adm-text-muted);font-size:0.78rem;"><i class="bi bi-info-circle me-1"></i> Chaque live peut être ajouté à Outlook</span>
+            <span style="color:var(--adm-text-muted);font-size:0.78rem;"><i class="bi bi-info-circle me-1"></i> Ouvrez chaque live sur sa plateforme</span>
         </div>
     </div>
     <div class="adm-card-body p-0">
         @forelse($lives as $live)
         @php
             $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
-            $startTime = $live->start_time ? $live->start_time : '00:00';
-            $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-            $startDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z' : '';
-            $endDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z' : '';
-            $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-            $outlookUrl .= '&subject=' . urlencode($live->title);
-            $outlookUrl .= '&startdt=' . $startDt;
-            $outlookUrl .= '&enddt=' . $endDt;
-            $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
-            $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
+            $meetingHost = strtolower((string) parse_url($live->stream_url, PHP_URL_HOST));
+            $isTeams = $live->provider === 'teams' || in_array($meetingHost, ['teams.microsoft.com', 'teams.live.com']);
+            $providerName = $isTeams ? 'Microsoft Teams' : 'Google Meet';
+            $providerIcon = $isTeams ? 'bi-microsoft-teams' : 'bi-camera-video-fill';
+            $providerColor = $isTeams ? '#6264A7' : '#0F9D58';
         @endphp
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.04);gap:12px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
             <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
@@ -160,12 +136,10 @@
                     @endif
                 </div>
             </div>
-            @if($live->live_date)
-            <a href="{{ $outlookUrl }}" target="_blank"
-               style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-size:0.78rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;"
-               onmouseover="this.style.background='rgba(2,132,199,0.15)';this.style.borderColor='rgba(2,132,199,0.2)';this.style.color='#38BDF8'"
-               onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.5)'">
-                <i class="bi bi-calendar-plus"></i> Outlook
+            @if($live->stream_url)
+            <a href="{{ $live->stream_url }}" target="_blank" rel="noopener noreferrer"
+               style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;background:{{ $providerColor }}22;border:1px solid {{ $providerColor }}55;color:{{ $providerColor }};font-size:0.78rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;">
+                <i class="bi {{ $providerIcon }}"></i> {{ $providerName }}
             </a>
             @endif
         </div>
@@ -173,7 +147,7 @@
         <div class="adm-empty">
             <div class="adm-empty-icon"><i class="bi bi-calendar-plus"></i></div>
             <h5>Aucun live à ajouter</h5>
-            <p>Les lives apparaîtront ici avec un bouton pour les ajouter à Outlook.</p>
+            <p>Les lives apparaîtront ici avec leur plateforme de réunion.</p>
         </div>
         @endforelse
     </div>

@@ -143,26 +143,21 @@
 
 <div class="pr-card">
     <div class="pr-card-header">
-        <h4><i class="bi bi-calendar-plus" style="color:#64748B;"></i> Ajouter au calendrier Outlook</h4>
+        <h4><i class="bi bi-camera-video" style="color:#64748B;"></i> Plateforme des lives</h4>
     </div>
     <div class="pr-card-body p-0">
         <div style="padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.35);font-size:0.78rem;">
             <i class="bi bi-info-circle"></i>
-            <span>Cliquez sur "Ajouter à Outlook" pour enregistrer un live dans votre calendrier.</span>
+            <span>Cliquez sur la plateforme indiquée pour ouvrir la réunion.</span>
         </div>
         @foreach($lives as $live)
         @php
             $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
-            $startTime = $live->start_time ? $live->start_time : '00:00';
-            $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-            $startDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z' : '';
-            $endDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z' : '';
-            $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-            $outlookUrl .= '&subject=' . urlencode($live->title);
-            $outlookUrl .= '&startdt=' . $startDt;
-            $outlookUrl .= '&enddt=' . $endDt;
-            $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
-            $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
+            $meetingHost = strtolower((string) parse_url($live->stream_url, PHP_URL_HOST));
+            $isTeams = $live->provider === 'teams' || in_array($meetingHost, ['teams.microsoft.com', 'teams.live.com']);
+            $providerName = $isTeams ? 'Microsoft Teams' : 'Google Meet';
+            $providerIcon = $isTeams ? 'bi-microsoft-teams' : 'bi-camera-video-fill';
+            $providerColor = $isTeams ? '#6264A7' : '#0F9D58';
         @endphp
         <div style="padding:0.85rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
             <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
@@ -179,12 +174,10 @@
                     @endif
                 </div>
             </div>
-            @if($live->live_date)
-            <a href="{{ $outlookUrl }}" target="_blank"
-               style="flex-shrink:0;padding:7px 16px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);font-size:0.75rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;"
-               onmouseover="this.style.background='rgba(2,132,199,0.15)';this.style.borderColor='rgba(2,132,199,0.2)';this.style.color='#38BDF8'"
-               onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.6)'">
-                <i class="bi bi-calendar-plus me-1"></i> Outlook
+            @if($live->stream_url)
+            <a href="{{ $live->stream_url }}" target="_blank" rel="noopener noreferrer"
+               style="flex-shrink:0;padding:7px 16px;border-radius:8px;background:{{ $providerColor }}22;border:1px solid {{ $providerColor }}55;color:{{ $providerColor }};font-size:0.75rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;">
+                <i class="bi {{ $providerIcon }} me-1"></i> {{ $providerName }}
             </a>
             @endif
         </div>

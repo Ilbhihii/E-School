@@ -85,15 +85,15 @@
                 <!-- ═══ CASCADE VISUAL INDICATOR ═══ -->
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;padding:8px 12px;background:rgba(255,255,255,0.02);border-radius:10px;">
                     <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:rgba(124,58,237,0.15);color:#A78BFA;font-size:0.75rem;font-weight:600;">
-                        <i class="bi bi-layers me-1"></i> Niveau
+                        <i class="bi bi-book me-1"></i> Matière
                     </div>
                     <i class="bi bi-chevron-right" style="color:var(--adm-text-muted);font-size:0.7rem;"></i>
                     <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:rgba(5,150,105,0.15);color:#34D399;font-size:0.75rem;font-weight:600;">
-                        <i class="bi bi-building me-1"></i> Classe
+                        <i class="bi bi-layers me-1"></i> Niveau
                     </div>
                     <i class="bi bi-chevron-right" style="color:var(--adm-text-muted);font-size:0.7rem;"></i>
                     <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:rgba(217,119,6,0.15);color:#FBBF24;font-size:0.75rem;font-weight:600;">
-                        <i class="bi bi-book me-1"></i> Matière
+                        <i class="bi bi-building me-1"></i> Classe
                     </div>
                 </div>
 
@@ -113,58 +113,54 @@
 
                     <div style="height:12px;"></div>
 
-                    <!-- Step 1: Level -->
+                    <!-- Step 1: Subject -->
                     <div class="adm-form-group">
                         <label class="adm-form-label">
-                            <i class="bi bi-layers me-1" style="color:#A78BFA;"></i>Niveau
+                            <i class="bi bi-book me-1" style="color:#A78BFA;"></i>Matière
                         </label>
-                        <select class="adm-form-select" id="level_filter">
-                            <option value="">Choisir un niveau</option>
+                        <select name="subject_id" class="adm-form-select" id="subject_id" required>
+                            <option value="">Choisir une matière</option>
+                            @foreach($subjects as $subject)
+                            <option value="{{ $subject->id }}" @selected(old('subject_id') == $subject->id)>{{ $subject->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('subject_id') <div class="adm-form-error">{{ $message }}</div> @enderror
+                    </div>
+
+                    <!-- Step 2: Level -->
+                    <div class="adm-form-group">
+                        <label class="adm-form-label">
+                            <i class="bi bi-layers me-1" style="color:#34D399;"></i>Niveau
+                        </label>
+                        <select class="adm-form-select" id="level_filter" required>
+                            <option value="">D'abord choisir une matière</option>
                             @foreach($levels as $level)
-                            <option value="{{ $level->id }}">{{ $level->name }}</option>
+                                @php $levelSubjectIds = $level->classes->flatMap->subjects->pluck('id')->unique()->implode(','); @endphp
+                            <option value="{{ $level->id }}" data-subject-ids="{{ $levelSubjectIds }}">{{ $level->name }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    <!-- Step 2: Class -->
+                    <!-- Step 3: Class -->
                     <div class="adm-form-group">
                         <label class="adm-form-label">
-                            <i class="bi bi-building me-1" style="color:#34D399;"></i>Classe
+                            <i class="bi bi-building me-1" style="color:#FBBF24;"></i>Classe
                         </label>
-                        <select name="class_id" class="adm-form-select" id="class_id" required>
+                        <select name="class_id" class="adm-form-select @error('class_id') error @enderror" id="class_id" required>
                             <option value="">D'abord choisir un niveau</option>
                             @foreach($classRooms as $classRoom)
-                            <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}">{{ $classRoom->level?->name ?? '—' }} — {{ $classRoom->name }}</option>
+                                @php $classSubjectIds = $classRoom->subjects->pluck('id')->implode(','); @endphp
+                            <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}" data-subject-ids="{{ $classSubjectIds }}">{{ $classRoom->name }}</option>
                             @endforeach
                         </select>
-                    </div>
-
-                    <!-- Step 3: Subjects (checkboxes multiples) -->
-                    <div class="adm-form-group">
-                        <label class="adm-form-label">
-                            <i class="bi bi-book me-1" style="color:#FBBF24;"></i>Matières
-                        </label>
-                        <div id="subjects_container" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:0.75rem;max-height:240px;overflow-y:auto;">
-                            <div class="subject-placeholder" style="text-align:center;padding:1.5rem;color:var(--adm-text-muted);font-size:0.85rem;">
-                                <i class="bi bi-inbox me-1"></i> D'abord choisir une classe
-                            </div>
-                            @foreach($subjects as $subject)
-                                @php
-                                    $classIds = $subject->classes->pluck('id')->implode(',');
-                                @endphp
-                                <label class="subject-checkbox-item" data-class-ids="{{ $classIds }}" style="display:none;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
-                                    <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}" style="width:16px;height:16px;accent-color:#FBBF24;cursor:pointer;flex-shrink:0;">
-                                    <span style="font-size:0.88rem;color:rgba(255,255,255,0.8);">{{ $subject->name }}</span>
-                                </label>
-                            @endforeach
-                        </div>
+                        @error('class_id') <div class="adm-form-error">{{ $message }}</div> @enderror
                         <small style="color:var(--adm-text-muted);font-size:0.75rem;margin-top:4px;display:block;">
-                            <i class="bi bi-info-circle me-1"></i> Cochez une ou plusieurs matières. Seules les matières liées à la classe sélectionnée apparaissent.
+                            <i class="bi bi-info-circle me-1"></i> Seules les classes liées à la matière et au niveau sélectionnés apparaissent.
                         </small>
                     </div>
 
                     <button type="submit" class="adm-btn adm-btn-primary w-100" style="margin-top:8px;">
-                        <i class="bi bi-plus-lg me-1"></i> Assigner les matières sélectionnées
+                        <i class="bi bi-plus-lg me-1"></i> Assigner la matière
                     </button>
                 </form>
             </div>
@@ -186,8 +182,9 @@
                         <thead>
                             <tr>
                                 <th>Étudiant</th>
-                                <th>Classe</th>
                                 <th>Matière</th>
+                                <th>Niveau</th>
+                                <th>Classe</th>
                                 <th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
@@ -195,7 +192,6 @@
                             @forelse($assignments ?? [] as $assignment)
                             <tr>
                                 <td><span style="font-weight:500;">{{ $assignment->student_name }}</span></td>
-                                <td><span class="adm-badge adm-badge-primary">{{ $assignment->class_name }}</span></td>
                                 <td>
                                     @if($assignment->subject_name)
                                         <span class="adm-badge" style="background:rgba(217,119,6,0.15);color:#FBBF24;">{{ $assignment->subject_name }}</span>
@@ -203,6 +199,8 @@
                                         <span style="color:var(--adm-text-muted);font-size:0.8rem;">—</span>
                                     @endif
                                 </td>
+                                <td><span class="adm-badge adm-badge-success">{{ $assignment->level_name ?? '—' }}</span></td>
+                                <td><span class="adm-badge adm-badge-primary">{{ $assignment->class_name }}</span></td>
                                 <td style="text-align:right;">
                                     <div style="display:flex;gap:6px;justify-content:flex-end;">
                                         <button class="adm-btn adm-btn-warning adm-btn-sm" onclick="editAssignment({{ $assignment->user_id }}, {{ $assignment->class_id }}, {{ $assignment->subject_id ?? 'null' }}, {{ $assignment->pivot_id }})">
@@ -219,7 +217,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4">
+                                <td colspan="5">
                                     <div class="adm-empty">
                                         <div class="adm-empty-icon"><i class="bi bi-people"></i></div>
                                         <h5>Aucune assignation</h5>
@@ -257,11 +255,23 @@
                 </div>
 
                 <div class="adm-form-group">
+                    <label class="adm-form-label">Matière</label>
+                    <select name="subject_id" id="edit_subject_id" class="adm-form-select" required>
+                        <option value="">Choisir une matière</option>
+                        @foreach($subjects as $s)
+                            @php $classIds = $s->classes->pluck('id')->implode(','); @endphp
+                        <option value="{{ $s->id }}" data-class-ids="{{ $classIds }}">{{ $s->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="adm-form-group">
                     <label class="adm-form-label">Niveau</label>
                     <select class="adm-form-select" id="edit_level_filter">
-                        <option value="">Sélectionner un niveau</option>
+                        <option value="">D'abord choisir une matière</option>
                         @foreach($levels as $level)
-                        <option value="{{ $level->id }}">{{ $level->name }}</option>
+                            @php $levelSubjectIds = $level->classes->flatMap->subjects->pluck('id')->unique()->implode(','); @endphp
+                        <option value="{{ $level->id }}" data-subject-ids="{{ $levelSubjectIds }}">{{ $level->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -271,18 +281,8 @@
                     <select name="class_id" id="edit_class_id" class="adm-form-select" required>
                         <option value="">D'abord choisir un niveau</option>
                         @foreach($classRooms as $c)
-                        <option value="{{ $c->id }}" data-level-id="{{ $c->level_id }}">{{ $c->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="adm-form-group">
-                    <label class="adm-form-label">Matière <span style="color:var(--adm-text-muted);font-size:0.75rem;">(optionnelle)</span></label>
-                    <select name="subject_id" id="edit_subject_id" class="adm-form-select">
-                        <option value="">Aucune matière spécifique</option>
-                        @foreach($subjects as $s)
-                            @php $classIds = $s->classes->pluck('id')->implode(','); @endphp
-                        <option value="{{ $s->id }}" data-class-ids="{{ $classIds }}">{{ $s->name }}</option>
+                            @php $classSubjectIds = $c->subjects->pluck('id')->implode(','); @endphp
+                        <option value="{{ $c->id }}" data-level-id="{{ $c->level_id }}" data-subject-ids="{{ $classSubjectIds }}">{{ $c->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -296,6 +296,51 @@
 </div>
 
 <script>
+// Matière -> Niveau -> Classe
+function filterLevelsBySubject(subjectSelectId, levelSelectId) {
+    const subjectId = document.getElementById(subjectSelectId).value;
+    const levelSelect = document.getElementById(levelSelectId);
+
+    Array.from(levelSelect.options).forEach(function(option) {
+        if (!option.value) {
+            option.text = subjectId ? 'Choisir un niveau' : 'D\'abord choisir une matière';
+            option.style.display = '';
+            return;
+        }
+
+        const subjectIds = (option.dataset.subjectIds || '').split(',').filter(Boolean);
+        option.style.display = subjectId && subjectIds.includes(subjectId) ? '' : 'none';
+    });
+
+    if (levelSelect.selectedOptions[0]?.style.display === 'none') {
+        levelSelect.value = '';
+    }
+}
+
+function filterClassesBySubjectAndLevel(subjectSelectId, levelSelectId, classSelectId) {
+    const subjectId = document.getElementById(subjectSelectId).value;
+    const levelId = document.getElementById(levelSelectId).value;
+    const classSelect = document.getElementById(classSelectId);
+
+    Array.from(classSelect.options).forEach(function(option) {
+        if (!option.value) {
+            option.text = levelId ? 'Choisir une classe' : 'D\'abord choisir un niveau';
+            option.style.display = '';
+            return;
+        }
+
+        const subjectIds = (option.dataset.subjectIds || '').split(',').filter(Boolean);
+        const visible = subjectId && levelId
+            && option.dataset.levelId === levelId
+            && subjectIds.includes(subjectId);
+        option.style.display = visible ? '' : 'none';
+    });
+
+    if (classSelect.selectedOptions[0]?.style.display === 'none') {
+        classSelect.value = '';
+    }
+}
+
 // 🔄 Filter classes by level
 function filterClassesByLevel(filterSelectId, classSelectId, subjectSelectId, preserveSubject) {
     const filter = document.getElementById(filterSelectId);
@@ -412,27 +457,13 @@ function editAssignment(userId, classId, subjectId, pivotId) {
     document.getElementById('edit_assignment_id').value = pivotId;
     document.getElementById('edit_user_id').value = userId;
 
-    // Find class to get its level
     const classOption = document.querySelector('#edit_class_id option[value="' + classId + '"]');
-    let levelId = '';
-    if (classOption && classOption.dataset.levelId) {
-        levelId = classOption.dataset.levelId;
-    }
-
-    // Set level filter
-    document.getElementById('edit_level_filter').value = levelId;
-
-    // Filter classes by level, but preserve the selected subject
-    filterClassesByLevel('edit_level_filter', 'edit_class_id', 'edit_subject_id', true);
-
-    // Set class value
-    document.getElementById('edit_class_id').value = classId;
-
-    // Filter subjects by class
-    filterSubjectsByClass('edit_class_id', 'edit_subject_id');
-
-    // Set subject value (null → empty string for the select)
+    const levelId = classOption?.dataset.levelId || '';
     document.getElementById('edit_subject_id').value = subjectId || '';
+    filterLevelsBySubject('edit_subject_id', 'edit_level_filter');
+    document.getElementById('edit_level_filter').value = levelId;
+    filterClassesBySubjectAndLevel('edit_subject_id', 'edit_level_filter', 'edit_class_id');
+    document.getElementById('edit_class_id').value = classId;
 
     const form = document.getElementById('editForm');
     form.action = form.action.replace('__PIVOT_ID__', pivotId);
@@ -445,24 +476,30 @@ function closeEditModal() {
     document.body.style.overflow = 'auto';
 }    // 🚀 Init
 document.addEventListener('DOMContentLoaded', function() {
-    // Main form: level → class → subject checkboxes
+    // Main form: subject → level → class
+    document.getElementById('subject_id').addEventListener('change', function() {
+        document.getElementById('level_filter').value = '';
+        document.getElementById('class_id').value = '';
+        filterLevelsBySubject('subject_id', 'level_filter');
+        filterClassesBySubjectAndLevel('subject_id', 'level_filter', 'class_id');
+    });
     document.getElementById('level_filter').addEventListener('change', function() {
-        filterClassesByLevel('level_filter', 'class_id', null);
-    });
-    document.getElementById('class_id').addEventListener('change', function() {
-        filterSubjectCheckboxesByClass('class_id', 'subjects_container');
+        filterClassesBySubjectAndLevel('subject_id', 'level_filter', 'class_id');
     });
 
-    // Edit modal: level → class → subject select
+    // Edit modal: subject → level → class
+    document.getElementById('edit_subject_id').addEventListener('change', function() {
+        document.getElementById('edit_level_filter').value = '';
+        document.getElementById('edit_class_id').value = '';
+        filterLevelsBySubject('edit_subject_id', 'edit_level_filter');
+        filterClassesBySubjectAndLevel('edit_subject_id', 'edit_level_filter', 'edit_class_id');
+    });
     document.getElementById('edit_level_filter').addEventListener('change', function() {
-        filterClassesByLevel('edit_level_filter', 'edit_class_id', 'edit_subject_id');
-    });
-    document.getElementById('edit_class_id').addEventListener('change', function() {
-        filterSubjectsByClass('edit_class_id', 'edit_subject_id');
+        filterClassesBySubjectAndLevel('edit_subject_id', 'edit_level_filter', 'edit_class_id');
     });
 
-    // Initial filter state
-    filterClassesByLevel('level_filter', 'class_id', null);
+    filterLevelsBySubject('subject_id', 'level_filter');
+    filterClassesBySubjectAndLevel('subject_id', 'level_filter', 'class_id');
 });
 </script>
 @endsection

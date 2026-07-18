@@ -211,7 +211,7 @@ $classRoom = ClassRoom::findOrFail($id);
 
     public function subjectsList()
     {
-        $subjects = Subject::withCount('classes')->orderBy('name')->get();
+        $subjects = Subject::with('classes:id,level_id')->withCount('classes')->orderBy('name')->get();
         return view('prof.subjects.index', compact('subjects'));
     }
 
