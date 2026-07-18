@@ -51,21 +51,49 @@
     <div class="st-card-body">
         <form method="POST" action="{{ route('student.assignments.send') }}" enctype="multipart/form-data">
             @csrf
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="st-form-group">
-                        <label class="st-form-label"><i class="bi bi-book me-1" style="color:#818CF8;"></i> Matière <span style="color:#DC2626;">*</span></label>
-                        <select name="subject_id" class="st-form-select" required>
-                            <option value="">Choisir une matière...</option>
-                            @foreach($subjects ?? [] as $subject)
+            <!-- Infos Matière / Niveau / Classe (lecture seule) -->
+            @if($classRoom)
+            <div style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.12);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;flex-wrap:wrap;gap:1.25rem;">
+                <div>
+                    <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;font-weight:600;margin-bottom:4px;">Niveau</div>
+                    <div style="font-weight:600;color:#F1F5F9;font-size:0.85rem;">
+                        <i class="bi bi-mortarboard-fill" style="color:#818CF8;margin-right:6px;"></i>
+                        {{ $classRoom->level->name ?? 'Non défini' }}
+                    </div>
+                </div>
+                <div style="width:1px;height:28px;background:rgba(255,255,255,0.06);align-self:center;"></div>
+                <div>
+                    <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;font-weight:600;margin-bottom:4px;">Classe</div>
+                    <div style="font-weight:600;color:#F1F5F9;font-size:0.85rem;">
+                        <i class="bi bi-building" style="color:#34D399;margin-right:6px;"></i>
+                        {{ $classRoom->name ?? 'Non définie' }}
+                    </div>
+                </div>
+                <div style="width:1px;height:28px;background:rgba(255,255,255,0.06);align-self:center;"></div>
+                <div>
+                    <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.06em;color:#64748B;font-weight:600;margin-bottom:4px;">Matière</div>
+                    @if($hasSingleSubject)
+                        <div style="font-weight:600;color:#F1F5F9;font-size:0.85rem;">
+                            <i class="bi bi-book-fill" style="color:#FBBF24;margin-right:6px;"></i>
+                            {{ $subjects->first()->name }}
+                        </div>
+                        <input type="hidden" name="subject_id" value="{{ $subjects->first()->id }}">
+                    @else
+                        <select name="subject_id" class="st-form-select" required style="font-size:0.8rem;padding:4px 28px 4px 10px;min-width:160px;">
+                            <option value="">Choisir...</option>
+                            @foreach($subjects as $subject)
                             <option value="{{ $subject->id }}" {{ old('subject_id') == $subject->id ? 'selected' : '' }}>
                                 {{ $subject->name }}
                             </option>
                             @endforeach
                         </select>
-                    </div>
+                    @endif
                 </div>
-                <div class="col-md-6">
+            </div>
+            @endif
+
+            <div class="row g-3">
+                <div class="col-md-12">
                     <div class="st-form-group">
                         <label class="st-form-label"><i class="bi bi-journal-text me-1" style="color:#059669;"></i> Titre <span style="color:#DC2626;">*</span></label>
                         <input type="text" name="title" class="st-form-control" placeholder="Ex: Exercice algèbre" value="{{ old('title') }}" required>

@@ -141,6 +141,18 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'Compte désactivé avec succès.');
     }
 
+    public function destroy(User $user)
+    {
+        if ($user->role === 'admin') {
+            return redirect()->back()->with('error', 'Impossible de supprimer un compte administrateur.');
+        }
+
+        $email = $user->email;
+        $user->delete();
+
+        return redirect()->back()->with('success', "Compte de $email annulé et supprimé avec succès.");
+    }
+
     /**
      * List students without class_id
      */

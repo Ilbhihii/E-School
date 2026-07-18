@@ -88,7 +88,11 @@ class LevelController extends Controller
      */
     public function subjectsIndex()
     {
-        $subjects = Subject::with(['levels', 'classes'])->withCount('courses')->orderBy('name')->get();
+        $subjects = Subject::where('name', '!=', 'Administration')
+            ->with(['levels', 'classes'])
+            ->withCount('courses')
+            ->orderBy('name')
+            ->get();
 
         return view('admin.subjects.index', compact('subjects'));
     }

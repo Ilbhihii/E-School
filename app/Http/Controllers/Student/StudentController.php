@@ -190,7 +190,10 @@ $course = Course::with(['subject', 'classRoom', 'devoirs'])->findOrFail($id);
 
         $classRoom = auth()->user()->classRoom;
         $courses = $classRoom?->courses ?? collect([]);
+
+        // Matières de la classe + matières assignées individuellement
         $subjects = $classRoom?->subjects ?? collect([]);
+        $subjects = $subjects->merge(auth()->user()->individuallyAssignedSubjects())->unique('id');
 
         // Devoirs postés par les professeurs pour cette classe
         $profAssignments = collect([]);
@@ -237,23 +240,56 @@ $course = Course::with(['subject', 'classRoom', 'devoirs'])->findOrFail($id);
             });
         }
 
-        return view('student.assignments', compact('assignments', 'courses', 'classRoom', 'subjects', 'profAssignments'));
+        $hasSingleSubject = $subjects->count() === 1;
+
+        return view('student.assignments', compact(
+            'assignments', 'courses', 'classRoom', 'subjects',
+            'profAssignments', 'hasSingleSubject'
+        ));
     }
 
 
     // envoyer devoir
     public function sendAssignment(Request $request)
     {
+        $user = auth()->user();
+        $userClassRoom = $user->classRoom;
+
+        // Matières assignées à l'étudiant
+        $validSubjects = collect();
+        if ($userClassRoom) {
+            $validSubjects = $userClassRoom->subjects;
+        }
+        $validSubjects = $validSubjects->merge($user->individuallyAssignedSubjects())->unique('id');
+
+        if ($validSubjects->count() === 0) {
+            return back()->with('error', 'Aucune matière assignée à votre compte. Veuillez contacter l\'administration.');
+        }
+
+        // Déterminer la matière
+        $subjectId = $request->subject_id;
+
+        if (!$subjectId) {
+            // Auto-détection si une seule matière
+            if ($validSubjects->count() === 1) {
+                $subjectId = $validSubjects->first()->id;
+            } else {
+                return back()->with('error', 'Veuillez sélectionner une matière dans le formulaire.');
+            }
+        } else {
+            // Vérifier que la matière fournie appartient bien à l'étudiant
+            if (!$validSubjects->pluck('id')->contains((int)$subjectId)) {
+                return back()->with('error', 'Cette matière ne vous est pas assignée.');
+            }
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'file' => 'required|file|max:10240', // 10MB
-            'subject_id' => 'required|exists:subjects,id',
         ]);
 
-        $userClassRoom = auth()->user()->classRoom;
-
         // Trouver un cours dans cette matière pour la classe de l'étudiant
-        $course = Course::where('subject_id', $request->subject_id)
+        $course = Course::where('subject_id', $subjectId)
             ->where('class_id', $userClassRoom?->id)
             ->first();
 
@@ -264,11 +300,11 @@ $course = Course::with(['subject', 'classRoom', 'devoirs'])->findOrFail($id);
         $file = $request->file('file')->store('assignments','public');
 
         Assignment::create([
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'title' => $request->title,
             'file' => $file,
             'course_id' => $course->id,
-            'subject_id' => $request->subject_id,
+            'subject_id' => $subjectId,
         ]);
 
         return back()->with('success','Devoir envoyé avec succès !');

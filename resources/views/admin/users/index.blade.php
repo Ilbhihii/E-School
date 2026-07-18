@@ -115,6 +115,12 @@
                                     </button>
                                 </form>
                                 @endif
+                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler définitivement le compte de {{ addslashes($user->name) }} ? Cette action est irréversible.')">
+                                    @csrf @method('DELETE')
+                                    <button class="adm-btn adm-btn-sm" style="background:rgba(127,29,29,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:6px 10px;cursor:pointer;transition:all 0.2s;font-size:0.75rem;" type="submit" title="Annuler le compte (suppression définitive)">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
