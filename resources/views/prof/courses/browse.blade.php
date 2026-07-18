@@ -7,11 +7,11 @@
         <div class="admin-header">
             <div>
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px;color:var(--muted);">
-                    <a href="{{ route('prof.levels') }}" style="color:var(--muted);text-decoration:none;"><i class="bi bi-layers me-1"></i>Niveaux</a>
+                    <a href="{{ route('prof.subjects.list') }}" style="color:var(--muted);text-decoration:none;"><i class="bi bi-book me-1"></i>Matières</a>
                     <span>/</span>
-                    <a href="{{ route('prof.levels.classes', $level) }}" style="color:var(--muted);text-decoration:none;">{{ $level->name }}</a>
+                    <span style="color:var(--muted);">{{ $level->name }}</span>
                     <span>/</span>
-                    <a href="{{ route('prof.subjects', [$level, $class]) }}" style="color:var(--muted);text-decoration:none;">{{ $class->name }}</a>
+                    <span style="color:var(--muted);">{{ $class->name }}</span>
                     <span>/</span>
                     <span style="color:var(--text);font-weight:600;">{{ $subject->name }}</span>
                 </div>
@@ -79,8 +79,8 @@
         @endif
 
         <div class="st-mt-3">
-            <a href="{{ route('prof.subjects', [$level, $class]) }}" class="adm-btn adm-btn-ghost">
-                <i class="bi bi-arrow-left me-1"></i> Retour aux matières
+            <a href="{{ route('prof.dashboard') }}" class="adm-btn adm-btn-ghost">
+                <i class="bi bi-arrow-left me-1"></i> Retour au tableau de bord
             </a>
         </div>
 

@@ -1,5 +1,9 @@
 @extends('layouts.prof')
 
+@section('title', 'Devoirs - ' . $subject->name . ' - ' . $class->name)
+@section('page_title', 'Devoirs — ' . $subject->name)
+@section('breadcrumb', 'Matières → Niveaux → Classes → Devoirs')
+
 @section('content')
 <div class="admin-page">
     <div class="admin-container">
@@ -9,14 +13,14 @@
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px;color:var(--muted);">
                     <a href="{{ route('prof.subjects.list') }}" style="color:var(--muted);text-decoration:none;"><i class="bi bi-book me-1"></i>Matières</a>
                     <span>/</span>
-                    <span style="color:var(--muted);">{{ $level->name }}</span>
+                    <a href="{{ route('prof.subjects.levels', $subject) }}" style="color:var(--muted);text-decoration:none;">{{ $subject->name }}</a>
                     <span>/</span>
-                    <span style="color:var(--muted);">{{ $class->name }}</span>
+                    <a href="{{ route('prof.subjects.classes', [$subject, $level]) }}" style="color:var(--muted);text-decoration:none;">{{ $level->name }}</a>
                     <span>/</span>
-                    <span style="color:var(--text);font-weight:600;">{{ $subject->name }}</span>
+                    <span style="color:var(--text);font-weight:600;">{{ $class->name }}</span>
                 </div>
                 <h1 class="admin-header-title"><span class="gradient">📚 Devoirs — {{ $subject->name }}</span></h1>
-                <p class="admin-header-subtitle">{{ $class->name }} — Gérez les devoirs de cette matière</p>
+                <p class="admin-header-subtitle">{{ $class->name }} · {{ $level->name }} — Gérez les devoirs de cette matière</p>
             </div>
             <a href="{{ route('prof.devoir.create') }}" class="adm-btn adm-btn-success">
                 <i class="bi bi-plus-lg"></i> Nouveau Devoir
@@ -92,9 +96,9 @@
             @endforeach
         @endif
 
-        <div class="st-mt-3">
-            <a href="{{ route('prof.dashboard') }}" class="adm-btn adm-btn-ghost">
-                <i class="bi bi-arrow-left me-1"></i> Retour au tableau de bord
+        <div class="mt-4">
+            <a href="{{ route('prof.subjects.classes', [$subject, $level]) }}" class="adm-btn adm-btn-ghost">
+                <i class="bi bi-arrow-left me-1"></i> Retour aux classes
             </a>
         </div>
 

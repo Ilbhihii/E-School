@@ -127,7 +127,13 @@ class LiveController extends Controller
             }
         }
 
-        return view('admin.lives.create', compact('subjects', 'levels', 'classes', 'levelSubjectMap'));
+        // Derniers lives créés (pour les afficher après enregistrement)
+        $recentLives = Live::with('classRoom.level')
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        return view('admin.lives.create', compact('subjects', 'levels', 'classes', 'levelSubjectMap', 'recentLives'));
     }
 
     // Enregistrer un live
@@ -140,7 +146,7 @@ class LiveController extends Controller
         $request->validate([
             'title' => 'required',
             'class_id' => 'required',
-            'stream_url' => 'nullable|url',
+            'stream_url' => 'required|url',
             'live_date' => 'required|date',
             'start_time' => 'required',
             'end_time' => 'required',

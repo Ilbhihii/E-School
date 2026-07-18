@@ -54,13 +54,13 @@
                             <div class="adm-card-body text-center" style="padding:1.5rem;">
                                 <h4 style="font-weight:700;color:var(--text);margin-bottom:1rem;">{{ $class->name }}</h4>
                                 <div class="d-flex flex-wrap gap-2" style="justify-content:center;">
-                                    <a href="{{ route('prof.browse.courses', [$level, $class, $subject]) }}" class="adm-btn adm-btn-{{ $colorMap[$gIdx % count($colorMap)] }} adm-btn-sm">
+                                    <a href="{{ route('prof.subjects.courses', [$subject, $level, $class]) }}" class="adm-btn adm-btn-{{ $colorMap[$gIdx % count($colorMap)] }} adm-btn-sm">
                                         <i class="bi bi-play-circle me-1"></i> Cours
                                     </a>
-                                    <a href="{{ route('prof.browse.lives', [$level, $class]) }}" class="adm-btn adm-btn-danger adm-btn-sm">
+                                    <a href="{{ route('prof.subjects.lives', [$subject, $level, $class]) }}" class="adm-btn adm-btn-danger adm-btn-sm">
                                         <i class="bi bi-camera-video me-1"></i> Lives
                                     </a>
-                                    <a href="{{ route('prof.browse.devoirs', [$level, $class, $subject]) }}" class="adm-btn adm-btn-success adm-btn-sm">
+                                    <a href="{{ route('prof.subjects.devoirs', [$subject, $level, $class]) }}" class="adm-btn adm-btn-success adm-btn-sm">
                                         <i class="bi bi-file-earmark-check me-1"></i> Devoirs
                                     </a>
                                 </div>

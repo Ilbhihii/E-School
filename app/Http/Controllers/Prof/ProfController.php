@@ -207,7 +207,7 @@ $classRoom = ClassRoom::findOrFail($id);
         return view('prof.lives.index', compact('lives', 'totalLives', 'recentLives', 'upcomingLives'));
     }
 
-    // ═══ Navigation hiérarchique : Matières → Niveaux → Classes ═══
+    // ═══ Navigation hiérarchique : Matières → Niveaux → Classes → Cours ═══
 
     public function subjectsList()
     {
@@ -228,6 +228,46 @@ $classRoom = ClassRoom::findOrFail($id);
             ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
             ->get();
         return view('prof.subjects.classes', compact('subject', 'level', 'classes'));
+    }
+
+    /**
+     * Affiche les cours d'une matière pour une classe dans le parcours Matière → Niveau → Classe → Cours
+     */
+    public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
+    {
+        $courses = Course::where('subject_id', $subject->id)
+            ->where('class_id', $class->id)
+            ->where('user_id', auth()->id())
+            ->with(['classRoom', 'subject'])
+            ->get();
+
+        return view('prof.subjects.courses', compact('subject', 'level', 'class', 'courses'));
+    }
+
+    /**
+     * Affiche les lives d'une classe dans le parcours Matière → Niveau → Classe → Lives
+     */
+    public function subjectLives(Subject $subject, Level $level, ClassRoom $class)
+    {
+        $lives = Live::where('class_id', $class->id)
+            ->latest()
+            ->get();
+
+        return view('prof.subjects.lives', compact('subject', 'level', 'class', 'lives'));
+    }
+
+    /**
+     * Affiche les devoirs d'une matière pour une classe dans le parcours Matière → Niveau → Classe → Devoirs
+     */
+    public function subjectDevoirs(Subject $subject, Level $level, ClassRoom $class)
+    {
+        $courses = Course::where('subject_id', $subject->id)
+            ->where('class_id', $class->id)
+            ->where('user_id', auth()->id())
+            ->with('devoirs')
+            ->get();
+
+        return view('prof.subjects.devoirs', compact('subject', 'level', 'class', 'courses'));
     }
 
 }

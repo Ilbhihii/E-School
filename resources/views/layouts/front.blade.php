@@ -938,7 +938,7 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('front.niveaux') }}">Niveaux</a>
+                    <a class="nav-link" href="{{ route('front.classes') }}">Matières</a>
                 </li>
 
                 <li class="nav-item">

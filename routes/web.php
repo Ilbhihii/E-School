@@ -147,6 +147,7 @@ Route::middleware(['auth','isAdmin'])
     Route::get('/subjects', [LevelController::class, 'subjectsIndex'])->name('subjects.index');
     Route::get('/subjects/{subject}/levels', [LevelController::class, 'subjectLevels'])->name('subjects.levels');
     Route::get('/subjects/{subject}/levels/{level}/classes', [LevelController::class, 'subjectClasses'])->name('subjects.classes');
+    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [LevelController::class, 'subjectCourses'])->name('subjects.courses');
 
     // Ancienne navigation Niveaux → Classes (conservée pour la rétrocompatibilité)
     Route::get('/levels/{level}/classes', [LevelController::class, 'classes'])->name('levels.classes');
@@ -282,12 +283,15 @@ Route::middleware(['auth','isProf'])
         
     Route::get('/lives', [ProfController::class, 'livesIndex'])->name('lives.index');
 
-    // Navigation hiérarchique : Matières → Niveaux → Classes
+    // Navigation hiérarchique : Matières → Niveaux → Classes → Cours
     Route::get('/subjects', [ProfController::class, 'subjectsList'])->name('subjects.list');
     Route::get('/subjects/{subject}/levels', [ProfController::class, 'subjectLevels'])->name('subjects.levels');
     Route::get('/subjects/{subject}/levels/{level}/classes', [ProfController::class, 'subjectClasses'])->name('subjects.classes');
+    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [ProfController::class, 'subjectCourses'])->name('subjects.courses');
+    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/lives', [ProfController::class, 'subjectLives'])->name('subjects.lives');
+    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/devoirs', [ProfController::class, 'subjectDevoirs'])->name('subjects.devoirs');
 
-    // Browse routes (cours, lives, devoirs) à partir des classes
+    // Browse routes (cours, lives, devoirs) -- conserves pour ret compatibilite
     Route::get('/browse/{level}/{class}/courses/{subject}', [ProfLevelController::class, 'courses'])->name('browse.courses');
     Route::get('/browse/{level}/{class}/lives', [ProfController::class, 'browseLives'])->name('browse.lives');
     Route::get('/browse/{level}/{class}/devoirs/{subject}', [ProfController::class, 'browseDevoirs'])->name('browse.devoirs');

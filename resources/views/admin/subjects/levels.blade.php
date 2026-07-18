@@ -80,7 +80,7 @@
                                 $courseCount = $class->courses()->where('subject_id', $subject->id)->count();
                             @endphp
                             <div style="flex:1;min-width:250px;max-width:350px;">
-                                <a href="{{ route('admin.levels.courses', [$level, $class, $subject]) }}" class="text-decoration-none">
+                                <a href="{{ route('admin.subjects.courses', [$subject, $level, $class]) }}" class="text-decoration-none">
                                     <div class="adm-card" style="cursor:pointer;transition:all 0.3s ease;height:100%;">
                                         <div class="adm-card-body" style="padding:1rem;display:flex;align-items:center;gap:12px;">
                                             <div style="width:48px;height:48px;border-radius:12px;background:{{ $classGradients[$gIdx] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">

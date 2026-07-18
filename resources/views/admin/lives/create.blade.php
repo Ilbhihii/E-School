@@ -96,14 +96,15 @@
 
                         <div class="adm-form-group mt-2" style="margin-bottom:0;">
                             <label class="adm-form-label" style="font-size:0.75rem;">
-                                Lien du live 
-                                <span id="linkStatus" style="color:#64748B;font-size:0.7rem;font-weight:400;">(généré automatiquement)</span>
+                                Lien de la réunion 
+                                <span style="color:#EF4444;font-size:0.7rem;font-weight:400;">(obligatoire — à coller après création Outlook)</span>
                             </label>
-                            <div style="display:flex;gap:6px;">
+                            <div style="display:flex;gap:6px;flex-direction:column;">
                                 <input type="url" id="outlook_url" class="adm-form-control" placeholder="https://meet.google.com/xxx-xxxx-xxx" style="font-size:0.85rem;flex:1;">
-                                <button type="button" id="regenerateBtn" style="padding:8px 14px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:#94A3B8;cursor:pointer;font-size:0.75rem;display:none;" onclick="generateRoomId()" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
-                                    <i class="bi bi-arrow-clockwise"></i>
-                                </button>
+                                <div style="font-size:0.7rem;color:#64748B;display:flex;align-items:center;gap:6px;">
+                                    <i class="bi bi-info-circle"></i>
+                                    Collez ici le lien de réunion après avoir créé l'événement dans Outlook
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -119,7 +120,7 @@
                             <i class="bi bi-plus-circle" style="font-size:1.1rem;"></i>
                             Créer dans Outlook
                         </a>
-                        <span id="outlookStatus" style="font-size:0.7rem;color:#64748B;text-align:center;">Remplissez les champs pour activer</span>
+                        <span id="outlookStatus" style="font-size:0.7rem;color:#64748B;text-align:center;">Remplissez les champs (titre, date, heure, classe)</span>
                     </div>
                 </div>
             </div>
@@ -199,8 +200,12 @@
                         </div>
 
                         <div class="adm-form-group">
-                            <label class="adm-form-label">Lien (YouTube / Zoom) <span style="color:#64748B;font-size:0.7rem;font-weight:400;">(optionnel — vous pourrez le modifier plus tard)</span></label>
-                            <input type="url" name="stream_url" value="{{ old('stream_url') }}" class="adm-form-control @error('stream_url') error @enderror" placeholder="https://...">
+                            <label class="adm-form-label">Lien de la réunion <span style="color:#EF4444;font-size:0.7rem;font-weight:400;">(obligatoire)</span></label>
+                            <input type="url" name="stream_url" value="{{ old('stream_url') }}" class="adm-form-control @error('stream_url') error @enderror" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+                            <div style="font-size:0.7rem;color:#64748B;margin-top:0.35rem;">
+                                <i class="bi bi-info-circle"></i>
+                                Utilisez un lien de Google Meet, Zoom, Microsoft Teams ou YouTube Live
+                            </div>
                             @error('stream_url') <div class="adm-form-error">{{ $message }}</div> @enderror
                         </div>
 
@@ -227,26 +232,104 @@
             </div>
         </details>
 
+        <!-- RECENT LIVES -->
+        <div class="adm-card mt-4" style="border-left:4px solid #22C55E;">
+            <div class="adm-card-header" style="background:linear-gradient(135deg, rgba(34,197,94,0.08), rgba(34,197,94,0.03));">
+                <h4><i class="bi bi-check2-circle" style="color:#22C55E;"></i> Lives enregistrés</h4>
+                <div class="card-actions">
+                    <span style="color:var(--adm-text-muted);font-size:0.78rem;">{{ $recentLives->count() }} live(s) récents</span>
+                </div>
+            </div>
+            <div class="adm-card-body p-0">
+                @if($recentLives->isEmpty())
+                    <div class="adm-empty" style="padding:3rem 2rem;">
+                        <div class="adm-empty-icon"><i class="bi bi-camera-video"></i></div>
+                        <h5>Aucun live enregistré</h5>
+                        <p>Les lives que vous créerez apparaîtront ici avec leur date, heure et lien.</p>
+                    </div>
+                @else
+                    <div class="adm-table-wrap">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>Titre</th>
+                                    <th>Classe</th>
+                                    <th>Date</th>
+                                    <th>Horaire</th>
+                                    <th>Lien de réunion</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($recentLives as $live)
+                                <tr>
+                                    <td><span style="font-weight:500;">{{ $live->title }}</span></td>
+                                    <td>
+                                        @if($live->classRoom)
+                                            <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name }}</span>
+                                            @if($live->classRoom->level)
+                                                <span style="color:var(--adm-text-muted);font-size:0.7rem;margin-left:4px;">({{ $live->classRoom->level->name }})</span>
+                                            @endif
+                                        @else
+                                            <span style="color:var(--adm-text-muted);">—</span>
+                                        @endif
+                                    </td>
+                                    <td style="color:var(--adm-text-muted);font-size:0.85rem;">
+                                        @if($live->live_date)
+                                            {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
+                                        @else
+                                            {{ $live->created_at->format('d/m/Y') }}
+                                        @endif
+                                    </td>
+                                    <td style="color:var(--adm-text-muted);font-size:0.85rem;">
+                                        @if($live->start_time)
+                                            {{ $live->start_time }} @if($live->end_time) — {{ $live->end_time }} @endif
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($live->stream_url)
+                                        <a href="{{ $live->stream_url }}" target="_blank" class="adm-btn adm-btn-ghost adm-btn-sm" title="{{ $live->stream_url }}" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;align-items:center;">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i>
+                                            <span style="overflow:hidden;text-overflow:ellipsis;">{{ $live->stream_url }}</span>
+                                        </a>
+                                        @else
+                                        <span style="color:var(--adm-text-muted);font-size:0.75rem;">—</span>
+                                        @endif
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div style="display:flex;gap:6px;justify-content:flex-end;">
+                                            <a href="{{ route('admin.lives.edit', $live) }}" class="adm-btn adm-btn-warning adm-btn-sm">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="POST" action="{{ route('admin.lives.destroy',$live) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce live ?')">
+                                                @csrf @method('DELETE')
+                                                <button class="adm-btn adm-btn-danger adm-btn-sm" type="submit">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+
     </div>
 </div>
 
 <script>
 (function() {
-    // Générer un ID de salle unique
-    function generateRoomId() {
-        let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let room = '';
-        for (let i = 0; i < 8; i++) {
-            room += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        let link = 'https://meet.smartschoolacademy.com/room/' + room;
-        document.getElementById('outlook_url').value = link;
-        document.getElementById('regenerateBtn').style.display = 'block';
-        document.getElementById('linkStatus').textContent = '(lien généré) ';
-        syncFields();
-    }
-
-    window.generateRoomId = generateRoomId;
+    // ─── Outlook Integration ───
+    // Remplissez le formulaire → cliquez sur "Créer dans Outlook" →
+    // Outlook s'ouvre avec les détails pré-remplis →
+    // Créez l'événement dans Outlook, récupérez le lien →
+    // Collez le lien dans le champ → Enregistrez dans Laravel
 
     // ─── Cascading filters ───
 
@@ -374,21 +457,14 @@
             return;
         }
 
-        // Auto-générer le lien si pas encore fait
-        let urlField = document.getElementById('outlook_url');
-        if (!urlField.value) {
-            generateRoomId();
-            streamUrl = urlField.value;
-        }
-
         if (!endTime) {
             let [h, m] = startTime.split(':').map(Number);
             h = (h + 1) % 24;
             endTime = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
         }
 
-        let startDt = liveDate.replace(/-/g, '') + 'T' + startTime.replace(/:/g, '');
-        let endDt = liveDate.replace(/-/g, '') + 'T' + endTime.replace(/:/g, '');
+        let startDt = liveDate + 'T' + startTime + ':00Z';
+        let endDt = liveDate + 'T' + endTime + ':00Z';
         let fullSubject = title;
         if (subjectName) fullSubject += ' - ' + subjectName;
         if (levelName) fullSubject += ' (' + levelName + ')';

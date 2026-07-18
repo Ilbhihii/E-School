@@ -84,13 +84,13 @@ class LevelController extends Controller
     }
 
     /**
-     * Affiche la page de gestion des niveaux
+     * Affiche la page des matières (point d'entrée de la hiérarchie Matière → Niveau → Classe)
      */
     public function subjectsIndex()
     {
-        $levels = Level::with('classes')->orderBy('name')->get();
+        $subjects = Subject::with(['levels', 'classes'])->withCount('courses')->orderBy('name')->get();
 
-        return view('admin.subjects.index', compact('levels'));
+        return view('admin.subjects.index', compact('subjects'));
     }
 
     /**
@@ -118,6 +118,19 @@ class LevelController extends Controller
             ->get();
 
         return view('admin.subjects.classes', compact('subject', 'level', 'classes'));
+    }
+
+    /**
+     * Affiche les cours d'une matière pour une classe (nouveau chemin Matière → Niveau → Classe → Cours)
+     */
+    public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
+    {
+        $courses = Course::where('subject_id', $subject->id)
+            ->where('class_id', $class->id)
+            ->with(['classRoom', 'subject'])
+            ->get();
+
+        return view('admin.subjects.courses', compact('level', 'class', 'subject', 'courses'));
     }
 
     public function store(Request $request)

@@ -119,8 +119,8 @@
                                         $liveDate = \Carbon\Carbon::parse($live->live_date);
                                         $startTime = $live->start_time ? $live->start_time : '00:00';
                                         $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-                                        $startDt = $liveDate->format('Ymd\THis');
-                                        $endDt = \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis');
+                                        $startDt = $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z';
+                                        $endDt = $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z';
                                         $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
                                         $outlookUrl .= '&subject=' . urlencode($live->title);
                                         $outlookUrl .= '&startdt=' . $startDt;
@@ -176,8 +176,8 @@
                 $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
                 $startTime = $live->start_time ? $live->start_time : '00:00';
                 $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-                $startDt = $liveDate ? $liveDate->format('Ymd\THis') : '';
-                $endDt = $liveDate ? \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis') : '';
+                $startDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z' : '';
+                $endDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z' : '';
                 $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
                 $outlookUrl .= '&subject=' . urlencode($live->title);
                 $outlookUrl .= '&startdt=' . $startDt;

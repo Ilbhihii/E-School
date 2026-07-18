@@ -75,11 +75,11 @@
                 $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
                 $startTime = $live->start_time ? $live->start_time : ($liveDate ? $liveDate->format('H:i') : '00:00');
                 $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-                $startDt = $liveDate ? $liveDate->format('Ymd\THis') : now()->format('Ymd\THis');
+                $startDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z' : now()->format('Y-m-d\TH:i:s\Z');
 
                 $endDt = $liveDate
-                    ? \Carbon\Carbon::parse($liveDate->format('Y-m-d') . ' ' . $endTime)->format('Ymd\THis')
-                    : now()->addHour()->format('Ymd\THis');
+                    ? $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z'
+                    : now()->addHour()->format('Y-m-d\TH:i:s\Z');
 
                 $isLive = $liveDate && now()->gte($liveDate) && now()->lt($liveDate->copy()->addHours(2));
                 $isUpcoming = $liveDate && now()->lt($liveDate);

@@ -426,73 +426,37 @@ public function levels()
 
 public function levelClasses(Level $level)
 {
-    $user = auth()->user();
-    
-    // Vérifier que le niveau demandé est bien celui de l'étudiant
-    if (!$user->classRoom || !$user->classRoom->level || $user->classRoom->level->id !== $level->id) {
-        return redirect()->route('student.subjects.index')
-            ->with('error', 'Accès non autorisé à ce niveau.');
-    }
-    
-    $classes = ClassRoom::where('level_id', $level->id)->get();
-    return view('student.level-classes', compact('classes', 'level'));
+    return redirect()->route('student.subjects.index')
+        ->with('info', 'Utilisez la navigation par matières pour accéder à vos cours.');
 }
 
 public function levelSubjects(Level $level, ClassRoom $class)
 {
-    $user = auth()->user();
-    
-    // Vérifier que la classe demandée est bien celle de l'étudiant
-    if (!$user->classRoom || $user->classRoom->id !== $class->id) {
-        return redirect()->route('student.subjects.index')
-            ->with('error', 'Accès non autorisé à cette classe.');
-    }
-    
-    $subjects = Subject::whereHas('classes', function($q) use ($class) {
-        $q->where('class_room_id', $class->id);
-    })->get();
-
-    return view('student.level-subjects', compact('subjects', 'level', 'class'));
+    return redirect()->route('student.subjects.index')
+        ->with('info', 'Utilisez la navigation par matières pour accéder à vos cours.');
 }
 
 public function subjects(Level $level)
 {
-    $user = auth()->user();
-    $classRoom = $user->classRoom()->with('level')->first();
-
-    if (!$classRoom) {
-        return redirect()->route('student.levels')
-            ->with('warning', 'Veuillez d\'abord choisir un niveau et une classe.');
-    }
-
-    $subjects = Subject::whereHas('classes', function($q) use ($level){
-        $q->where('level_id', $level->id);
-    })->get();
-
-    return view('student.subjects', compact('subjects', 'level', 'classRoom'));
+    return redirect()->route('student.subjects.index')
+        ->with('info', 'Utilisez la navigation par matières pour accéder à vos cours.');
 }
 
 public function classes(Subject $subject, Level $level)
 {
-    $user = auth()->user();
-    $classRoom = $user->classRoom;
-
-    $classes = $subject->classes()
-        ->where('level_id', $level->id)
-        ->get();
-
-    return view('student.class.subject-classes', compact('classes', 'subject', 'level', 'classRoom'));
+    return redirect()->route('student.subjects.classes', [$subject, $level]);
 }
 
 public function courses(Subject $subject, ClassRoom $class)
 {
+    $level = $class->level;
+    
+    if (!$level) {
+        return redirect()->route('student.subjects.index')
+            ->with('error', 'Niveau non trouvé pour cette classe.');
+    }
 
-    $courses = Course::where('subject_id', $subject->id)
-        ->where('class_id', $class->id)
-        ->withCount('devoirs')
-        ->get();
-
-    return view('student.class.courses', compact('courses', 'class', 'subject'));
+    return redirect()->route('student.subjects.courses', [$subject, $level, $class]);
 }
 
     public function index(Request $request)
