@@ -29,6 +29,19 @@
                     <form method="POST" action="{{ route('appointment.store') }}{{ request()->query('from') ? '?' . http_build_query(['redirect' => 'student.waiting']) : '' }}">
                         @csrf
 
+                        @if($vocalSubmission)
+                            <input type="hidden" name="vocal_test_submission_id" value="{{ $vocalSubmission->id }}">
+                            <div class="mb-4" style="padding:16px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);border-radius:14px;color:#D1FAE5;">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-mic-fill" style="color:#4ADE80;"></i>
+                                    <strong>Récitation vocale enregistrée</strong>
+                                </div>
+                                <small style="color:rgba(255,255,255,.6);">
+                                    {{ $vocalSubmission->subject->name }} · {{ $vocalSubmission->level->name }} · {{ $vocalSubmission->classRoom->name }}
+                                </small>
+                            </div>
+                        @endif
+
                         @if(session('success'))
                             <div class="alert mb-4" style="background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; padding: 14px 18px; font-size: 0.92rem;">
                                 <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
@@ -130,7 +143,7 @@
                         </div>
 
                         <button type="submit" class="btn-3d btn-3d-gradient w-100 mt-4" style="padding: 14px;">
-                            <i class="bi bi-calendar-check me-2"></i> Envoyer ma demande
+                            <i class="bi bi-calendar-check me-2"></i> Envoyer mon rendez-vous de test
                         </button>
                     </form>
                 </div>

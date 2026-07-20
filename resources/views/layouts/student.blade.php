@@ -189,6 +189,7 @@
     <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/student-refresh.css') }}">
 </head>
 <body>
 
@@ -302,17 +303,22 @@
                         <h2 class="st-topbar-page-title">
                             @yield('page_title', 'Tableau de bord')
                         </h2>
+                        @unless(Route::is('student.dashboard'))
                         <div class="st-topbar-breadcrumb">
                             <a href="{{ route('student.dashboard') }}">Accueil</a>
                             <span>/</span>
                             <span>@yield('breadcrumb', 'Tableau de bord')</span>
                         </div>
+                        @endunless
                     </div>
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
 
                     @if(!Route::is('student.waiting'))
+                    <a href="{{ route('home') }}" class="st-tb-link">
+                        <i class="bi bi-house-door"></i> <span class="d-none d-md-inline">Accueil principal</span>
+                    </a>
                     <a href="{{ route('student.subjects.index') }}" class="st-tb-link {{ str_contains($route ?? '', 'subject') ? 'active' : '' }}">
                         <i class="bi bi-book"></i> <span class="d-none d-md-inline">Matières</span>
                     </a>

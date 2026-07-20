@@ -3,11 +3,22 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up()
     {
+        if (DB::getDriverName() === 'sqlite') {
+            if (!Schema::hasColumn('courses', 'level_id')) {
+                Schema::table('courses', function (Blueprint $table) {
+                    $table->unsignedBigInteger('level_id')->nullable();
+                });
+            }
+
+            return;
+        }
+
         Schema::table('courses', function (Blueprint $table) {
             // Drop class_id if it exists
             if (Schema::hasColumn('courses', 'class_id')) {
@@ -57,4 +68,3 @@ return new class extends Migration
         });
     }
 };
-

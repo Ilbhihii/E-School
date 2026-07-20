@@ -24,15 +24,24 @@ class UserController extends Controller
     public function profAssignments()
     {
         $professors = User::where('role', 'prof')->orderBy('name')->get();
-        $levels = Level::orderBy('name')->get();
-        $classes = ClassRoom::orderBy('name')->get();
-        $subjects = Subject::orderBy('name')->get();
+        $subjects = Subject::with(['levels' => fn ($query) => $query
+                ->with(['classes' => fn ($classes) => $classes->orderBy('name')])
+                ->orderBy('order')->orderBy('name')])
+            ->orderBy('name')->get();
+        $hierarchy = $subjects->mapWithKeys(fn ($subject) => [
+            $subject->id => $subject->levels->map(fn ($level) => [
+                'id' => $level->id,
+                'name' => $level->name,
+                'classes' => $level->classes
+                    ->map->only(['id', 'name'])->values(),
+            ])->values(),
+        ]);
         $assignments = ProfAssignment::with(['prof', 'level', 'classRoom', 'subject'])
             ->latest()
             ->get();
 
         return view('admin.prof-assignments', compact(
-            'professors', 'levels', 'classes', 'subjects', 'assignments'
+            'professors', 'subjects', 'hierarchy', 'assignments'
         ));
     }
 
@@ -288,6 +297,19 @@ class UserController extends Controller
             'class_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
         ]);
+
+        abort_unless(User::whereKey($request->prof_id)->where('role', 'prof')->exists(), 422);
+        $level = Level::whereKey($request->level_id)
+            ->where('subject_id', $request->subject_id)->first();
+        if (! $level) {
+            return back()->withInput()->withErrors(['level_id' => 'Ce niveau n’appartient pas à la matière sélectionnée.']);
+        }
+        $class = ClassRoom::whereKey($request->class_id)
+            ->where('level_id', $level->id)
+            ->first();
+        if (! $class) {
+            return back()->withInput()->withErrors(['class_id' => 'Cette classe n’appartient pas au niveau et à la matière sélectionnés.']);
+        }
 
         if (!User::whereKey($request->user_id)->where('role', 'student')->exists()) {
             return back()->withInput()->withErrors(['user_id' => 'L’utilisateur sélectionné n’est pas un étudiant.']);

@@ -63,7 +63,7 @@ html.light-mode .subjects-title{color:#172033}html.light-mode .subjects-subtitle
                 ['#06B6D4','linear-gradient(135deg,#0E7490,#22D3EE)'],
             ];
             [$color, $gradient] = $themes[$loop->index % count($themes)];
-            $levelCount = $subject->classes->pluck('level_id')->filter()->unique()->count();
+            $levelCount = $subject->assigned_levels_count ?? 0;
         @endphp
         <div class="col-sm-6 col-xl-4 subject-item" data-name="{{ Str::lower($subject->name) }}">
             <a href="{{ route('prof.subjects.levels', $subject) }}" class="text-decoration-none">
@@ -73,7 +73,7 @@ html.light-mode .subjects-title{color:#172033}html.light-mode .subjects-subtitle
                         <h2 class="subject-name">{{ $subject->name }}</h2>
                         <div class="subject-meta">
                             <span class="subject-chip"><i class="bi bi-layers me-1"></i>{{ $levelCount }} niveau(x)</span>
-                            <span class="subject-chip"><i class="bi bi-building me-1"></i>{{ $subject->classes_count }} classe(s)</span>
+                            <span class="subject-chip"><i class="bi bi-building me-1"></i>{{ $subject->assigned_classes_count ?? 0 }} classe(s)</span>
                         </div>
                         <div class="subject-action"><span>Explorer les niveaux</span><i class="bi bi-arrow-right"></i></div>
                     </div>

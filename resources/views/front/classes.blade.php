@@ -35,11 +35,18 @@
 
         <div class="row g-4" id="subjectsGrid">
             @forelse($subjects as $subject)
+            @php
+                $subjectDesign = match (mb_strtolower($subject->name)) {
+                    'arabe' => ['icon' => 'bi-translate', 'gradient' => 'linear-gradient(135deg,#2563EB,#06B6D4)'],
+                    'coran' => ['icon' => 'bi-book-half', 'gradient' => 'linear-gradient(135deg,#7C3AED,#A855F7)'],
+                    default => ['icon' => 'bi-journal-bookmark-fill', 'gradient' => 'linear-gradient(135deg,#4F46E5,#7C3AED)'],
+                };
+            @endphp
             <div class="col-md-4 subject-card" data-type="{{ $subject->type }}">
                 <div class="card-3d text-center h-100 reveal-3d">
                     <a href="{{ route('front.subject.levels', $subject->id) }}" class="text-decoration-none">
-                        <div class="card-3d-icon mx-auto">
-                            <i class="bi bi-book"></i>
+                        <div class="card-3d-icon mx-auto" style="background:{{ $subjectDesign['gradient'] }};">
+                            <i class="bi {{ $subjectDesign['icon'] }}"></i>
                         </div>
                         <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">{{ $subject->name }}</h5>
                     </a>

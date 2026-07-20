@@ -23,7 +23,7 @@
                 <p class="admin-header-subtitle">{{ $class->name }} · {{ $level->name }} — {{ $courses->count() }} cours</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('prof.courses.create') }}?class_id={{ $class->id }}&subject_id={{ $subject->id }}" class="adm-btn adm-btn-primary">
+                <a href="{{ route('admin.courses.create', ['class_id' => $class->id, 'subject_id' => $subject->id]) }}" class="adm-btn adm-btn-primary">
                     <i class="bi bi-plus-lg"></i> Nouveau cours
                 </a>
             </div>
@@ -96,13 +96,13 @@
                                 <td style="color:var(--muted);font-size:0.8rem;">{{ $course->created_at->format('d/m/Y') }}</td>
                                 <td style="text-align:right;">
                                     <div style="display:flex;gap:6px;justify-content:flex-end;">
-                                        <a href="{{ route('prof.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir le cours">
+                                        <a href="{{ route('admin.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir le cours">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="{{ route('prof.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
+                                        <a href="{{ route('admin.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <form method="POST" action="{{ route('prof.courses.destroy', $course->id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce cours ?')">
+                                        <form method="POST" action="{{ route('admin.courses.destroy', $course->id) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce cours ?')">
                                             @csrf @method('DELETE')
                                             <button class="adm-btn adm-btn-danger adm-btn-sm" type="submit" title="Supprimer">
                                                 <i class="bi bi-trash"></i>
@@ -120,7 +120,7 @@
                     <div class="adm-empty-icon"><i class="bi bi-inbox"></i></div>
                     <h5>Aucun cours pour cette matière</h5>
                     <p>Créez votre premier cours pour {{ $subject->name }} dans la classe {{ $class->name }}.</p>
-                    <a href="{{ route('prof.courses.create') }}?class_id={{ $class->id }}&subject_id={{ $subject->id }}" class="adm-btn adm-btn-primary adm-btn-sm">
+                    <a href="{{ route('admin.courses.create', ['class_id' => $class->id, 'subject_id' => $subject->id]) }}" class="adm-btn adm-btn-primary adm-btn-sm">
                         <i class="bi bi-plus-lg me-1"></i> Créer un cours
                     </a>
                 </div>

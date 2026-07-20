@@ -199,7 +199,7 @@
     <div>
       <h1>Chat Administration</h1>
       <p>
-        Conversations avec les étudiants
+        Conversations privées avec les étudiants et les professeurs
         @if(isset($subject))
           • {{ $subject->name ?? 'Sujet non spécifié' }}
         @endif
@@ -219,6 +219,11 @@
     @if(isset($messages) && $messages->count() > 0)
       @foreach($messages as $msg)
         <div class="chat-msg {{ $msg->user_id == auth()->id() ? 'own' : 'other' }}">
+          @if($isAdministration)
+            <div style="font-size:.7rem;color:rgba(255,255,255,.4);margin:0 8px 4px;{{ $msg->user_id == auth()->id() ? 'text-align:right;' : '' }}">
+              <i class="bi bi-person me-1"></i>{{ $msg->conversationUser->name ?? 'Conversation non attribuée' }}
+            </div>
+          @endif
           @if($msg->user_id == auth()->id())
             <x-user-message :message="$msg" />
           @else
@@ -231,7 +236,7 @@
         <div class="chat-empty-icon">💬</div>
         <h5>Aucune conversation</h5>
         <p style="color:rgba(255,255,255,0.3);max-width:400px;font-size:0.85rem;">
-          Commencez la conversation avec vos étudiants en envoyant un premier message.
+          Commencez une conversation privée en envoyant un premier message.
         </p>
       </div>
     @endif
@@ -242,6 +247,16 @@
     <form method="POST" action="{{ route('admin.chat.send') }}" class="chat-input-group">
       @csrf
       <input type="hidden" name="subject_id" value="{{ $subject->id ?? '' }}">
+      @if($isAdministration)
+        <select name="conversation_user_id" class="chat-input" required style="flex:0 0 230px;">
+          <option value="">Choisir un étudiant ou professeur</option>
+          @foreach($conversationUsers as $conversationUser)
+            <option value="{{ $conversationUser->id }}" {{ (string) old('conversation_user_id', request('student')) === (string) $conversationUser->id ? 'selected' : '' }}>
+              {{ $conversationUser->role === 'prof' ? 'Professeur' : 'Étudiant' }} — {{ $conversationUser->name }}
+            </option>
+          @endforeach
+        </select>
+      @endif
       <input type="text" name="message" class="chat-input" placeholder="Tapez votre message..." required autocomplete="off">
       <button type="submit" class="btn-send">
         <i class="bi bi-send" style="font-size:0.9rem;"></i> Envoyer

@@ -6,18 +6,19 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Schedule;
 use App\Models\ClassRoom;
+use App\Models\ProfAssignment;
 
 class ScheduleController extends Controller
 {
     public function index()
     {
-        $classes = ClassRoom::all();
+        $classes = $this->assignedClasses();
         return view('prof.schedule', compact('classes'));
     }
 
     public function classes()
     {
-        $classes = ClassRoom::all(['id', 'name']);
+        $classes = $this->assignedClasses(['id', 'name']);
         return response()->json($classes);
     }
 
@@ -33,6 +34,7 @@ class ScheduleController extends Controller
             'start_time' => 'required|date',
             'end_time' => 'required|date|after:start_time'
         ]);
+        abort_unless($this->assignedClassIds()->contains((int) $request->class_id), 403);
 
         Schedule::create([
             'prof_id' => auth()->id(),
@@ -71,7 +73,8 @@ class ScheduleController extends Controller
 
     public function update(Request $request)
     {
-        $schedule = Schedule::find($request->id);
+        $request->validate(['id' => ['required', 'integer'], 'start' => ['required', 'date'], 'end' => ['required', 'date', 'after:start']]);
+        $schedule = Schedule::where('prof_id', auth()->id())->findOrFail($request->id);
 
         $schedule->update([
             'start_time' => $request->start,
@@ -83,8 +86,17 @@ class ScheduleController extends Controller
 
     public function destroy($id)
     {
-        Schedule::findOrFail($id)->delete();
+        Schedule::where('prof_id', auth()->id())->findOrFail($id)->delete();
         return response()->json(['success' => true]);
     }
-}
 
+    private function assignedClassIds()
+    {
+        return ProfAssignment::where('prof_id', auth()->id())->pluck('class_id')->unique();
+    }
+
+    private function assignedClasses(array $columns = ['*'])
+    {
+        return ClassRoom::whereIn('id', $this->assignedClassIds())->orderBy('name')->get($columns);
+    }
+}

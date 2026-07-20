@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
 use App\Models\Course;
 use App\Models\Live;
+use App\Models\Subject;
+use App\Models\TestAppointment;
 use App\Models\User;
 use App\Models\Absence;
 use Illuminate\Http\Request;
@@ -23,24 +25,98 @@ public function index()
         }
 
         $classesCount = ClassRoom::count();
-
         $coursesCount = Course::count();
-
         $livesCount = Live::count();
-
         $usersCount = User::where('role', 'student')->count();
+        $professorsCount = User::where('role', 'prof')->count();
+        $assignedStudentsCount = User::where('role', 'student')->whereNotNull('class_id')->count();
+        $assignmentRate = $usersCount > 0 ? round(($assignedStudentsCount / $usersCount) * 100) : 0;
+        $pendingAppointments = TestAppointment::pending()->count();
 
         $testResultsCount = \App\Models\Result::count();
 
-$students = User::where('role','student')->paginate(10);
+        $students = User::where('role', 'student')->latest()->paginate(10);
+
+        $registrationsByMonth = collect(range(5, 0))->map(function ($monthsAgo) {
+            $date = now()->subMonths($monthsAgo);
+
+            return [
+                'label' => $date->translatedFormat('M Y'),
+                'value' => User::where('role', 'student')
+                    ->whereYear('created_at', $date->year)
+                    ->whereMonth('created_at', $date->month)
+                    ->count(),
+            ];
+        });
+        $maxMonthlyRegistrations = max(1, (int) $registrationsByMonth->max('value'));
+
+        $coursesBySubject = Subject::whereIn('name', ['Arabe', 'Coran'])
+            ->withCount('courses')
+            ->orderBy('name')
+            ->get()
+            ->map(fn($subject) => [
+                'label' => $subject->name,
+                'value' => $subject->courses_count,
+            ]);
+        $maxCoursesBySubject = max(1, (int) $coursesBySubject->max('value'));
+
+        $studentsByCountry = User::where('role', 'student')
+            ->whereNotNull('country')
+            ->where('country', '!=', '')
+            ->selectRaw('country, COUNT(*) as total')
+            ->groupBy('country')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get();
+
+        $appointmentsByStatus = [
+            'pending' => TestAppointment::where('status', TestAppointment::STATUS_PENDING)->count(),
+            'confirmed' => TestAppointment::where('status', TestAppointment::STATUS_CONFIRMED)->count(),
+            'cancelled' => TestAppointment::where('status', TestAppointment::STATUS_CANCELLED)->count(),
+        ];
+
+        $recentActivities = collect()
+            ->concat(User::where('role', 'student')->latest()->limit(3)->get()->map(fn($student) => [
+                'type' => 'student',
+                'title' => 'Nouvel étudiant',
+                'description' => $student->name,
+                'date' => $student->created_at,
+            ]))
+            ->concat(Course::latest()->limit(3)->get()->map(fn($course) => [
+                'type' => 'course',
+                'title' => 'Cours ajouté',
+                'description' => $course->title,
+                'date' => $course->created_at,
+            ]))
+            ->concat(Live::latest()->limit(3)->get()->map(fn($live) => [
+                'type' => 'live',
+                'title' => 'Live programmé',
+                'description' => $live->title,
+                'date' => $live->created_at,
+            ]))
+            ->filter(fn($activity) => $activity['date'])
+            ->sortByDesc('date')
+            ->take(6)
+            ->values();
 
         return view('admin.dashboard', compact(
         'classesCount',
         'coursesCount',
         'livesCount',
         'usersCount',
+        'professorsCount',
+        'assignedStudentsCount',
+        'assignmentRate',
+        'pendingAppointments',
         'testResultsCount',
-        'students'
+        'students',
+        'registrationsByMonth',
+        'maxMonthlyRegistrations',
+        'coursesBySubject',
+        'maxCoursesBySubject',
+        'studentsByCountry',
+        'appointmentsByStatus',
+        'recentActivities'
 
         ));
 
@@ -190,4 +266,3 @@ $students = User::where('role','student')->paginate(10);
     }
 
 }
-

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Subject;
 use App\Models\Level;
 use App\Models\Course;
+use App\Models\ClassRoom;
 
 class FrontController extends Controller
 {
@@ -26,15 +27,17 @@ class FrontController extends Controller
     {
         $subject = Subject::withCount(['courses', 'classes'])->findOrFail($id);
 
-        // Les niveaux sont reliés aux matières via : Subject → classes (pivot) → ClassRoom.level_id → Level
-        $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique();
-        $levels = Level::whereIn('id', $levelIds)
+        // La matière est désormais la source de vérité du niveau. Cela permet
+        // aussi d'afficher les niveaux qui n'ont pas encore de classe.
+        $levels = Level::where('subject_id', $subject->id)
             ->withCount([
-                'courses',
+                'courses' => fn($query) => $query->where('subject_id', $subject->id),
                 'classes as available_classes_count' => fn($query) => $query
                     ->whereHas('subjects', fn($subjectQuery) => $subjectQuery
                         ->where('subjects.id', $subject->id)),
             ])
+            ->orderBy('order')
+            ->orderBy('id')
             ->get();
 
         // Autres matières de la même famille (même type : religieux / scolaire)
@@ -84,12 +87,36 @@ class FrontController extends Controller
 
     public function courses($subject_id, $level_id, $class_id)
     {
-        $courses = Course::where('subject_id', $subject_id)
+        $class = ClassRoom::whereKey($class_id)
             ->where('level_id', $level_id)
-            ->where('class_id', $class_id)
-            ->get();
+            ->whereHas('subjects', fn($query) => $query->where('subjects.id', $subject_id))
+            ->firstOrFail();
 
-        return view('front.class-courses', compact('courses'));
+        $subject = Subject::findOrFail($subject_id);
+        $level = Level::whereKey($level_id)
+            ->where('subject_id', $subject_id)
+            ->firstOrFail();
+
+        if (mb_strtolower($subject->name) === 'coran') {
+            $vocalTestUrl = route('vocal-test.create', [$subject, $level, $class]);
+
+            if (auth()->guest()) {
+                session()->put('url.intended', $vocalTestUrl);
+
+                return redirect()->route('register')
+                    ->with('info', 'Créez votre compte pour passer le test vocal du Coran.');
+            }
+
+            return redirect()->to($vocalTestUrl);
+        }
+
+        if (auth()->guest()) {
+            return redirect()->route('register')
+                ->with('info', 'Créez votre compte pour poursuivre votre inscription.');
+        }
+
+        return redirect()->route('appointment.create', ['type' => 'test'])
+            ->with('info', 'Prenez rendez-vous pour votre test de niveau.');
     }
 
     /**

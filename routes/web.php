@@ -16,6 +16,7 @@ use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Student\TestController as StudentTestController;
 use App\Http\Controllers\Prof\ProfController;
+use App\Http\Controllers\Prof\ProfLevelController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Prof\ScheduleController;
 
@@ -29,6 +30,7 @@ use App\Http\Controllers\Front\LearningController;
 
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\VocalTestController;
 /*
 |--------------------------------------------------------------------------
 | Public
@@ -39,6 +41,13 @@ Route::get('/', [HomeController::class,'index'])->name('home');
 // Rendez-vous pour test
 Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appointment.create');
 Route::post('/rendez-vous', [AppointmentController::class, 'store'])->name('appointment.store');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/test-vocal/coran/{subject}/{level}/{class}', [VocalTestController::class, 'create'])
+        ->name('vocal-test.create');
+    Route::post('/test-vocal/coran/{subject}/{level}/{class}', [VocalTestController::class, 'store'])
+        ->name('vocal-test.store');
+});
 
 Route::get('/classes', [\App\Http\Controllers\Front\HomeController::class, 'classes'])->name('front.classes');
 Route::get('/niveaux', [\App\Http\Controllers\Front\HomeController::class, 'niveaux'])->name('front.niveaux');
@@ -211,6 +220,7 @@ Route::middleware(['auth','isAdmin'])
     Route::patch('/appointments/{appointment}/confirm', [\App\Http\Controllers\AppointmentController::class, 'confirm'])->name('appointments.confirm');
     Route::patch('/appointments/{appointment}/cancel', [\App\Http\Controllers\AppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::delete('/appointments/{appointment}', [\App\Http\Controllers\AppointmentController::class, 'destroy'])->name('appointments.destroy');
+    Route::get('/appointments/{appointment}/audio', [\App\Http\Controllers\AppointmentController::class, 'audio'])->name('appointments.audio');
 
     Route::get('/profile', function () {
         return view('admin.profile');
@@ -254,7 +264,7 @@ Route::middleware(['auth','isProf'])
     Route::get('/chat/{subject}', [ChatController::class, 'profChat'])
         ->name('chat');
 
-    Route::post('/chat/send', [ChatController::class,'send'])
+    Route::post('/chat/send', [ChatController::class,'profSend'])
         ->name('chat.send');
 
     Route::delete('/chat/delete', [ChatController::class, 'profDelete'])

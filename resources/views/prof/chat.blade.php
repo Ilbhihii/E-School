@@ -2,7 +2,7 @@
 
 @section('title', 'Chat Professeur')
 @section('page_title', 'Chat')
-@section('breadcrumb', 'Questions étudiants')
+@section('breadcrumb', ($isAdministration ?? false) ? 'Conversation privée avec l’administration' : 'Questions étudiants')
 
 @section('content')
 
@@ -147,7 +147,9 @@
                 <span style="font-size:1.4rem;">💬</span>
                 <div>
                     <div style="font-weight:700;color:rgba(255,255,255,0.9);">{{ $subject->name ?? 'Chat' }}</div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Discussion avec les étudiants</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">
+                        {{ ($isAdministration ?? false) ? 'Conversation privée avec l’administration' : 'Discussion avec les étudiants' }}
+                    </div>
                 </div>
             </div>
             <button id="selectToggleProf" class="adm-btn adm-btn-ghost adm-btn-sm">
@@ -160,7 +162,7 @@
             <div class="msg-row {{ $msg->user_id == auth()->id() ? 'prof' : 'student' }}" data-id="{{ $msg->id }}" style="position:relative;">
                 <div class="msg-bubble {{ $msg->user_id == auth()->id() ? 'prof' : 'student' }}">
                     @if($msg->user_id != auth()->id())
-                    <div class="msg-name">{{ $msg->user->name ?? 'Étudiant' }}</div>
+                    <div class="msg-name">{{ $msg->user->name ?? (($isAdministration ?? false) ? 'Administration' : 'Étudiant') }}</div>
                     @endif
                     <p class="msg-text {{ $msg->deleted_at ? 'deleted' : '' }}">{{ $msg->message }}</p>
                     @if($msg->deleted_at)
@@ -176,7 +178,7 @@
             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);text-align:center;padding:3rem 2rem;">
                 <div style="width:72px;height:72px;background:rgba(255,255,255,0.04);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;font-size:1.75rem;">💬</div>
                 <h5 style="color:rgba(255,255,255,0.4);font-weight:600;margin-bottom:0.5rem;">Aucun message</h5>
-                <p style="color:rgba(255,255,255,0.3);max-width:400px;font-size:0.85rem;">Les étudiants n'ont pas encore envoyé de message.</p>
+                <p style="color:rgba(255,255,255,0.3);max-width:400px;font-size:0.85rem;">{{ ($isAdministration ?? false) ? 'Commencez votre conversation privée avec l’administration.' : "Les étudiants n'ont pas encore envoyé de message." }}</p>
             </div>
             @endforelse
         </div>

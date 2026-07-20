@@ -64,7 +64,8 @@ $user = User::create([
 
         Auth::login($user);
 
-        // Rediriger vers le formulaire de rendez-vous pour un test de niveau
-        return redirect()->route('appointment.create', ['type' => 'test', 'from' => 'registration']);
+        // Reprendre le parcours choisi avant l'inscription (par exemple le
+        // test vocal Coran), sinon ouvrir le rendez-vous de test standard.
+        return redirect()->intended(route('appointment.create', ['type' => 'test', 'from' => 'registration']));
     }
 }

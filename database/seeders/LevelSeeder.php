@@ -17,13 +17,13 @@ class LevelSeeder extends Seeder
         if ($coran) {
             $coranLevels = [
                 [
-                    'name' => 'Niveau 1 – Apprendre les règles',
+                    'name' => 'Apprendre les règles',
                     'description' => 'Apprendre les bases de la lecture correcte du Coran',
                     'subject_id' => $coran->id,
                     'order' => 1,
                 ],
                 [
-                    'name' => 'Niveau 2 – Tajwid et Hifd',
+                    'name' => 'Tajwid et Hifd',
                     'description' => 'Perfectionnement en tajwid et mémorisation du Coran',
                     'subject_id' => $coran->id,
                     'order' => 2,
@@ -45,25 +45,25 @@ class LevelSeeder extends Seeder
         if ($arabe) {
             $arabeLevels = [
                 [
-                    'name' => 'Niveau 1 – Découverte de l\'alphabet',
+                    'name' => 'Découverte de l\'alphabet',
                     'description' => 'Lire et écrire l\'alphabet arabe (Débutant)',
                     'subject_id' => $arabe->id,
                     'order' => 1,
                 ],
                 [
-                    'name' => 'Niveau 2 – Lecture et communication',
+                    'name' => 'Lecture et communication',
                     'description' => 'Comprendre et produire des phrases simples (Élémentaire)',
                     'subject_id' => $arabe->id,
                     'order' => 2,
                 ],
                 [
-                    'name' => 'Niveau 3 – Maîtrise intermédiaire',
+                    'name' => 'Maîtrise intermédiaire',
                     'description' => 'S\'exprimer avec aisance sur des sujets variés',
                     'subject_id' => $arabe->id,
                     'order' => 3,
                 ],
                 [
-                    'name' => 'Niveau 4 – Expression écrite et orale avancée',
+                    'name' => 'Expression écrite et orale',
                     'description' => 'Rédiger des textes et communiquer de manière autonome',
                     'subject_id' => $arabe->id,
                     'order' => 4,

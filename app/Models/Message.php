@@ -13,6 +13,7 @@ class Message extends Model
     protected $fillable = [
         'subject_id',
         'user_id',
+        'conversation_user_id',
         'message'
     ];
 
@@ -25,6 +26,11 @@ class Message extends Model
     public function subject()
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function conversationUser()
+    {
+        return $this->belongsTo(User::class, 'conversation_user_id');
     }
 
 }

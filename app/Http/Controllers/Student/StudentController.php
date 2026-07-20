@@ -13,6 +13,7 @@ use App\Models\Level;
 use App\Models\Result;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StudentController extends Controller
@@ -28,73 +29,62 @@ class StudentController extends Controller
             return redirect()->route('student.waiting');
         }
 
-        $classRoom = $user->classRoom()->with('subjects')->first();
-        $subjects = $classRoom?->subjects ?? collect([]);
+        $studentAssignment = DB::table('class_user')
+            ->where('user_id', $user->id)
+            ->whereNotNull('subject_id')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
 
-        // + Matières assignées individuellement via class_user.subject_id
-        $subjects = $subjects->merge($user->individuallyAssignedSubjects())->unique('id');
-        $coursesCount = $classRoom?->courses()->count() ?? 0;
-        $livesCount = Live::where('class_id', $user->class_id)->count();
+        $classRoom = $studentAssignment
+            ? ClassRoom::with('level')->find($studentAssignment->class_id)
+            : $user->classRoom()->with('level')->first();
+        $assignedSubject = $studentAssignment
+            ? Subject::find($studentAssignment->subject_id)
+            : $user->individuallyAssignedSubjects()->first();
+        $subjects = $assignedSubject ? collect([$assignedSubject]) : collect();
 
-        $recentCourses = $classRoom?->courses()->latest()->take(4)->get() ?? collect([]);
+        $courseQuery = Course::query()
+            ->when($classRoom, fn($query) => $query->where('class_id', $classRoom->id))
+            ->when($assignedSubject, fn($query) => $query->where('subject_id', $assignedSubject->id));
+        $coursesCount = (clone $courseQuery)->count();
+        $recentCourses = (clone $courseQuery)->latest()->take(4)->get();
+        $recentCourses2 = (clone $courseQuery)->latest()->take(2)->get();
 
-        /* 🔥 NEW METRICS FROM TASK */
-        $totalAssignments = Assignment::count();
+        $livesCount = $classRoom ? Live::where('class_id', $classRoom->id)->count() : 0;
 
-        $assignmentsSent = Assignment::where('user_id', auth()->id())->count();
+        $profAssignments = Assignment::query()
+            ->when($classRoom, fn($query) => $query->where('class_room_id', $classRoom->id))
+            ->when($assignedSubject, fn($query) => $query->where('subject_id', $assignedSubject->id))
+            ->whereHas('user', fn($query) => $query->where('role', 'prof'));
+        $totalAssignments = $classRoom && $assignedSubject ? $profAssignments->count() : 0;
 
-        $assignmentsCorrected = Assignment::where('user_id', auth()->id())
-            ->whereNotNull('grade')
-            ->count();
+        $assignmentsQuery = Assignment::where('user_id', $user->id)
+            ->when($assignedSubject, fn($query) => $query->where('subject_id', $assignedSubject->id));
+        $assignments = (clone $assignmentsQuery)->latest()->get();
+        $assignmentsSent = $assignments->count();
+        $assignmentsCorrected = $assignments->whereNotNull('grade')->count();
+        $assignmentCompletion = $totalAssignments > 0
+            ? min(100, round(($assignmentsSent / $totalAssignments) * 100))
+            : ($assignmentsSent > 0 ? 100 : 0);
+        $sentPercent = $assignmentCompletion;
+        $correctedPercent = $assignmentsSent > 0
+            ? round(($assignmentsCorrected / $assignmentsSent) * 100)
+            : 0;
 
-        /* 🔥 POURCENTAGES */
-        $sentPercent = $totalAssignments > 0 ? ($assignmentsSent / $totalAssignments) * 100 : 0;
+        $attendanceRecords = Absence::where('user_id', $user->id)->get();
+        $totalSessions = $attendanceRecords->count();
+        $totalAbsences = $attendanceRecords->where('present', false)->count();
+        $presencePercent = $totalSessions > 0
+            ? round(($attendanceRecords->where('present', true)->count() / $totalSessions) * 100)
+            : 100;
 
-        $correctedPercent = $assignmentsSent > 0 ? ($assignmentsCorrected / $assignmentsSent) * 100 : 0;
+        $average = $assignments->whereNotNull('grade')->avg('grade') ?? 0;
+        $grades = $assignments->whereNotNull('grade')->pluck('grade')->values();
+        $engagement = round(($assignmentCompletion + $correctedPercent + $presencePercent) / 3);
 
-        /* ABSENCES */
-        $totalSessions = Absence::count();
-
-        $absencesCount = Absence::where('user_id', auth()->id())->count();  // renamed to avoid conflict
-
-        $presencePercent = $totalSessions > 0 ? (100 - (($absencesCount / $totalSessions) * 100)) : 100;
-
-        /* MOYENNE */
-        $average = Assignment::where('user_id', auth()->id())
-            ->whereNotNull('grade')
-            ->avg('grade') ?? 0;
-
-        /* ENGAGEMENT (simple calcul) */
-        $engagement = ($sentPercent + $presencePercent) / 2;
-
-
-        /* récupérer assignments de l'étudiant */
-        $assignments = Assignment::where('user_id', auth()->id())->get();
-
-        /* notes pour graphique */
-        $grades = $assignments
-                    ->whereNotNull('grade')
-                    ->pluck('grade')
-                    ->values(); // 🔥 important
-
-
-        /* Activités Récent */
-        $recentCourses2 = Course::latest()->take(2)->get();
-
-        $recentAssignments = Assignment::where('user_id', auth()->id())
-                            ->latest()
-                            ->take(2)
-                            ->get();
-
-        $absences = Absence::where('user_id', auth()->id())
-            ->where('present', false)
-            ->latest()
-            ->take(3)
-            ->get();
-
-        $totalAbsences = Absence::where('user_id', auth()->id())
-                    ->where('present', false)
-                    ->count();
+        $recentAssignments = $assignments->take(2);
+        $absences = $attendanceRecords->where('present', false)->sortByDesc('date')->take(3)->values();
         if($totalAbsences <= 2){
             $situation = "Situation normale";
         }
@@ -115,6 +105,8 @@ class StudentController extends Controller
             'totalAbsences',
             'assignmentsSent',
             'assignmentsCorrected',
+            'assignmentCompletion',
+            'totalAssignments',
             'average',
             'grades',
             'assignments',
@@ -124,6 +116,7 @@ class StudentController extends Controller
             'engagement',
             'subjects',
             'classRoom',
+            'assignedSubject',
             'recentCourses2'
         ));
 

@@ -1,0 +1,142 @@
+/* Student portal refinement. Loaded only by layouts.student. */
+:root {
+  --student-accent: #818cf8;
+  --student-accent-2: #22d3ee;
+  --student-line: rgba(129, 140, 248, .15);
+}
+
+.st-wrapper {
+  background:
+    radial-gradient(circle at 82% 4%, rgba(79,70,229,.12), transparent 30rem),
+    radial-gradient(circle at 48% 100%, rgba(6,182,212,.07), transparent 34rem),
+    #080e1a !important;
+}
+
+.st-sidebar {
+  background: linear-gradient(180deg, rgba(8,14,28,.99), rgba(16,20,43,.98)) !important;
+  box-shadow: 16px 0 48px rgba(0,0,0,.18);
+}
+.st-sidebar-brand { background: linear-gradient(180deg, rgba(129,140,248,.065), transparent); }
+.st-sidebar-brand h3 { letter-spacing: -.025em; text-shadow: 0 4px 24px rgba(129,140,248,.22); }
+
+.st-nav-link {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+.st-nav-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(90deg, rgba(129,140,248,.12), transparent 75%);
+  transition: opacity .2s ease;
+}
+.st-nav-link:hover::after, .st-nav-link.active::after { opacity: 1; }
+.st-nav-link > * { position: relative; z-index: 1; }
+.st-nav-link.active {
+  border-color: rgba(129,140,248,.17);
+  box-shadow: inset 3px 0 0 var(--student-accent), 0 8px 24px rgba(0,0,0,.14);
+}
+
+.st-topbar {
+  background: rgba(8,14,26,.8) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,.14);
+}
+.st-topbar-page-title { letter-spacing: -.025em; }
+
+.st-page-header {
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--student-line);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(30,41,59,.64), rgba(15,23,42,.43));
+  box-shadow: 0 12px 34px rgba(0,0,0,.18);
+}
+.st-page-header h1 { letter-spacing: -.025em; }
+
+.st-card, .pr-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(20,30,52,.9), rgba(11,19,34,.9)) !important;
+  border-color: var(--student-line) !important;
+}
+.st-card::before, .pr-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(129,140,248,.5), rgba(34,211,238,.25), transparent);
+  pointer-events: none;
+}
+a:hover .st-card, a:hover .pr-card, .st-card:hover, .pr-card:hover {
+  border-color: rgba(129,140,248,.3) !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,.3), 0 0 28px rgba(79,70,229,.07);
+}
+a:hover .st-card, a:hover .pr-card { transform: translateY(-4px); }
+
+.st-card-header, .pr-card-header {
+  min-height: 58px;
+  padding: 1rem 1.2rem;
+  background: rgba(255,255,255,.018);
+  border-color: var(--student-line) !important;
+}
+.st-card-body, .pr-card-body { padding: 1.25rem; }
+
+.st-btn, .pr-btn {
+  min-height: 40px;
+  border-radius: 11px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.17);
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.st-btn:hover, .pr-btn:hover { transform: translateY(-2px); filter: brightness(1.07); box-shadow: 0 12px 26px rgba(0,0,0,.25); }
+.st-btn-primary, .pr-btn-primary { background: linear-gradient(135deg,#4f46e5,#6366f1) !important; }
+
+.st-form-control, .st-form-select,
+.st-content .form-control, .st-content .form-select {
+  min-height: 46px;
+  border-radius: 12px !important;
+  border-color: var(--student-line) !important;
+}
+.st-form-label { color: #c7d2fe !important; font-weight: 650; }
+
+.st-table-wrap, .pr-table-wrap {
+  border: 1px solid var(--student-line);
+  border-radius: 15px;
+  overflow: auto;
+  background: rgba(5,10,20,.22);
+}
+.st-table thead th, .pr-table thead th { background: rgba(18,25,48,.98) !important; color: #c7d2fe !important; }
+.st-table tbody tr:nth-child(even), .pr-table tbody tr:nth-child(even) { background: rgba(129,140,248,.018); }
+.st-table tbody tr:hover, .pr-table tbody tr:hover { background: rgba(129,140,248,.055) !important; }
+
+.pr-empty {
+  padding: 3.25rem 1.5rem;
+  border-radius: 16px;
+  background: radial-gradient(circle, rgba(129,140,248,.065), transparent 62%);
+}
+.pr-empty-icon { box-shadow: 0 12px 30px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.08); }
+
+.st-content .pagination { gap: .35rem; flex-wrap: wrap; }
+.st-content .page-link {
+  min-width: 38px;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px !important;
+  background: rgba(18,25,48,.88) !important;
+  border-color: var(--student-line) !important;
+  color: #c7d2fe !important;
+}
+.st-content .page-item.active .page-link { background: linear-gradient(135deg,#4f46e5,#0891b2) !important; }
+
+@media (max-width: 991.98px) {
+  .st-page-header { align-items: flex-start; gap: 1rem; }
+}
+@media (max-width: 575.98px) {
+  .st-page-header { padding: 1rem; border-radius: 14px; }
+  .st-page-header .st-btn, .st-page-header .pr-btn { width: 100%; }
+  .st-card-body, .pr-card-body { padding: 1rem; }
+  .st-card-header, .pr-card-header { padding: .9rem 1rem; }
+  .st-table th, .st-table td, .pr-table th, .pr-table td { padding: .8rem .72rem !important; }
+}

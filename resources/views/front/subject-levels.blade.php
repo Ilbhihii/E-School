@@ -248,28 +248,12 @@ html.light-mode .card-3d .text-white-50 {
 
                 <!-- Description / Publicité du contenu -->
                 <p class="text-white-50 mt-3" style="font-size:1.05rem;line-height:1.7;max-width:540px;">
-                    @if($subject->type === 'religieux')
-                        Explorez l'enseignement des sciences religieuses avec des cours structurés et adaptés à chaque niveau. Apprenez à votre rythme avec des professeurs qualifiés.
-                    @else
-                        Maîtrisez les concepts clés de {{ $subject->name }} grâce à des cours interactifs, des exercices pratiques et un suivi personnalisé. Du niveau débutant à avancé.
-                    @endif
+                    {{ $subject->description ?: match (mb_strtolower($subject->name)) {
+                        'coran' => 'Apprentissage du Saint Coran à travers la lecture correcte, les règles du Tajwid, la mémorisation et la révision progressive, avec un accompagnement adapté à chaque niveau.',
+                        'arabe' => 'Apprentissage progressif de la langue arabe : alphabet, lecture, écriture, vocabulaire, grammaire et communication orale, du niveau débutant au niveau avancé.',
+                        default => 'Découvrez cette matière grâce à un parcours progressif, des ressources pédagogiques adaptées et un accompagnement structuré pour chaque niveau.',
+                    } }}
                 </p>
-
-                <!-- CTA -->
-                <div class="d-flex flex-wrap gap-3 mt-4">
-                    @auth
-                        <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-gradient">
-                            <i class="bi bi-calendar-check"></i> Prise de contact
-                        </a>
-                    @else
-                        <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient">
-                            <i class="bi bi-person-plus"></i> Commencer gratuitement
-                        </a>
-                        <a href="{{ route('plans') }}" class="btn-3d btn-3d-outline">
-                            <i class="bi bi-credit-card"></i> Voir les offres
-                        </a>
-                    @endauth
-                </div>
 
                 <!-- Stats -->
                 <div style="display:flex;gap:2rem;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.04);">
@@ -469,9 +453,6 @@ html.light-mode .card-3d .text-white-50 {
                     @else
                         <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient">
                             <i class="bi bi-person-plus"></i> Créer un compte gratuit
-                        </a>
-                        <a href="{{ route('plans') }}" class="btn-3d btn-3d-outline">
-                            <i class="bi bi-credit-card"></i> Voir les offres
                         </a>
                     @endauth
                 </div>

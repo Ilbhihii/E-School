@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Models\Course;
 use App\Models\Live;
+use App\Models\ProfAssignment;
+use Illuminate\Support\Facades\DB;
 
 
 class ProfController extends Controller
@@ -22,24 +24,83 @@ class ProfController extends Controller
 
     public function dashboard()
     {
-        $studentsCount = \App\Models\User::where('role', 'student')->count();
-        $assignmentsCount = \App\Models\Assignment::count();
-        $myDevoirsCount = \App\Models\Assignment::where('user_id', auth()->id())->count();
-        $absencesCount = \App\Models\Absence::where('present', 0)->count();
-        $livesCount = \App\Models\Live::count();
+        $profAssignments = ProfAssignment::with(['subject', 'level', 'classRoom'])
+            ->where('prof_id', auth()->id())
+            ->get();
+        $classIds = $profAssignments->pluck('class_id')->unique()->values();
+        $subjectIds = $profAssignments->pluck('subject_id')->unique()->values();
 
-        return view('prof.dashboard', compact('studentsCount', 'assignmentsCount', 'myDevoirsCount', 'absencesCount', 'livesCount'));
+        $studentIds = $profAssignments->isEmpty() ? collect() : DB::table('class_user')
+            ->join('users', 'users.id', '=', 'class_user.user_id')
+            ->where('users.role', 'student')
+            ->where(function ($query) use ($profAssignments) {
+                foreach ($profAssignments as $assignment) {
+                    $query->orWhere(function ($pair) use ($assignment) {
+                        $pair->where('class_user.class_id', $assignment->class_id)
+                            ->where('class_user.subject_id', $assignment->subject_id);
+                    });
+                }
+            })
+            ->distinct()
+            ->pluck('users.id');
+
+        $coursesQuery = Course::where('user_id', auth()->id());
+        $devoirsQuery = Assignment::where('user_id', auth()->id());
+        $submissionsQuery = Assignment::whereIn('user_id', $studentIds)
+            ->whereIn('subject_id', $subjectIds);
+        $attendanceQuery = Absence::whereIn('user_id', $studentIds);
+
+        $studentsCount = $studentIds->count();
+        $coursesCount = (clone $coursesQuery)->count();
+        $myDevoirsCount = (clone $devoirsQuery)->count();
+        $assignmentsCount = (clone $submissionsQuery)->count();
+        $correctedCount = (clone $submissionsQuery)->whereNotNull('grade')->count();
+        $pendingCount = max($assignmentsCount - $correctedCount, 0);
+        $correctionRate = $assignmentsCount > 0 ? round(($correctedCount / $assignmentsCount) * 100) : 0;
+        $averageGrade = (float) ((clone $submissionsQuery)->whereNotNull('grade')->avg('grade') ?? 0);
+        $absencesCount = (clone $attendanceQuery)->where('present', false)->count();
+        $attendanceCount = (clone $attendanceQuery)->count();
+        $presenceRate = $attendanceCount > 0
+            ? round(((clone $attendanceQuery)->where('present', true)->count() / $attendanceCount) * 100)
+            : 100;
+        $livesCount = Live::where('user_id', auth()->id())->count();
+        $recentSubmissions = (clone $submissionsQuery)->with(['user', 'subject'])->latest()->take(5)->get();
+
+        return view('prof.dashboard', compact(
+            'studentsCount', 'coursesCount', 'assignmentsCount', 'myDevoirsCount',
+            'correctedCount', 'pendingCount', 'correctionRate', 'averageGrade',
+            'absencesCount', 'presenceRate', 'livesCount', 'profAssignments',
+            'recentSubmissions'
+        ));
     }
 
     public function assignments()
     {
-        $assignments = Assignment::with('user')->latest()->get();
+        $scope = ProfAssignment::where('prof_id', auth()->id())->get();
+        $studentIds = $scope->isEmpty() ? collect() : DB::table('class_user')
+            ->where(function ($query) use ($scope) {
+                foreach ($scope as $item) {
+                    $query->orWhere(fn ($pair) => $pair
+                        ->where('class_id', $item->class_id)
+                        ->where('subject_id', $item->subject_id));
+                }
+            })->pluck('user_id')->unique();
+        $assignments = Assignment::with(['user', 'subject'])
+            ->whereIn('user_id', $studentIds)
+            ->whereIn('subject_id', $scope->pluck('subject_id'))
+            ->latest()->get();
         return view('prof.assignments', compact('assignments'));
     }
 
     public function grade(Request $request)
     {
-        $assignment = Assignment::findOrFail($request->id);
+        $assignment = Assignment::whereKey($request->id)
+            ->whereHas('user', fn ($query) => $query->where('role', 'student'))
+            ->findOrFail($request->id);
+        $allowed = ProfAssignment::where('prof_id', auth()->id())
+            ->where('subject_id', $assignment->subject_id)
+            ->exists();
+        abort_unless($allowed, 403);
 
         $status = $request->status;
         $assignment->grade = match($status) {
@@ -64,7 +125,7 @@ class ProfController extends Controller
     public function absences()
     {
 
-$classes = ClassRoom::all();
+        $classes = $this->assignedClasses();
 
         return view('prof.absences',compact('classes'));
 
@@ -72,7 +133,8 @@ $classes = ClassRoom::all();
 
     public function absencesList(Request $request)
     {
-        $query = Absence::with(['user.classRoom'])->latest('created_at');
+        $studentIds = $this->assignedStudentIds();
+        $query = Absence::with(['user.classRoom'])->whereIn('user_id', $studentIds)->latest('created_at');
 
         // Filter by class
         if ($request->class_id) {
@@ -88,7 +150,7 @@ $classes = ClassRoom::all();
         }
 
         $absences = $query->paginate(15);
-        $classes = ClassRoom::all();
+        $classes = $this->assignedClasses();
 
         return view('prof.absences-list', compact('absences', 'classes'));
     }
@@ -100,7 +162,7 @@ $classes = ClassRoom::all();
             'present' => 'required|boolean'
         ]);
 
-        $absence = Absence::findOrFail($id);
+        $absence = Absence::whereIn('user_id', $this->assignedStudentIds())->findOrFail($id);
         $absence->present = (int) $request->present;
         $absence->save();
 
@@ -110,7 +172,8 @@ $classes = ClassRoom::all();
 
     public function getStudents($id)
     {
-$classRoom = ClassRoom::findOrFail($id);
+        abort_unless($this->assignedClasses()->contains('id', (int) $id), 403);
+        $classRoom = ClassRoom::findOrFail($id);
 
         $students = $classRoom->users()->where('role', 'student')->select('id', 'name')->get();
 
@@ -121,9 +184,12 @@ $classRoom = ClassRoom::findOrFail($id);
 
     public function storeAbsence(Request $request)
     {
+        $request->validate(['students' => ['required', 'array']]);
+        $allowedStudentIds = $this->assignedStudentIds();
         $alertStudents = [];
 
         foreach($request->students as $studentId => $status){
+            abort_unless($allowedStudentIds->contains((int) $studentId), 403);
 
             Absence::create([
             'user_id'=>$studentId,
@@ -193,15 +259,16 @@ $classRoom = ClassRoom::findOrFail($id);
     public function livesIndex()
     {
         $lives = Live::with('classRoom')
+            ->where('user_id', auth()->id())
             ->latest()
             ->paginate(15);
         
-        $totalLives = \App\Models\Live::count();
-        $recentLives = \App\Models\Live::latest()
+        $totalLives = Live::where('user_id', auth()->id())->count();
+        $recentLives = Live::where('user_id', auth()->id())->latest()
             ->limit(5)
             ->get();
-        $upcomingLives = \App\Models\Live::where('live_date', '>=', now())
-            ->orWhereNull('live_date')
+        $upcomingLives = Live::where('user_id', auth()->id())
+            ->where(fn ($query) => $query->where('live_date', '>=', now())->orWhereNull('live_date'))
             ->count();
         
         return view('prof.lives.index', compact('lives', 'totalLives', 'recentLives', 'upcomingLives'));
@@ -211,21 +278,31 @@ $classRoom = ClassRoom::findOrFail($id);
 
     public function subjectsList()
     {
-        $subjects = Subject::with('classes:id,level_id')->withCount('classes')->orderBy('name')->get();
+        $scope = ProfAssignment::where('prof_id', auth()->id())->get();
+        $subjects = Subject::whereIn('id', $scope->pluck('subject_id'))->orderBy('name')->get();
+        $subjects->each(function ($subject) use ($scope) {
+            $subjectScope = $scope->where('subject_id', $subject->id);
+            $subject->assigned_levels_count = $subjectScope->pluck('level_id')->unique()->count();
+            $subject->assigned_classes_count = $subjectScope->pluck('class_id')->unique()->count();
+        });
         return view('prof.subjects.index', compact('subjects'));
     }
 
     public function subjectLevels(Subject $subject)
     {
-        $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique()->filter();
+        $levelIds = ProfAssignment::where('prof_id', auth()->id())
+            ->where('subject_id', $subject->id)->pluck('level_id')->unique();
+        abort_if($levelIds->isEmpty(), 403);
         $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
         return view('prof.subjects.levels', compact('subject', 'levels'));
     }
 
     public function subjectClasses(Subject $subject, Level $level)
     {
-        $classes = ClassRoom::where('level_id', $level->id)
-            ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
+        $classIds = ProfAssignment::where('prof_id', auth()->id())
+            ->where('subject_id', $subject->id)->where('level_id', $level->id)->pluck('class_id');
+        abort_if($classIds->isEmpty(), 403);
+        $classes = ClassRoom::whereIn('id', $classIds)
             ->get();
         return view('prof.subjects.classes', compact('subject', 'level', 'classes'));
     }
@@ -235,6 +312,7 @@ $classRoom = ClassRoom::findOrFail($id);
      */
     public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
     {
+        $this->authorizeTeachingScope($subject, $level, $class);
         $courses = Course::where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->where('user_id', auth()->id())
@@ -249,7 +327,9 @@ $classRoom = ClassRoom::findOrFail($id);
      */
     public function subjectLives(Subject $subject, Level $level, ClassRoom $class)
     {
+        $this->authorizeTeachingScope($subject, $level, $class);
         $lives = Live::where('class_id', $class->id)
+            ->where('user_id', auth()->id())
             ->latest()
             ->get();
 
@@ -261,6 +341,7 @@ $classRoom = ClassRoom::findOrFail($id);
      */
     public function subjectDevoirs(Subject $subject, Level $level, ClassRoom $class)
     {
+        $this->authorizeTeachingScope($subject, $level, $class);
         $courses = Course::where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->where('user_id', auth()->id())
@@ -268,6 +349,37 @@ $classRoom = ClassRoom::findOrFail($id);
             ->get();
 
         return view('prof.subjects.devoirs', compact('subject', 'level', 'class', 'courses'));
+    }
+
+    private function assignedClasses()
+    {
+        $ids = ProfAssignment::where('prof_id', auth()->id())->pluck('class_id')->unique();
+        return ClassRoom::whereIn('id', $ids)->orderBy('name')->get();
+    }
+
+    private function assignedStudentIds()
+    {
+        $scope = ProfAssignment::where('prof_id', auth()->id())->get();
+        if ($scope->isEmpty()) {
+            return collect();
+        }
+        return DB::table('class_user')
+            ->where(function ($query) use ($scope) {
+                foreach ($scope as $item) {
+                    $query->orWhere(fn ($pair) => $pair
+                        ->where('class_id', $item->class_id)
+                        ->where('subject_id', $item->subject_id));
+                }
+            })->pluck('user_id')->unique()->values();
+    }
+
+    private function authorizeTeachingScope(Subject $subject, Level $level, ClassRoom $class): void
+    {
+        abort_unless(ProfAssignment::where('prof_id', auth()->id())
+            ->where('subject_id', $subject->id)
+            ->where('level_id', $level->id)
+            ->where('class_id', $class->id)
+            ->exists(), 403);
     }
 
 }

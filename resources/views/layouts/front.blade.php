@@ -1088,26 +1088,6 @@
     <i class="bi bi-arrow-up"></i>
 </button>
 
-<!-- ═══ FLOATING CTA BANNER ═══ -->
-<div class="floating-cta" id="floatingCta">
-    <div class="container d-flex align-items-center justify-content-between">
-        <div class="d-none d-md-flex align-items-center gap-3">
-            <div class="cta-pulse-ring"></div>
-            <span class="fw-semibold" style="font-size: 0.95rem;">
-                🎓 <span style="color: var(--3d-gold);">50%</span> de réduction sur l'abonnement Premium — offre limitée
-            </span>
-        </div>
-        <div class="d-flex align-items-center gap-3 w-100 w-md-auto justify-content-center justify-content-md-end">
-            <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 10px 24px; font-size: 0.9rem; white-space: nowrap;">
-                <i class="bi bi-rocket-takeoff"></i> Commencer maintenant
-            </a>
-            <button class="floating-cta-close" onclick="document.getElementById('floatingCta').classList.add('d-none')" aria-label="Fermer">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- ═══ FLOATING WHATSAPP ═══ -->
 <a href="https://wa.me/212707678821?text=Bonjour%20Smart%20School%20Academy%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
     <i class="bi bi-whatsapp"></i>
@@ -1195,32 +1175,6 @@
                 el.addEventListener('mouseenter', () => cursor.classList.add('active'));
                 el.addEventListener('mouseleave', () => cursor.classList.remove('active'));
             });
-        }
-
-        // ── FLOATING CTA ──
-        const floatingCta = document.getElementById('floatingCta');
-        if (floatingCta) {
-            const ctaDismissed = localStorage.getItem('ctaDismissed');
-            if (ctaDismissed === 'true') {
-                floatingCta.style.display = 'none';
-            } else {
-                let ctaShown = false;
-                window.addEventListener('scroll', () => {
-                    if (!ctaShown && window.scrollY > 600) {
-                        floatingCta.classList.add('show');
-                        ctaShown = true;
-                    }
-                }, { passive: true });
-
-                const closeBtn = floatingCta.querySelector('.floating-cta-close');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => {
-                        floatingCta.classList.remove('show');
-                        floatingCta.style.display = 'none';
-                        localStorage.setItem('ctaDismissed', 'true');
-                    });
-                }
-            }
         }
 
         // ── SCROLL REVEAL (fade-in-3d) ──

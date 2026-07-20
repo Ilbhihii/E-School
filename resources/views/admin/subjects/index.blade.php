@@ -15,7 +15,21 @@
     opacity: 0;
     animation: subjFadeIn 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     will-change: transform, opacity;
+    flex: 0 1 280px;
+    width: calc(50% - 8px);
+    min-width: 0;
+    max-width: 280px;
 }
+.subject-cards-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+}
+.subject-card-outer > a,
+.subject-card-outer .adm-card { display: block; height: 100%; }
 .subject-card-outer:nth-child(1) { animation-delay: 0.05s; }
 .subject-card-outer:nth-child(2) { animation-delay: 0.10s; }
 .subject-card-outer:nth-child(3) { animation-delay: 0.15s; }
@@ -26,6 +40,10 @@
 .subject-card-outer:nth-child(8) { animation-delay: 0.40s; }
 @media (prefers-reduced-motion: reduce) {
     .subject-card-outer { animation: none; opacity: 1; }
+}
+@media (max-width: 480px) {
+    .subject-cards-grid { gap: 8px; }
+    .subject-card-outer { width: calc(50% - 4px); }
 }
 </style>
 
@@ -50,60 +68,47 @@
 </div>
 @endif
 
-<div class="row g-4">
-    @php
-        $subjectGradients = [
-            'linear-gradient(135deg, #7C3AED, #A78BFA)',
-            'linear-gradient(135deg, #059669, #34D399)',
-            'linear-gradient(135deg, #D97706, #FBBF24)',
-            'linear-gradient(135deg, #1E40AF, #60A5FA)',
-            'linear-gradient(135deg, #D90429, #EF4444)',
-            'linear-gradient(135deg, #06B6D4, #67E8F9)',
-            'linear-gradient(135deg, #BE185D, #F472B6)',
-            'linear-gradient(135deg, #065F46, #34D399)',
-        ];
-        $subjectIcons = [
-            'bi-book', 'bi-calculator', 'bi-globe2', 'bi-flask',
-            'bi-pencil-square', 'bi-music-note-beamed', 'bi-brush', 'bi-stars'
-        ];
-    @endphp
-
+<div class="subject-cards-grid">
     @forelse($subjects as $subject)
         @php
-            $idx = $loop->index % count($subjectGradients);
-            $gradient = $subjectGradients[$idx];
-            $icon = $subjectIcons[$idx];
-            $levelCount = $subject->levels->count();
+            $design = match (mb_strtolower($subject->name)) {
+                'arabe' => ['icon' => 'bi-translate', 'gradient' => 'linear-gradient(135deg,#2563EB,#06B6D4)'],
+                'coran' => ['icon' => 'bi-book-half', 'gradient' => 'linear-gradient(135deg,#7C3AED,#A855F7)'],
+                default => ['icon' => 'bi-journal-bookmark-fill', 'gradient' => 'linear-gradient(135deg,#4F46E5,#7C3AED)'],
+            };
+            $gradient = $design['gradient'];
+            $icon = $design['icon'];
+            $levelCount = match (mb_strtolower($subject->name)) {
+                'arabe' => 4,
+                'coran' => 2,
+                default => $subject->levels->count(),
+            };
             $classCount = $subject->classes->count();
-            $courseCount = $subject->courses_count ?? 0;
         @endphp
-        <div class="col-lg-3 col-md-6 subject-card-outer">
+        <div class="subject-card-outer">
             <a href="{{ route('admin.subjects.levels', $subject) }}" class="text-decoration-none">
                 <div class="adm-card" style="cursor:pointer;height:100%;transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                    <div style="height:110px;background:{{ $gradient }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-                        <div style="position:absolute;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.06);top:-50px;right:-50px;"></div>
-                        <div style="position:absolute;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.04);bottom:-30px;left:-30px;"></div>
-                        <i class="bi {{ $icon }}" style="font-size:2.8rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
+                    <div style="height:76px;background:{{ $gradient }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.07);top:-40px;right:-35px;"></div>
+                        <div style="position:absolute;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,0.05);bottom:-28px;left:-22px;"></div>
+                        <i class="bi {{ $icon }}" style="font-size:2rem;color:rgba(255,255,255,0.42);position:relative;z-index:1;"></i>
                     </div>
-                    <div class="adm-card-body text-center" style="padding:1.25rem;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:0.5rem;">
+                    <div class="adm-card-body text-center" style="padding:0.9rem;">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:0.35rem;">
                             <span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;background:rgba(255,255,255,0.06);color:var(--adm-text-muted);">
                                 {{ $subject->type ?? 'scolaire' }}
                             </span>
                         </div>
-                        <h4 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.75rem;">{{ $subject->name }}</h4>
-                        <div style="display:flex;justify-content:center;gap:16px;margin-bottom:1rem;">
-                            <span style="font-size:0.8rem;color:var(--adm-text-muted);">
+                        <h4 style="font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:0.55rem;font-size:1rem;">{{ $subject->name }}</h4>
+                        <div style="display:flex;justify-content:center;gap:10px;margin-bottom:0.75rem;flex-wrap:wrap;">
+                            <span style="font-size:0.7rem;color:var(--adm-text-muted);">
                                 <i class="bi bi-layers me-1"></i> {{ $levelCount }} niveaux
                             </span>
-                            <span style="font-size:0.8rem;color:var(--adm-text-muted);">
+                            <span style="font-size:0.7rem;color:var(--adm-text-muted);">
                                 <i class="bi bi-building me-1"></i> {{ $classCount }} classes
                             </span>
-                            <span style="font-size:0.8rem;color:var(--adm-text-muted);">
-                                <i class="bi bi-play-circle me-1"></i> {{ $courseCount }} cours
-                            </span>
                         </div>
-                        <span class="adm-btn" style="background:{{ $gradient }};color:white;border:none;width:100%;">
+                        <span class="adm-btn adm-btn-sm" style="background:{{ $gradient }};color:white;border:none;width:100%;">
                             <i class="bi bi-arrow-right me-1"></i> Voir les niveaux
                         </span>
                     </div>

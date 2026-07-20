@@ -17,9 +17,9 @@ class CourseFactory extends Factory
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph,
             'level_id' => null,
-            'subject_id' => null,
+            'subject_id' => Subject::factory(),
             'user_id' => null,
-            'admin_id' => null,
+            'admin_id' => User::factory()->state(['role' => 'admin']),
         ];
     }
 }

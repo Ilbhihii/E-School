@@ -6,6 +6,29 @@
 
 @section('content')
 
+<style>
+.level-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(230px, 320px));
+    justify-content: center;
+    align-items: start;
+    gap: 16px;
+}
+.level-card-outer { min-width: 0; }
+.level-card-outer > .adm-card { height: 100%; margin-bottom: 0 !important; }
+.level-card-outer .adm-card-header { min-height: 52px; padding: 0.75rem 0.9rem; }
+.level-card-outer .adm-card-header h4 { font-size: 0.92rem; }
+.level-card-outer .adm-card-header .adm-btn { min-height: 32px; padding: 0.4rem 0.65rem; font-size: 0.72rem; }
+.level-card-outer > .adm-card > .adm-card-body { padding: 0.85rem; }
+.level-class-item { width: 100%; min-width: 0; }
+@media (max-width: 900px) {
+    .level-cards-grid { grid-template-columns: repeat(2, minmax(240px, 340px)); }
+}
+@media (max-width: 620px) {
+    .level-cards-grid { grid-template-columns: minmax(0, 380px); }
+}
+</style>
+
 <div class="adm-page-header">
     <div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.8rem;color:var(--adm-text-muted);">
@@ -53,12 +76,14 @@
         ];
     @endphp
 
+    <div class="level-cards-grid">
     @foreach($levels as $level)
         @php
             $idx = $loop->index % 4;
             $gradient = $levelGradients[$idx];
             $classes = $level->classes;
         @endphp
+        <div class="level-card-outer">
         <div class="adm-card mb-4">
             <div class="adm-card-header" style="background:{{ $gradient }};border-radius:18px 18px 0 0;">
                 <h4 style="color:white;margin:0;">
@@ -79,7 +104,7 @@
                                 $gIdx = $loop->index % count($classGradients);
                                 $courseCount = $class->courses()->where('subject_id', $subject->id)->count();
                             @endphp
-                            <div style="flex:1;min-width:250px;max-width:350px;">
+                            <div class="level-class-item">
                                 <a href="{{ route('admin.subjects.courses', [$subject, $level, $class]) }}" class="text-decoration-none">
                                     <div class="adm-card" style="cursor:pointer;transition:all 0.3s ease;height:100%;">
                                         <div class="adm-card-body" style="padding:1rem;display:flex;align-items:center;gap:12px;">
@@ -111,6 +136,7 @@
                 @endif
             </div>
         </div>
+        </div>
 
         <!-- ═══ ADD CLASS MODAL for {{ $level->name }} ═══ -->
         <div class="adm-modal-overlay" id="addClassModal{{ $level->id }}" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
@@ -141,6 +167,7 @@
             </div>
         </div>
     @endforeach
+    </div>
 @endif
 
 <!-- ═══════════════ MODAL SCRIPT ═══════════════ -->

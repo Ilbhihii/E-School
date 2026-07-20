@@ -31,7 +31,11 @@
                 {{ $level->name }}
             </span>
             <h2 class="section-title-3d">{{ $subject->name }}</h2>
-            <p class="text-white-50" style="max-width: 500px; margin: 0 auto;">Choisissez une classe pour accéder aux cours</p>
+            <p class="text-white-50" style="max-width: 560px; margin: 0 auto;">
+                {{ mb_strtolower($subject->name) === 'coran'
+                    ? 'Choisissez une classe pour passer votre test vocal avant de prendre rendez-vous.'
+                    : 'Choisissez une classe pour continuer votre inscription.' }}
+            </p>
         </div>
     </div>
 
@@ -55,7 +59,8 @@
                         </div>
                         <h5 class="fw-bold text-white mt-3 mb-1" style="font-family: 'Poppins', sans-serif;">{{ $class->name }}</h5>
                         <p class="text-white-50 small mb-0">
-                            Voir les cours <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
+                            {{ mb_strtolower($subject->name) === 'coran' ? 'Passer le test vocal' : 'Continuer' }}
+                            <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
                         </p>
                     </div>
                 </a>

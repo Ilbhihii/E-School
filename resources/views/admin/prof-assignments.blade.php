@@ -2,14 +2,14 @@
 
 @section('title', 'Assignation des Professeurs')
 @section('page_title', 'Assignation Profs')
-@section('breadcrumb', 'Professeurs → Niveaux → Classes → Matières')
+@section('breadcrumb', 'Professeurs → Matières → Niveaux → Classes')
 
 @section('content')
 
 <div class="adm-page-header">
     <div>
         <h1><i class="bi bi-person-badge me-2" style="color:var(--adm-accent);"></i> Assignation des Professeurs</h1>
-        <div class="subtitle">Attribuez à chaque professeur son niveau, sa classe et sa matière</div>
+        <div class="subtitle">Choisissez d’abord la matière, puis son niveau et enfin sa classe</div>
     </div>
 </div>
 
@@ -36,38 +36,32 @@
                         <select name="prof_id" class="adm-form-select" required>
                             <option value="">Sélectionner un professeur</option>
                             @foreach($professors as $prof)
-                                <option value="{{ $prof->id }}">{{ $prof->name }}</option>
+                                <option value="{{ $prof->id }}" @selected(old('prof_id') == $prof->id)>{{ $prof->name }}</option>
                             @endforeach
                         </select>
                     </div>
 
                     <div class="adm-form-group">
-                        <label class="adm-form-label">Niveau <span style="color:var(--adm-danger);">*</span></label>
-                        <select name="level_id" class="adm-form-select" required>
-                            <option value="">Sélectionner un niveau</option>
-                            @foreach($levels as $level)
-                                <option value="{{ $level->id }}">{{ $level->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="adm-form-group">
-                        <label class="adm-form-label">Classe <span style="color:var(--adm-danger);">*</span></label>
-                        <select name="class_id" class="adm-form-select" required>
-                            <option value="">Sélectionner une classe</option>
-                            @foreach($classes as $class)
-                                <option value="{{ $class->id }}">{{ $class->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="adm-form-group">
-                        <label class="adm-form-label">Matière <span style="color:var(--adm-danger);">*</span></label>
-                        <select name="subject_id" class="adm-form-select" required>
+                        <label class="adm-form-label">1. Matière <span style="color:var(--adm-danger);">*</span></label>
+                        <select name="subject_id" id="subjectSelect" class="adm-form-select" required>
                             <option value="">Sélectionner une matière</option>
                             @foreach($subjects as $subject)
-                                <option value="{{ $subject->id }}">{{ $subject->name }}</option>
+                                <option value="{{ $subject->id }}" @selected(old('subject_id') == $subject->id)>{{ $subject->name }}</option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label class="adm-form-label">2. Niveau <span style="color:var(--adm-danger);">*</span></label>
+                        <select name="level_id" id="levelSelect" class="adm-form-select" required disabled>
+                            <option value="">Choisissez d’abord une matière</option>
+                        </select>
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label class="adm-form-label">3. Classe <span style="color:var(--adm-danger);">*</span></label>
+                        <select name="class_id" id="classSelect" class="adm-form-select" required disabled>
+                            <option value="">Choisissez d’abord un niveau</option>
                         </select>
                     </div>
 
@@ -139,5 +133,46 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const hierarchy = @json($hierarchy);
+    const subject = document.getElementById('subjectSelect');
+    const level = document.getElementById('levelSelect');
+    const classRoom = document.getElementById('classSelect');
+    const oldLevel = @json((string) old('level_id', ''));
+    const oldClass = @json((string) old('class_id', ''));
+    const makeOption = (value, label) => Object.assign(document.createElement('option'), { value, textContent: label });
+
+    function loadClasses(selected = '') {
+        const levels = hierarchy[subject.value] || [];
+        const current = levels.find(item => String(item.id) === String(level.value));
+        const classes = current?.classes || [];
+        classRoom.replaceChildren(makeOption('', classes.length ? 'Sélectionner une classe' : 'Aucune classe disponible'));
+        classes.forEach(item => classRoom.appendChild(makeOption(item.id, item.name)));
+        classRoom.disabled = classes.length === 0;
+        if (classes.some(item => String(item.id) === String(selected))) classRoom.value = selected;
+    }
+
+    function loadLevels(selected = '') {
+        const levels = hierarchy[subject.value] || [];
+        level.replaceChildren(makeOption('', levels.length ? 'Sélectionner un niveau' : 'Aucun niveau disponible'));
+        levels.forEach(item => level.appendChild(makeOption(item.id, item.name)));
+        level.disabled = levels.length === 0;
+        classRoom.replaceChildren(makeOption('', 'Choisissez d’abord un niveau'));
+        classRoom.disabled = true;
+        if (levels.length) {
+            level.value = levels.some(item => String(item.id) === String(selected))
+                ? selected
+                : levels[0].id;
+            loadClasses(selected ? oldClass : '');
+        }
+    }
+
+    subject.addEventListener('change', () => loadLevels());
+    level.addEventListener('change', () => loadClasses());
+    if (subject.value) loadLevels(oldLevel);
+});
+</script>
 
 @endsection

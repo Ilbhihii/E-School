@@ -188,6 +188,23 @@
                     <i class="bi bi-box-arrow-up-right" style="font-size:0.65rem;"></i> Accéder aux matières
                 </a>
             </div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;">
+                @if($assignedSubject)
+                    <span style="padding:4px 9px;border-radius:999px;background:rgba(79,70,229,.14);border:1px solid rgba(99,102,241,.2);color:#A5B4FC;font-size:.7rem;font-weight:600;">
+                        <i class="bi bi-book me-1"></i>{{ $assignedSubject->name }}
+                    </span>
+                @endif
+                @if($classRoom?->level)
+                    <span style="padding:4px 9px;border-radius:999px;background:rgba(5,150,105,.12);border:1px solid rgba(16,185,129,.18);color:#6EE7B7;font-size:.7rem;font-weight:600;">
+                        <i class="bi bi-layers me-1"></i>{{ $classRoom->level->name }}
+                    </span>
+                @endif
+                @if($classRoom)
+                    <span style="padding:4px 9px;border-radius:999px;background:rgba(2,132,199,.12);border:1px solid rgba(14,165,233,.18);color:#7DD3FC;font-size:.7rem;font-weight:600;">
+                        <i class="bi bi-people me-1"></i>{{ $classRoom->name }}
+                    </span>
+                @endif
+            </div>
         </div>
         <a href="{{ route('student.profile') }}" style="padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:#94A3B8;text-decoration:none;font-size:0.82rem;font-weight:500;transition:all 0.2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
             <i class="bi bi-person-circle"></i> Profil
@@ -200,7 +217,7 @@
     @php
         $metrics = [
             ['value' => $coursesCount ?? 0, 'label' => 'Cours', 'icon' => 'book', 'color' => '#4F46E5'],
-            ['value' => $lives ?? 0, 'label' => 'Lives', 'icon' => 'broadcast', 'color' => '#DC2626'],
+            ['value' => $livesCount ?? 0, 'label' => 'Lives', 'icon' => 'broadcast', 'color' => '#DC2626'],
             ['value' => $assignmentsSent ?? 0, 'label' => 'Devoirs', 'icon' => 'upload', 'color' => '#059669'],
             ['value' => number_format($average ?? 0, 1), 'label' => 'Moyenne', 'icon' => 'graph-up', 'color' => '#D97706', 'suffix' => '/20'],
             ['value' => $assignmentCompletion ?? 0, 'label' => 'Réussite', 'icon' => 'trophy', 'color' => '#7C3AED', 'suffix' => '%'],
@@ -286,7 +303,7 @@
         <div class="col-lg-7">
             <div class="pr-card">
                 <div class="pr-card-header">
-                    <h4><i class="bi bi-bar-chart-fill" style="color:#0284C7;"></i> Radar de performance</h4>
+                    <h4><i class="bi bi-bar-chart-fill" style="color:#0284C7;"></i> Analyse de votre parcours</h4>
                 </div>
                 <div class="pr-card-body">
                     <div style="height:260px;"><canvas id="gradesChart"></canvas></div>

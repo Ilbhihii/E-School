@@ -88,9 +88,8 @@ class LevelController extends Controller
      */
     public function subjectsIndex()
     {
-        $subjects = Subject::where('name', '!=', 'Administration')
+        $subjects = Subject::whereIn('name', ['Arabe', 'Coran'])
             ->with(['levels', 'classes'])
-            ->withCount('courses')
             ->orderBy('name')
             ->get();
 
@@ -102,12 +101,101 @@ class LevelController extends Controller
      */
     public function subjectLevels(Subject $subject)
     {
-        // Charger TOUS les niveaux, avec leurs classes filtrées par matière
-        $levels = Level::with(['classes' => function($q) use ($subject) {
+        $levels = Level::where(function ($query) use ($subject) {
+                $query->where('subject_id', $subject->id)
+                    ->orWhereHas('classes.subjects', fn($subjectQuery) => $subjectQuery->where('subjects.id', $subject->id));
+            })
+            ->with(['classes' => function($q) use ($subject) {
                 $q->whereHas('subjects', fn($sq) => $sq->where('subject_id', $subject->id));
             }])
-            ->orderBy('name')
+            ->orderBy('order')
+            ->orderBy('id')
             ->get();
+
+        if (mb_strtolower($subject->name) === 'arabe') {
+            $arabicLevelNames = [
+                1 => 'Découverte de l’alphabet',
+                2 => 'Lecture et communication',
+                3 => 'Maîtrise intermédiaire',
+                4 => 'Expression écrite et orale',
+            ];
+
+            $arabicLevelsByName = Level::where(function ($query) {
+                    $query->where('name', 'like', '%alphabet%')
+                        ->orWhere('name', 'like', '%Lecture et communication%')
+                        ->orWhere('name', 'like', '%Maîtrise intermédiaire%')
+                        ->orWhere('name', 'like', '%Expression écrite et orale%');
+                })
+                ->with(['classes' => function($q) use ($subject) {
+                    $q->whereHas('subjects', fn($sq) => $sq->where('subject_id', $subject->id));
+                }])
+                ->get();
+
+            $levels = $levels->concat($arabicLevelsByName)->unique('id');
+
+            $levels = $levels
+                ->filter(function ($level) use ($arabicLevelNames) {
+                    $name = mb_strtolower($level->name);
+
+                    return isset($arabicLevelNames[(int) $level->order])
+                        || collect($arabicLevelNames)->contains(function ($expectedName) use ($name) {
+                            $searchName = $expectedName === 'Découverte de l’alphabet'
+                                ? 'alphabet'
+                                : mb_strtolower($expectedName);
+
+                            return str_contains($name, $searchName);
+                        });
+                })
+                ->each(function ($level) use ($arabicLevelNames) {
+                    $name = mb_strtolower($level->name);
+                    $matchedName = collect($arabicLevelNames)->first(function ($expectedName) use ($name) {
+                        $searchName = $expectedName === 'Découverte de l’alphabet'
+                            ? 'alphabet'
+                            : mb_strtolower($expectedName);
+
+                        return str_contains($name, $searchName);
+                    });
+
+                    $level->name = $matchedName ?? $arabicLevelNames[(int) $level->order];
+                })
+                ->sortBy(fn($level) => array_search($level->name, $arabicLevelNames, true))
+                ->values();
+        } elseif (mb_strtolower($subject->name) === 'coran') {
+            $quranLevelNames = [
+                1 => 'Apprendre les règles',
+                2 => 'Tajwid et Hifd',
+            ];
+
+            $quranLevelsByName = Level::where(function ($query) {
+                    $query->where('name', 'like', '%Apprendre les règles%')
+                        ->orWhere('name', 'like', '%Tajwid et Hifd%');
+                })
+                ->with(['classes' => function($q) use ($subject) {
+                    $q->whereHas('subjects', fn($sq) => $sq->where('subject_id', $subject->id));
+                }])
+                ->get();
+
+            $levels = $levels->concat($quranLevelsByName)->unique('id');
+
+            $levels = $levels
+                ->filter(function ($level) use ($quranLevelNames) {
+                    $name = mb_strtolower($level->name);
+
+                    return isset($quranLevelNames[(int) $level->order])
+                        || collect($quranLevelNames)->contains(
+                            fn($expectedName) => str_contains($name, mb_strtolower($expectedName))
+                        );
+                })
+                ->each(function ($level) use ($quranLevelNames) {
+                    $matchedName = collect($quranLevelNames)->first(
+                        fn($expectedName) => str_contains(mb_strtolower($level->name), mb_strtolower($expectedName))
+                    );
+
+                    $level->name = $matchedName ?? $quranLevelNames[(int) $level->order];
+                })
+                ->sortBy(fn($level) => array_search($level->name, $quranLevelNames, true))
+                ->values();
+        }
 
         return view('admin.subjects.levels', compact('subject', 'levels'));
     }

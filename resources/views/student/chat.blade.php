@@ -160,7 +160,7 @@
         <div class="chat-header-icon">💬</div>
         <div>
             <h1>{{ $subject->name ?? 'Chat' }}</h1>
-            <p>Posez vos questions aux professeurs</p>
+            <p>{{ mb_strtolower($subject->name ?? '') === 'administration' ? 'Conversation privée avec l’administration' : 'Posez vos questions aux professeurs' }}</p>
         </div>
     </div>
 

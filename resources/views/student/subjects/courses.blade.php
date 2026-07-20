@@ -46,7 +46,7 @@
     <div class="pr-empty-icon"><i class="bi bi-book"></i></div>
     <h5>Aucun cours disponible</h5>
     <p>Aucun cours n'est encore disponible pour cette matière, niveau et classe.</p>
-    <a href="{{ route('student.subjects.classes', [$subject->id, $level->id]) }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-arrow-left me-2"></i> Retour aux classes</a>
+    <a href="{{ route('student.subjects.index') }}" class="pr-btn pr-btn-ghost pr-btn-sm"><i class="bi bi-arrow-left me-2"></i> Retour</a>
 </div>
 @endif
 

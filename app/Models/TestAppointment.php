@@ -15,6 +15,7 @@ class TestAppointment extends Model
         'country',
         'type',
         'status',
+        'vocal_test_submission_id',
     ];
 
     const STATUS_PENDING = 'pending';
@@ -49,5 +50,10 @@ class TestAppointment extends Model
     public function scopePending($query)
     {
         return $query->where('status', self::STATUS_PENDING);
+    }
+
+    public function vocalSubmission()
+    {
+        return $this->belongsTo(VocalTestSubmission::class, 'vocal_test_submission_id');
     }
 }

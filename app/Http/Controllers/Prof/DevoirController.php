@@ -9,6 +9,7 @@ use App\Models\ClassRoom;
 use App\Models\Course;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use App\Models\ProfAssignment;
 
 class DevoirController extends Controller
 {
@@ -19,11 +20,11 @@ class DevoirController extends Controller
         $query = Assignment::where('user_id', auth()->id());
         if ($course_id) {
             $query->where('course_id', $course_id);
-            $course = Course::findOrFail($course_id);
+            $course = Course::where('user_id', auth()->id())->findOrFail($course_id);
         }
         $devoirs = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        $courses = Course::all(); // for filter
+        $courses = Course::where('user_id', auth()->id())->orderBy('title')->get();
 
         return view('prof.devoir.index', compact('devoirs', 'course_id', 'course', 'courses'));
     }
@@ -32,9 +33,10 @@ class DevoirController extends Controller
     public function create(Request $request)
     {
         $course_id = $request->course_id;
-        $course = $course_id ? Course::findOrFail($course_id) : null;
-        $classes = ClassRoom::all();
-        $courses = Course::all();
+        $course = $course_id ? Course::where('user_id', auth()->id())->findOrFail($course_id) : null;
+        $scope = ProfAssignment::where('prof_id', auth()->id())->get();
+        $classes = ClassRoom::whereIn('id', $scope->pluck('class_id'))->orderBy('name')->get();
+        $courses = Course::where('user_id', auth()->id())->orderBy('title')->get();
         return view('prof.devoir.create', compact('course', 'classes', 'courses', 'course_id'));
     }
 
@@ -51,6 +53,13 @@ class DevoirController extends Controller
             'due_date' => 'required|date|after:now',
             'file' => 'nullable|file|mimes:pdf|max:5120', // 5MB PDF
         ]);
+        $course = $request->course_id
+            ? Course::where('user_id', auth()->id())->findOrFail($request->course_id)
+            : null;
+        abort_unless(ProfAssignment::where('prof_id', auth()->id())
+            ->where('class_id', $request->class_room_id)
+            ->when($course, fn ($query) => $query->where('subject_id', $course->subject_id))
+            ->exists(), 403);
 
         $filePath = null;
         if ($request->hasFile('file')) {
@@ -77,7 +86,8 @@ class DevoirController extends Controller
             abort(403);
         }
 
-        $classes = ClassRoom::all();
+        $classIds = ProfAssignment::where('prof_id', auth()->id())->pluck('class_id');
+        $classes = ClassRoom::whereIn('id', $classIds)->orderBy('name')->get();
         return view('prof.devoir.edit', compact('devoir', 'classes'));
     }
 
@@ -94,6 +104,8 @@ class DevoirController extends Controller
             'due_date' => 'required|date',
             'file' => 'nullable|file|mimes:pdf|max:5120',
         ]);
+        abort_unless(ProfAssignment::where('prof_id', auth()->id())
+            ->where('class_id', $request->class_room_id)->exists(), 403);
 
         if ($request->hasFile('file')) {
             if ($devoir->file) {
@@ -131,4 +143,3 @@ class DevoirController extends Controller
     }
 }
 ?>
-
