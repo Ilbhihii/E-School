@@ -317,6 +317,7 @@
             .shooting-star { display: none; }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
 </head>
 
 <body>
@@ -338,10 +339,6 @@
         Smart School Academy
     </a>
     <div class="d-flex gap-2 align-items-center">
-        <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème">
-            <i class="bi bi-moon-fill icon-moon"></i>
-            <i class="bi bi-sun-fill icon-sun"></i>
-        </button>
         <a href="{{ route('login') }}" class="btn nav-btn-3d btn-sm px-3" style="font-size: 0.85rem; background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 209, 102, 0.3);">
             <i class="bi bi-person"></i> Connexion
         </a>
@@ -416,8 +413,6 @@
     }
 })();
 </script>
-
-@include('partials.theme-toggle-js')
 
 @stack('scripts')
 

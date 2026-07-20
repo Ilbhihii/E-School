@@ -78,6 +78,8 @@
                 <th>Nom</th>
                 <th>Téléphone</th>
                 <th>Email</th>
+                <th>Ville</th>
+                <th>Pays</th>
                 <th>Type</th>
                 <th>Statut</th>
                 <th>Date</th>
@@ -100,6 +102,8 @@
                         <i class="bi bi-envelope me-1" style="color: rgba(255,255,255,0.3);"></i>{{ $appointment->email }}
                     </a>
                 </td>
+                <td>{{ $appointment->city ?: '—' }}</td>
+                <td>{{ $appointment->country ?: '—' }}</td>
                 <td>
                     <span class="type-badge type-{{ $appointment->type }}">
                         @if($appointment->type === 'test')
@@ -154,7 +158,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="9" class="text-center py-5" style="color: rgba(255,255,255,0.3);">
+                <td colspan="11" class="text-center py-5" style="color: rgba(255,255,255,0.3);">
                     <i class="bi bi-inbox" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
                     Aucun rendez-vous pour le moment
                 </td>

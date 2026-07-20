@@ -103,6 +103,30 @@
                                     <small style="color: #FCA5A5;">{{ $message }}</small>
                                 @enderror
                             </div>
+
+                            <!-- Ville -->
+                            <div class="col-md-6">
+                                <label class="form-label text-white-50 small mb-1" style="font-weight: 500;">Ville</label>
+                                <input type="text" name="city" value="{{ old('city') }}" required
+                                       class="form-control chat-input @error('city') is-invalid @enderror"
+                                       placeholder="Votre ville" autocomplete="address-level2"
+                                       style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); border-radius: 10px; padding: 12px 16px;">
+                                @error('city')
+                                    <small style="color: #FCA5A5;">{{ $message }}</small>
+                                @enderror
+                            </div>
+
+                            <!-- Pays -->
+                            <div class="col-md-6">
+                                <label class="form-label text-white-50 small mb-1" style="font-weight: 500;">Pays</label>
+                                <input type="text" name="country" value="{{ old('country') }}" required
+                                       class="form-control chat-input @error('country') is-invalid @enderror"
+                                       placeholder="Votre pays" autocomplete="country-name"
+                                       style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); border-radius: 10px; padding: 12px 16px;">
+                                @error('country')
+                                    <small style="color: #FCA5A5;">{{ $message }}</small>
+                                @enderror
+                            </div>
                         </div>
 
                         <button type="submit" class="btn-3d btn-3d-gradient w-100 mt-4" style="padding: 14px;">

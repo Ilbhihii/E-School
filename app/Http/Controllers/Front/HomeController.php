@@ -16,8 +16,8 @@ class HomeController extends Controller
         $courses = Course::count();
         $lives = Live::latest()->take(3)->get();
 
-        $subjectsReligieux = \App\Models\Subject::where('type', 'religieux')->get();
-        $subjectsScolaire = \App\Models\Subject::where('type', 'scolaire')->get();
+        $subjectsReligieux = \App\Models\Subject::where('name', 'Coran')->get();
+        $subjectsScolaire = \App\Models\Subject::where('name', 'Arabe')->get();
 
 $subjectsGrouped = [
             'Matières Religieuses' => [
@@ -52,17 +52,33 @@ $subjectsGrouped = [
     // Liste des matières
     public function classes()
     {
-        $subjects = \App\Models\Subject::withCount(['courses', 'classes'])->get();
+        $subjects = \App\Models\Subject::with(['classes.level', 'levels'])
+            ->withCount(['courses', 'classes'])
+            ->whereIn('name', ['Arabe', 'Coran'])
+            ->get();
 
         $subjects->each(function ($subject) {
-            if ($subject->courses_count > 0) {
+            $classLevels = $subject->classes
+                ->pluck('level')
+                ->filter();
+
+            $subject->available_levels = $subject->levels
+                ->concat($classLevels)
+                ->unique('id')
+                ->sortBy('order')
+                ->values();
+
+            $hasLevels = $subject->available_levels->isNotEmpty();
+            $hasClasses = $subject->classes_count > 0;
+
+            if ($hasLevels && $hasClasses) {
                 $subject->status = 'disponible';
                 $subject->status_label = 'Disponible';
                 $subject->status_icon = 'bi-check-circle-fill';
                 $subject->status_color = '#4ADE80';
                 $subject->status_bg = 'rgba(34,197,94,0.15)';
                 $subject->status_border = 'rgba(34,197,94,0.2)';
-            } elseif ($subject->classes_count > 0) {
+            } elseif ($hasLevels) {
                 $subject->status = 'en_cours';
                 $subject->status_label = 'En cours';
                 $subject->status_icon = 'bi-hourglass-split';

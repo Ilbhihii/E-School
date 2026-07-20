@@ -36,23 +36,39 @@
         <div class="row g-4" id="subjectsGrid">
             @forelse($subjects as $subject)
             <div class="col-md-4 subject-card" data-type="{{ $subject->type }}">
-                <a href="{{ route('front.subject.levels', $subject->id) }}" class="text-decoration-none">
-                    <div class="card-3d text-center h-100 reveal-3d" style="cursor: pointer;">
+                <div class="card-3d text-center h-100 reveal-3d">
+                    <a href="{{ route('front.subject.levels', $subject->id) }}" class="text-decoration-none">
                         <div class="card-3d-icon mx-auto">
                             <i class="bi bi-book"></i>
                         </div>
                         <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">{{ $subject->name }}</h5>
+                    </a>
                         <span class="badge px-3 py-1 mb-2" style="background: {{ $subject->status_bg }}; color: {{ $subject->status_color }}; border: 1px solid {{ $subject->status_border }}; border-radius: 20px; font-weight: 500; font-size: 0.75rem;">
                             <i class="bi {{ $subject->status_icon }} me-1"></i> {{ $subject->status_label }}
                         </span>
-                        <p class="text-white-50 small mb-0">
+                        <p class="text-white-50 small mb-3">
                             <span class="badge" style="background: {{ $subject->type === 'religieux' ? 'rgba(155,89,182,0.2)' : 'rgba(52,152,219,0.2)' }}; color: {{ $subject->type === 'religieux' ? '#D7A1F9' : '#7DD3FC' }}; border-radius: 20px; font-size: 0.7rem;">
                                 {{ $subject->type === 'religieux' ? '🕌 Religieux' : '📚 Scolaire' }}
                             </span>
-                            <span class="ms-2">Voir les niveaux <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i></span>
                         </p>
-                    </div>
-                </a>
+
+                        <div class="pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+                            <div class="small fw-semibold mb-2" style="color:rgba(255,255,255,0.65);">
+                                <i class="bi bi-layers me-1"></i>Niveaux disponibles
+                            </div>
+                            <div class="d-flex flex-wrap justify-content-center gap-2">
+                                @forelse($subject->available_levels as $level)
+                                    <a href="{{ route('front.subject.level.classes', [$subject->id, $level->id]) }}"
+                                       class="badge text-decoration-none px-3 py-2"
+                                       style="background:rgba(124,58,237,0.16);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25);border-radius:20px;">
+                                        {{ $level->name }} <i class="bi bi-chevron-right ms-1"></i>
+                                    </a>
+                                @empty
+                                    <span class="text-white-50 small">Aucun niveau disponible</span>
+                                @endforelse
+                            </div>
+                        </div>
+                </div>
             </div>
             @empty
             <div class="col-12 text-center">

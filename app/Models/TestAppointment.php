@@ -11,6 +11,8 @@ class TestAppointment extends Model
         'last_name',
         'phone',
         'email',
+        'city',
+        'country',
         'type',
         'status',
     ];

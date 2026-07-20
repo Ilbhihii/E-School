@@ -24,17 +24,23 @@ class FrontController extends Controller
 
     public function subjectLevels($id)
     {
-        $subject = Subject::withCount('courses')->findOrFail($id);
+        $subject = Subject::withCount(['courses', 'classes'])->findOrFail($id);
 
         // Les niveaux sont reliés aux matières via : Subject → classes (pivot) → ClassRoom.level_id → Level
         $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique();
         $levels = Level::whereIn('id', $levelIds)
-            ->withCount('courses')
+            ->withCount([
+                'courses',
+                'classes as available_classes_count' => fn($query) => $query
+                    ->whereHas('subjects', fn($subjectQuery) => $subjectQuery
+                        ->where('subjects.id', $subject->id)),
+            ])
             ->get();
 
         // Autres matières de la même famille (même type : religieux / scolaire)
         $sameFamilySubjects = Subject::where('type', $subject->type)
             ->where('id', '!=', $subject->id)
+            ->whereIn('name', ['Arabe', 'Coran'])
             ->withCount('courses')
             ->get();
 
@@ -104,7 +110,8 @@ class FrontController extends Controller
     public function publicSubjects(Level $level, \App\Models\ClassRoom $class_room)
     {
         $class = $class_room;
-        $subjects = Subject::whereHas('classes', fn($q) => $q->where('class_room_id', $class->id))
+        $subjects = Subject::whereIn('name', ['Arabe', 'Coran'])
+            ->whereHas('classes', fn($q) => $q->where('class_room_id', $class->id))
             ->withCount('courses')
             ->get();
 
@@ -130,6 +137,7 @@ class FrontController extends Controller
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
             ->where('type', 'religieux')
+            ->where('name', 'Coran')
             ->get();
 
         $subjects->each(function ($subject) {
@@ -161,6 +169,7 @@ class FrontController extends Controller
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
             ->where('type', 'scolaire')
+            ->where('name', 'Arabe')
             ->get();
 
         $subjects->each(function ($subject) {

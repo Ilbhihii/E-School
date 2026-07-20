@@ -188,6 +188,7 @@
     </style>
     <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
+    <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
 </head>
 <body>
 
@@ -200,10 +201,11 @@
         <aside class="st-sidebar" id="mainSidebar">
 
             <div class="st-sidebar-brand">
-                <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
+                <a href="{{ route('home') }}" class="brand-icon" aria-label="Retour à l'accueil"
+                   style="background:transparent;box-shadow:none;width:auto;height:auto;text-decoration:none;">
                     <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" class="logo-theme-dark" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
                     <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" class="logo-theme-light" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
-                </div>
+                </a>
                 <h3>Smart School Academy</h3>
                 <div class="brand-sub">Espace Étudiant</div>
             </div>
@@ -309,12 +311,6 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
-                    <!-- ═══ THEME TOGGLE ═══ -->
-                    <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème"
-                            style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.3s ease;flex-shrink:0;">
-                        <i class="bi bi-moon-fill icon-moon"></i>
-                        <i class="bi bi-sun-fill icon-sun"></i>
-                    </button>
 
                     @if(!Route::is('student.waiting'))
                     <a href="{{ route('student.subjects.index') }}" class="st-tb-link {{ str_contains($route ?? '', 'subject') ? 'active' : '' }}">
@@ -396,8 +392,6 @@
         }
     });
     </script>
-
-    @include('partials.theme-toggle-js')
 
     @stack('scripts')
 

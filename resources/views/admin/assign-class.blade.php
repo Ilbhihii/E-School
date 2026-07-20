@@ -82,6 +82,12 @@
                 </div>
                 @endif
 
+                @if(session('info'))
+                <div class="adm-alert mb-4" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);color:#93C5FD;border-radius:12px;padding:12px 16px;">
+                    <i class="bi bi-info-circle me-2"></i> {{ session('info') }}
+                </div>
+                @endif
+
                 <!-- ═══ CASCADE VISUAL INDICATOR ═══ -->
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;padding:8px 12px;background:rgba(255,255,255,0.02);border-radius:10px;">
                     <div style="flex:1;text-align:center;padding:6px 0;border-radius:8px;background:rgba(124,58,237,0.15);color:#A78BFA;font-size:0.75rem;font-weight:600;">
@@ -103,12 +109,13 @@
                         <label class="adm-form-label">
                             <i class="bi bi-person me-1" style="color:#4ADE80;"></i> Étudiant
                         </label>
-                        <select name="user_id" class="adm-form-select" required>
+                        <select name="user_id" class="adm-form-select @error('user_id') error @enderror" required>
                             <option value="">Sélectionner un étudiant</option>
                             @foreach($students as $student)
-                            <option value="{{ $student->id }}">{{ $student->name }}</option>
+                            <option value="{{ $student->id }}" @selected(old('user_id') == $student->id)>{{ $student->name }}</option>
                             @endforeach
                         </select>
+                        @error('user_id') <div class="adm-form-error">{{ $message }}</div> @enderror
                     </div>
 
                     <div style="height:12px;"></div>
@@ -150,7 +157,7 @@
                             <option value="">D'abord choisir un niveau</option>
                             @foreach($classRooms as $classRoom)
                                 @php $classSubjectIds = $classRoom->subjects->pluck('id')->implode(','); @endphp
-                            <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}" data-subject-ids="{{ $classSubjectIds }}">{{ $classRoom->name }}</option>
+                            <option value="{{ $classRoom->id }}" data-level-id="{{ $classRoom->level_id }}" data-subject-ids="{{ $classSubjectIds }}" @selected(old('class_id') == $classRoom->id)>{{ $classRoom->name }}</option>
                             @endforeach
                         </select>
                         @error('class_id') <div class="adm-form-error">{{ $message }}</div> @enderror
@@ -235,9 +242,10 @@
 </div>
 
 <!-- Edit Modal -->
-<div class="adm-modal-overlay" id="editModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+<div class="adm-modal-overlay" id="editModal" style="display:none;" onclick="if(event.target===this)closeEditModal()">
     <div class="adm-modal">
-        <form method="POST" action="{{ route('admin.assign.class.update', '__PIVOT_ID__') }}" id="editForm">
+        <form method="POST" action="{{ route('admin.assign.class.update', '__PIVOT_ID__') }}"
+              data-action-template="{{ route('admin.assign.class.update', '__PIVOT_ID__') }}" id="editForm">
             @csrf @method('PATCH')
             <input type="hidden" name="pivot_id" id="edit_assignment_id">
             <div class="adm-modal-header">
@@ -466,7 +474,7 @@ function editAssignment(userId, classId, subjectId, pivotId) {
     document.getElementById('edit_class_id').value = classId;
 
     const form = document.getElementById('editForm');
-    form.action = form.action.replace('__PIVOT_ID__', pivotId);
+    form.action = form.dataset.actionTemplate.replace('__PIVOT_ID__', pivotId);
     document.getElementById('editModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
@@ -476,6 +484,8 @@ function closeEditModal() {
     document.body.style.overflow = 'auto';
 }    // 🚀 Init
 document.addEventListener('DOMContentLoaded', function() {
+    const initialClassId = document.getElementById('class_id').value;
+
     // Main form: subject → level → class
     document.getElementById('subject_id').addEventListener('change', function() {
         document.getElementById('level_filter').value = '';
@@ -499,7 +509,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     filterLevelsBySubject('subject_id', 'level_filter');
-    filterClassesBySubjectAndLevel('subject_id', 'level_filter', 'class_id');
+    if (initialClassId) {
+        const initialClassOption = document.querySelector('#class_id option[value="' + initialClassId + '"]');
+        document.getElementById('level_filter').value = initialClassOption?.dataset.levelId || '';
+        filterClassesBySubjectAndLevel('subject_id', 'level_filter', 'class_id');
+        document.getElementById('class_id').value = initialClassId;
+    } else {
+        filterClassesBySubjectAndLevel('subject_id', 'level_filter', 'class_id');
+    }
 });
 </script>
 @endsection

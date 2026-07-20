@@ -289,6 +289,10 @@ class UserController extends Controller
             'subject_id' => 'required|exists:subjects,id',
         ]);
 
+        if (!User::whereKey($request->user_id)->where('role', 'student')->exists()) {
+            return back()->withInput()->withErrors(['user_id' => 'L’utilisateur sélectionné n’est pas un étudiant.']);
+        }
+
         $classHasSubject = ClassRoom::whereKey($request->class_id)
             ->whereHas('subjects', fn ($query) => $query->where('subjects.id', $request->subject_id))
             ->exists();
@@ -318,7 +322,7 @@ class UserController extends Controller
         ]);
 
         // 🔥 Synchroniser users.class_id pour que $user->classRoom() fonctionne
-        User::where('id', $request->user_id)->update(['class_id' => $request->class_id]);
+        $this->syncStudentClass((int) $request->user_id);
 
         return redirect()->back()->with('success', 'Matière assignée avec succès !');
     }
@@ -328,11 +332,18 @@ class UserController extends Controller
      */
     public function updateAssignment(Request $request, $pivotId)
     {
+        $assignment = DB::table('class_user')->where('id', $pivotId)->first();
+        abort_unless($assignment, 404);
+
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'class_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
         ]);
+
+        if (!User::whereKey($request->user_id)->where('role', 'student')->exists()) {
+            return back()->withInput()->withErrors(['user_id' => 'L’utilisateur sélectionné n’est pas un étudiant.']);
+        }
 
         $classHasSubject = ClassRoom::whereKey($request->class_id)
             ->whereHas('subjects', fn ($query) => $query->where('subjects.id', $request->subject_id))
@@ -341,6 +352,18 @@ class UserController extends Controller
         if (!$classHasSubject) {
             return back()->withInput()->withErrors([
                 'class_id' => 'La classe sélectionnée n’est pas liée à cette matière.',
+            ]);
+        }
+
+        $duplicateExists = DB::table('class_user')
+            ->where('user_id', $request->user_id)
+            ->where('subject_id', $request->subject_id)
+            ->where('id', '!=', $pivotId)
+            ->exists();
+
+        if ($duplicateExists) {
+            return back()->withInput()->withErrors([
+                'subject_id' => 'Cette matière est déjà assignée à cet étudiant.',
             ]);
         }
 
@@ -353,8 +376,11 @@ class UserController extends Controller
                 'updated_at' => now()
             ]);
 
-        // 🔥 Synchroniser users.class_id
-        User::where('id', $request->user_id)->update(['class_id' => $request->class_id]);
+        // Synchroniser l'ancien étudiant et le nouveau si l'assignation a été transférée.
+        $this->syncStudentClass((int) $assignment->user_id);
+        if ((int) $assignment->user_id !== (int) $request->user_id) {
+            $this->syncStudentClass((int) $request->user_id);
+        }
 
         return redirect()->back()->with('success', 'Assignation modifiée avec succès!');
     }
@@ -366,23 +392,25 @@ class UserController extends Controller
     {
         $pivot = DB::table('class_user')->where('id', $pivotId)->first();
 
+        abort_unless($pivot, 404);
+
         DB::table('class_user')
             ->where('id', $pivotId)
             ->delete();
 
-        // 🔥 Effacer users.class_id si c'était la seule assignation
-        if ($pivot) {
-            // Check if user has other assignments before clearing class_id
-            $otherAssignments = DB::table('class_user')
-                ->where('user_id', $pivot->user_id)
-                ->where('id', '!=', $pivotId)
-                ->exists();
-
-            if (!$otherAssignments) {
-                User::where('id', $pivot->user_id)->update(['class_id' => null]);
-            }
-        }
+        $this->syncStudentClass((int) $pivot->user_id);
 
         return redirect()->back()->with('success', 'Assignation supprimée avec succès!');
+    }
+
+    private function syncStudentClass(int $userId): void
+    {
+        $classId = DB::table('class_user')
+            ->where('user_id', $userId)
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->value('class_id');
+
+        User::whereKey($userId)->where('role', 'student')->update(['class_id' => $classId]);
     }
 }

@@ -141,6 +141,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
 </head>
 
 <body>
@@ -162,12 +163,6 @@
     </a>
 
     <div class="app-nav d-flex flex-wrap align-items-center gap-1">
-        <!-- ═══ THEME TOGGLE ═══ -->
-        <button class="theme-toggle-btn" id="themeToggle" aria-label="Changer le thème"
-                style="width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all 0.3s ease;flex-shrink:0;">
-            <i class="bi bi-moon-fill icon-moon"></i>
-            <i class="bi bi-sun-fill icon-sun"></i>
-        </button>
 
         @auth
             @if(auth()->user()->role === 'admin')
@@ -205,8 +200,6 @@
 <main class="app-content">
     @yield('content')
 </main>
-
-@include('partials.theme-toggle-js')
 
 @stack('scripts')
 

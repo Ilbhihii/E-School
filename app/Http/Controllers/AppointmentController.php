@@ -27,6 +27,8 @@ class AppointmentController extends Controller
             'last_name'  => 'required|string|max:255',
             'phone'      => 'required|string|max:20',
             'email'      => 'required|email|max:255',
+            'city'       => 'required|string|max:255',
+            'country'    => 'required|string|max:255',
             'type'       => 'required|string|in:' . implode(',', array_keys(TestAppointment::getTypes())),
         ];
 
@@ -37,6 +39,8 @@ class AppointmentController extends Controller
             'last_name'  => $validated['last_name'],
             'phone'      => $validated['phone'],
             'email'      => $validated['email'],
+            'city'       => $validated['city'],
+            'country'    => $validated['country'],
             'type'       => $validated['type'],
             'status'     => TestAppointment::STATUS_PENDING,
         ]);

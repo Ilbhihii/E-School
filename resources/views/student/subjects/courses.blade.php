@@ -3,7 +3,7 @@
 @section('title', 'Cours - ' . $subject->name)
 
 @section('page_title', $subject->name)
-@section('breadcrumb', 'Matières → Niveaux → Classes → Cours')
+@section('breadcrumb', 'Accueil / Matières / Cours')
 
 @section('content')
 
@@ -11,12 +11,6 @@
     <a href="{{ route('student.dashboard') }}" style="color:#64748B;text-decoration:none;"><i class="bi bi-house me-1"></i>Accueil</a>
     <span style="color:rgba(255,255,255,0.12);">/</span>
     <a href="{{ route('student.subjects.index') }}" style="color:#64748B;text-decoration:none;">Matières</a>
-    <span style="color:rgba(255,255,255,0.12);">/</span>
-    <a href="{{ route('student.subjects.levels', $subject->id) }}" style="color:#94A3B8;text-decoration:none;">{{ $subject->name }}</a>
-    <span style="color:rgba(255,255,255,0.12);">/</span>
-    <a href="{{ route('student.subjects.classes', [$subject->id, $level->id]) }}" style="color:#94A3B8;text-decoration:none;">{{ $level->name }}</a>
-    <span style="color:rgba(255,255,255,0.12);">/</span>
-    <span style="color:#94A3B8;font-weight:500;">{{ $class->name }}</span>
     <span style="color:rgba(255,255,255,0.12);">/</span>
     <span style="color:#F1F5F9;font-weight:600;">Cours</span>
 </div>

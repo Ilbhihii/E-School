@@ -20,15 +20,31 @@
             tout ce qu'il vous faut pour exceller, accessible partout et à tout moment.
         </p>
 
-        <div class="d-flex flex-wrap justify-content-center gap-3 mb-5">
-            <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
-                <i class="bi bi-calendar-check"></i>
-                prise de contact
-            </a>
-            <a href="{{ route('front.classes') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.05rem;">
-                <i class="bi bi-grid-3x3-gap"></i>
-                Explorer les matières
-            </a>
+        <div class="row g-4 justify-content-center mb-5 mx-auto" style="max-width:760px;">
+            @foreach($subjectsGrouped as $group)
+                @foreach($group['subjects'] as $subject)
+                    <div class="col-md-6">
+                        <a href="{{ route('front.subject.levels', $subject->id) }}"
+                           class="text-decoration-none d-block h-100"
+                           aria-label="Voir les niveaux de {{ $subject->name }}">
+                            <div class="card-3d text-center h-100 reveal-3d" style="cursor:pointer;padding:2rem;">
+                                <div class="card-3d-icon mx-auto">
+                                    <i class="bi {{ $subject->name === 'Coran' ? 'bi-book-half' : 'bi-translate' }}"></i>
+                                </div>
+                                <h5 class="fw-bold text-white mt-3 mb-2" style="font-family:'Poppins',sans-serif;">
+                                    {{ $subject->name }}
+                                </h5>
+                                <span class="badge mx-auto mb-3" style="background:{{ $subject->type === 'religieux' ? 'rgba(155,89,182,0.2)' : 'rgba(52,152,219,0.2)' }};color:{{ $subject->type === 'religieux' ? '#D7A1F9' : '#7DD3FC' }};border-radius:20px;font-size:0.72rem;">
+                                    {{ $subject->type === 'religieux' ? 'Matière religieuse' : 'Matière scolaire' }}
+                                </span>
+                                <p class="text-white-50 small mb-0">
+                                    Voir les niveaux <i class="bi bi-arrow-right ms-1" style="color:var(--3d-gold);"></i>
+                                </p>
+                            </div>
+                        </a>
+                    </div>
+                @endforeach
+            @endforeach
         </div>
     </div>
 

@@ -10,7 +10,7 @@
 <div class="st-page-header">
     <div>
         <h1><i class="bi bi-book" style="color:#818CF8;"></i> Mes Matières</h1>
-        <div class="subtitle">Choisissez une matière pour explorer les niveaux et classes</div>
+        <div class="subtitle">Choisissez une matière pour accéder directement à vos cours</div>
     </div>
 </div>
 
@@ -54,7 +54,10 @@
             list($r,$g,$b) = sscanf($color, '#%02x%02x%02x');
         @endphp
         <div class="col-sm-6 col-lg-4 col-xl-3">
-            <a href="{{ route('student.subjects.levels', $subject->id) }}" style="text-decoration:none;display:block;height:100%;">
+            <a href="{{ $classRoom && $level
+                ? route('student.subjects.courses', [$subject->id, $level->id, $classRoom->id])
+                : route('student.subjects.levels', $subject->id) }}"
+               style="text-decoration:none;display:block;height:100%;">
                 <div style="background:linear-gradient(135deg,#1E293B,#1a2332);border:1px solid rgba(255,255,255,0.04);border-radius:12px;padding:1.5rem 1.25rem;text-align:center;transition:all 0.2s ease;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;" onmouseover="this.style.borderColor='rgba(255,255,255,0.12)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.04)';this.style.boxShadow='none'">
                     <div style="position:absolute;top:-10px;right:-10px;width:60px;height:60px;border-radius:50%;background:rgba({{ $r }},{{ $g }},{{ $b }},0.06);"></div>
                     <div style="width:56px;height:56px;border-radius:50%;background:rgba({{ $r }},{{ $g }},{{ $b }},0.1);display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:{{ $color }};margin-bottom:0.75rem;transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
@@ -62,7 +65,7 @@
                     </div>
                     <h5 style="font-weight:700;color:#F1F5F9;margin-bottom:0.35rem;font-size:0.95rem;">{{ $subject->name }}</h5>
                     <p style="font-size:0.78rem;color:#64748B;margin:0;display:flex;align-items:center;gap:5px;">
-                        <i class="bi bi-layers me-1" style="color:#4F46E5;"></i> Voir les niveaux
+                        <i class="bi bi-play-circle me-1" style="color:#4F46E5;"></i> Voir mes cours
                     </p>
                 </div>
             </a>

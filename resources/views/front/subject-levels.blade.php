@@ -258,8 +258,8 @@ html.light-mode .card-3d .text-white-50 {
                 <!-- CTA -->
                 <div class="d-flex flex-wrap gap-3 mt-4">
                     @auth
-                        <a href="{{ route('student.subjects.index') }}" class="btn-3d btn-3d-gradient">
-                            <i class="bi bi-mortarboard"></i> Accéder à mes cours
+                        <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-gradient">
+                            <i class="bi bi-calendar-check"></i> Prise de contact
                         </a>
                     @else
                         <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient">
@@ -278,12 +278,8 @@ html.light-mode .card-3d .text-white-50 {
                         <div class="stat-3d-label">Niveaux</div>
                     </div>
                     <div class="stat-3d-item">
-                        <div class="stat-3d-value gradient-text">{{ $subject->courses_count ?? 0 }}</div>
-                        <div class="stat-3d-label">Cours</div>
-                    </div>
-                    <div class="stat-3d-item">
-                        <div class="stat-3d-value gradient-text">{{ $levels->sum('courses_count') ?: '—' }}</div>
-                        <div class="stat-3d-label">Leçons</div>
+                        <div class="stat-3d-value gradient-text">{{ $subject->classes_count ?? 0 }}</div>
+                        <div class="stat-3d-label">Classes disponibles</div>
                     </div>
                 </div>
             </div>
@@ -298,8 +294,9 @@ html.light-mode .card-3d .text-white-50 {
     </div>
 </section>
 
+<div style="display:flex;flex-direction:column;">
 <!-- ═══ EXPLICATION / PUBLICITÉ DU CONTENU ═══ -->
-<section class="py-5">
+<section class="py-5" style="order:2;">
     <div class="container">
         <div class="text-center mb-5">
             <span class="badge px-3 py-2 mb-3" style="background:rgba(124,58,237,0.12);color:#A78BFA;border-radius:20px;font-weight:500;font-size:0.8rem;">
@@ -346,7 +343,7 @@ html.light-mode .card-3d .text-white-50 {
 </section>
 
 <!-- ═══ NIVEAUX DISPONIBLES ═══ -->
-<section class="py-5" style="background:rgba(255,255,255,0.01);">
+<section class="py-5" style="background:rgba(255,255,255,0.01);order:1;">
     <div class="container">
         <div class="text-center mb-5">
             <span class="badge px-3 py-2 mb-3" style="background:rgba(34,197,94,0.12);color:#4ADE80;border-radius:20px;font-weight:500;font-size:0.8rem;">
@@ -372,10 +369,13 @@ html.light-mode .card-3d .text-white-50 {
                     </div>
                     <h5 class="fw-bold mb-2" style="color:rgba(255,255,255,0.9);font-family:'Poppins',sans-serif;">{{ $level->name }}</h5>
                     <p class="text-white-50 small mb-3" style="line-height:1.6;">
-                        Accédez aux cours et ressources du niveau {{ $level->name }}
+                        {{ $level->description ?: 'Ce niveau vous permet de progresser étape par étape en ' . $subject->name . '.' }}
                     </p>
                     <div style="display:flex;justify-content:center;gap:16px;font-size:0.75rem;color:rgba(255,255,255,0.3);">
-                        <span><i class="bi bi-play-circle me-1"></i>{{ $level->courses_count ?? 0 }} cours</span>
+                        <span>
+                            <i class="bi bi-people-fill me-1"></i>{{ $level->available_classes_count ?? 0 }}
+                            {{ ($level->available_classes_count ?? 0) > 1 ? 'classes disponibles' : 'classe disponible' }}
+                        </span>
                         <span><i class="bi bi-arrow-right" style="color:hsl({{ $hue }},60%,60%);"></i></span>
                     </div>
                 </a>
@@ -393,6 +393,7 @@ html.light-mode .card-3d .text-white-50 {
         @endif
     </div>
 </section>
+</div>
 
 <!-- ═══ AUTRES MATIÈRES DE LA MÊME FAMILLE ═══ -->
 @if($sameFamilySubjects && $sameFamilySubjects->count() > 0)
@@ -462,8 +463,8 @@ html.light-mode .card-3d .text-white-50 {
                 </p>
                 <div class="d-flex flex-wrap gap-3 justify-content-center">
                     @auth
-                        <a href="{{ route('student.subjects.index') }}" class="btn-3d btn-3d-gradient">
-                            <i class="bi bi-mortarboard"></i> Accéder à mes cours
+                        <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-gradient">
+                            <i class="bi bi-calendar-check"></i> Prise de contact
                         </a>
                     @else
                         <a href="{{ route('register') }}" class="btn-3d btn-3d-gradient">
