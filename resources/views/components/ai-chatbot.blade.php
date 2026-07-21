@@ -1,5 +1,5 @@
 <!-- ══════════════════════════════════════════════════════
-     TELEGRAM BOUTON — Smart School Academy
+     CONTACT TELEGRAM — Smart School Academy
      ══════════════════════════════════════════════════════ -->
 
 <style>
@@ -95,5 +95,5 @@
    aria-label="Contactez-nous sur Telegram">
     <i class="bi bi-telegram"></i>
     <span class="pulse-dot"></span>
-    <span class="telegram-tooltip">Contactez-nous sur Telegram !</span>
+    <span class="telegram-tooltip">Discuter sur Telegram</span>
 </a>

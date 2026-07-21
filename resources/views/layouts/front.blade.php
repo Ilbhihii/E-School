@@ -592,6 +592,45 @@
         html.light-mode .footer-link-3d:hover {
             color: #003A8F;
         }
+        .footer-subject-select {
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 11px;
+            background: rgba(255,255,255,.035);
+            overflow: hidden;
+        }
+        .footer-subject-select summary {
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 9px 11px;
+            color: rgba(255,255,255,.72);
+            font-size: .78rem;
+            font-weight: 650;
+            cursor: pointer;
+            user-select: none;
+        }
+        .footer-subject-select summary::-webkit-details-marker { display: none; }
+        .footer-subject-select summary i { transition: transform .22s ease; }
+        .footer-subject-select[open] summary i { transform: rotate(180deg); }
+        .footer-subject-options { padding: 0 10px 9px; }
+        .footer-subject-option {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            width: calc(100% - 10px);
+            padding: 6px 9px;
+            border-left: 2px solid #FFD166;
+            border-radius: 0 8px 8px 0;
+            background: rgba(255,209,102,.06);
+            color: rgba(255,255,255,.6);
+            font-size: .73rem;
+            text-decoration: none;
+            transition: .2s ease;
+        }
+        .footer-subject-option:nth-child(even) { margin-left: 10px; }
+        .footer-subject-option:hover { color: #FFD166; background: rgba(255,209,102,.12); transform: translateX(3px); }
         html.light-mode .footer-3d hr {
             border-color: rgba(0, 0, 0, 0.06) !important;
         }
@@ -1038,9 +1077,31 @@
 
             <div class="col-lg-2 col-md-6 col-6">
                 <h6 class="fw-bold mb-3 text-white" style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5;">Matières</h6>
+                @php
+                    $footerSchoolSubjects = \App\Models\Subject::where('type', 'scolaire')->where('name', 'Arabe')->get();
+                    $footerReligiousSubjects = \App\Models\Subject::where('type', 'religieux')->where('name', 'Coran')->get();
+                @endphp
                 <div class="d-flex flex-column gap-2">
-                    <a href="{{ route('front.religieux') }}" class="footer-link-3d">Religieuses</a>
-                    <a href="{{ route('front.scolaires') }}" class="footer-link-3d">Scolaires</a>
+                    <details class="footer-subject-select">
+                        <summary><span><i class="bi bi-mortarboard me-1"></i>Scolaires</span><i class="bi bi-chevron-down"></i></summary>
+                        <div class="footer-subject-options">
+                            @forelse($footerSchoolSubjects as $subject)
+                                <a href="{{ route('front.subject.levels', $subject->id) }}" class="footer-subject-option"><i class="bi bi-arrow-return-right"></i>{{ $subject->name }}</a>
+                            @empty
+                                <a href="{{ route('front.scolaires') }}" class="footer-subject-option"><i class="bi bi-arrow-return-right"></i>Arabe</a>
+                            @endforelse
+                        </div>
+                    </details>
+                    <details class="footer-subject-select">
+                        <summary><span><i class="bi bi-moon-stars me-1"></i>Religieuses</span><i class="bi bi-chevron-down"></i></summary>
+                        <div class="footer-subject-options">
+                            @forelse($footerReligiousSubjects as $subject)
+                                <a href="{{ route('front.subject.levels', $subject->id) }}" class="footer-subject-option"><i class="bi bi-arrow-return-right"></i>{{ $subject->name }}</a>
+                            @empty
+                                <a href="{{ route('front.religieux') }}" class="footer-subject-option"><i class="bi bi-arrow-return-right"></i>Coran</a>
+                            @endforelse
+                        </div>
+                    </details>
                 </div>
             </div>
 
@@ -1059,13 +1120,7 @@
                         </span>
                         +212707678821
                     </span>
-                    <span class="d-flex align-items-center gap-2">
-                        <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i class="bi bi-geo-alt" style="font-size: 0.85rem;"></i>
-                        </span>
-                        AIN EL AOUDA, Maroc
-                    </span>
-                </div>
+              </div>
             </div>
 
         </div>
@@ -1076,9 +1131,6 @@
             <small style="color: rgba(255,255,255,0.25);">
                 &copy; {{ date('Y') }} Smart School Academy. Tous droits réservés.
             </small>
-            <small style="color: rgba(255,255,255,0.2);">
-                Fièrement conçu avec <i class="bi bi-heart-fill" style="color: #D90429;"></i> pour l'éducation
-            </small>
         </div>
     </div>
 </footer>
@@ -1088,13 +1140,13 @@
     <i class="bi bi-arrow-up"></i>
 </button>
 
-<!-- ═══ FLOATING WHATSAPP ═══ -->
-<a href="https://wa.me/212707678821?text=Bonjour%20Smart%20School%20Academy%20!%20J'aimerais%20en%20savoir%20plus" target="_blank" class="floating-chat" aria-label="WhatsApp">
+<!-- ═══ CONTACT WHATSAPP ═══ -->
+<a href="https://wa.me/212707678821?text={{ rawurlencode('Bonjour Smart School Academy, je souhaite obtenir plus d’informations.') }}" target="_blank" rel="noopener noreferrer" class="floating-chat" aria-label="Ouvrir une discussion WhatsApp">
     <i class="bi bi-whatsapp"></i>
-    <span class="chat-tooltip">Besoin d'aide ?</span>
+    <span class="chat-tooltip">Discuter sur WhatsApp</span>
 </a>
 
-<!-- ═══ TELEGRAM BOUTON ═══ -->
+<!-- ═══ CONTACT TELEGRAM ═══ -->
 <x-ai-chatbot />
 
 <!-- JS -->
