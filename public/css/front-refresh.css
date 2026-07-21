@@ -19,15 +19,23 @@ body { background:#070d18 !important; }
   backdrop-filter:blur(24px) saturate(140%) !important;
   box-shadow:0 10px 38px rgba(0,0,0,.18);
 }
-.navbar-brand { letter-spacing:-.025em; }
+.navbar-brand { display:inline-flex;align-items:center;letter-spacing:-.025em;text-decoration:none !important; }
 .navbar-brand img { transition:transform .25s ease,box-shadow .25s ease; }
 .navbar-brand:hover img { transform:rotate(-2deg) scale(1.05); box-shadow:0 10px 30px rgba(96,165,250,.2) !important; }
+.front-brand-name { display:inline-flex;align-items:baseline;gap:.4rem;font-family:'Poppins',sans-serif;font-size:1.08rem;font-weight:750;letter-spacing:-.03em; }
+.front-brand-name > span,.front-footer-brand > span { color:#c7d2fe !important;-webkit-text-fill-color:#c7d2fe !important;text-shadow:0 0 22px rgba(129,140,248,.2); }
+.front-brand-name strong,.front-footer-brand strong {
+  color:transparent !important;-webkit-text-fill-color:transparent !important;background:linear-gradient(110deg,#ffd166 5%,#fbbf24 45%,#22d3ee 100%);background-clip:text;-webkit-background-clip:text;
+  font-weight:850;text-shadow:0 0 24px rgba(251,191,36,.12);
+}
+.front-footer-brand { font-family:'Poppins',sans-serif;font-size:1.08rem;font-weight:750;letter-spacing:-.03em; }
 .navbar-3d .nav-link { position:relative; border-radius:10px; transition:.2s ease; }
 .navbar-3d .nav-link::after {
-  content:""; position:absolute; left:50%; right:50%; bottom:4px; height:2px;
-  border-radius:99px; background:linear-gradient(90deg,var(--front-blue),var(--front-indigo)); transition:.22s ease;
+  content:""; position:absolute; left:50%; right:auto; bottom:3px; width:calc(100% - 32px);
+  height:2px; border-radius:99px; background:linear-gradient(90deg,var(--front-blue),var(--front-indigo));
+  transform:translateX(-50%) scaleX(0); transform-origin:center; transition:transform .22s ease;
 }
-.navbar-3d .nav-link:hover::after { left:18%; right:18%; }
+.navbar-3d .nav-link:hover::after { width:calc(100% - 32px); transform:translateX(-50%) scaleX(1); }
 
 .hero-3d { position:relative; isolation:isolate; }
 .hero-3d::after {
@@ -83,5 +91,6 @@ body { background:#070d18 !important; }
 }
 @media(max-width:767.98px){
   .navbar-3d{backdrop-filter:blur(18px) !important}.hero-3d{padding-top:3rem !important}
+  .front-brand-name{font-size:.86rem;gap:.25rem}.navbar-brand img{width:46px;height:46px}
   .front-content .card-3d{border-radius:16px !important}.footer-3d{padding-bottom:5rem}
 }

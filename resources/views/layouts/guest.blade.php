@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+    <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -337,7 +339,10 @@
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
         <img src="{{ asset('images/logoSSA.jpeg') }}" width="48" height="48" alt="" class="logo-theme-dark me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
         <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="48" height="48" alt="" class="logo-theme-light me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-        Smart School Academy
+        <span class="guest-brand-name">
+            <span>Smart School</span>
+            <strong>Academy</strong>
+        </span>
     </a>
     <div class="d-flex gap-2 align-items-center">
         <a href="{{ route('login') }}" class="btn nav-btn-3d btn-sm px-3" style="font-size: 0.85rem; background: linear-gradient(135deg, #FFD166, #FFB347); color: #1E293B; font-weight: 700; box-shadow: 0 4px 20px rgba(255, 209, 102, 0.3);">
@@ -372,7 +377,9 @@
                  class="logo-theme-dark" style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
             <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="80" height="80" alt="" 
                  class="logo-theme-light" style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
-            <h4 class="auth-title-3d mt-3 mb-0" style="font-size: 1.3rem;">Smart School Academy</h4>
+            <h4 class="auth-title-3d auth-brand-title mt-3 mb-0">
+                <span>Smart School</span> <strong>Academy</strong>
+            </h4>
             <small style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Plateforme éducative</small>
         </div>
         @yield('content')

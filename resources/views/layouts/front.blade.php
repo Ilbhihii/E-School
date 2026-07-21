@@ -922,7 +922,7 @@
     <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/front-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/front-refresh.css') }}?v={{ filemtime(public_path('css/front-refresh.css')) }}">
 </head>
 
 <body>
@@ -965,7 +965,10 @@
         <a class="navbar-brand" href="{{ route('home') }}">
             <img src="{{ asset('images/logoSSA.jpeg') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-dark me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-light me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-            Smart School Academy
+            <span class="front-brand-name">
+                <span>Smart School</span>
+                <strong>Academy</strong>
+            </span>
         </a>
 
         <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
@@ -1050,7 +1053,9 @@
                     <img src="{{ asset('images/logoSSA.jpeg') }}" width="64" height="64" alt="" class="logo-theme-dark" style="border-radius: 12px;">
                     <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="64" height="64" alt="" class="logo-theme-light" style="border-radius: 12px;">
                     <div>
-                        <h5 class="fw-bold mb-0" style="font-family: 'Poppins', sans-serif;">Smart School Academy</h5>
+                        <h5 class="front-footer-brand mb-0">
+                            <span>Smart School</span> <strong>Academy</strong>
+                        </h5>
                         <small style="color: rgba(255,255,255,0.3);">Apprentissage intelligent</small>
                     </div>
                 </div>
