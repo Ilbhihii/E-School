@@ -31,7 +31,7 @@
                 </div>
             </div>
         @else
-            <div class="row g-4">
+            <div class="prof-card-grid">
                 @foreach($classes as $class)
                     @php
                         $gradients = [
@@ -45,15 +45,16 @@
                         $gIdx = $loop->index % count($gradients);
                         $colorMap = ['primary','success','danger','warning','info','purple'];
                     @endphp
-                    <div class="col-md-4">
-                        <div class="adm-card st-fade-up" style="transition:all .2s;cursor:pointer;">
-                            <div style="height:100px;background:{{ $gradients[$gIdx] }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+                    <div>
+                        <article class="prof-path-card prof-class-card st-fade-up">
+                            <div class="prof-path-cover" style="--path-gradient:{{ $gradients[$gIdx] }};">
                                 <div style="position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);top:-40px;right:-40px;"></div>
                                 <i class="bi bi-mortarboard-fill" style="font-size:2.5rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
                             </div>
-                            <div class="adm-card-body text-center" style="padding:1.5rem;">
-                                <h4 style="font-weight:700;color:var(--text);margin-bottom:1rem;">{{ $class->name }}</h4>
-                                <div class="d-flex flex-wrap gap-2" style="justify-content:center;">
+                            <div class="prof-path-body">
+                                <span class="prof-path-kicker"><i class="bi bi-people"></i> Classe</span>
+                                <h2>{{ $class->name }}</h2>
+                                <div class="prof-class-actions">
                                     <a href="{{ route('prof.subjects.courses', [$subject, $level, $class]) }}" class="adm-btn adm-btn-{{ $colorMap[$gIdx % count($colorMap)] }} adm-btn-sm">
                                         <i class="bi bi-play-circle me-1"></i> Cours
                                     </a>
@@ -65,7 +66,7 @@
                                     </a>
                                 </div>
                             </div>
-                        </div>
+                        </article>
                     </div>
                 @endforeach
             </div>

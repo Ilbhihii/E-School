@@ -21,6 +21,12 @@
 .level-card-outer .adm-card-header .adm-btn { min-height: 32px; padding: 0.4rem 0.65rem; font-size: 0.72rem; }
 .level-card-outer > .adm-card > .adm-card-body { padding: 0.85rem; }
 .level-class-item { width: 100%; min-width: 0; }
+.level-class-card { overflow:hidden; }
+.level-class-main { display:flex;align-items:center;gap:12px;padding:1rem;color:inherit;text-decoration:none; }
+.level-class-main:hover { text-decoration:none; }
+.level-class-actions { display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 .75rem .75rem; }
+.level-class-actions .adm-btn { width:100%;justify-content:center;min-height:34px;padding:.42rem .55rem; }
+.level-class-actions form { margin:0; }
 @media (max-width: 900px) {
     .level-cards-grid { grid-template-columns: repeat(2, minmax(240px, 340px)); }
 }
@@ -105,9 +111,8 @@
                                 $courseCount = $class->courses()->where('subject_id', $subject->id)->count();
                             @endphp
                             <div class="level-class-item">
-                                <a href="{{ route('admin.subjects.courses', [$subject, $level, $class]) }}" class="text-decoration-none">
-                                    <div class="adm-card" style="cursor:pointer;transition:all 0.3s ease;height:100%;">
-                                        <div class="adm-card-body" style="padding:1rem;display:flex;align-items:center;gap:12px;">
+                                <div class="adm-card level-class-card" style="transition:all 0.3s ease;height:100%;">
+                                    <a href="{{ route('admin.subjects.courses', [$subject, $level, $class]) }}" class="level-class-main" title="Voir les cours de {{ $class->name }}">
                                             <div style="width:48px;height:48px;border-radius:12px;background:{{ $classGradients[$gIdx] }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                                 <i class="bi bi-mortarboard-fill" style="font-size:1.3rem;color:rgba(255,255,255,0.4);"></i>
                                             </div>
@@ -118,9 +123,20 @@
                                                 </small>
                                             </div>
                                             <i class="bi bi-chevron-right" style="color:rgba(255,255,255,0.2);flex-shrink:0;"></i>
-                                        </div>
+                                    </a>
+                                    <div class="level-class-actions">
+                                        <a href="{{ route('admin.classes.edit', $class) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier {{ $class->name }}">
+                                            <i class="bi bi-pencil-square me-1"></i> Modifier
+                                        </a>
+                                        <form method="POST" action="{{ route('admin.classes.destroy', $class) }}" onsubmit="return confirm('Supprimer définitivement la classe « {{ addslashes($class->name) }} » ? Cette action peut affecter ses cours et ses assignations.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="adm-btn adm-btn-danger adm-btn-sm" title="Supprimer {{ $class->name }}">
+                                                <i class="bi bi-trash3 me-1"></i> Supprimer
+                                            </button>
+                                        </form>
                                     </div>
-                                </a>
+                                </div>
                             </div>
                         @endforeach
                     </div>

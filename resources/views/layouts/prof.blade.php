@@ -264,7 +264,7 @@
     <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/prof-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/prof-refresh.css') }}?v={{ filemtime(public_path('css/prof-refresh.css')) }}">
 </head>
 <body>
 

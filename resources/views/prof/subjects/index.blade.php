@@ -50,7 +50,7 @@ html.light-mode .subjects-title{color:#172033}html.light-mode .subjects-subtitle
 </div>
 @endif
 
-<div class="row g-4" id="subjectsGrid">
+<div class="prof-card-grid" id="subjectsGrid">
     @forelse($subjects as $subject)
         @php
             $icons = ['book','calculator','flask','translate','globe2','palette','music-note-beamed','cpu','graph-up','pencil-square','journal-text','stars'];
@@ -65,7 +65,7 @@ html.light-mode .subjects-title{color:#172033}html.light-mode .subjects-subtitle
             [$color, $gradient] = $themes[$loop->index % count($themes)];
             $levelCount = $subject->assigned_levels_count ?? 0;
         @endphp
-        <div class="col-sm-6 col-xl-4 subject-item" data-name="{{ Str::lower($subject->name) }}">
+        <div class="subject-item" data-name="{{ Str::lower($subject->name) }}">
             <a href="{{ route('prof.subjects.levels', $subject) }}" class="text-decoration-none">
                 <article class="subject-card" style="--subject-color:{{ $color }};--subject-gradient:{{ $gradient }};">
                     <div class="subject-cover"><div class="subject-icon"><i class="bi bi-{{ $icons[$loop->index % count($icons)] }}"></i></div></div>
@@ -81,7 +81,7 @@ html.light-mode .subjects-title{color:#172033}html.light-mode .subjects-subtitle
             </a>
         </div>
     @empty
-        <div class="col-12"><div class="adm-card"><div class="adm-empty"><div class="adm-empty-icon"><i class="bi bi-inbox"></i></div><h3>Aucune matière</h3><p>Aucune matière n'est disponible.</p></div></div></div>
+        <div class="prof-grid-empty"><div class="adm-card"><div class="adm-empty"><div class="adm-empty-icon"><i class="bi bi-inbox"></i></div><h3>Aucune matière</h3><p>Aucune matière n'est disponible.</p></div></div></div>
     @endforelse
 </div>
 <div class="subjects-empty-filter" id="subjectsEmpty"><i class="bi bi-search fs-2 d-block mb-2"></i>Aucune matière ne correspond à votre recherche.</div>

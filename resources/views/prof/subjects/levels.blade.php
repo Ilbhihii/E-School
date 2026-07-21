@@ -29,7 +29,7 @@
                 </div>
             </div>
         @else
-            <div class="row g-4">
+            <div class="prof-card-grid">
                 @php
                     $levelGradients = [
                         'linear-gradient(135deg, #16A34A, #22C55E)',
@@ -45,19 +45,16 @@
                         $gradient = $levelGradients[$idx];
                         $icon = $levelIcons[$idx];
                     @endphp
-                    <div class="col-md-4">
-                        <a href="{{ route('prof.subjects.classes', [$subject, $level]) }}" class="text-decoration-none">
-                            <div class="adm-card st-fade-up" style="transition:all .2s;cursor:pointer;">
-                                <div style="height:100px;background:{{ $gradient }};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+                    <div>
+                        <a href="{{ route('prof.subjects.classes', [$subject, $level]) }}" class="prof-path-card st-fade-up">
+                            <div class="prof-path-cover" style="--path-gradient:{{ $gradient }};">
                                     <div style="position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);top:-40px;right:-40px;"></div>
                                     <i class="bi {{ $icon }}" style="font-size:2.5rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
-                                </div>
-                                <div class="adm-card-body text-center" style="padding:1.5rem;">
-                                    <h4 style="font-weight:700;color:var(--text);margin-bottom:0.5rem;">{{ $level->name }}</h4>
-                                    <span class="adm-btn" style="background:{{ $gradient }};color:white;border:none;width:100%;">
-                                        <i class="bi bi-building me-1"></i> Voir les classes
-                                    </span>
-                                </div>
+                            </div>
+                            <div class="prof-path-body">
+                                <span class="prof-path-kicker"><i class="bi bi-layers"></i> Niveau</span>
+                                <h2>{{ $level->name }}</h2>
+                                <div class="prof-path-action" style="--path-gradient:{{ $gradient }};"><span>Voir les classes</span><i class="bi bi-arrow-right"></i></div>
                             </div>
                         </a>
                     </div>
