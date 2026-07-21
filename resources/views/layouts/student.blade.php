@@ -202,13 +202,15 @@
         <aside class="st-sidebar" id="mainSidebar">
 
             <div class="st-sidebar-brand">
-                <a href="{{ route('home') }}" class="brand-icon" aria-label="Retour à l'accueil"
-                   style="background:transparent;box-shadow:none;width:auto;height:auto;text-decoration:none;">
-                    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Logo" class="logo-theme-dark" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
-                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Logo" class="logo-theme-light" style="width:64px;height:64px;object-fit:contain;border-radius: 16px;animation: preloaderPulse 1.5s ease-in-out infinite;">
+                <a href="{{ route('home') }}" class="portal-brand-home" title="Retour à l’accueil principal" aria-label="Retour à l’accueil principal">
+                    <span class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
+                        <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Smart School Academy" class="logo-theme-dark">
+                        <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Smart School Academy" class="logo-theme-light">
+                    </span>
+                    <h3>Smart School Academy</h3>
+                    <span class="brand-sub">Espace Étudiant</span>
+                    <span class="brand-home-hint"><i class="bi bi-arrow-up-right"></i> Accueil principal</span>
                 </a>
-                <h3>Smart School Academy</h3>
-                <div class="brand-sub">Espace Étudiant</div>
             </div>
 
             <div class="st-sidebar-profile">
