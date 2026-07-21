@@ -125,20 +125,31 @@ class UserController extends Controller
      */
     public function activate($id)
     {
-        $user = User::findOrFail($id);
+        $user = User::where('role', 'student')->findOrFail($id);
+        if ($user->is_active) {
+            return back()->with('error', 'Ce compte étudiant est déjà actif. Aucun nouvel email n’a été envoyé.');
+        }
+
         $user->is_active = true;
         $user->test_passed = true;
         $user->is_paid = true;
         $user->save();
 
         // Send activation email
+        $emailSent = false;
         try {
             Mail::to($user->email)->send(new AccountActivatedMailable($user));
+            $emailSent = true;
         } catch (\Exception $e) {
             \Log::error('Failed to send activation email to ' . $user->email . ': ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Compte activé et test validé avec succès. Email envoyé à ' . $user->email);
+        $message = 'Compte étudiant activé et accès pédagogique validé.';
+        if ($emailSent) {
+            return back()->with('success', $message . ' Un email de confirmation a été envoyé à ' . $user->email . '.');
+        }
+
+        return back()->with('error', $message . ' Cependant, l’email n’a pas pu être envoyé. Vérifiez la configuration Gmail.');
     }
 
     public function deactivate($id)

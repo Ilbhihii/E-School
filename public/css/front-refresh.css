@@ -1,0 +1,87 @@
+/* Premium public experience — shared by every front page. */
+:root {
+  --front-blue:#60a5fa;
+  --front-indigo:#818cf8;
+  --front-gold:#ffd166;
+  --front-surface:rgba(15,24,42,.82);
+  --front-line:rgba(148,163,184,.13);
+}
+
+body { background:#070d18 !important; }
+.front-content { min-height:60vh; overflow:hidden; }
+.front-content > section,
+.front-content > .container,
+.front-content > .container-fluid { position:relative; }
+
+.navbar-3d {
+  border-bottom:1px solid rgba(148,163,184,.1) !important;
+  background:rgba(7,13,24,.76) !important;
+  backdrop-filter:blur(24px) saturate(140%) !important;
+  box-shadow:0 10px 38px rgba(0,0,0,.18);
+}
+.navbar-brand { letter-spacing:-.025em; }
+.navbar-brand img { transition:transform .25s ease,box-shadow .25s ease; }
+.navbar-brand:hover img { transform:rotate(-2deg) scale(1.05); box-shadow:0 10px 30px rgba(96,165,250,.2) !important; }
+.navbar-3d .nav-link { position:relative; border-radius:10px; transition:.2s ease; }
+.navbar-3d .nav-link::after {
+  content:""; position:absolute; left:50%; right:50%; bottom:4px; height:2px;
+  border-radius:99px; background:linear-gradient(90deg,var(--front-blue),var(--front-indigo)); transition:.22s ease;
+}
+.navbar-3d .nav-link:hover::after { left:18%; right:18%; }
+
+.hero-3d { position:relative; isolation:isolate; }
+.hero-3d::after {
+  content:""; position:absolute; width:42rem; height:42rem; left:50%; top:28%; transform:translate(-50%,-50%);
+  border-radius:50%; background:radial-gradient(circle,rgba(79,70,229,.1),transparent 65%); z-index:-1; pointer-events:none;
+}
+.hero-title-3d,.section-title-3d { letter-spacing:-.045em !important; text-wrap:balance; }
+.hero-subtitle-3d,.section-subtitle-3d { text-wrap:pretty; }
+
+.front-content .card-3d,
+.front-content [class*="subject-card"],
+.front-content [class*="level-card"],
+.front-content [class*="class-card"],
+.front-content .pricing-card {
+  border:1px solid var(--front-line) !important;
+  background:linear-gradient(145deg,rgba(20,31,53,.88),rgba(10,18,32,.9)) !important;
+  border-radius:20px !important;
+  box-shadow:0 16px 42px rgba(0,0,0,.2) !important;
+  transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease !important;
+}
+.front-content a:hover .card-3d,
+.front-content [class*="subject-card"]:hover,
+.front-content [class*="level-card"]:hover,
+.front-content [class*="class-card"]:hover,
+.front-content .pricing-card:hover {
+  transform:translateY(-6px) !important; border-color:rgba(129,140,248,.36) !important;
+  box-shadow:0 24px 58px rgba(0,0,0,.34),0 0 32px rgba(79,70,229,.07) !important;
+}
+.front-content .btn-3d,.front-content .btn {
+  border-radius:12px; min-height:43px; font-weight:700; transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
+}
+.front-content .btn-3d:hover,.front-content .btn:hover { transform:translateY(-2px); filter:brightness(1.06); }
+
+.front-content .form-control,.front-content .form-select,.front-content textarea {
+  min-height:48px; border-radius:13px !important; color:#eef2ff !important;
+  background:rgba(7,14,27,.78) !important; border:1px solid rgba(148,163,184,.16) !important;
+}
+.front-content .form-control:focus,.front-content .form-select:focus,.front-content textarea:focus {
+  border-color:rgba(96,165,250,.62) !important; box-shadow:0 0 0 4px rgba(59,130,246,.1) !important;
+}
+.front-content .form-select option { background:#101a2c; color:#eef2ff; }
+
+.footer-3d { border-top:1px solid rgba(148,163,184,.1) !important; background:linear-gradient(180deg,#09111f,#060b14) !important; }
+.footer-3d .container { position:relative; }
+.footer-3d .container::before {
+  content:""; position:absolute; inset:-2rem 15% auto; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(96,165,250,.45),rgba(129,140,248,.35),transparent);
+}
+
+@media(prefers-reduced-motion:no-preference){
+  .front-content > *{animation:frontEnter .42s ease both}
+  @keyframes frontEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+}
+@media(max-width:767.98px){
+  .navbar-3d{backdrop-filter:blur(18px) !important}.hero-3d{padding-top:3rem !important}
+  .front-content .card-3d{border-radius:16px !important}.footer-3d{padding-bottom:5rem}
+}

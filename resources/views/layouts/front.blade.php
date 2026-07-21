@@ -922,6 +922,7 @@
     <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/front-refresh.css') }}">
 </head>
 
 <body>
@@ -1035,7 +1036,7 @@
 </nav>
 
 <!-- ═══ CONTENT ═══ -->
-<main class="front-content">
+<main class="front-content" id="mainContent">
     @yield('content')
 </main>
 

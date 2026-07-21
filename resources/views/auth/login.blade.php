@@ -4,6 +4,12 @@
 
 @section('content')
 
+<div class="auth-page-heading">
+    <span class="auth-page-icon"><i class="bi bi-person-lock"></i></span>
+    <h2>Heureux de vous revoir</h2>
+    <p>Connectez-vous pour retrouver votre espace et poursuivre votre apprentissage.</p>
+</div>
+
 <!-- ERRORS -->
 @if ($errors->any())
     <div class="alert alert-danger text-center py-2 mb-4" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.2); color: #FCA5A5; border-radius: 12px; font-size: 0.875rem;">
@@ -15,8 +21,9 @@
     @csrf
 
     <!-- EMAIL -->
-    <div class="mb-3">
+    <div class="mb-3 auth-field">
         <label class="auth-label-3d">Email</label>
+        <i class="bi bi-envelope"></i>
         <input type="email" name="email"
                class="auth-input-3d"
                placeholder="exemple@email.com"
@@ -25,8 +32,9 @@
     </div>
 
     <!-- PASSWORD -->
-    <div class="mb-3">
+    <div class="mb-3 auth-field">
         <label class="auth-label-3d">Mot de passe</label>
+        <i class="bi bi-lock"></i>
         <input type="password" name="password"
                class="auth-input-3d"
                placeholder="••••••••"

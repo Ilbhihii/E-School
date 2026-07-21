@@ -11,6 +11,7 @@ use Spatie\Permission\Traits\HasRoles;
 use App\Models\ClassRoom;
 use App\Models\Classe;
 use App\Models\Absence;
+use App\Notifications\ResetPasswordNotification;
 
 class User extends Authenticatable
 {
@@ -62,6 +63,14 @@ class User extends Authenticatable
 'role' => 'string',
         'test_passed' => 'boolean',
     ];
+
+    /**
+     * Envoie l'email personnalisé de réinitialisation du mot de passe.
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
 
     public function classRoom()
     {

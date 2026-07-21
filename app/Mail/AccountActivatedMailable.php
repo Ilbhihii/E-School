@@ -5,8 +5,6 @@ namespace App\Mail;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class AccountActivatedMailable extends Mailable
@@ -14,6 +12,8 @@ class AccountActivatedMailable extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
+    public $dashboardUrl;
+    public $logoUrl;
 
     /**
      * Create a new message instance.
@@ -21,36 +21,17 @@ class AccountActivatedMailable extends Mailable
     public function __construct(User $user)
     {
         $this->user = $user;
+        $this->dashboardUrl = route('student.dashboard');
+        $this->logoUrl = 'https://raw.githubusercontent.com/Ilbhihii/E-School/main/public/images/logoSSA-removebg-preview.png';
     }
 
     /**
-     * Get the message envelope.
+     * Construit le message avec l'API compatible avec la version Laravel du projet.
      */
-    public function envelope(): Envelope
+    public function build()
     {
-        return new Envelope(
-            subject: '✅ Votre compte a été activé !',
-        );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'mail.account-activated',
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
+        return $this
+            ->subject('Votre compte étudiant est activé — Smart School Academy')
+            ->view('mail.account-activated');
     }
 }
-

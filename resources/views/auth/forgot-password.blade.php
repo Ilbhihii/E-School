@@ -4,6 +4,12 @@
 
 @section('content')
 
+<div class="auth-page-heading">
+    <span class="auth-page-icon"><i class="bi bi-key"></i></span>
+    <h2>Réinitialiser le mot de passe</h2>
+    <p>Nous vous enverrons un lien sécurisé pour choisir un nouveau mot de passe.</p>
+</div>
+
 <!-- STATUS -->
 @if (session('status'))
     <div class="alert text-center py-2 mb-4" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.2); color: #6EE7B7; border-radius: 12px; font-size: 0.875rem;">
@@ -18,16 +24,13 @@
     </div>
 @endif
 
-<p style="color: rgba(0, 0, 0, 0.5); font-size: 0.875rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: center;">
-    Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
-</p>
-
 <form method="POST" action="{{ route('password.email') }}">
     @csrf
 
     <!-- EMAIL -->
-    <div class="mb-3">
+    <div class="mb-3 auth-field">
         <label class="auth-label-3d">Email</label>
+        <i class="bi bi-envelope"></i>
         <input type="email" name="email"
                class="auth-input-3d"
                placeholder="exemple@email.com"

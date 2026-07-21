@@ -318,6 +318,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/auth-refresh.css') }}">
 </head>
 
 <body>
@@ -349,8 +350,23 @@
 </nav>
 
 <!-- ═══ AUTH CONTENT ═══ -->
-<div class="auth-container-3d" style="padding-top: 100px; min-height: 100vh;">
-    <div class="auth-card-3d">
+<main class="auth-container-3d auth-page-shell">
+  <div class="auth-shell">
+    <aside class="auth-trust-panel" aria-label="Avantages Smart School Academy">
+        <a href="{{ route('home') }}" class="auth-trust-logo">
+            <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Smart School Academy">
+        </a>
+        <span class="auth-eyebrow"><i class="bi bi-stars"></i> Apprendre autrement</span>
+        <h1>Votre parcours éducatif commence ici.</h1>
+        <p>Une expérience claire, humaine et structurée pour progresser en Arabe et dans l’apprentissage du Coran.</p>
+        <div class="auth-trust-list">
+            <div><i class="bi bi-shield-check"></i><span><strong>Espace sécurisé</strong><small>Vos données et vos échanges restent protégés.</small></span></div>
+            <div><i class="bi bi-person-check"></i><span><strong>Suivi personnalisé</strong><small>Un parcours adapté à votre niveau et à votre classe.</small></span></div>
+            <div><i class="bi bi-camera-video"></i><span><strong>Apprentissage interactif</strong><small>Cours, lives, devoirs et accompagnement.</small></span></div>
+        </div>
+        <div class="auth-trust-footer"><span class="auth-live-dot"></span> Plateforme disponible et sécurisée</div>
+    </aside>
+    <section class="auth-card-3d">
         <div class="text-center mb-4">
             <img src="{{ asset('images/logoSSA.jpeg') }}" width="80" height="80" alt="" 
                  class="logo-theme-dark" style="border-radius: 16px; box-shadow: 0 8px 30px rgba(0,58,143,0.3);">
@@ -360,8 +376,9 @@
             <small style="color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">Plateforme éducative</small>
         </div>
         @yield('content')
-    </div>
-</div>
+    </section>
+  </div>
+</main>
 
 <!-- JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
