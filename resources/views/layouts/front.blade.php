@@ -1000,7 +1000,7 @@
 
                 @auth
                     <li class="nav-item ms-lg-2">
-                        <a href="{{ route('student.dashboard') }}" class="btn nav-btn-3d nav-btn-3d-primary">
+                        <a href="{{ auth()->user()->dashboardRoute() }}" class="btn nav-btn-3d nav-btn-3d-primary">
                             <i class="bi bi-speedometer2"></i> Tableau de bord
                         </a>
                     </li>

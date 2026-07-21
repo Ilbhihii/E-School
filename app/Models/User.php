@@ -100,7 +100,22 @@ public function isProf()
 public function isStudent()
 {
     return $this->role === static::ROLE_STUDENT;
-}    public function results()
+}
+
+/**
+ * Retourne la route du tableau de bord correspondant au rôle du compte.
+ */
+public function dashboardRoute(): string
+{
+    return match ($this->role) {
+        static::ROLE_ADMIN => route('admin.dashboard'),
+        static::ROLE_PROF => route('prof.dashboard'),
+        static::ROLE_STUDENT => route('student.dashboard'),
+        default => route('home'),
+    };
+}
+
+public function results()
     {
         return $this->hasMany(\App\Models\Result::class);
     }
