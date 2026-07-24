@@ -112,7 +112,10 @@
                         <select name="user_id" class="adm-form-select @error('user_id') error @enderror" required>
                             <option value="">Sélectionner un étudiant</option>
                             @foreach($students as $student)
-                            <option value="{{ $student->id }}" @selected(old('user_id') == $student->id)>{{ $student->name }}</option>
+                            @php
+                                $studentName = trim(preg_replace('/^\s*\([^)]*\)\s*>\s*/', '', $student->name));
+                            @endphp
+                            <option value="{{ $student->id }}" @selected(old('user_id') == $student->id)>{{ $studentName }}</option>
                             @endforeach
                         </select>
                         @error('user_id') <div class="adm-form-error">{{ $message }}</div> @enderror
@@ -139,7 +142,7 @@
                         <label class="adm-form-label">
                             <i class="bi bi-layers me-1" style="color:#34D399;"></i>Niveau
                         </label>
-                        <select class="adm-form-select" id="level_filter" required>
+                        <select name="level_id" class="adm-form-select" id="level_filter" required>
                             <option value="">D'abord choisir une matière</option>
                             @foreach($levels as $level)
                                 @php $levelSubjectIds = $level->classes->flatMap->subjects->pluck('id')->unique()->implode(','); @endphp
@@ -257,7 +260,10 @@
                     <label class="adm-form-label">Étudiant</label>
                     <select name="user_id" id="edit_user_id" class="adm-form-select" required>
                         @foreach($students as $s)
-                        <option value="{{ $s->id }}">{{ $s->name }}</option>
+                        @php
+                            $studentName = trim(preg_replace('/^\s*\([^)]*\)\s*>\s*/', '', $s->name));
+                        @endphp
+                        <option value="{{ $s->id }}">{{ $studentName }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -275,7 +281,7 @@
 
                 <div class="adm-form-group">
                     <label class="adm-form-label">Niveau</label>
-                    <select class="adm-form-select" id="edit_level_filter">
+                    <select name="level_id" class="adm-form-select" id="edit_level_filter" required>
                         <option value="">D'abord choisir une matière</option>
                         @foreach($levels as $level)
                             @php $levelSubjectIds = $level->classes->flatMap->subjects->pluck('id')->unique()->implode(','); @endphp

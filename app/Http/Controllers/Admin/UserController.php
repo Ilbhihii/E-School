@@ -126,30 +126,33 @@ class UserController extends Controller
     public function activate($id)
     {
         $user = User::where('role', 'student')->findOrFail($id);
-        if ($user->is_active) {
-            return back()->with('error', 'Ce compte étudiant est déjà actif. Aucun nouvel email n’a été envoyé.');
-        }
+        $wasAlreadyActive = (bool) $user->is_active;
 
-        $user->is_active = true;
-        $user->test_passed = true;
-        $user->is_paid = true;
-        $user->save();
+        if (! $wasAlreadyActive) {
+            $user->is_active = true;
+            $user->test_passed = true;
+            $user->is_paid = true;
+            $user->save();
+        }
 
         // Send activation email
         $emailSent = false;
         try {
             Mail::to($user->email)->send(new AccountActivatedMailable($user));
             $emailSent = true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('Failed to send activation email to ' . $user->email . ': ' . $e->getMessage());
         }
 
-        $message = 'Compte étudiant activé et accès pédagogique validé.';
+        $message = $wasAlreadyActive
+            ? 'Le compte étudiant était déjà actif.'
+            : 'Compte étudiant activé et accès pédagogique validé.';
+
         if ($emailSent) {
-            return back()->with('success', $message . ' Un email de confirmation a été envoyé à ' . $user->email . '.');
+            return back()->with('success', $message . ' L’email de confirmation a été envoyé à ' . $user->email . '.');
         }
 
-        return back()->with('error', $message . ' Cependant, l’email n’a pas pu être envoyé. Vérifiez la configuration Gmail.');
+        return back()->with('error', $message . ' L’email n’a pas pu être envoyé. Vérifiez les identifiants SMTP Gmail du serveur, videz le cache de configuration, puis cliquez à nouveau sur Activer pour réessayer.');
     }
 
     public function deactivate($id)
@@ -307,9 +310,9 @@ class UserController extends Controller
             'user_id' => 'required|exists:users,id',
             'class_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
+            'level_id' => 'required|exists:levels,id',
         ]);
 
-        abort_unless(User::whereKey($request->prof_id)->where('role', 'prof')->exists(), 422);
         $level = Level::whereKey($request->level_id)
             ->where('subject_id', $request->subject_id)->first();
         if (! $level) {
@@ -372,7 +375,19 @@ class UserController extends Controller
             'user_id' => 'required|exists:users,id',
             'class_id' => 'required|exists:class_rooms,id',
             'subject_id' => 'required|exists:subjects,id',
+            'level_id' => 'required|exists:levels,id',
         ]);
+
+        $level = Level::whereKey($request->level_id)
+            ->where('subject_id', $request->subject_id)
+            ->first();
+        if (! $level) {
+            return back()->withInput()->withErrors(['level_id' => 'Ce niveau n’appartient pas à la matière sélectionnée.']);
+        }
+
+        if (! ClassRoom::whereKey($request->class_id)->where('level_id', $level->id)->exists()) {
+            return back()->withInput()->withErrors(['class_id' => 'Cette classe n’appartient pas au niveau sélectionné.']);
+        }
 
         if (!User::whereKey($request->user_id)->where('role', 'student')->exists()) {
             return back()->withInput()->withErrors(['user_id' => 'L’utilisateur sélectionné n’est pas un étudiant.']);

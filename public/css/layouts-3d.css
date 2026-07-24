@@ -1064,3 +1064,15 @@
   background: rgba(255, 209, 102, 0.06);
   box-shadow: 0 8px 25px rgba(255, 209, 102, 0.15);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   SMART SCHOOL — CHANGEMENT DE COULEUR UNIQUEMENT
+   Aucun changement de position, taille ou espacement.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.auth-title-3d.auth-brand-title > span,
+.guest-brand-name > span {
+  color: #c9ccff !important;
+  -webkit-text-fill-color: #c9ccff !important;
+}

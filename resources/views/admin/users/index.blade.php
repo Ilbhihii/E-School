@@ -108,6 +108,12 @@
                                     </button>
                                 </form>
                                 @else
+                                <form action="{{ route('admin.users.activate', $user->id) }}" method="POST" style="display:inline;">
+                                    @csrf @method('PUT')
+                                    <button class="adm-btn adm-btn-primary adm-btn-sm" type="submit" title="Renvoyer l’email d’activation">
+                                        <i class="bi bi-envelope-arrow-up"></i>
+                                    </button>
+                                </form>
                                 <form action="{{ route('admin.users.deactivate', $user->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Désactiver ce compte ?')">
                                     @csrf @method('PUT')
                                     <button class="adm-btn adm-btn-danger adm-btn-sm" type="submit" title="Désactiver">
