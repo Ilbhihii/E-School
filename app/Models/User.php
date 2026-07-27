@@ -138,4 +138,45 @@ public function results()
         return collect();
     }
 
+    /**
+     * Tokens de notification push FCM
+     */
+    public function deviceTokens()
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
+     * Tokens actifs uniquement
+     */
+    public function activeDeviceTokens()
+    {
+        return $this->hasMany(DeviceToken::class)->where('is_active', true);
+    }
+
+    /**
+     * Préférences de notification
+     */
+    public function notificationPreference()
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    /**
+     * Crée les préférences par défaut si elles n'existent pas
+     */
+    public function getOrCreateNotificationPreference(): NotificationPreference
+    {
+        if (!$this->relationLoaded('notificationPreference')) {
+            $this->load('notificationPreference');
+        }
+
+        if (!$this->notificationPreference) {
+            $pref = $this->notificationPreference()->create([]);
+            $this->setRelation('notificationPreference', $pref);
+        }
+
+        return $this->notificationPreference;
+    }
+
 }

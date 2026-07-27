@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primaryDark">#080c14</color>
+    <color name="surfaceDark">#0f172a</color>
+    <color name="navyBlue">#003A8F</color>
+    <color name="purple">#7C3AED</color>
+    <color name="gold">#FFD166</color>
+    <color name="notification_icon_bg_color">#003A8F</color>
+</resources>

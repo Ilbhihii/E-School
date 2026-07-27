@@ -6,8 +6,20 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
 
-    <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+        <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
     <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+
+    <!-- ═══ PWA — PROGRESSIVE WEB APP ═══ -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#080c14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SS Academy">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Smart School Academy">
+    <link rel="apple-touch-icon" href="{{ asset('images/logoSSA.jpeg') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSSA.jpeg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSSA.jpeg') }}">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -1158,6 +1170,64 @@
 <!-- JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- ═══ PWA — SERVICE WORKER REGISTRATION ═══ -->
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('{{ asset('sw.js') }}')
+            .then(reg => {
+                console.log('[PWA] Service Worker enregistré:', reg.scope);
+
+                // Détection des mises à jour du SW
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Nouvelle version disponible
+                            showUpdatePrompt();
+                        }
+                    });
+                });
+            })
+            .catch(err => {
+                console.warn('[PWA] Erreur Service Worker:', err);
+            });
+
+        // Écouter le contrôle du nouveau worker
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                window.location.reload();
+            }
+        });
+    });
+
+    // Vérifier si l'app est déjà installée (display-mode: standalone)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.documentElement.classList.add('pwa-installed');
+    }
+}
+
+// ── Afficher le prompt de mise à jour ──
+function showUpdatePrompt() {
+    const toast = document.getElementById('pwa-update-toast');
+    if (toast) {
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 30000);
+    }
+}
+
+// ── Mettre à jour le SW ──
+function updateServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    }
+}
+</script>
+
 <script>
     (function() {
         'use strict';
@@ -1319,6 +1389,157 @@
         })();
 
     })();
+</script>
+
+<!-- ═══ PWA — BOUTON INSTALLER ═══ -->
+<div id="pwa-install-wrapper" class="pwa-install-btn" style="display: none;">
+    <button id="pwaInstallBtn" class="btn nav-btn-3d"
+            style="background: linear-gradient(135deg, #003A8F, #7C3AED); color: white; font-weight: 600; font-size: 0.85rem; padding: 8px 18px; border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3); transition: all 0.3s ease;">
+        <i class="bi bi-download me-1"></i> Installer l'app
+    </button>
+</div>
+
+<!-- ═══ PWA — TOAST DE MISE À JOUR ═══ -->
+<div id="pwa-update-toast" class="pwa-update-toast">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); animation: livePulse 2s ease-in-out infinite; flex-shrink: 0;"></span>
+            <span style="font-size: 0.85rem; font-weight: 600;">Nouvelle version disponible</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="updateServiceWorker()" class="btn btn-sm"
+                    style="background: linear-gradient(135deg, #003A8F, #7C3AED); color: white; border: none; border-radius: 8px; padding: 4px 14px; font-size: 0.78rem; font-weight: 600;">
+                Mettre à jour
+            </button>
+            <button onclick="document.getElementById('pwa-update-toast').classList.remove('show')" class="btn btn-sm"
+                    style="background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 4px 10px; font-size: 0.78rem;">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ── PWA Install Button (fixed bottom-right) ── */
+.pwa-install-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 90px;
+    z-index: 9993;
+    animation: pwaInstallBounce 2s ease-in-out infinite;
+}
+.pwa-install-btn button:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 30px rgba(124, 58, 237, 0.4) !important;
+}
+@keyframes pwaInstallBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* ── PWA Update Toast ── */
+.pwa-update-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    z-index: 9999;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 12px 20px;
+    min-width: 320px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: white;
+}
+.pwa-update-toast.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ── Light mode overrides ── */
+html.light-mode .pwa-update-toast {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #1e293b;
+}
+html.light-mode .pwa-update-toast button:last-child {
+    background: rgba(0, 0, 0, 0.04) !important;
+    color: rgba(0, 0, 0, 0.4) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ── PWA Mode adjustments ── */
+html.pwa-installed .pwa-install-btn {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .pwa-install-btn {
+        bottom: 145px;
+        right: 16px;
+    }
+    .pwa-install-btn button {
+        padding: 6px 14px !important;
+        font-size: 0.78rem !important;
+    }
+    .pwa-update-toast {
+        min-width: unset;
+        width: calc(100vw - 32px);
+        bottom: 16px;
+        padding: 10px 14px;
+    }
+}
+</style>
+
+<script>
+// ── PWA — Installer le bouton personnalisé ──
+document.addEventListener('DOMContentLoaded', () => {
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('pwaInstallBtn');
+    const installWrapper = document.getElementById('pwa-install-wrapper');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installWrapper.style.display = 'block';
+
+        installBtn.addEventListener('click', async () => {
+            installWrapper.style.display = 'none';
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('[PWA] Application installée');
+                document.documentElement.classList.add('pwa-installed');
+            } else {
+                console.log('[PWA] Installation refusée');
+                setTimeout(() => {
+                    installWrapper.style.display = 'block';
+                }, 60000); // Réafficher après 1 minute
+            }
+            deferredPrompt = null;
+        });
+    });
+
+    // Cacher le bouton si déjà installé
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        installWrapper.style.display = 'none';
+    }
+
+    // Écouter l'événement 'appinstalled'
+    window.addEventListener('appinstalled', () => {
+        installWrapper.style.display = 'none';
+        document.documentElement.classList.add('pwa-installed');
+        console.log('[PWA] Application installée avec succès');
+    });
+});
 </script>
 
 @stack('scripts')

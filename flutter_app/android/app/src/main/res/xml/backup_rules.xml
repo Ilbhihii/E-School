@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Exclure les tokens d'authentification de la sauvegarde cloud -->
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml"/>
+    <exclude domain="sharedpref" path="FlutterSecureStorageKey.xml"/>
+    <exclude domain="file" path="app_flutter"/>
+</full-backup-content>

@@ -114,3 +114,9 @@ html.light-mode .auth-home-card .form-check-input { background-color:#fff; borde
   .guest-nav-3d .btn{padding:.45rem .65rem !important}.auth-page-shell{padding:92px 10px 18px !important;display:block}
   .auth-shell{border-radius:20px}.auth-card-3d{padding:1.4rem !important;border-radius:19px !important}
 }
+/* Smart School — couleur finale */
+.guest-brand-name > span,
+.auth-brand-title > span {
+    color: #c9ccff !important;
+    -webkit-text-fill-color: #c9ccff !important;
+}

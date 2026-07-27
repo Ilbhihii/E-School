@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App icon foreground: book with star (Smart School Academy) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0"/>
+    <!-- Book shape -->
+    <path
+        android:fillColor="#003A8F"
+        android:pathData="M36,40v32l12,-6l12,6v-32l-12,-6z"
+        android:strokeWidth="1"/>
+    <!-- Star -->
+    <path
+        android:fillColor="#FFD166"
+        android:pathData="M54,34l2.5,7.7h8.1l-6.5,4.7l2.5,7.7l-6.5,-4.7l-6.5,4.7l2.5,-7.7l-6.5,-4.7h8.1z"/>
+</vector>

@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e3a5f"/>
+    </linearGradient>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#003A8F"/>
+      <stop offset="50%" style="stop-color:#1a56db"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD166"/>
+      <stop offset="100%" style="stop-color:#FFB347"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9ccff;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- Subtle glow in top-right -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#glow)"/>
+
+  <!-- Outer decorative ring -->
+  <rect x="32" y="32" width="448" height="448" rx="80" ry="80" fill="none" stroke="url(#grad1)" stroke-width="2" opacity="0.3"/>
+
+  <!-- Book base (open book) -->
+  <path d="M256 160 
+           C256 160 180 130 120 150 
+           L120 340 
+           C180 320 256 350 256 350 
+           Z" 
+        fill="url(#grad1)" opacity="0.9"/>
+  <path d="M256 160 
+           C256 160 332 130 392 150 
+           L392 340 
+           C332 320 256 350 256 350 
+           Z" 
+        fill="url(#grad1)" opacity="0.7"/>
+
+  <!-- Book spine -->
+  <rect x="248" y="145" width="16" height="215" rx="3" fill="url(#gold)" opacity="0.9"/>
+
+  <!-- Book pages (left) -->
+  <path d="M256 170 
+           C256 170 195 148 140 162 
+           L140 330 
+           C195 316 256 338 256 338 
+           Z" 
+        fill="#1e293b" opacity="0.15"/>
+
+  <!-- Book pages (right) -->
+  <path d="M256 170 
+           C256 170 317 148 372 162 
+           L372 330 
+           C317 316 256 338 256 338 
+           Z" 
+        fill="#1e293b" opacity="0.15"/>
+
+  <!-- Stars on left page -->
+  <circle cx="175" cy="240" r="4" fill="url(#gold)" opacity="0.8"/>
+  <circle cx="195" cy="270" r="3" fill="url(#gold)" opacity="0.6"/>
+  <circle cx="165" cy="290" r="2" fill="url(#gold)" opacity="0.5"/>
+
+  <!-- Stars on right page -->
+  <circle cx="337" cy="240" r="4" fill="url(#gold)" opacity="0.8"/>
+  <circle cx="317" cy="270" r="3" fill="url(#gold)" opacity="0.6"/>
+  <circle cx="347" cy="290" r="2" fill="url(#gold)" opacity="0.5"/>
+
+  <!-- Graduation cap on top -->
+  <path d="M256 120 
+           L160 155 
+           L256 190 
+           L352 155 
+           Z" 
+        fill="url(#gold)" opacity="0.95"/>
+  <rect x="160" y="155" width="192" height="10" rx="4" fill="#e6a800" opacity="0.7"/>
+  <!-- Cap tassel -->
+  <line x1="352" y1="155" x2="375" y2="140" stroke="url(#gold)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="378" cy="137" r="5" fill="#FFD166"/>
+
+  <!-- SSA Initials -->
+  <text x="256" y="300" text-anchor="middle" font-family="'Inter','Segoe UI',sans-serif" 
+        font-size="52" font-weight="800" fill="white" opacity="0.95" letter-spacing="4">SSA</text>
+
+  <!-- Small decorative dots -->
+  <circle cx="120" cy="380" r="3" fill="url(#grad1)" opacity="0.4"/>
+  <circle cx="392" cy="380" r="3" fill="url(#grad1)" opacity="0.4"/>
+  <circle cx="256" cy="400" r="2" fill="url(#gold)" opacity="0.3"/>
+
+  <!-- Bottom accent bar -->
+  <rect x="156" y="395" width="200" height="3" rx="1.5" fill="url(#gold)" opacity="0.6"/>
+</svg>

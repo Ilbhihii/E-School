@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash screen background - dark gradient matching the app theme -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:gravity="fill">
+        <shape>
+            <gradient
+                android:startColor="#080c14"
+                android:endColor="#0f172a"
+                android:angle="135" />
+        </shape>
+    </item>
+</layer-list>

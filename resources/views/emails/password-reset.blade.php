@@ -15,7 +15,7 @@
                 </tr>
                 <tr>
                     <td style="padding:34px 42px 25px;background:#091426;text-align:center;">
-                        <img src="{{ $logoUrl }}" width="76" height="76" alt="Smart School Academy" style="display:block;margin:0 auto 16px;border-radius:18px;object-fit:contain;background:#ffffff;box-shadow:0 10px 30px rgba(0,0,0,.22);">
+                        <img src="{{ asset('images/logoSSA.jpeg') }}" width="76" height="76" alt="Smart School Academy" style="display:block;margin:0 auto 16px;border-radius:18px;object-fit:contain;background:#ffffff;box-shadow:0 10px 30px rgba(0,0,0,.22);">
                         <div style="font-size:21px;line-height:1.25;font-weight:800;color:#ffffff;letter-spacing:-.3px;">Smart School Academy</div>
                         <div style="margin-top:6px;font-size:11px;line-height:1.5;color:#8fa1ba;letter-spacing:1.5px;text-transform:uppercase;">Plateforme éducative</div>
                     </td>

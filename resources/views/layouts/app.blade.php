@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- ═══ PWA — PROGRESSIVE WEB APP ═══ -->
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#080c14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SS Academy">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Smart School Academy">
+    <link rel="apple-touch-icon" href="{{ asset('images/logoSSA.jpeg') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSSA.jpeg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSSA.jpeg') }}">
+
     @stack('head')
 
     <!-- 3D Design System -->
@@ -200,6 +212,25 @@
 <main class="app-content">
     @yield('content')
 </main>
+
+<!-- ═══ PWA — SERVICE WORKER REGISTRATION ═══ -->
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('{{ asset('sw.js') }}')
+            .then(reg => {
+                console.log('[PWA] Service Worker enregistré:', reg.scope);
+            })
+            .catch(err => {
+                console.warn('[PWA] Erreur Service Worker:', err);
+            });
+    });
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        document.documentElement.classList.add('pwa-installed');
+    }
+}
+</script>
 
 @stack('scripts')
 

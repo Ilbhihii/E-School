@@ -22,3 +22,36 @@ CLASS_ROOMS_FIX.md
 
 cacert.pem
 nul
+
+# Flutter / Dart
+flutter_app/.dart_tool/
+flutter_app/.packages
+flutter_app/.pub-cache/
+flutter_app/build/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/.metadata
+flutter_app/*.iml
+flutter_app/.idea/
+flutter_app/.vscode/
+flutter_app/.dart_tool/package_config.json
+flutter_app/coverage/
+flutter_app/.pub/
+flutter_app/android/.gradle/
+flutter_app/android/local.properties
+flutter_app/android/key.properties
+flutter_app/android/upload-keystore.jks
+flutter_app/android/app/google-services.json
+flutter_app/ios/Pods/
+flutter_app/ios/.symlinks/
+flutter_app/ios/Flutter/Flutter.framework
+flutter_app/ios/Flutter/Flutter.podspec
+flutter_app/ios/Runner.xcworkspace/
+flutter_app/ios/Runner.xcodeproj/xcuserdata/
+
+# Firebase credentials (ne pas commiter)
+storage/app/firebase-auth.json
+
+# OS files
+.DS_Store
+Thumbs.db
