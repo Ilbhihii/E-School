@@ -1,47 +1,99 @@
-/node_modules
+# =========================================================
+# Laravel / PHP
+# =========================================================
+
+/node_modules/
+/vendor/
+
 /public/hot
 /public/storage
+
 /storage/*.key
-/vendor
-.env
-.env.backup
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+
+# Enregistrements vocaux privés des élèves
+/storage/app/vocal-tests/*
+
+# Conserver éventuellement un fichier .gitignore dans le dossier
+!/storage/app/vocal-tests/.gitignore
+
+/bootstrap/cache/*.php
+
 .phpunit.result.cache
+
+# =========================================================
+# Variables d'environnement
+# =========================================================
+
+.env
+.env.*
+!.env.example
+
+.env.backup
+
+# =========================================================
+# Docker / Homestead
+# =========================================================
+
 docker-compose.override.yml
 Homestead.json
 Homestead.yaml
+
+# =========================================================
+# Logs
+# =========================================================
+
 npm-debug.log
 yarn-error.log
-/.idea
-/.vscode
+*.log
 
-# Laravel storage cached views
-/storage/framework/views/*
-# TODO/notes files
+# =========================================================
+# IDE
+# =========================================================
+
+/.idea/
+/.vscode/
+
+# =========================================================
+# Notes locales
+# =========================================================
+
 TODO*.md
 CLASS_ROOMS_FIX.md
+
+# =========================================================
+# Fichiers locaux
+# =========================================================
 
 cacert.pem
 nul
 
+# =========================================================
 # Flutter / Dart
+# =========================================================
+
 flutter_app/.dart_tool/
 flutter_app/.packages
 flutter_app/.pub-cache/
 flutter_app/build/
 flutter_app/.flutter-plugins
 flutter_app/.flutter-plugins-dependencies
-flutter_app/.metadata
 flutter_app/*.iml
 flutter_app/.idea/
 flutter_app/.vscode/
-flutter_app/.dart_tool/package_config.json
 flutter_app/coverage/
 flutter_app/.pub/
+
 flutter_app/android/.gradle/
 flutter_app/android/local.properties
 flutter_app/android/key.properties
 flutter_app/android/upload-keystore.jks
 flutter_app/android/app/google-services.json
+
 flutter_app/ios/Pods/
 flutter_app/ios/.symlinks/
 flutter_app/ios/Flutter/Flutter.framework
@@ -49,15 +101,21 @@ flutter_app/ios/Flutter/Flutter.podspec
 flutter_app/ios/Runner.xcworkspace/
 flutter_app/ios/Runner.xcodeproj/xcuserdata/
 
-# Firebase credentials (ne pas commiter)
+# =========================================================
+# Firebase
+# =========================================================
+
 storage/app/firebase-auth.json
 
-# Browser profile (ne pas commiter)
+# =========================================================
+# Profils navigateur
+# =========================================================
+
 /.presentation-chrome-profile/
 
-# Log files
-/storage/logs/*.log
+# =========================================================
+# Système d'exploitation
+# =========================================================
 
-# OS files
 .DS_Store
 Thumbs.db
