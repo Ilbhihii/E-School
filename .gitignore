@@ -52,6 +52,12 @@ flutter_app/ios/Runner.xcodeproj/xcuserdata/
 # Firebase credentials (ne pas commiter)
 storage/app/firebase-auth.json
 
+# Browser profile (ne pas commiter)
+/.presentation-chrome-profile/
+
+# Log files
+/storage/logs/*.log
+
 # OS files
 .DS_Store
 Thumbs.db

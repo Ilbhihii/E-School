@@ -274,6 +274,18 @@
                     <span>Rendez-vous</span>
                 </a>
 
+                <a href="{{ route('admin.vocal-tests.prompts.index') }}"
+                   class="adm-nav-link {{ preg_match('/vocal-tests/', $route ?? '') ? 'active' : '' }}">
+                    <span class="nav-link-icon"><i class="bi bi-mic-fill"></i></span>
+                    <span>Tests vocaux</span>
+                </a>
+
+                <a href="{{ route('admin.vocal-tests.submissions.index') }}"
+                   class="adm-nav-link {{ preg_match('/submissions/', $route ?? '') ? 'active' : '' }}">
+                    <span class="nav-link-icon"><i class="bi bi-list-check"></i></span>
+                    <span>Soumissions vocales</span>
+                </a>
+
                 <div class="nav-heading">Communication</div>
 
                 <a href="{{ route('admin.chat.list') }}"

@@ -8,7 +8,6 @@ use App\Models\Subject;
 use App\Models\VocalTestPrompt;
 use App\Models\VocalTestSubmission;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
@@ -186,29 +185,8 @@ class VocalTestController extends Controller
 
         $targetAbsolutePath = $disk->path($targetRelativePath);
 
-        /*
-         * Utiliser un chemin absolu évite le problème suivant sous Windows :
-         * FFmpeg fonctionne dans CMD, mais le processus PHP déjà démarré
-         * ne connaît pas encore le nouveau PATH.
-         *
-         * Exemple dans .env :
-         * FFMPEG_PATH="C:/ffmpeg/bin/ffmpeg.exe"
-         */
-        $ffmpegBinary = (string) env('FFMPEG_PATH', 'ffmpeg');
-
-        if (
-            $ffmpegBinary !== 'ffmpeg'
-            && !is_file($ffmpegBinary)
-        ) {
-            throw ValidationException::withMessages([
-                'audio' =>
-                    'Le chemin FFmpeg configuré est introuvable : ' .
-                    $ffmpegBinary,
-            ]);
-        }
-
         $process = new Process([
-            $ffmpegBinary,
+            'ffmpeg',
             '-y',
             '-fflags',
             '+genpts',
@@ -237,20 +215,10 @@ class VocalTestController extends Controller
         if (!$conversionSucceeded) {
             $disk->delete($targetRelativePath);
 
-            Log::error('Échec de conversion FFmpeg du test vocal.', [
-                'ffmpeg_binary' => $ffmpegBinary,
-                'command' => $process->getCommandLine(),
-                'exit_code' => $process->getExitCode(),
-                'error_output' => $process->getErrorOutput(),
-                'standard_output' => $process->getOutput(),
-                'source_path' => $sourceAbsolutePath,
-                'target_path' => $targetAbsolutePath,
-            ]);
-
             throw ValidationException::withMessages([
                 'audio' =>
-                    'La conversion audio a échoué. ' .
-                    'Consultez storage/logs/laravel.log pour connaître l’erreur FFmpeg.',
+                    'La conversion de l’enregistrement a échoué. ' .
+                    'Vérifiez que FFmpeg est installé et accessible dans le PATH.',
             ]);
         }
 

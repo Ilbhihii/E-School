@@ -1,8 +1,9 @@
 class ApiConfig {
   // Changer cette URL selon l'environnement
-  static const String baseUrl = 'http://10.0.2.2:8000/api';
-  // Pour iOS simulator: http://localhost:8000/api
-  // Pour appareil physique: http://<IP_LOCALE>:8000/api
+  // Émulateur Android : http://10.0.2.2:8000/api
+  // iOS simulator    : http://localhost:8000/api
+  // Appareil physique : https://votre-domaine.com/api
+  static const String baseUrl = 'https://www.smart-school-academy.com/api';
 
   // ─── Authentification ───
   static const String register        = '/register';

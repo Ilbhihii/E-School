@@ -43,9 +43,9 @@ Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appo
 Route::post('/rendez-vous', [AppointmentController::class, 'store'])->name('appointment.store');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/test-vocal/coran/{subject}/{level}/{class}', [VocalTestController::class, 'create'])
+    Route::get('/test-vocal/{subject}/{level}/{class}', [VocalTestController::class, 'create'])
         ->name('vocal-test.create');
-    Route::post('/test-vocal/coran/{subject}/{level}/{class}', [VocalTestController::class, 'store'])
+    Route::post('/test-vocal/{subject}/{level}/{class}', [VocalTestController::class, 'store'])
         ->name('vocal-test.store');
 });
 
@@ -148,9 +148,9 @@ Route::middleware(['auth','isAdmin'])
 
     Route::get('/dashboard', [DashboardController::class,'index'])->name('dashboard');
 
-    Route::resource('devoirs', DevoirController::class);
+    Route::resource('devoirs', DevoirController::class)->except(['show']);
 
-    Route::resource('classes', ClassController::class);
+    Route::resource('classes', ClassController::class)->except(['show']);
 
     // Navigation hiérarchique : Matières → Niveaux → Classes → Cours
     Route::get('/subjects', [LevelController::class, 'subjectsIndex'])->name('subjects.index');
@@ -166,7 +166,7 @@ Route::middleware(['auth','isAdmin'])
     Route::delete('/levels/{level}/classes/{class}/subjects/{subject}/detach', [LevelController::class, 'detachSubject'])->name('levels.subjects.detach');
     Route::resource('levels', LevelController::class)->except(['create', 'edit', 'show']);
 
-    Route::resource('users', UserController::class);
+    Route::resource('users', UserController::class)->except(['create', 'store']);
     Route::get('users/without-class', [UserController::class, 'withoutClass'])->name('users.without-class');
     Route::get('users/{user}/test-results', [UserController::class, 'testResults'])->name('users.test-results');
     Route::get('users/{userId}/test/{testId}/result', [UserController::class, 'showResult'])->name('users.test-result');
@@ -214,6 +214,19 @@ Route::middleware(['auth','isAdmin'])
     Route::get('/prof-assignments', [UserController::class, 'profAssignments'])->name('users.prof-assignments');
     Route::post('/prof-assignments', [UserController::class, 'storeProfAssignment'])->name('users.store-prof-assignment');
     Route::delete('/prof-assignments/{id}', [UserController::class, 'destroyProfAssignment'])->name('users.destroy-prof-assignment');
+
+    // Tests vocaux
+    Route::prefix('vocal-tests')->name('vocal-tests.')->group(function () {
+        // Textes (CRUD)
+        Route::resource('prompts', \App\Http\Controllers\Admin\VocalTestPromptController::class)->except(['show']);
+
+        // Soumissions (consultation + évaluation)
+        Route::get('/submissions', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'index'])->name('submissions.index');
+        Route::get('/submissions/{submission}', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'show'])->name('submissions.show');
+        Route::post('/submissions/{submission}/review', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'review'])->name('submissions.review');
+        Route::get('/submissions/{submission}/audio', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'audio'])->name('submissions.audio');
+        Route::delete('/submissions/{submission}', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'destroy'])->name('submissions.destroy');
+    });
 
     // Rendez-vous
     Route::get('/appointments', [\App\Http\Controllers\AppointmentController::class, 'index'])->name('appointments.index');

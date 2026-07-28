@@ -32,10 +32,3 @@ class StudentAnswer extends Model
         return $this->belongsTo(Question::class);
     }
 }
-?>
-</xai:function_call}
-
-
-
-
-<xai:function_call name="edit_file">

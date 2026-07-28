@@ -23,6 +23,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('class_room_subject');
+        // Sécurité : ne pas détruire une table créée par une autre migration
+        // La table originale est créée par 2026_01_05_000000
+        // Cette migration est un correctif de compatibilité uniquement
     }
 };

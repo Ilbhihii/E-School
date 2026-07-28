@@ -121,7 +121,38 @@
 .contact-link { display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.68);text-decoration:none;white-space:nowrap; }
 .contact-link:hover { color:#93C5FD; }
 .path-pill { display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 8px;border-radius:7px;background:rgba(255,255,255,.045);color:rgba(255,255,255,.48);font-size:.7rem; }
-.audio-player { width:210px;height:36px;display:block;filter:invert(.88) hue-rotate(180deg);opacity:.86; }
+.recitation-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 190px;
+    padding: 10px 16px;
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    border-radius: 11px;
+    background: linear-gradient(
+        135deg,
+        rgba(124, 58, 237, 0.22),
+        rgba(37, 99, 235, 0.18)
+    );
+    color: #C4B5FD;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        color 0.2s ease;
+}
+
+.recitation-link:hover {
+    color: #FFFFFF;
+    border-color: rgba(167, 139, 250, 0.55);
+    box-shadow: 0 8px 22px rgba(76, 29, 149, 0.25);
+    transform: translateY(-2px);
+}
 @media(max-width:760px){.appointments-toolbar{align-items:stretch;flex-direction:column}.appointments-search{width:100%}.appointments-panel{border-radius:14px}}
 </style>
 
@@ -189,11 +220,16 @@
                         {{ $appointment->vocalSubmission->level->name }} · {{ $appointment->vocalSubmission->classRoom->name }}
                     </small>
                 </td>
-                <td style="min-width:240px;">
-                    <audio controls preload="none" class="audio-player">
-                        <source src="{{ route('admin.appointments.audio', $appointment) }}" type="{{ $appointment->vocalSubmission->audio_mime_type ?: 'audio/webm' }}">
-                        Votre navigateur ne peut pas lire cet enregistrement.
-                    </audio>
+                <td style="min-width:220px;">
+                    <a
+                        href="{{ route('admin.vocal-tests.submissions.index') }}"
+                        class="recitation-link"
+                        title="Consulter les enregistrements vocaux"
+                    >
+                        <i class="bi bi-mic-fill"></i>
+                        Voir les enregistrements
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
                 </td>
                 <td>
                     <span class="status-badge status-{{ $appointment->status }}">

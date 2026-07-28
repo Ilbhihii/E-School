@@ -45,12 +45,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final typesResponse = results[1];
 
     if (appointmentsResponse.success && typesResponse.success) {
-      final appointsList = (appointmentsResponse.data is Map
-              ? (appointmentsResponse.data as Map)['data']
-              : appointmentsResponse.data) as List?;
-      final typesList = (typesResponse.data is Map
-              ? (typesResponse.data as Map)['data']
-              : typesResponse.data) as List?;
+      // ✅ ApiClient extrait déjà `data` → utilisation directe
+      final appointsList = appointmentsResponse.data as List?;
+      final typesList = typesResponse.data as List?;
 
       setState(() {
         _appointments = (appointsList ?? [])

@@ -44,7 +44,14 @@
         <div class="row g-4">
             @forelse($classes as $class)
             <div class="col-md-6 col-lg-4">
-                <a href="{{ route('front.courses', [$subject->id, $level->id, $class->id]) }}" class="text-decoration-none">
+                @php
+                    $normalizedSubjectName = mb_strtolower(trim($subject->name ?? ''));
+                    $hasVocalTest = in_array($normalizedSubjectName, ['arabe', 'coran', 'quran', 'القرآن', 'القران'], true);
+                    $targetRoute = $hasVocalTest
+                        ? route('vocal-test.create', [$subject, $level, $class])
+                        : route('front.courses', [$subject->id, $level->id, $class->id]);
+                @endphp
+                <a href="{{ $targetRoute }}" class="text-decoration-none">
                     <div class="card-3d text-center h-100 reveal-3d" style="cursor: pointer;">
                         <div class="card-3d-icon mx-auto" style="background: linear-gradient(135deg, 
                             @switch(($loop->index ?? 0) % 5)
@@ -59,7 +66,12 @@
                         </div>
                         <h5 class="fw-bold text-white mt-3 mb-1" style="font-family: 'Poppins', sans-serif;">{{ $class->name }}</h5>
                         <p class="text-white-50 small mb-0">
-                            {{ mb_strtolower($subject->name) === 'coran' ? 'Passer le test vocal' : 'Continuer' }}
+                            @if($hasVocalTest)
+                                <i class="bi bi-mic-fill me-1" style="color: #A78BFA;"></i>
+                                Passer le test vocal
+                            @else
+                                Continuer
+                            @endif
                             <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
                         </p>
                     </div>

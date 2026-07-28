@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             TestSeeder::class,
             RoleSeeder::class,
             UserRoleSeeder::class,
+            ArabicVocalTestPromptSeeder::class,
+            QuranVocalTestPromptSeeder::class,
         ]);
     }
 

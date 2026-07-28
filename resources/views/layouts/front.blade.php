@@ -1130,7 +1130,7 @@
                         <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <i class="bi bi-envelope" style="font-size: 0.85rem;"></i>
                         </span>
-                        contact@e-school.com
+                        contact.smartschoolacademy@gmail.com
                     </span>
                     <span class="d-flex align-items-center gap-2">
                         <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">

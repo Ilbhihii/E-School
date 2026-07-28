@@ -117,8 +117,3 @@ class DevoirController extends Controller
         return redirect()->route('admin.devoirs.index', ['course_id' => $course_id])->with('success', 'Devoir supprimé!');
     }
 }
-?>
-</xai:function_call > 
-
-<xai:function_call name="create_file">
-<parameter name="absolute_path >

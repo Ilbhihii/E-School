@@ -4,6 +4,68 @@
 
 @section('content')
 
+<style>
+    /* Image coranique affichée uniquement pour la matière Coran */
+    .home-quran-icon-wrapper {
+        width: 96px !important;
+        height: 96px !important;
+        margin: 0 auto 1rem;
+        padding: 12px;
+
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 24px !important;
+        overflow: hidden !important;
+
+        background: linear-gradient(135deg, #2563EB 0%, #4F46E5 48%, #7C3AED 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow:
+            0 12px 28px rgba(37, 99, 235, 0.28),
+            0 0 22px rgba(124, 58, 237, 0.22) !important;
+
+        transform: translateZ(30px);
+        transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease;
+    }
+
+    .home-quran-subject-image {
+        width: 76px;
+        height: 76px;
+        display: block;
+        object-fit: contain;
+        filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.32));
+        transition: transform 0.3s ease;
+    }
+
+    .card-3d:hover .home-quran-icon-wrapper {
+        transform: translateZ(50px) scale(1.08);
+        box-shadow:
+            0 16px 34px rgba(37, 99, 235, 0.36),
+            0 0 30px rgba(124, 58, 237, 0.32) !important;
+    }
+
+    .card-3d:hover .home-quran-subject-image {
+        transform: scale(1.06);
+    }
+
+    @media (max-width: 576px) {
+        .home-quran-icon-wrapper {
+            width: 82px !important;
+            height: 82px !important;
+            padding: 10px;
+            border-radius: 20px !important;
+        }
+
+        .home-quran-subject-image {
+            width: 64px;
+            height: 64px;
+        }
+    }
+</style>
+
 <!-- ══════════════════════════════════════════════════════
      HERO SECTION
      ══════════════════════════════════════════════════════ -->
@@ -23,13 +85,39 @@
         <div class="row g-4 justify-content-center mb-5 mx-auto" style="max-width:760px;">
             @foreach($subjectsGrouped as $group)
                 @foreach($group['subjects'] as $subject)
+                    @php
+                        $normalizedSubjectName = mb_strtolower(trim($subject->name ?? ''));
+
+                        $isQuran = in_array($normalizedSubjectName, [
+                            'coran',
+                            'quran',
+                            'couran',
+                            'القرآن',
+                            'القران',
+                        ], true);
+
+                        $subjectIcon = match ($normalizedSubjectName) {
+                            'arabe' => 'bi-translate',
+                            default => 'bi-journal-bookmark-fill',
+                        };
+                    @endphp
+
                     <div class="col-md-6">
                         <a href="{{ route('front.subject.levels', $subject->id) }}"
                            class="text-decoration-none d-block h-100"
                            aria-label="Voir les niveaux de {{ $subject->name }}">
                             <div class="card-3d text-center h-100 reveal-3d" style="cursor:pointer;padding:2rem;">
-                                <div class="card-3d-icon mx-auto">
-                                    <i class="bi {{ $subject->name === 'Coran' ? 'bi-book-half' : 'bi-translate' }}"></i>
+                                <div class="card-3d-icon mx-auto {{ $isQuran ? 'home-quran-icon-wrapper' : '' }}">
+                                    @if ($isQuran)
+                                        <img
+                                            src="{{ asset('images/alquran.png') }}"
+                                            alt="Livre du Coran"
+                                            class="home-quran-subject-image"
+                                            loading="lazy"
+                                        >
+                                    @else
+                                        <i class="bi {{ $subjectIcon }}"></i>
+                                    @endif
                                 </div>
                                 <h5 class="fw-bold text-white mt-3 mb-2" style="font-family:'Poppins',sans-serif;">
                                     {{ $subject->name }}

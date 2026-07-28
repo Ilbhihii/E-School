@@ -12,7 +12,7 @@ use Kreait\Firebase\Messaging\Notification;
 
 class PushNotificationService
 {
-    protected Messaging $messaging;
+    protected ?Messaging $messaging = null;
 
     public function __construct()
     {
