@@ -1,6 +1,12 @@
 @extends('layouts.admin')
 
-@section('title', 'Soumission vocale — ' . $submission->user?->name)
+@section(
+    'title',
+    ($submission->isCompletionSubmission()
+        ? 'Exercice de complétion — '
+        : 'Soumission vocale — ')
+    . $submission->user?->name
+)
 @section('page_title', 'Détail de la soumission')
 @section('breadcrumb', 'Tests vocaux → Soumission')
 
@@ -85,11 +91,67 @@
 .mode-badge.reading { background: rgba(99,102,241,0.12); color: #A5B4FC; }
 .mode-badge.tajwid { background: rgba(16,185,129,0.12); color: #6EE7B7; }
 .mode-badge.hifd { background: rgba(251,191,36,0.12); color: #FCD34D; }
+.completion-review-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.completion-review-row {
+    display: grid;
+    grid-template-columns: 42px 1fr 1fr 90px;
+    align-items: center;
+    gap: 10px;
+    padding: 11px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.025);
+}
+
+.completion-review-word {
+    direction: rtl;
+    font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+    font-size: 1.05rem;
+}
+
+.completion-review-result {
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.completion-review-result.correct {
+    color: #4ADE80;
+}
+
+.completion-review-result.incorrect {
+    color: #FCA5A5;
+}
+
+@media (max-width: 700px) {
+    .completion-review-row {
+        grid-template-columns: 36px 1fr;
+    }
+
+    .completion-review-result {
+        text-align: left;
+    }
+}
+
 </style>
 
 <div class="adm-page-header">
     <div>
-        <h1><i class="bi bi-file-earmark-text me-2" style="color:var(--adm-primary);"></i> Soumission vocale</h1>
+        <h1>
+            <i
+                class="bi {{ $submission->isCompletionSubmission()
+                    ? 'bi-puzzle-fill'
+                    : 'bi-file-earmark-text' }} me-2"
+                style="color:var(--adm-primary);"
+            ></i>
+            {{ $submission->isCompletionSubmission()
+                ? 'Exercice de complétion'
+                : 'Soumission vocale' }}
+        </h1>
         <div class="subtitle">{{ $submission->user?->name }} — {{ $submission->subject?->name }} / {{ $submission->level?->name }} / {{ $submission->classRoom?->name }}</div>
     </div>
     <div class="page-actions">
@@ -214,10 +276,115 @@
                 </div>
             </div>
         </div>
+
+        @if($isCompletionSubmission && $completionReview)
+            <div class="adm-card mb-4">
+                <div class="adm-card-header">
+                    <h4>
+                        <i
+                            class="bi bi-puzzle-fill"
+                            style="color:rgba(255,255,255,0.35);"
+                        ></i>
+                        Réponses de l’élève
+                    </h4>
+                </div>
+
+                <div class="adm-card-body">
+                    <div class="completion-review-grid">
+                        @foreach(
+                            $completionReview['expected_answers']
+                            as $index => $expectedAnswer
+                        )
+                            @php
+                                $studentAnswer =
+                                    $completionReview['answers'][$index]
+                                    ?? '—';
+
+                                $isCorrect =
+                                    $completionReview['results'][$index]
+                                    ?? false;
+                            @endphp
+
+                            <div class="completion-review-row">
+                                <strong>{{ $index + 1 }}</strong>
+
+                                <div>
+                                    <small
+                                        style="
+                                            color:var(--adm-text-muted);
+                                            display:block;
+                                        "
+                                    >
+                                        Réponse choisie
+                                    </small>
+
+                                    <span class="completion-review-word">
+                                        {{ $studentAnswer }}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <small
+                                        style="
+                                            color:var(--adm-text-muted);
+                                            display:block;
+                                        "
+                                    >
+                                        Réponse attendue
+                                    </small>
+
+                                    <span class="completion-review-word">
+                                        {{ $expectedAnswer }}
+                                    </span>
+                                </div>
+
+                                <span
+                                    class="completion-review-result
+                                        {{ $isCorrect
+                                            ? 'correct'
+                                            : 'incorrect' }}"
+                                >
+                                    <i
+                                        class="bi {{ $isCorrect
+                                            ? 'bi-check-circle-fill'
+                                            : 'bi-x-circle-fill' }}"
+                                    ></i>
+                                    {{ $isCorrect
+                                        ? 'Correct'
+                                        : 'Incorrect' }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div
+                        style="
+                            margin-top:14px;
+                            padding:12px;
+                            border-radius:12px;
+                            background:rgba(124,58,237,0.1);
+                            color:#C4B5FD;
+                            text-align:center;
+                            font-weight:700;
+                        "
+                    >
+                        Résultat automatique :
+                        {{ $submission->auto_correct_count ?? 0 }}
+                        /
+                        {{ $submission->auto_total_questions ?? 0 }}
+                        —
+                        {{ $submission->final_score
+                            ?? $submission->score
+                            ?? 0 }}/100
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 
     <!-- Audio & Évaluation -->
     <div class="col-lg-5">
+        @unless($isCompletionSubmission)
         <!-- Audio Player -->
         <div class="adm-card mb-4">
             <div class="adm-card-header">
@@ -278,6 +445,8 @@
                 </div>
             </div>
         </div>
+
+        @endunless
 
         <!-- Formulaire d'évaluation -->
         <div class="adm-card">

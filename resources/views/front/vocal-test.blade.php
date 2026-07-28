@@ -4,6 +4,23 @@
 
 @section('content')
 
+@php
+    $isCompletionTest = $isCompletionTest
+        ?? \App\Models\VocalTestPrompt::isInteractiveCompletionPath(
+            $subject,
+            $level,
+            $class,
+            $prompt
+        );
+
+    $completionDefinition = $completionDefinition
+        ?? (
+            $isCompletionTest
+                ? \App\Models\VocalTestPrompt::completionDefinition()
+                : null
+        );
+@endphp
+
 <style>
     .vocal-test-section {
         padding-top: 4rem;
@@ -45,6 +62,12 @@
         background: rgba(251, 191, 36, 0.15);
         color: #fcd34d;
         border-color: rgba(251, 191, 36, 0.25);
+    }
+
+    .vocal-badge.mode-completion {
+        background: rgba(245, 158, 11, 0.14);
+        color: #fcd34d;
+        border-color: rgba(245, 158, 11, 0.3);
     }
 
     .vocal-title {
@@ -122,6 +145,7 @@
         line-height: 2.25;
 
         text-align: center;
+        white-space: pre-line;
         color: #ffffff;
         background: rgba(255, 255, 255, 0.035);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -220,6 +244,160 @@
         display: block;
     }
 
+    .completion-form-card {
+        margin-bottom: 1.75rem;
+    }
+
+    .completion-verses {
+        display: grid;
+        gap: 1.2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .completion-verse {
+        padding: 1.4rem;
+        font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+        font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+        line-height: 2.4;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.035);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        text-align: center;
+    }
+
+    .completion-slot {
+        min-width: 135px;
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+        margin: 0 0.3rem;
+        padding: 0.35rem 0.8rem;
+        cursor: pointer;
+        color: #fcd34d;
+        background: rgba(245, 158, 11, 0.08);
+        border: 2px dashed rgba(251, 191, 36, 0.5);
+        border-radius: 12px;
+        font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+        font-size: 1.25rem;
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            background 0.2s ease;
+    }
+
+    .completion-slot.is-selected,
+    .completion-slot.drag-over {
+        border-color: #a78bfa;
+        background: rgba(124, 58, 237, 0.18);
+        transform: translateY(-2px);
+    }
+
+    .completion-slot.is-filled {
+        border-style: solid;
+        border-color: rgba(74, 222, 128, 0.5);
+        background: rgba(34, 197, 94, 0.12);
+        color: #bbf7d0;
+    }
+
+    .completion-slot-placeholder {
+        color: rgba(255, 255, 255, 0.38);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .completion-bank-title {
+        margin-bottom: 0.8rem;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .completion-word-bank {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 1.1rem;
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 16px;
+    }
+
+    .completion-word-card {
+        min-width: 110px;
+        padding: 0.7rem 1rem;
+        cursor: grab;
+        color: #ffffff;
+        background: linear-gradient(
+            135deg,
+            rgba(37, 99, 235, 0.9),
+            rgba(124, 58, 237, 0.9)
+        );
+        border: 1px solid rgba(196, 181, 253, 0.32);
+        border-radius: 12px;
+        font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+        font-size: 1.15rem;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+        transition:
+            transform 0.2s ease,
+            opacity 0.2s ease,
+            filter 0.2s ease;
+    }
+
+    .completion-word-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .completion-word-card:active {
+        cursor: grabbing;
+    }
+
+    .completion-word-card.is-used {
+        opacity: 0.25;
+        filter: grayscale(0.7);
+        pointer-events: none;
+        transform: none;
+    }
+
+    .completion-progress {
+        margin-bottom: 1rem;
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 0.86rem;
+        text-align: center;
+    }
+
+    .completion-actions {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+    }
+
+    .completion-reset-button {
+        min-width: 170px;
+        color: #e2e8f0;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .completion-submit-button {
+        flex: 1;
+        min-width: 240px;
+    }
+
+    .completion-error {
+        margin-bottom: 1rem;
+        padding: 0.85rem 1rem;
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 12px;
+    }
+
     @media (max-width: 768px) {
         .vocal-test-section {
             padding-top: 2.5rem;
@@ -251,15 +429,23 @@
     <div class="container vocal-test-container">
 
         <div class="text-center vocal-header">
-            <span class="badge vocal-badge @if($prompt->test_mode === 'tajwid') mode-tajwid @elseif($prompt->test_mode === 'hifd') mode-hifd @endif">
-                @if ($prompt->test_mode === 'hifd')
+            <span class="badge vocal-badge @if($isCompletionTest) mode-completion @elseif($prompt->test_mode === 'tajwid') mode-tajwid @elseif($prompt->test_mode === 'hifd') mode-hifd @endif">
+                @if ($isCompletionTest)
+                    <i class="bi bi-puzzle-fill"></i>
+                @elseif ($prompt->test_mode === 'hifd')
                     <i class="bi bi-lock-fill"></i>
                 @elseif ($prompt->test_mode === 'tajwid')
                     <i class="bi bi-music-note"></i>
                 @else
                     <i class="bi bi-mic-fill"></i>
                 @endif
-                {{ $subject->name }} · {{ \App\Models\VocalTestPrompt::getModes()[$prompt->test_mode] ?? 'Lecture' }}
+
+                {{ $subject->name }} ·
+                @if ($isCompletionTest)
+                    Complétion des versets
+                @else
+                    {{ \App\Models\VocalTestPrompt::getModes()[$prompt->test_mode] ?? 'Lecture' }}
+                @endif
             </span>
 
             <h1 class="vocal-title">
@@ -271,137 +457,569 @@
             </p>
         </div>
 
-        <div class="card-3d p-4 p-md-5 vocal-recitation-card">
-            <div class="vocal-card-header">
-                <div class="card-3d-icon vocal-card-icon">
-                    @if ($prompt->test_mode === 'hifd')
-                        <i class="bi bi-lock text-white"></i>
-                    @else
-                        <i class="bi bi-book-half text-white"></i>
-                    @endif
-                </div>
-
-                <div>
-                    <h5 class="text-white mb-1">
-                        @if ($prompt->test_mode === 'hifd')
-                            Texte à mémoriser
-                        @else
-                            Texte à réciter
-                        @endif
-                    </h5>
-                    <small class="text-white-50">
-                        Durée maximale : {{ $prompt->maximum_duration }} secondes
-                        @if ($prompt->preparation_seconds > 0)
-                            · Préparation : {{ $prompt->preparation_seconds }}s
-                        @endif
-                    </small>
-                </div>
-            </div>
-
-            @if ($prompt->instructions)
-                <div class="vocal-instructions">
-                    <i class="bi bi-info-circle-fill"></i>
-                    {{ $prompt->instructions }}
-                </div>
-            @endif
-
-            <div
-                id="recitationText"
-                dir="rtl"
-                lang="ar"
-                class="vocal-reading-text"
-            >
-                {{ $prompt->reading_text }}
-            </div>
-
-            <div class="text-center">
-                <span class="vocal-duration-badge">
-                    @if ($prompt->test_mode === 'hifd')
-                        <i class="bi bi-lock"></i>
-                        Mémorisation · Max {{ $prompt->maximum_duration }}s
-                    @elseif ($prompt->test_mode === 'tajwid')
-                        <i class="bi bi-music-note"></i>
-                        Tajwid · Max {{ $prompt->maximum_duration }}s
-                    @else
-                        <i class="bi bi-clock"></i>
-                        Max {{ $prompt->maximum_duration }} secondes
-                    @endif
-                </span>
-            </div>
-        </div>
-
-        <div class="card-3d p-4 p-md-5 vocal-recording-card">
+        @if($isCompletionTest)
             <form
                 method="POST"
                 action="{{ route('vocal-test.store', [$subject, $level, $class]) }}"
-                enctype="multipart/form-data"
-                id="vocalTestForm"
+                id="completionTestForm"
             >
                 @csrf
 
-                <input type="file" name="audio" id="audioFile" accept="audio/*,video/webm" hidden required>
-                <input type="hidden" name="duration_seconds" id="durationSeconds" value="">
+                <div class="card-3d p-4 p-md-5 completion-form-card">
+                    <div class="vocal-card-header">
+                        <div class="card-3d-icon vocal-card-icon">
+                            <i class="bi bi-puzzle-fill text-white"></i>
+                        </div>
 
-                @error('audio')
-                    <div class="alert mb-4" style="background: rgba(239, 68, 68, 0.14); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px;">
-                        {{ $message }}
+                        <div>
+                            <h5 class="text-white mb-1">
+                                Complétez les quatre espaces
+                            </h5>
+                            <small class="text-white-50">
+                                Cliquez sur une carte ou glissez-la vers
+                                l’emplacement correspondant.
+                            </small>
+                        </div>
                     </div>
-                @enderror
 
-                <div class="text-center">
+                    @if ($prompt->instructions)
+                        <div class="vocal-instructions">
+                            <i class="bi bi-info-circle-fill"></i>
+                            {{ $prompt->instructions }}
+                        </div>
+                    @endif
 
-                    <!-- ═══ STATUS ═══ -->
-                    <div id="recordingStatus" class="vocal-status">
+                    @if(
+                        $errors->has('answers')
+                        || $errors->has('answers.*')
+                    )
+                        <div class="completion-error">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            {{ $errors->first('answers')
+                                ?: $errors->first('answers.*') }}
+                        </div>
+                    @endif
+
+                    <div class="completion-verses" dir="rtl" lang="ar">
+                        @foreach($completionDefinition['verses'] as $verse)
+                            <div class="completion-verse">
+                                @foreach($verse as $part)
+                                    @if(array_key_exists('text', $part))
+                                        <span>{{ $part['text'] }}</span>
+                                    @else
+                                        @php
+                                            $slotIndex = $part['slot'];
+                                            $oldValue = old(
+                                                'answers.' . $slotIndex,
+                                                ''
+                                            );
+                                        @endphp
+
+                                        <button
+                                            type="button"
+                                            class="completion-slot {{ $oldValue ? 'is-filled' : '' }}"
+                                            data-slot="{{ $slotIndex }}"
+                                            aria-label="Emplacement {{ $slotIndex + 1 }}"
+                                        >
+                                            <span class="completion-slot-value">
+                                                @if($oldValue)
+                                                    {{ $oldValue }}
+                                                @else
+                                                    <span class="completion-slot-placeholder">
+                                                        Choisir un mot
+                                                    </span>
+                                                @endif
+                                            </span>
+
+                                            <input
+                                                type="hidden"
+                                                name="answers[{{ $slotIndex }}]"
+                                                value="{{ $oldValue }}"
+                                                data-answer-input
+                                            >
+                                        </button>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="completion-bank-title">
+                        <i class="bi bi-hand-index-thumb me-1"></i>
+                        Cartes disponibles
+                    </div>
+
+                    <div
+                        class="completion-word-bank"
+                        id="completionWordBank"
+                        dir="rtl"
+                        lang="ar"
+                    >
+                        @foreach($completionDefinition['choices'] as $choice)
+                            <button
+                                type="button"
+                                class="completion-word-card"
+                                data-word="{{ $choice }}"
+                                draggable="true"
+                            >
+                                {{ $choice }}
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="card-3d p-4 p-md-5">
+                    <div
+                        id="completionProgress"
+                        class="completion-progress"
+                    >
+                        0 / {{ count($completionDefinition['expected_answers']) }}
+                        espaces complétés
+                    </div>
+
+                    <div class="completion-actions">
+                        <button
+                            type="button"
+                            id="resetCompletion"
+                            class="btn-3d completion-reset-button"
+                        >
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>
+                            Réinitialiser
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="submitCompletion"
+                            class="btn-3d btn-3d-gradient completion-submit-button"
+                            disabled
+                        >
+                            <i class="bi bi-check2-circle me-2"></i>
+                            Valider mes réponses et continuer
+                            <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        @else
+            <div class="card-3d p-4 p-md-5 vocal-recitation-card">
+                <div class="vocal-card-header">
+                    <div class="card-3d-icon vocal-card-icon">
                         @if ($prompt->test_mode === 'hifd')
-                            Prenez le temps de mémoriser le texte, puis commencez l'enregistrement.
+                            <i class="bi bi-lock text-white"></i>
                         @else
-                            Autorisez le microphone puis commencez l'enregistrement.
+                            <i class="bi bi-book-half text-white"></i>
                         @endif
                     </div>
 
-                    <div id="maxDurationWarning" class="vocal-max-warning">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                        Vous approchez de la durée maximale autorisée ({{ $prompt->maximum_duration }} secondes).
-                    </div>
-
-                    <div id="timer" class="vocal-timer">00:00</div>
-
-                    <div class="vocal-actions">
-                        <button type="button" id="startRecording" class="btn-3d btn-3d-gradient vocal-action-button">
-                            <i class="bi bi-mic-fill me-2"></i>
+                    <div>
+                        <h5 class="text-white mb-1">
                             @if ($prompt->test_mode === 'hifd')
-                                Commencer la récitation
+                                Texte à mémoriser
                             @else
-                                Commencer
+                                Texte à réciter
                             @endif
-                        </button>
-
-                        <button type="button" id="stopRecording" class="btn-3d vocal-stop-button" disabled>
-                            <i class="bi bi-stop-fill me-2"></i> Arrêter
-                        </button>
+                        </h5>
+                        <small class="text-white-50">
+                            Durée maximale :
+                            {{ $prompt->maximum_duration }} secondes
+                            @if ($prompt->preparation_seconds > 0)
+                                · Préparation :
+                                {{ $prompt->preparation_seconds }}s
+                            @endif
+                        </small>
                     </div>
-
-                    <div id="previewBlock" class="vocal-preview" hidden>
-                        <p class="text-white-50 mb-2">
-                            <i class="bi bi-check-circle-fill me-1" style="color: #4ade80;"></i>
-                            Écoutez votre enregistrement avant de continuer.
-                        </p>
-                        <audio id="audioPreview" controls></audio>
-                    </div>
-
-                    <button type="submit" id="submitRecording" class="btn-3d btn-3d-gradient vocal-submit-button" disabled>
-                        <i class="bi bi-send-fill me-2"></i>
-                        Envoyer et continuer vers le rendez-vous
-                        <i class="bi bi-arrow-right ms-2"></i>
-                    </button>
-
                 </div>
-            </form>
-        </div>
+
+                @if ($prompt->instructions)
+                    <div class="vocal-instructions">
+                        <i class="bi bi-info-circle-fill"></i>
+                        {{ $prompt->instructions }}
+                    </div>
+                @endif
+
+                <div
+                    id="recitationText"
+                    dir="rtl"
+                    lang="ar"
+                    class="vocal-reading-text"
+                >
+                    {{ $prompt->reading_text }}
+                </div>
+
+                <div class="text-center">
+                    <span class="vocal-duration-badge">
+                        @if ($prompt->test_mode === 'hifd')
+                            <i class="bi bi-lock"></i>
+                            Mémorisation · Max
+                            {{ $prompt->maximum_duration }}s
+                        @elseif ($prompt->test_mode === 'tajwid')
+                            <i class="bi bi-music-note"></i>
+                            Tajwid · Max
+                            {{ $prompt->maximum_duration }}s
+                        @else
+                            <i class="bi bi-clock"></i>
+                            Max {{ $prompt->maximum_duration }}
+                            secondes
+                        @endif
+                    </span>
+                </div>
+            </div>
+
+            <div class="card-3d p-4 p-md-5 vocal-recording-card">
+                <form
+                    method="POST"
+                    action="{{ route('vocal-test.store', [$subject, $level, $class]) }}"
+                    enctype="multipart/form-data"
+                    id="vocalTestForm"
+                >
+                    @csrf
+
+                    <input
+                        type="file"
+                        name="audio"
+                        id="audioFile"
+                        accept="audio/*,video/webm"
+                        hidden
+                        required
+                    >
+
+                    <input
+                        type="hidden"
+                        name="duration_seconds"
+                        id="durationSeconds"
+                        value=""
+                    >
+
+                    @error('audio')
+                        <div
+                            class="alert mb-4"
+                            style="
+                                background:rgba(239,68,68,0.14);
+                                color:#fca5a5;
+                                border:1px solid rgba(239,68,68,0.25);
+                                border-radius:12px;
+                            "
+                        >
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    <div class="text-center">
+                        <div
+                            id="recordingStatus"
+                            class="vocal-status"
+                        >
+                            @if ($prompt->test_mode === 'hifd')
+                                Prenez le temps de mémoriser le texte,
+                                puis commencez l’enregistrement.
+                            @else
+                                Autorisez le microphone puis commencez
+                                l’enregistrement.
+                            @endif
+                        </div>
+
+                        <div
+                            id="maxDurationWarning"
+                            class="vocal-max-warning"
+                        >
+                            <i
+                                class="bi bi-exclamation-triangle-fill me-1"
+                            ></i>
+                            Vous approchez de la durée maximale autorisée
+                            ({{ $prompt->maximum_duration }} secondes).
+                        </div>
+
+                        <div id="timer" class="vocal-timer">
+                            00:00
+                        </div>
+
+                        <div class="vocal-actions">
+                            <button
+                                type="button"
+                                id="startRecording"
+                                class="btn-3d btn-3d-gradient vocal-action-button"
+                            >
+                                <i class="bi bi-mic-fill me-2"></i>
+                                @if ($prompt->test_mode === 'hifd')
+                                    Commencer la récitation
+                                @else
+                                    Commencer
+                                @endif
+                            </button>
+
+                            <button
+                                type="button"
+                                id="stopRecording"
+                                class="btn-3d vocal-stop-button"
+                                disabled
+                            >
+                                <i class="bi bi-stop-fill me-2"></i>
+                                Arrêter
+                            </button>
+                        </div>
+
+                        <div
+                            id="previewBlock"
+                            class="vocal-preview"
+                            hidden
+                        >
+                            <p class="text-white-50 mb-2">
+                                <i
+                                    class="bi bi-check-circle-fill me-1"
+                                    style="color:#4ade80;"
+                                ></i>
+                                Écoutez votre enregistrement avant
+                                de continuer.
+                            </p>
+
+                            <audio
+                                id="audioPreview"
+                                controls
+                            ></audio>
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="submitRecording"
+                            class="btn-3d btn-3d-gradient vocal-submit-button"
+                            disabled
+                        >
+                            <i class="bi bi-send-fill me-2"></i>
+                            Envoyer et continuer vers le rendez-vous
+                            <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        @endif
 
     </div>
 </section>
 
+@if($isCompletionTest)
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('completionTestForm');
+    const slots = Array.from(
+        document.querySelectorAll('.completion-slot')
+    );
+    const cards = Array.from(
+        document.querySelectorAll('.completion-word-card')
+    );
+    const progress = document.getElementById(
+        'completionProgress'
+    );
+    const submitButton = document.getElementById(
+        'submitCompletion'
+    );
+    const resetButton = document.getElementById(
+        'resetCompletion'
+    );
+
+    let selectedSlot = null;
+    let draggedWord = null;
+
+    const inputOf = slot =>
+        slot.querySelector('[data-answer-input]');
+
+    const valueOf = slot =>
+        (inputOf(slot)?.value || '').trim();
+
+    const cardForWord = word =>
+        cards.find(card => card.dataset.word === word);
+
+    const renderSlot = slot => {
+        const word = valueOf(slot);
+        const valueBlock = slot.querySelector(
+            '.completion-slot-value'
+        );
+
+        if (!valueBlock) return;
+
+        if (word) {
+            valueBlock.textContent = word;
+            slot.classList.add('is-filled');
+        } else {
+            valueBlock.innerHTML =
+                '<span class="completion-slot-placeholder">'
+                + 'Choisir un mot'
+                + '</span>';
+            slot.classList.remove('is-filled');
+        }
+    };
+
+    const updateState = () => {
+        const usedWords = slots
+            .map(valueOf)
+            .filter(Boolean);
+
+        cards.forEach(card => {
+            card.classList.toggle(
+                'is-used',
+                usedWords.includes(card.dataset.word)
+            );
+        });
+
+        slots.forEach(renderSlot);
+
+        const completed = usedWords.length;
+        const total = slots.length;
+
+        progress.textContent =
+            `${completed} / ${total} espaces complétés`;
+
+        submitButton.disabled = completed !== total;
+    };
+
+    const clearSlot = slot => {
+        const input = inputOf(slot);
+
+        if (input) {
+            input.value = '';
+        }
+
+        slot.classList.remove('is-selected');
+        selectedSlot = null;
+        updateState();
+    };
+
+    const assignWord = (word, targetSlot = null) => {
+        if (!word) return;
+
+        const existingSlot = slots.find(
+            slot => valueOf(slot) === word
+        );
+
+        if (existingSlot) {
+            const existingInput = inputOf(existingSlot);
+            existingInput.value = '';
+        }
+
+        let slot = targetSlot;
+
+        if (!slot && selectedSlot && !valueOf(selectedSlot)) {
+            slot = selectedSlot;
+        }
+
+        if (!slot) {
+            slot = slots.find(item => !valueOf(item));
+        }
+
+        if (!slot) {
+            progress.textContent =
+                'Tous les espaces sont remplis. '
+                + 'Cliquez sur un espace pour le vider.';
+            return;
+        }
+
+        const input = inputOf(slot);
+        input.value = word;
+
+        slots.forEach(item =>
+            item.classList.remove('is-selected')
+        );
+
+        selectedSlot = null;
+        updateState();
+    };
+
+    slots.forEach(slot => {
+        slot.addEventListener('click', () => {
+            if (valueOf(slot)) {
+                clearSlot(slot);
+                return;
+            }
+
+            slots.forEach(item =>
+                item.classList.remove('is-selected')
+            );
+
+            slot.classList.add('is-selected');
+            selectedSlot = slot;
+        });
+
+        slot.addEventListener('dragover', event => {
+            event.preventDefault();
+            slot.classList.add('drag-over');
+        });
+
+        slot.addEventListener('dragleave', () => {
+            slot.classList.remove('drag-over');
+        });
+
+        slot.addEventListener('drop', event => {
+            event.preventDefault();
+            slot.classList.remove('drag-over');
+
+            const word =
+                event.dataTransfer.getData('text/plain')
+                || draggedWord;
+
+            assignWord(word, slot);
+            draggedWord = null;
+        });
+    });
+
+    cards.forEach(card => {
+        card.addEventListener('click', () => {
+            assignWord(card.dataset.word);
+        });
+
+        card.addEventListener('dragstart', event => {
+            draggedWord = card.dataset.word;
+            event.dataTransfer.setData(
+                'text/plain',
+                draggedWord
+            );
+            event.dataTransfer.effectAllowed = 'move';
+        });
+
+        card.addEventListener('dragend', () => {
+            draggedWord = null;
+            slots.forEach(slot =>
+                slot.classList.remove('drag-over')
+            );
+        });
+    });
+
+    resetButton.addEventListener('click', () => {
+        slots.forEach(slot => {
+            const input = inputOf(slot);
+            input.value = '';
+            slot.classList.remove(
+                'is-selected',
+                'drag-over'
+            );
+        });
+
+        selectedSlot = null;
+        updateState();
+    });
+
+    form.addEventListener('submit', event => {
+        const completed = slots.every(
+            slot => Boolean(valueOf(slot))
+        );
+
+        if (!completed) {
+            event.preventDefault();
+            progress.textContent =
+                'Complétez les quatre espaces avant '
+                + 'de valider.';
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.innerHTML =
+            '<span class="spinner-border '
+            + 'spinner-border-sm me-2"></span>'
+            + 'Validation en cours…';
+    });
+
+    updateState();
+});
+</script>
+@else
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('vocalTestForm');
@@ -675,6 +1293,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 </script>
+@endif
 
 @endsection

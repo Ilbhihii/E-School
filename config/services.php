@@ -45,4 +45,8 @@ return [
         'project_id'  => env('FIREBASE_PROJECT_ID'),
     ],
 
+    'ffmpeg' => [
+        'path' => env('FFMPEG_PATH', 'ffmpeg'),
+    ],
+
 ];

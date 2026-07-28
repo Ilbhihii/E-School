@@ -16,6 +16,10 @@ class VocalTestSubmission extends Model
         'class_id',
         'reading_text',
         'test_mode',
+        'submission_type',
+        'answer_data',
+        'auto_correct_count',
+        'auto_total_questions',
         'audio_path',
         'audio_original_name',
         'audio_mime_type',
@@ -45,6 +49,9 @@ class VocalTestSubmission extends Model
         'score_fluency' => 'integer',
         'final_score' => 'integer',
         'audio_size' => 'integer',
+        'answer_data' => 'array',
+        'auto_correct_count' => 'integer',
+        'auto_total_questions' => 'integer',
         'consumed_at' => 'datetime',
     ];
 
@@ -53,6 +60,9 @@ class VocalTestSubmission extends Model
     const STATUS_REVIEWED = 'reviewed';
     const STATUS_ACCEPTED = 'accepted';
     const STATUS_NEEDS_IMPROVEMENT = 'needs_improvement';
+
+    public const TYPE_AUDIO = 'audio';
+    public const TYPE_COMPLETION = 'completion';
 
     const MODE_READING = 'reading';
     const MODE_TAJWID = 'tajwid';
@@ -103,6 +113,30 @@ class VocalTestSubmission extends Model
         }
 
         return (int) round(array_sum($scores) / count($scores));
+    }
+
+    public function isCompletionSubmission(): bool
+    {
+        return $this->submission_type === self::TYPE_COMPLETION;
+    }
+
+    public function completionAnswers(): array
+    {
+        return (array) data_get($this->answer_data, 'answers', []);
+    }
+
+    public function completionExpectedAnswers(): array
+    {
+        return (array) data_get(
+            $this->answer_data,
+            'expected_answers',
+            []
+        );
+    }
+
+    public function completionResults(): array
+    {
+        return (array) data_get($this->answer_data, 'results', []);
     }
 
     public function user(): BelongsTo

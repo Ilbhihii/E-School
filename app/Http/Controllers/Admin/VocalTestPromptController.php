@@ -164,5 +164,17 @@ class VocalTestPromptController extends Controller
             422,
             'Cette classe n\'appartient pas au niveau sélectionné.'
         );
+
+        abort_unless(
+            VocalTestPrompt::isSupportedPath($subject, $level, $class),
+            422,
+            'Cette sélection ne fait pas partie de la nouvelle structure.'
+        );
+
+        abort_if(
+            VocalTestPrompt::isExcludedPath($subject, $level, $class),
+            422,
+            'Aucun test vocal ne doit être créé pour un parcours d’Arabe en classe Débutant.'
+        );
     }
 }

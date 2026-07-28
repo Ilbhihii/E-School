@@ -118,4 +118,4 @@ storage/app/firebase-auth.json
 # =========================================================
 
 .DS_Store
-Thumbs.db
+Thumbs.db/public/test-audio.webm

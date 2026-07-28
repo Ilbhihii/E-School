@@ -7,6 +7,7 @@ use App\Models\Subject;
 use App\Models\Level;
 use App\Models\Course;
 use App\Models\ClassRoom;
+use App\Models\VocalTestPrompt;
 
 class FrontController extends Controller
 {
@@ -26,39 +27,90 @@ class FrontController extends Controller
     public function subjectLevels($id)
     {
         $subject = Subject::withCount(['courses', 'classes'])->findOrFail($id);
+        $allowedLevelNames = VocalTestPrompt::pathNamesForSubject($subject);
 
-        // La matière est désormais la source de vérité du niveau. Cela permet
-        // aussi d'afficher les niveaux qui n'ont pas encore de classe.
         $levels = Level::where('subject_id', $subject->id)
+            ->when(
+                !empty($allowedLevelNames),
+                fn($query) => $query->whereIn('name', $allowedLevelNames)
+            )
             ->withCount([
-                'courses' => fn($query) => $query->where('subject_id', $subject->id),
+                'courses' => fn($query) => $query
+                    ->where('subject_id', $subject->id),
                 'classes as available_classes_count' => fn($query) => $query
-                    ->whereHas('subjects', fn($subjectQuery) => $subjectQuery
-                        ->where('subjects.id', $subject->id)),
+                    ->whereHas(
+                        'subjects',
+                        fn($subjectQuery) => $subjectQuery
+                            ->where('subjects.id', $subject->id)
+                    ),
             ])
             ->orderBy('order')
             ->orderBy('id')
             ->get();
 
-        // Autres matières de la même famille (même type : religieux / scolaire)
         $sameFamilySubjects = Subject::where('type', $subject->type)
             ->where('id', '!=', $subject->id)
             ->whereIn('name', ['Arabe', 'Coran'])
             ->withCount('courses')
             ->get();
 
-        return view('front.subject-levels', compact('subject', 'levels', 'sameFamilySubjects'));
+        return view(
+            'front.subject-levels',
+            compact('subject', 'levels', 'sameFamilySubjects')
+        );
     }
 
     public function levelClasses($subjectId, $levelId)
     {
         $subject = Subject::findOrFail($subjectId);
-        $level = Level::findOrFail($levelId);
-        $classes = \App\Models\ClassRoom::where('level_id', $levelId)
-            ->whereHas('subjects', fn($q) => $q->where('subject_id', $subjectId))
-            ->get();
+        $level = Level::whereKey($levelId)
+            ->where('subject_id', $subject->id)
+            ->firstOrFail();
 
-        return view('front.level-classes', compact('subject', 'level', 'classes'));
+        abort_unless(
+            VocalTestPrompt::isSupportedLevel($subject, $level),
+            404,
+            'Ce parcours ne fait pas partie de la structure actuelle.'
+        );
+
+        $allowedClassNames = VocalTestPrompt::allowedClassNames();
+        $classOrder = array_flip(array_map(
+            [VocalTestPrompt::class, 'normalizePathName'],
+            $allowedClassNames
+        ));
+
+        $classes = ClassRoom::where('level_id', $level->id)
+            ->whereIn('name', $allowedClassNames)
+            ->whereHas(
+                'subjects',
+                fn($query) => $query->where('subjects.id', $subject->id)
+            )
+            ->get()
+            ->sortBy(function (ClassRoom $class) use ($classOrder) {
+                return $classOrder[
+                    VocalTestPrompt::normalizePathName($class->name)
+                ] ?? 99;
+            })
+            ->values();
+
+        $classes->each(function (ClassRoom $class) use ($subject, $level) {
+            $class->requires_vocal_test = VocalTestPrompt::requiresVocalTest(
+                $subject,
+                $level,
+                $class
+            );
+
+            $class->is_without_vocal_test = VocalTestPrompt::isExcludedPath(
+                $subject,
+                $level,
+                $class
+            );
+        });
+
+        return view(
+            'front.level-classes',
+            compact('subject', 'level', 'classes')
+        );
     }
 
     public function levelCourses($id)
@@ -87,37 +139,104 @@ class FrontController extends Controller
 
     public function courses($subject_id, $level_id, $class_id)
     {
-        $class = ClassRoom::whereKey($class_id)
-            ->where('level_id', $level_id)
-            ->whereHas('subjects', fn($query) => $query->where('subjects.id', $subject_id))
-            ->firstOrFail();
-
         $subject = Subject::findOrFail($subject_id);
+
         $level = Level::whereKey($level_id)
-            ->where('subject_id', $subject_id)
+            ->where('subject_id', $subject->id)
             ->firstOrFail();
 
-        if (mb_strtolower($subject->name) === 'coran') {
-            $vocalTestUrl = route('vocal-test.create', [$subject, $level, $class]);
+        $class = ClassRoom::whereKey($class_id)
+            ->where('level_id', $level->id)
+            ->whereHas(
+                'subjects',
+                fn($query) => $query->where('subjects.id', $subject->id)
+            )
+            ->firstOrFail();
+
+        if (!VocalTestPrompt::isSupportedPath($subject, $level, $class)) {
+            return redirect()
+                ->route('front.subject.levels', $subject->id)
+                ->with(
+                    'info',
+                    'Ce parcours a été remplacé par la nouvelle structure.'
+                );
+        }
+
+        if (VocalTestPrompt::isExcludedPath($subject, $level, $class)) {
+            $appointmentUrl = route(
+                'appointment.create',
+                ['type' => 'test']
+            );
+
+            if (auth()->guest()) {
+                session()->put('url.intended', $appointmentUrl);
+
+                return redirect()
+                    ->route('register')
+                    ->with(
+                        'info',
+                        'Ce parcours débutant ne nécessite aucun test vocal. Créez votre compte pour continuer.'
+                    );
+            }
+
+            return redirect()
+                ->to($appointmentUrl)
+                ->with(
+                    'info',
+                    'Aucun test vocal n’est demandé pour ce parcours débutant. Vous pouvez prendre rendez-vous directement.'
+                );
+        }
+
+        $prompt = VocalTestPrompt::activeForPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        if ($prompt) {
+            $vocalTestUrl = route(
+                'vocal-test.create',
+                [$subject, $level, $class]
+            );
 
             if (auth()->guest()) {
                 session()->put('url.intended', $vocalTestUrl);
 
-                return redirect()->route('register')
-                    ->with('info', 'Créez votre compte pour passer le test vocal du Coran.');
+                return redirect()
+                    ->route('register')
+                    ->with(
+                        'info',
+                        'Créez votre compte pour passer le test vocal.'
+                    );
             }
 
             return redirect()->to($vocalTestUrl);
         }
 
+        $appointmentUrl = route(
+            'appointment.create',
+            ['type' => 'test']
+        );
+
         if (auth()->guest()) {
-            return redirect()->route('register')
-                ->with('info', 'Créez votre compte pour poursuivre votre inscription.');
+            session()->put('url.intended', $appointmentUrl);
+
+            return redirect()
+                ->route('register')
+                ->with(
+                    'info',
+                    'Créez votre compte pour poursuivre votre inscription.'
+                );
         }
 
-        return redirect()->route('appointment.create', ['type' => 'test'])
-            ->with('info', 'Prenez rendez-vous pour votre test de niveau.');
+        return redirect()
+            ->to($appointmentUrl)
+            ->with(
+                'info',
+                'Aucun test vocal actif n’est configuré pour cette sélection. Vous pouvez prendre rendez-vous.'
+            );
     }
+
 
     /**
      * Affiche les classes d'un niveau (navigation publique)

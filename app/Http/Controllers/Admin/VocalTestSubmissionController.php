@@ -48,10 +48,35 @@ class VocalTestSubmissionController extends Controller
             'appointment',
         ]);
 
-        $audioState = $this->getAudioState($submission);
+        $isCompletionSubmission =
+            $submission->isCompletionSubmission();
+
+        $audioState = $isCompletionSubmission
+            ? [
+                'exists' => false,
+                'playable' => false,
+                'size' => null,
+                'mime_type' => null,
+                'error' => null,
+            ]
+            : $this->getAudioState($submission);
+
+        $completionReview = $isCompletionSubmission
+            ? [
+                'answers' =>
+                    $submission->completionAnswers(),
+                'expected_answers' =>
+                    $submission->completionExpectedAnswers(),
+                'results' =>
+                    $submission->completionResults(),
+            ]
+            : null;
 
         return view('admin.vocal-tests.submissions.show', [
             'submission' => $submission,
+            'isCompletionSubmission' =>
+                $isCompletionSubmission,
+            'completionReview' => $completionReview,
             'audioExists' => $audioState['exists'],
             'audioPlayable' => $audioState['playable'],
             'audioSize' => $audioState['size'],
@@ -104,8 +129,14 @@ class VocalTestSubmissionController extends Controller
             ->with('success', 'Évaluation enregistrée avec succès.');
     }
 
-    public function audio(VocalTestSubmission $submission)
+    public function audio(Request $request, VocalTestSubmission $submission)
     {
+        abort_if(
+            $submission->isCompletionSubmission(),
+            404,
+            'Cet exercice ne contient aucun enregistrement audio.'
+        );
+
         $audioState = $this->getAudioState($submission);
 
         abort_unless(
@@ -122,36 +153,134 @@ class VocalTestSubmissionController extends Controller
 
         $disk = Storage::disk('local');
         $absolutePath = $disk->path($submission->audio_path);
-        $extension = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        $fileSize = (int) filesize($absolutePath);
 
-        /*
-         * Ne pas utiliser mime_content_type() ici :
-         * Windows peut annoncer un mauvais type pour WebM.
-         * Le type est imposé selon l’extension réelle.
-         */
-        $mimeType = match ($extension) {
-            'mp3', 'mpeg' => 'audio/mpeg',
-            'webm' => 'audio/webm',
-            'ogg', 'oga' => 'audio/ogg',
-            'wav' => 'audio/wav',
-            'm4a', 'mp4' => 'audio/mp4',
-            'aac' => 'audio/aac',
-            default => $audioState['mime_type'] ?: 'application/octet-stream',
-        };
+        abort_if(
+            $fileSize <= 0,
+            422,
+            'Le fichier audio est vide.'
+        );
+
+        $extension = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
 
         $filename = $submission->audio_original_name
             ? basename($submission->audio_original_name)
             : 'recitation-' . $submission->id . ($extension ? '.' . $extension : '');
 
-        return response()->file($absolutePath, [
-            'Content-Type' => $mimeType,
-            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        $safeFilename = preg_replace(
+            '/[^A-Za-z0-9._-]/',
+            '-',
+            $filename
+        ) ?: 'recitation-' . $submission->id . ($extension ? '.' . $extension : '');
+
+        /*
+         * Le lecteur HTML5 envoie souvent un en-tête Range pour récupérer
+         * seulement une partie de l'audio. Cette méthode répond correctement
+         * avec HTTP 206 Partial Content.
+         */
+        $start = 0;
+        $end = $fileSize - 1;
+        $statusCode = 200;
+
+        $rangeHeader = $request->header('Range');
+
+        if (
+            is_string($rangeHeader)
+            && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $matches)
+        ) {
+            $requestedStart = $matches[1];
+            $requestedEnd = $matches[2];
+
+            if ($requestedStart === '' && $requestedEnd === '') {
+                return response('', 416, [
+                    'Content-Range' => 'bytes */' . $fileSize,
+                    'Accept-Ranges' => 'bytes',
+                ]);
+            }
+
+            if ($requestedStart === '') {
+                // Exemple : bytes=-500 demande les 500 derniers octets.
+                $suffixLength = max(1, (int) $requestedEnd);
+                $start = max(0, $fileSize - $suffixLength);
+            } else {
+                $start = (int) $requestedStart;
+            }
+
+            if ($requestedEnd !== '') {
+                $end = min((int) $requestedEnd, $fileSize - 1);
+            }
+
+            if ($start < 0 || $start >= $fileSize || $start > $end) {
+                return response('', 416, [
+                    'Content-Range' => 'bytes */' . $fileSize,
+                    'Accept-Ranges' => 'bytes',
+                ]);
+            }
+
+            $statusCode = 206;
+        }
+
+        $contentLength = $end - $start + 1;
+
+        $headers = [
+            'Content-Type' => $audioState['mime_type'],
+            'Content-Disposition' => 'inline; filename="' . $safeFilename . '"',
+            'Content-Length' => (string) $contentLength,
             'Accept-Ranges' => 'bytes',
-            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+            'Cache-Control' => 'private, no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
             'X-Content-Type-Options' => 'nosniff',
-        ]);
+        ];
+
+        if ($statusCode === 206) {
+            $headers['Content-Range'] = sprintf(
+                'bytes %d-%d/%d',
+                $start,
+                $end,
+                $fileSize
+            );
+        }
+
+        return response()->stream(
+            function () use ($absolutePath, $start, $contentLength): void {
+                $handle = fopen($absolutePath, 'rb');
+
+                if ($handle === false) {
+                    return;
+                }
+
+                try {
+                    fseek($handle, $start);
+
+                    $remaining = $contentLength;
+                    $chunkSize = 8192;
+
+                    while ($remaining > 0 && !feof($handle)) {
+                        $readLength = min($chunkSize, $remaining);
+                        $buffer = fread($handle, $readLength);
+
+                        if ($buffer === false || $buffer === '') {
+                            break;
+                        }
+
+                        echo $buffer;
+
+                        $remaining -= strlen($buffer);
+
+                        if (connection_aborted()) {
+                            break;
+                        }
+
+                        flush();
+                    }
+                } finally {
+                    fclose($handle);
+                }
+            },
+            $statusCode,
+            $headers
+        );
     }
 
     public function destroy(VocalTestSubmission $submission)

@@ -7,9 +7,11 @@ use App\Models\Level;
 use App\Models\Subject;
 use App\Models\VocalTestPrompt;
 use App\Models\VocalTestSubmission;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
 use Throwable;
@@ -20,13 +22,45 @@ class VocalTestController extends Controller
     {
         $this->validatePath($subject, $level, $class);
 
+        if (!VocalTestPrompt::isSupportedPath($subject, $level, $class)) {
+            return redirect()
+                ->route('front.subject.levels', $subject->id)
+                ->with(
+                    'info',
+                    'Ce parcours a été remplacé par la nouvelle structure.'
+                );
+        }
+
+        if (VocalTestPrompt::isExcludedPath($subject, $level, $class)) {
+            return $this->redirectExcludedPath();
+        }
+
         $prompt = $this->findPrompt($subject, $level, $class);
+
+        $isCompletionTest =
+            VocalTestPrompt::isInteractiveCompletionPath(
+                $subject,
+                $level,
+                $class,
+                $prompt
+            );
+
+        $completionDefinition = null;
+
+        if ($isCompletionTest) {
+            $completionDefinition =
+                VocalTestPrompt::completionDefinition();
+
+            shuffle($completionDefinition['choices']);
+        }
 
         return view('front.vocal-test', [
             'subject' => $subject,
             'level' => $level,
             'class' => $class,
             'prompt' => $prompt,
+            'isCompletionTest' => $isCompletionTest,
+            'completionDefinition' => $completionDefinition,
         ]);
     }
 
@@ -34,7 +68,37 @@ class VocalTestController extends Controller
     {
         $this->validatePath($subject, $level, $class);
 
+        if (!VocalTestPrompt::isSupportedPath($subject, $level, $class)) {
+            return redirect()
+                ->route('front.subject.levels', $subject->id)
+                ->with(
+                    'info',
+                    'Ce parcours a été remplacé par la nouvelle structure.'
+                );
+        }
+
+        if (VocalTestPrompt::isExcludedPath($subject, $level, $class)) {
+            return $this->redirectExcludedPath();
+        }
+
         $prompt = $this->findPrompt($subject, $level, $class);
+
+        if (
+            VocalTestPrompt::isInteractiveCompletionPath(
+                $subject,
+                $level,
+                $class,
+                $prompt
+            )
+        ) {
+            return $this->storeCompletionTest(
+                $request,
+                $subject,
+                $level,
+                $class,
+                $prompt
+            );
+        }
 
         $validated = $request->validate([
             'audio' => [
@@ -134,14 +198,136 @@ class VocalTestController extends Controller
             );
     }
 
-    private function findPrompt(Subject $subject, Level $level, ClassRoom $class): VocalTestPrompt
+    private function storeCompletionTest(
+        Request $request,
+        Subject $subject,
+        Level $level,
+        ClassRoom $class,
+        VocalTestPrompt $prompt
+    ): RedirectResponse {
+        $definition = VocalTestPrompt::completionDefinition();
+        $expectedAnswers = $definition['expected_answers'];
+        $allowedChoices = $definition['choices'];
+        $questionCount = count($expectedAnswers);
+
+        $validated = $request->validate([
+            'answers' => [
+                'required',
+                'array',
+                'size:' . $questionCount,
+            ],
+            'answers.*' => [
+                'required',
+                'string',
+                Rule::in($allowedChoices),
+            ],
+        ], [
+            'answers.required' =>
+                'Complétez tous les espaces avant de continuer.',
+            'answers.size' =>
+                'Les quatre espaces doivent être complétés.',
+            'answers.*.required' =>
+                'Chaque espace doit contenir un mot.',
+            'answers.*.in' =>
+                'Un des mots sélectionnés n’est pas autorisé.',
+        ]);
+
+        $answers = array_values($validated['answers']);
+
+        if (count(array_unique($answers)) !== $questionCount) {
+            throw ValidationException::withMessages([
+                'answers' =>
+                    'Chaque carte ne peut être utilisée qu’une seule fois.',
+            ]);
+        }
+
+        $results = [];
+        $correctCount = 0;
+
+        foreach ($expectedAnswers as $index => $expectedAnswer) {
+            $isCorrect =
+                ($answers[$index] ?? null) === $expectedAnswer;
+
+            $results[] = $isCorrect;
+
+            if ($isCorrect) {
+                $correctCount++;
+            }
+        }
+
+        $score = (int) round(
+            ($correctCount / max(1, $questionCount)) * 100
+        );
+
+        $submission = VocalTestSubmission::create([
+            'user_id' => auth()->id(),
+            'vocal_test_prompt_id' => $prompt->id,
+            'subject_id' => $subject->id,
+            'level_id' => $level->id,
+            'class_id' => $class->id,
+            'reading_text' => $prompt->reading_text,
+            'test_mode' => $prompt->test_mode,
+            'submission_type' =>
+                VocalTestSubmission::TYPE_COMPLETION,
+            'answer_data' => [
+                'answers' => $answers,
+                'expected_answers' => $expectedAnswers,
+                'results' => $results,
+            ],
+            'auto_correct_count' => $correctCount,
+            'auto_total_questions' => $questionCount,
+            'audio_path' => null,
+            'audio_original_name' => null,
+            'audio_mime_type' => null,
+            'audio_size' => null,
+            'duration_seconds' => null,
+            'status' => VocalTestSubmission::STATUS_SUBMITTED,
+            'score' => $score,
+            'score_memorization' => $score,
+            'final_score' => $score,
+            'submitted_at' => now(),
+        ]);
+
+        return redirect()
+            ->route('appointment.create', [
+                'type' => 'test',
+                'vocal_submission' => $submission->id,
+            ])
+            ->with(
+                'success',
+                '✅ Vos réponses ont été enregistrées. '
+                . 'Complétez maintenant votre rendez-vous.'
+            );
+    }
+
+    private function redirectExcludedPath(): RedirectResponse
     {
-        return VocalTestPrompt::query()
-            ->where('subject_id', $subject->id)
-            ->where('level_id', $level->id)
-            ->where('class_id', $class->id)
-            ->where('is_active', true)
-            ->firstOrFail();
+        return redirect()
+            ->route('appointment.create', ['type' => 'test'])
+            ->with(
+                'info',
+                'Aucun test vocal n’est demandé pour ce parcours débutant. Vous pouvez prendre rendez-vous directement.'
+            );
+    }
+
+    private function findPrompt(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ): VocalTestPrompt {
+        $prompt = VocalTestPrompt::activeForPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        abort_unless(
+            $prompt,
+            404,
+            'Aucun test vocal actif n’est disponible pour cette sélection.'
+        );
+
+        return $prompt;
     }
 
     private function validatePath(Subject $subject, Level $level, ClassRoom $class): void
@@ -194,7 +380,7 @@ class VocalTestController extends Controller
          * Exemple dans .env :
          * FFMPEG_PATH="C:/ffmpeg/bin/ffmpeg.exe"
          */
-        $ffmpegBinary = (string) env('FFMPEG_PATH', 'ffmpeg');
+        $ffmpegBinary = (string) config('services.ffmpeg.path', 'ffmpeg');
 
         if (
             $ffmpegBinary !== 'ffmpeg'
