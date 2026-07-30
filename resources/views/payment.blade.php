@@ -1,331 +1,794 @@
 @extends('layouts.front')
 
-@section('title', 'Abonnement requis')
+@section('title', 'Paiement — ' . $selectedPlan['name'])
 
 @section('content')
 
+<div class="payment-wrapper">
+    <div class="payment-decoration"></div>
+
+    <div class="container payment-container">
+        <div class="payment-card">
+            <a
+                href="{{ route('plans') }}"
+                class="payment-back"
+            >
+                <i class="bi bi-arrow-left"></i>
+                Retour aux offres
+            </a>
+
+            <div class="payment-icon">
+                <i
+                    class="bi {{
+                        $selectedPlan['icon']
+                    }}"
+                ></i>
+            </div>
+
+            <span class="payment-scope">
+                {{ $selectedPlan['scope'] }}
+            </span>
+
+            <h1>{{ $selectedPlan['name'] }}</h1>
+
+            <p class="payment-subtitle">
+                {{ $selectedPlan['subtitle'] }}
+            </p>
+
+            @if(session('error'))
+                <div class="payment-alert error">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    {{ session('error') }}
+                </div>
+            @endif
+
+            @if(session('success'))
+                <div class="payment-alert success">
+                    <i class="bi bi-check-circle-fill"></i>
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            <div class="payment-price">
+                <strong>
+                    {{ $selectedPlan['amount_display'] }}
+                </strong>
+
+                <span>
+                    {{ $selectedPlan['currency_symbol'] }}
+                </span>
+
+                <small>
+                    / {{ $selectedPlan['period'] }}
+                </small>
+            </div>
+
+            <div class="payment-features">
+                @foreach(
+                    $selectedPlan['features']
+                    as $feature
+                )
+                    <div>
+                        <span>
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+
+                        {{ $feature }}
+                    </div>
+                @endforeach
+            </div>
+
+            @if(
+                $planCode
+                === 'soutien_lycee'
+            )
+                <div class="payment-restriction">
+                    <i class="bi bi-shield-lock-fill"></i>
+
+                    Cette formule permet uniquement
+                    l’accès au parcours Soutien Lycée :
+                    Mathématiques BAC et
+                    Physique-Chimie BAC.
+                </div>
+            @endif
+
+            <div class="payment-reference">
+                <span>Référence à communiquer</span>
+
+                <strong>
+                    SSA-{{
+                        strtoupper(
+                            str_replace(
+                                '_',
+                                '-',
+                                $planCode
+                            )
+                        )
+                    }}-{{
+                        auth()->check()
+                            ? auth()->id()
+                            : 'COMPTE'
+                    }}
+                </strong>
+            </div>
+
+            <div class="payment-methods">
+                @if(request('method') === 'paypal')
+                    <section class="payment-method-box">
+                        <header>
+                            <i class="bi bi-paypal"></i>
+
+                            <div>
+                                <strong>Paiement PayPal</strong>
+                                <span>
+                                    {{
+                                        $selectedPlan[
+                                            'amount_display'
+                                        ]
+                                    }}
+                                    {{
+                                        $selectedPlan[
+                                            'currency_symbol'
+                                        ]
+                                    }}
+                                </span>
+                            </div>
+                        </header>
+
+                        <p>
+                            Après le paiement, envoyez la
+                            confirmation et la référence affichée
+                            ci-dessus à l’administration.
+                        </p>
+
+                        <a
+                            href="https://www.paypal.me/abdelghanimaloulou1"
+                            target="_blank"
+                            rel="noopener"
+                            class="payment-button paypal"
+                        >
+                            <i class="bi bi-paypal"></i>
+                            Continuer sur PayPal
+                        </a>
+                    </section>
+
+                    <a
+                        href="{{
+                            route(
+                                'student.payment',
+                                ['plan' => $planCode]
+                            )
+                        }}"
+                        class="payment-change"
+                    >
+                        <i class="bi bi-arrow-left"></i>
+                        Changer la méthode
+                    </a>
+                @elseif(
+                    request('method')
+                    === 'bank'
+                )
+                    <section class="payment-method-box">
+                        <header>
+                            <i class="bi bi-bank"></i>
+
+                            <div>
+                                <strong>Virement bancaire</strong>
+                                <span>
+                                    {{
+                                        $selectedPlan[
+                                            'amount_display'
+                                        ]
+                                    }}
+                                    {{
+                                        $selectedPlan[
+                                            'currency_symbol'
+                                        ]
+                                    }}
+                                </span>
+                            </div>
+                        </header>
+
+                        <div class="bank-account">
+                            <span>
+                                Maroc — Banque Populaire
+                            </span>
+
+                            <p>
+                                <small>RIB</small>
+                                123456789012345678901234
+                            </p>
+
+                            <p>
+                                <small>Titulaire</small>
+                                M. Abdelghani Maloulou
+                            </p>
+                        </div>
+
+                        <div class="bank-account">
+                            <span>
+                                France — EUROCOMPTE SÉRÉNITÉ
+                            </span>
+
+                            <p>
+                                <small>IBAN</small>
+                                FR76 1027 8089 7600 0210 7440 103
+                            </p>
+
+                            <p>
+                                <small>BIC</small>
+                                CMCIFR2A
+                            </p>
+                        </div>
+
+                        <p>
+                            Indiquez la référence du paiement
+                            dans le motif du virement.
+                        </p>
+                    </section>
+
+                    <a
+                        href="{{
+                            route(
+                                'student.payment',
+                                ['plan' => $planCode]
+                            )
+                        }}"
+                        class="payment-change"
+                    >
+                        <i class="bi bi-arrow-left"></i>
+                        Changer la méthode
+                    </a>
+                @else
+                    <a
+                        href="{{
+                            route(
+                                'student.payment',
+                                [
+                                    'plan' =>
+                                        $planCode,
+                                    'method' =>
+                                        'paypal',
+                                ]
+                            )
+                        }}"
+                        class="payment-button paypal"
+                    >
+                        <i class="bi bi-paypal"></i>
+                        Payer avec PayPal
+                    </a>
+
+                    <a
+                        href="{{
+                            route(
+                                'student.payment',
+                                [
+                                    'plan' =>
+                                        $planCode,
+                                    'method' =>
+                                        'bank',
+                                ]
+                            )
+                        }}"
+                        class="payment-button bank"
+                    >
+                        <i class="bi bi-bank"></i>
+                        Virement bancaire
+                    </a>
+                @endif
+            </div>
+
+            <p class="payment-security">
+                <i class="bi bi-shield-check"></i>
+
+                Le choix du plan est enregistré,
+                mais l’accès reste bloqué jusqu’à
+                confirmation du paiement.
+            </p>
+        </div>
+    </div>
+</div>
+
 <style>
-.payment-block-wrapper {
-    min-height: 100vh;
-    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-    display: flex;
-    align-items: center;
+.payment-wrapper {
     position: relative;
+    min-height: 100vh;
     overflow: hidden;
+    padding: 6.5rem 0 4rem;
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(37,99,235,.17),
+            transparent 32%
+        ),
+        radial-gradient(
+            circle at 87% 75%,
+            rgba(124,58,237,.17),
+            transparent 34%
+        ),
+        linear-gradient(
+            135deg,
+            #07101F,
+            #15102D
+        );
 }
 
-.payment-block-wrapper::before {
-    content: '';
+.payment-decoration {
     position: absolute;
-    width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(102,126,234,0.15), transparent 70%);
-    top: -100px;
-    right: -100px;
-    animation: floatPayment 8s ease-in-out infinite;
+    inset: 0;
+    pointer-events: none;
 }
 
-.payment-block-wrapper::after {
-    content: '';
+.payment-decoration::before,
+.payment-decoration::after {
     position: absolute;
-    width: 300px;
-    height: 300px;
+    content: '';
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(118,75,162,0.12), transparent 70%);
-    bottom: -80px;
-    left: -80px;
-    animation: floatPayment 10s ease-in-out infinite reverse;
+    filter: blur(2px);
 }
 
-@keyframes floatPayment {
-    0%, 100% { transform: translateY(0px) scale(1); }
-    50% { transform: translateY(-20px) scale(1.05); }
+.payment-decoration::before {
+    top: 6%;
+    right: 8%;
+    width: 260px;
+    height: 260px;
+    background:
+        radial-gradient(
+            circle,
+            rgba(96,165,250,.2),
+            transparent 68%
+        );
 }
 
-.payment-glass-card {
-    background: rgba(255,255,255,0.06);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 24px;
-    padding: 2.5rem;
-    text-align: center;
+.payment-decoration::after {
+    bottom: 4%;
+    left: 7%;
+    width: 280px;
+    height: 280px;
+    background:
+        radial-gradient(
+            circle,
+            rgba(245,158,11,.12),
+            transparent 68%
+        );
+}
+
+.payment-container {
     position: relative;
     z-index: 2;
 }
 
-.payment-icon-wrap {
-    width: 72px;
-    height: 72px;
+.payment-card {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 1.7rem;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 27px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,.075),
+            rgba(255,255,255,.035)
+        );
+    box-shadow:
+        0 30px 75px rgba(0,0,0,.35);
+    backdrop-filter: blur(20px);
+    text-align: center;
+}
+
+.payment-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    float: left;
+    color: rgba(255,255,255,.4);
+    font-size: .68rem;
+    text-decoration: none;
+}
+
+.payment-back:hover {
+    color: #fff;
+}
+
+.payment-icon {
+    width: 67px;
+    height: 67px;
+    display: grid;
+    place-items: center;
+    clear: both;
+    margin: 2rem auto 1rem;
+    border-radius: 20px;
+    color: #fff;
+    background:
+        linear-gradient(
+            135deg,
+            #2563EB,
+            #7C3AED
+        );
+    box-shadow:
+        0 14px 35px rgba(37,99,235,.24);
+    font-size: 1.55rem;
+}
+
+.payment-scope {
+    display: inline-flex;
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #BFDBFE;
+    background: rgba(37,99,235,.12);
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.payment-card h1 {
+    margin: .65rem 0 .35rem;
+    color: #fff;
+    font-size: 1.7rem;
+    font-weight: 850;
+}
+
+.payment-subtitle {
+    margin: 0;
+    color: rgba(255,255,255,.45);
+    font-size: .78rem;
+}
+
+.payment-alert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 1rem;
+    padding: 10px 12px;
+    border-radius: 11px;
+    font-size: .7rem;
+    text-align: left;
+}
+
+.payment-alert.error {
+    border: 1px solid rgba(239,68,68,.16);
+    color: #FCA5A5;
+    background: rgba(239,68,68,.08);
+}
+
+.payment-alert.success {
+    border: 1px solid rgba(34,197,94,.16);
+    color: #86EFAC;
+    background: rgba(34,197,94,.08);
+}
+
+.payment-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 5px;
+    margin: 1.2rem 0;
+}
+
+.payment-price strong {
+    color: #fff;
+    font-size: 3.2rem;
+    font-weight: 900;
+    letter-spacing: -.05em;
+    line-height: 1;
+}
+
+.payment-price span {
+    color: rgba(255,255,255,.74);
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.payment-price small {
+    color: rgba(255,255,255,.32);
+    font-size: .72rem;
+}
+
+.payment-features {
+    display: grid;
+    grid-template-columns:
+        repeat(2,minmax(0,1fr));
+    gap: 8px;
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.payment-features > div {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: rgba(255,255,255,.68);
+    font-size: .68rem;
+    line-height: 1.45;
+}
+
+.payment-features span {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
+    display: grid;
+    place-items: center;
     border-radius: 50%;
-    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: #fff;
+    background:
+        linear-gradient(
+            135deg,
+            #2563EB,
+            #7C3AED
+        );
+    font-size: .52rem;
+}
+
+.payment-restriction {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: .85rem;
+    padding: 9px 10px;
+    border: 1px solid rgba(245,158,11,.15);
+    border-radius: 10px;
+    color: #FCD34D;
+    background: rgba(245,158,11,.07);
+    font-size: .65rem;
+    line-height: 1.45;
+    text-align: left;
+}
+
+.payment-reference {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: .9rem;
+    padding: 10px 12px;
+    border: 1px dashed rgba(96,165,250,.22);
+    border-radius: 11px;
+    background: rgba(37,99,235,.055);
+    text-align: left;
+}
+
+.payment-reference span {
+    color: rgba(255,255,255,.38);
+    font-size: .61rem;
+}
+
+.payment-reference strong {
+    color: #BFDBFE;
+    font-size: .67rem;
+    word-break: break-word;
+}
+
+.payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.payment-button {
+    min-height: 47px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1.25rem;
-    box-shadow: 0 10px 30px rgba(245,158,11,0.3);
+    gap: 8px;
+    border-radius: 13px;
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition:
+        transform .25s ease,
+        filter .25s ease;
 }
 
-.payment-icon-wrap i {
-    font-size: 1.75rem;
-    color: white;
+.payment-button:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    filter: brightness(1.08);
 }
 
-.payment-btn {
+.payment-button.paypal {
+    background:
+        linear-gradient(
+            135deg,
+            #0070BA,
+            #1546A0
+        );
+}
+
+.payment-button.bank {
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+}
+
+.payment-method-box {
+    padding: 1rem;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px;
+    background: rgba(0,0,0,.14);
+    text-align: left;
+}
+
+.payment-method-box header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: .8rem;
+}
+
+.payment-method-box header > i {
+    color: #60A5FA;
+    font-size: 1.3rem;
+}
+
+.payment-method-box header > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-method-box header strong {
+    color: rgba(255,255,255,.85);
+    font-size: .75rem;
+}
+
+.payment-method-box header span {
+    color: rgba(255,255,255,.36);
+    font-size: .62rem;
+}
+
+.payment-method-box > p {
+    margin: 0 0 .8rem;
+    color: rgba(255,255,255,.43);
+    font-size: .66rem;
+    line-height: 1.5;
+}
+
+.bank-account {
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.045);
+}
+
+.bank-account > span {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(255,255,255,.42);
+    font-size: .59rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.bank-account p {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 3px 0;
+    color: rgba(255,255,255,.7);
+    font-size: .65rem;
+}
+
+.bank-account small {
+    color: rgba(255,255,255,.32);
+}
+
+.payment-change {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 16px 24px;
-    border-radius: 14px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 7px;
+    color: rgba(255,255,255,.4);
+    font-size: .66rem;
     text-decoration: none;
-    font-family: inherit;
 }
 
-.payment-btn:hover {
-    transform: translateY(-3px);
+.payment-change:hover {
+    color: #fff;
 }
 
-.btn-paypal {
-    background: linear-gradient(135deg, #0070ba, #1546a0);
-    color: white !important;
-    box-shadow: 0 8px 25px rgba(0,112,186,0.3);
-}
-
-.btn-paypal:hover {
-    box-shadow: 0 12px 35px rgba(0,112,186,0.5);
-    background: linear-gradient(135deg, #0089d0, #1a5bbf);
-}
-
-.btn-bank {
-    background: rgba(255,255,255,0.08);
-    color: white !important;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-
-.btn-bank:hover {
-    background: rgba(255,255,255,0.15);
-    border-color: rgba(255,255,255,0.4);
-}
-
-.feature-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-.feature-item:last-child {
-    border-bottom: none;
-}
-
-.feature-item .check {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #10B981, #059669);
+.payment-security {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 0.65rem;
-    flex-shrink: 0;
+    gap: 7px;
+    margin: 1rem 0 0;
+    color: rgba(255,255,255,.3);
+    font-size: .61rem;
+    line-height: 1.45;
 }
 
-/* Light mode */
-html.light-mode .payment-block-wrapper {
-    background: linear-gradient(135deg, #f0f4ff 0%, #e8edf5 50%, #f5f7fa 100%);
+html.light-mode .payment-wrapper {
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(37,99,235,.08),
+            transparent 32%
+        ),
+        linear-gradient(
+            135deg,
+            #F3F6FC,
+            #E8EDF6
+        );
 }
 
-html.light-mode .payment-block-wrapper::before {
-    background: radial-gradient(circle, rgba(102,126,234,0.08), transparent 70%);
+html.light-mode .payment-card {
+    border-color: rgba(15,23,42,.08);
+    background: rgba(255,255,255,.95);
+    box-shadow:
+        0 25px 60px rgba(15,23,42,.1);
 }
 
-html.light-mode .payment-block-wrapper::after {
-    background: radial-gradient(circle, rgba(118,75,162,0.06), transparent 70%);
+html.light-mode .payment-card h1,
+html.light-mode .payment-price strong {
+    color: #172033;
 }
 
-html.light-mode .payment-glass-card {
-    background: rgba(255,255,255,0.95);
-    border-color: rgba(0,0,0,0.08);
+html.light-mode .payment-subtitle,
+html.light-mode .payment-price small,
+html.light-mode .payment-security,
+html.light-mode .payment-back {
+    color: #64748B;
 }
 
-html.light-mode .payment-glass-card h2 {
-    color: #1e293b !important;
+html.light-mode .payment-price span,
+html.light-mode .payment-features > div {
+    color: #334155;
 }
 
-html.light-mode .payment-glass-card .text-white-50 {
-    color: #64748b !important;
+html.light-mode .payment-method-box {
+    border-color: rgba(15,23,42,.08);
+    background: rgba(15,23,42,.025);
 }
 
-html.light-mode .payment-glass-card .feature-item div:last-child {
-    color: #334155 !important;
+html.light-mode .payment-method-box header strong,
+html.light-mode .bank-account p {
+    color: #334155;
 }
 
-html.light-mode .btn-bank {
-    background: rgba(0,0,0,0.03);
-    color: #334155 !important;
-    border-color: rgba(0,0,0,0.12);
+html.light-mode .payment-method-box > p,
+html.light-mode .payment-method-box header span,
+html.light-mode .bank-account > span,
+html.light-mode .bank-account small {
+    color: #64748B;
 }
 
-html.light-mode .btn-bank:hover {
-    background: rgba(0,0,0,0.06);
-    border-color: #003A8F;
-    color: #003A8F !important;
+html.light-mode .bank-account {
+    background: rgba(15,23,42,.035);
+}
+
+html.light-mode .payment-button.bank {
+    border-color: rgba(15,23,42,.12);
+    color: #334155;
+    background: rgba(15,23,42,.035);
+}
+
+html.light-mode .payment-reference {
+    background: rgba(37,99,235,.045);
+}
+
+html.light-mode .payment-reference span {
+    color: #64748B;
+}
+
+@media (max-width:620px) {
+    .payment-wrapper {
+        padding-top: 5.4rem;
+    }
+
+    .payment-card {
+        padding: 1.15rem;
+        border-radius: 20px;
+    }
+
+    .payment-features {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-reference {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }
 </style>
-
-<div class="payment-block-wrapper">
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-6 col-md-8">
-                <div class="payment-glass-card">
-
-                    <div class="payment-icon-wrap">
-                        <i class="bi bi-credit-card"></i>
-                    </div>
-
-                    <h2 class="fw-bold text-white mb-2" style="font-family:'Poppins',sans-serif;">Abonnement requis</h2>
-                    <p class="text-white-50 mb-4" style="max-width:400px;margin-left:auto;margin-right:auto;">
-                        Vous devez souscrire à un abonnement pour accéder à l'espace étudiant.
-                    </p>
-
-                    @if(session('error'))
-                        <div class="alert" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.15);color:#FCA5A5;border-radius:12px;padding:12px 16px;font-size:0.85rem;margin-bottom:1.25rem;">
-                            <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-                        </div>
-                    @endif
-
-                    @if(session('success'))
-                        <div class="alert" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.15);color:#4ADE80;border-radius:12px;padding:12px 16px;font-size:0.85rem;margin-bottom:1.25rem;">
-                            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                        </div>
-                    @endif
-
-                    <!-- Prix -->
-                    <div style="margin-bottom:1.5rem;">
-                        <span style="font-size:0.8rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;">Offre Premium</span>
-                        <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;margin-top:4px;">
-                            <span style="font-size:3rem;font-weight:800;color:white;line-height:1;">200</span>
-                            <span style="font-size:1.1rem;color:rgba(255,255,255,0.4);">€</span>
-                            <span style="font-size:0.9rem;color:rgba(255,255,255,0.3);margin-left:4px;">/ an</span>
-                        </div>
-                    </div>
-
-                    <!-- Features -->
-                    <div style="text-align:left;margin-bottom:1.5rem;padding:0 0.5rem;">
-                        <div class="feature-item">
-                            <span class="check"><i class="bi bi-check"></i></span>
-                            <div style="color:rgba(255,255,255,0.75);font-size:0.85rem;">Accès à tous les cours et lives</div>
-                        </div>
-                        <div class="feature-item">
-                            <span class="check"><i class="bi bi-check"></i></span>
-                            <div style="color:rgba(255,255,255,0.75);font-size:0.85rem;">Chat avec les professeurs</div>
-                        </div>
-                        <div class="feature-item">
-                            <span class="check"><i class="bi bi-check"></i></span>
-                            <div style="color:rgba(255,255,255,0.75);font-size:0.85rem;">Suivi pédagogique personnalisé</div>
-                        </div>
-                        <div class="feature-item">
-                            <span class="check"><i class="bi bi-check"></i></span>
-                            <div style="color:rgba(255,255,255,0.75);font-size:0.85rem;">Exercices, quiz et certificat</div>
-                        </div>
-                    </div>
-
-                    <div style="display:flex;flex-direction:column;gap:12px;">
-                        @if(request('method') === 'paypal')
-                            <!-- Paiement PayPal -->
-                            <div style="background:rgba(0,0,0,0.15);border-radius:14px;padding:1.25rem;margin-bottom:0.5rem;">
-                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.75rem;">
-                                    <i class="bi bi-paypal" style="font-size:1.5rem;color:#0070ba;"></i>
-                                    <span style="font-weight:600;color:white;">Paiement PayPal</span>
-                                </div>
-                                <p style="color:rgba(255,255,255,0.5);font-size:0.82rem;margin-bottom:1rem;">
-                                    Cliquez ci-dessous pour être redirigé vers PayPal et effectuer votre paiement en toute sécurité.
-                                </p>
-                                <a href="https://www.paypal.me/abdelghanimaloulou1" target="_blank" class="payment-btn btn-paypal" style="padding:12px;">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                                        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106z"/>
-                                    </svg>
-                                    Payer avec PayPal
-                                </a>
-                                <p style="color:rgba(255,255,255,0.3);font-size:0.7rem;margin-top:0.75rem;">
-                                    Après paiement, veuillez contacter l'administrateur avec votre confirmation.
-                                </p>
-                            </div>
-                            <a href="{{ route('student.payment') }}" class="payment-btn" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);padding:10px;font-weight:500;font-size:0.85rem;">
-                                <i class="bi bi-arrow-left"></i> Autres méthodes de paiement
-                            </a>
-
-                        @elseif(request('method') === 'bank')
-                            <!-- Virement bancaire -->
-                            <div style="background:rgba(0,0,0,0.15);border-radius:14px;padding:1.25rem;margin-bottom:0.5rem;">
-                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.75rem;">
-                                    <i class="bi bi-bank" style="font-size:1.3rem;color:#4ADE80;"></i>
-                                    <span style="font-weight:600;color:white;">Virement bancaire</span>
-                                </div>
-
-                                <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:0.85rem 1rem;text-align:left;margin-bottom:0.75rem;">
-                                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Maroc — Banque Populaire</div>
-                                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.6);margin-bottom:4px;"><span style="color:rgba(255,255,255,0.3);">RIB :</span> 123456789012345678901234</div>
-                                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.6);"><span style="color:rgba(255,255,255,0.3);">Titulaire :</span> M. Abdelghani Maloulou</div>
-                                </div>
-
-                                <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:0.85rem 1rem;text-align:left;margin-bottom:0.75rem;">
-                                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">France — EUROCOMPTE SÉRÉNITÉ</div>
-                                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.6);margin-bottom:2px;"><span style="color:rgba(255,255,255,0.3);">RIB :</span> 10278 08976 00021074401 03</div>
-                                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.6);margin-bottom:2px;"><span style="color:rgba(255,255,255,0.3);">IBAN :</span> FR76 1027 8089 7600 0210 7440 103</div>
-                                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.6);"><span style="color:rgba(255,255,255,0.3);">BIC :</span> CMCIFR2A</div>
-                                </div>
-
-                                <p style="color:rgba(255,255,255,0.4);font-size:0.75rem;">
-                                    <i class="bi bi-info-circle me-1"></i> Après virement, envoyez le reçu à l'administrateur pour activer votre accès.
-                                </p>
-                            </div>
-                            <a href="{{ route('student.payment') }}" class="payment-btn" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);padding:10px;font-weight:500;font-size:0.85rem;">
-                                <i class="bi bi-arrow-left"></i> Autres méthodes de paiement
-                            </a>
-
-                        @else
-                            <!-- Choix de la méthode -->
-                            <a href="{{ route('student.payment') }}?method=paypal" class="payment-btn btn-paypal">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106z"/>
-                                </svg>
-                                Payer avec PayPal
-                            </a>
-                            <a href="{{ route('student.payment') }}?method=bank" class="payment-btn btn-bank">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="8" width="20" height="14" rx="2"/>
-                                    <path d="M12 2L2 8h20L12 2z"/>
-                                    <path d="M12 14v4"/>
-                                </svg>
-                                Virement bancaire
-                            </a>
-                            <p style="color:rgba(255,255,255,0.25);font-size:0.72rem;margin-top:0.5rem;">
-                                🔒 Paiement sécurisé
-                            </p>
-                        @endif
-                    </div>
-
-                    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.04);">
-                        <a href="{{ route('home') }}" style="color:rgba(255,255,255,0.3);text-decoration:none;font-size:0.82rem;transition:color 0.2s;" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">
-                            <i class="bi bi-house me-1"></i> Retour à l'accueil
-                        </a>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 @endsection

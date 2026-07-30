@@ -3,53 +3,102 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Stripe\Stripe;
-use Stripe\Checkout\Session;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Stripe\Checkout\Session;
+use Stripe\Stripe;
 
 class PlanController extends Controller
 {
     public function index()
     {
-        return view('plans.index');
+        $plans = config('plans.offers', []);
+
+        return view(
+            'plans.index',
+            compact('plans')
+        );
     }
 
+    /*
+     * Cette méthode est conservée pour compatibilité.
+     * Le flux actuellement utilisé par les vues passe
+     * principalement par PaymentController.
+     */
     public function checkout(Request $request)
     {
-        $request->validate([
-            'plan' => 'required|in:standard,premium'
+        $validated = $request->validate([
+            'plan' => [
+                'required',
+                'string',
+            ],
         ]);
 
-        $amounts = [
-            'standard' => 9900,  // 99 MAD
-            'premium' => 14900   // 149 MAD
-        ];
+        $plans = config('plans.offers', []);
+        $planCode = $validated['plan'];
 
-        Stripe::setApiKey(config('services.stripe.secret_key'));
+        abort_unless(
+            isset($plans[$planCode]),
+            422,
+            'L’offre sélectionnée est invalide.'
+        );
 
-        $session = Stripe\Checkout\Session::create([
+        if (!Auth::check()) {
+            return redirect()
+                ->route('login')
+                ->with(
+                    'error',
+                    'Connectez-vous avant de continuer le paiement.'
+                );
+        }
+
+        $plan = $plans[$planCode];
+
+        /*
+         * Le choix est mémorisé, mais aucun accès payant
+         * n’est activé avant confirmation du paiement.
+         */
+        Auth::user()->forceFill([
+            'subscription_type' => $planCode,
+        ])->save();
+
+        Stripe::setApiKey(
+            config('services.stripe.secret_key')
+        );
+
+        $session = Session::create([
             'payment_method_types' => ['card'],
             'line_items' => [[
                 'price_data' => [
-                    'currency' => 'mad',
+                    'currency' => $plan['currency'],
                     'product_data' => [
-                        'name' => 'Abonnement ' . ucfirst($request->plan),
+                        'name' =>
+                            'Abonnement '
+                            . $plan['name'],
+                        'description' =>
+                            $plan['scope'],
                     ],
-                    'unit_amount' => $amounts[$request->plan],
+                    'unit_amount' =>
+                        $plan['amount_minor'],
                 ],
                 'quantity' => 1,
             ]],
             'mode' => 'payment',
-            'success_url' => url('/payment-success?plan=' . $request->plan),
-            'cancel_url' => url('/plans'),
+            'success_url' =>
+                url(
+                    '/payment-success?plan='
+                    . urlencode($planCode)
+                ),
+            'cancel_url' =>
+                route(
+                    'plans',
+                    ['plan' => $planCode]
+                ),
             'metadata' => [
                 'user_id' => Auth::id(),
-                'plan' => $request->plan
-            ]
+                'plan' => $planCode,
+            ],
         ]);
 
         return redirect($session->url);
     }
 }
-
