@@ -15,9 +15,18 @@ use App\Models\Subject;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use App\Services\LearningPathService;
+use App\Models\HighSchoolTestSubmission;
+use App\Models\VocalTestPrompt;
 
 class StudentController extends Controller
 {
+    private LearningPathService $paths;
+
+    public function __construct(LearningPathService $paths)
+    {
+        $this->paths = $paths;
+    }
 
     // dashboard étudiant
     public function dashboard()
@@ -28,30 +37,38 @@ class StudentController extends Controller
         if ($user->role === 'student' && !$user->is_active) {
             return redirect()->route('student.waiting');
         }
+        $assignmentRows = $this->paths->studentAssignmentRows($user->id);
+        $classIds = $assignmentRows->pluck('class_id')->unique()->values();
+        $subjectIds = $assignmentRows->pluck('subject_id')->unique()->values();
 
-        $studentAssignment = DB::table('class_user')
-            ->where('user_id', $user->id)
-            ->whereNotNull('subject_id')
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->first();
+        $classRoom = $classIds->isNotEmpty()
+            ? ClassRoom::with('level')->find($classIds->first())
+            : null;
+        $assignedSubject = $subjectIds->isNotEmpty()
+            ? Subject::find($subjectIds->first())
+            : null;
+        $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
 
-        $classRoom = $studentAssignment
-            ? ClassRoom::with('level')->find($studentAssignment->class_id)
-            : $user->classRoom()->with('level')->first();
-        $assignedSubject = $studentAssignment
-            ? Subject::find($studentAssignment->subject_id)
-            : $user->individuallyAssignedSubjects()->first();
-        $subjects = $assignedSubject ? collect([$assignedSubject]) : collect();
-
-        $courseQuery = Course::query()
-            ->when($classRoom, fn($query) => $query->where('class_id', $classRoom->id))
-            ->when($assignedSubject, fn($query) => $query->where('subject_id', $assignedSubject->id));
+        $courseQuery = Course::query();
+        if ($assignmentRows->isEmpty()) {
+            $courseQuery->whereRaw('1 = 0');
+        } else {
+            $courseQuery->where(function ($query) use ($assignmentRows) {
+                foreach ($assignmentRows as $row) {
+                    $query->orWhere(function ($pair) use ($row) {
+                        $pair->where('subject_id', $row->subject_id)
+                            ->where('level_id', $row->level_id)
+                            ->where('class_id', $row->class_id);
+                    });
+                }
+            });
+        }
         $coursesCount = (clone $courseQuery)->count();
         $recentCourses = (clone $courseQuery)->latest()->take(4)->get();
         $recentCourses2 = (clone $courseQuery)->latest()->take(2)->get();
-
-        $livesCount = $classRoom ? Live::where('class_id', $classRoom->id)->count() : 0;
+        $livesCount = $classIds->isNotEmpty()
+            ? Live::whereIn('class_id', $classIds)->count()
+            : 0;
 
         $profAssignments = Assignment::query()
             ->when($classRoom, fn($query) => $query->where('class_room_id', $classRoom->id))
@@ -146,9 +163,16 @@ class StudentController extends Controller
 
     public function classCourses($id)
     {
-        $class = \App\Models\ClassRoom::with('courses')->findOrFail($id);
+        $user = auth()->user();
+        $rows = $this->paths->studentAssignmentRows($user->id)
+            ->where('class_id', (int) $id);
+        abort_if($rows->isEmpty(), 403);
 
-        $courses = $class->courses;
+        $class = ClassRoom::with('level')->findOrFail($id);
+        $courses = Course::query()
+            ->where('class_id', $class->id)
+            ->whereIn('subject_id', $rows->pluck('subject_id'))
+            ->get();
 
         return view('student.class.courses', compact('class', 'courses'));
     }
@@ -156,11 +180,22 @@ class StudentController extends Controller
 
     public function coursesBySubject($classId, $subjectId)
     {
-        $courses = \App\Models\Course::where('class_id', $classId)
-                    ->where('subject_id', $subjectId)
-                    ->get();
+        $class = ClassRoom::with('level')->findOrFail($classId);
+        abort_unless(
+            $class->level
+            && $this->paths->studentCanAccessPath(
+                auth()->user(),
+                (int) $subjectId,
+                (int) $class->level_id,
+                (int) $class->id
+            ),
+            403
+        );
 
-        $class = \App\Models\ClassRoom::findOrFail($classId);
+        $courses = Course::where('class_id', $class->id)
+            ->where('subject_id', $subjectId)
+            ->where('level_id', $class->level_id)
+            ->get();
 
         return view('student.class.courses', compact('courses', 'class'));
     }
@@ -168,9 +203,77 @@ class StudentController extends Controller
 
     public function showCourse($id)
     {
-$course = Course::with(['subject', 'classRoom', 'devoirs'])->findOrFail($id);
+        $course = Course::with([
+                'subject',
+                'level',
+                'classRoom.level',
+                'devoirs',
+            ])
+            ->findOrFail($id);
 
-        return view('student.class.course-show', compact('course'));
+        abort_unless(
+            $this->paths->userCanAccessCourse(
+                auth()->user(),
+                $course
+            ),
+            403
+        );
+
+        $courseLevel =
+            $course->level
+            ?? $course->classRoom?->level;
+
+        abort_unless(
+            $course->subject
+            && $courseLevel
+            && $course->classRoom,
+            404
+        );
+
+        $this->ensureHighSchoolTestApproved(
+            $course->subject,
+            $courseLevel,
+            $course->classRoom
+        );
+
+        $resourceUrls = [];
+
+        foreach (
+            ['video', 'pdf', 'link']
+            as $type
+        ) {
+            $exists = $type === 'video'
+                ? (
+                    $course->video
+                    || $course->video_url
+                )
+                : (
+                    $type === 'pdf'
+                        ? $course->pdf
+                        : $course->course_link
+                );
+
+            if ($exists) {
+                $resourceUrls[$type] =
+                    \URL::temporarySignedRoute(
+                        'course.resource',
+                        now()->addMinutes(10),
+                        [
+                            'course' =>
+                                $course->id,
+                            'type' => $type,
+                        ]
+                    );
+            }
+        }
+
+        return view(
+            'student.class.course-show',
+            compact(
+                'course',
+                'resourceUrls'
+            )
+        );
     }
 
 
@@ -375,18 +478,11 @@ public function settings()
     public function indexSubjects()
     {
         $user = auth()->user();
-        $classRoom = $user->classRoom()->with('level', 'subjects')->first();
-
-        // Matières liées à la classe de l'étudiant
-        $subjects = collect();
-        if ($classRoom && $classRoom->subjects->isNotEmpty()) {
-            $subjects = $classRoom->subjects;
-        }
-
-        // + Matières assignées individuellement via class_user.subject_id
-        $subjects = $subjects->merge($user->individuallyAssignedSubjects())->unique('id');
-
-        $level = $classRoom?->level;
+        $rows = $this->paths->studentAssignmentRows($user->id);
+        $subjects = Subject::whereIn('id', $rows->pluck('subject_id'))->orderBy('name')->get();
+        $firstRow = $rows->first();
+        $classRoom = $firstRow ? ClassRoom::with('level')->find($firstRow->class_id) : null;
+        $level = $classRoom ? $classRoom->level : null;
 
         return view('student.subjects.index', compact('subjects', 'level', 'classRoom'));
     }
@@ -395,30 +491,73 @@ public function settings()
 
 public function subjectLevels(Subject $subject)
 {
-    $levelIds = $subject->classes()->pluck('class_rooms.level_id')->unique()->filter();
-    $levels = Level::whereIn('id', $levelIds)->orderBy('name')->get();
+    $hierarchy = collect($this->paths->hierarchyForStudent(auth()->id()));
+    $node = $hierarchy->firstWhere('id', $subject->id);
+    abort_unless($node, 403);
 
+    $levels = Level::whereIn('id', collect($node['levels'])->pluck('id'))->orderBy('name')->get();
     return view('student.subjects.levels', compact('subject', 'levels'));
 }
 
 public function subjectClasses(Subject $subject, Level $level)
 {
-    $classes = ClassRoom::where('level_id', $level->id)
-        ->whereHas('subjects', fn($q) => $q->where('subject_id', $subject->id))
-        ->get();
+    $rows = $this->paths->studentAssignmentRows(auth()->id())
+        ->where('subject_id', $subject->id)
+        ->where('level_id', $level->id);
+    abort_if($rows->isEmpty(), 403);
 
+    $classes = ClassRoom::whereIn('id', $rows->pluck('class_id'))->orderBy('name')->get();
     return view('student.subjects.classes', compact('subject', 'level', 'classes'));
 }
 
-public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
-{
-    $courses = Course::where('subject_id', $subject->id)
-        ->where('class_id', $class->id)
+public function subjectCourses(
+    Subject $subject,
+    Level $level,
+    ClassRoom $class
+) {
+    abort_unless(
+        $this->paths->studentCanAccessPath(
+            auth()->user(),
+            $subject->id,
+            $level->id,
+            $class->id
+        ),
+        403
+    );
+
+    $this->ensureHighSchoolTestApproved(
+        $subject,
+        $level,
+        $class
+    );
+
+    $courses = Course::where(
+            'subject_id',
+            $subject->id
+        )
+        ->where(
+            'level_id',
+            $level->id
+        )
+        ->where(
+            'class_id',
+            $class->id
+        )
         ->withCount('devoirs')
         ->get();
 
-    return view('student.subjects.courses', compact('subject', 'level', 'class', 'courses'));
-}    public function waiting()
+    return view(
+        'student.subjects.courses',
+        compact(
+            'subject',
+            'level',
+            'class',
+            'courses'
+        )
+    );
+}
+
+    public function waiting()
     {
         $user = auth()->user();
         
@@ -485,8 +624,60 @@ public function courses(Subject $subject, ClassRoom $class)
             ->with('error', 'Niveau non trouvé pour cette classe.');
     }
 
+    abort_unless(
+        $this->paths->studentCanAccessPath(auth()->user(), $subject->id, $level->id, $class->id),
+        403
+    );
+
     return redirect()->route('student.subjects.courses', [$subject, $level, $class]);
 }
+
+    private function ensureHighSchoolTestApproved(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ): void {
+        $isHighSchoolSupport =
+            VocalTestPrompt::normalizePathName(
+                $subject->name
+            ) === 'soutien lycee';
+
+        if (!$isHighSchoolSupport) {
+            return;
+        }
+
+        $approved =
+            HighSchoolTestSubmission::query()
+                ->where(
+                    'user_id',
+                    auth()->id()
+                )
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->where(
+                    'level_id',
+                    $level->id
+                )
+                ->where(
+                    'class_id',
+                    $class->id
+                )
+                ->where(
+                    'status',
+                    HighSchoolTestSubmission
+                        ::STATUS_APPROVED
+                )
+                ->exists();
+
+        abort_unless(
+            $approved,
+            403,
+            'Votre test écrit doit être validé '
+            . 'avant l’accès aux cours.'
+        );
+    }
 
     public function index(Request $request)
     {

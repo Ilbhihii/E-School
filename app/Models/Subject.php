@@ -27,14 +27,21 @@ class Subject extends Model
         return $this->hasMany(Message::class);
     }
 
-    public function classRoom()
-    {
-        return $this->belongsTo(ClassRoom::class, 'class_id');
-    }
-
     public function classes()
     {
-        return $this->belongsToMany(ClassRoom::class);
+        return $this->belongsToMany(
+            ClassRoom::class,
+            'class_room_subject',
+            'subject_id',
+            'class_room_id'
+        );
+    }
+
+    public function highSchoolTestSubmissions()
+    {
+        return $this->hasMany(
+            HighSchoolTestSubmission::class
+        );
     }
 
 }

@@ -8,9 +8,18 @@ use App\Models\Level;
 use App\Models\Course;
 use App\Models\ClassRoom;
 use App\Models\VocalTestPrompt;
+use App\Models\HighSchoolTestSubmission;
+use App\Services\LearningPathService;
+use Illuminate\Support\Facades\URL;
 
 class FrontController extends Controller
 {
+    private LearningPathService $paths;
+
+    public function __construct(LearningPathService $paths)
+    {
+        $this->paths = $paths;
+    }
     public function subjects()
     {
         $subjectsReligieux = Subject::where('type', 'religieux')->get();
@@ -349,6 +358,77 @@ class FrontController extends Controller
             )
             ->firstOrFail();
 
+        /*
+         * Soutien Lycée :
+         * - test validé : accès à l'espace étudiant ;
+         * - test en correction : page de suivi ;
+         * - sinon : affichage du test écrit.
+         */
+        if ($this->isHighSchoolSupport($subject)) {
+            if (
+                auth()->check()
+                && auth()->user()->role === 'student'
+            ) {
+                $submission =
+                    HighSchoolTestSubmission::query()
+                        ->where(
+                            'user_id',
+                            auth()->id()
+                        )
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->where(
+                            'level_id',
+                            $level->id
+                        )
+                        ->where(
+                            'class_id',
+                            $class->id
+                        )
+                        ->latest('submitted_at')
+                        ->latest('id')
+                        ->first();
+
+                if (
+                    $submission
+                    && $submission->isApproved()
+                ) {
+                    return redirect()->route(
+                        'student.subjects.courses',
+                        [
+                            $subject,
+                            $level,
+                            $class,
+                        ]
+                    )->with(
+                        'success',
+                        'Test validé : accès aux cours autorisé.'
+                    );
+                }
+
+                if (
+                    $submission
+                    && $submission->isPendingReview()
+                ) {
+                    return redirect()->route(
+                        'student.written-tests.show',
+                        $submission
+                    );
+                }
+            }
+
+            return redirect()->route(
+                'high-school-test.show',
+                [
+                    $subject,
+                    $level,
+                    $class,
+                ]
+            );
+        }
+
         if (!VocalTestPrompt::isSupportedPath($subject, $level, $class)) {
             return redirect()
                 ->route('front.subject.levels', $subject->id)
@@ -433,6 +513,91 @@ class FrontController extends Controller
             );
     }
 
+
+
+    /**
+     * Liste publique des cours d’un niveau.
+     * Les ressources privées ne sont jamais exposées ici.
+     */
+    public function levelCourses($id)
+    {
+        $level = Level::with(['subject'])->findOrFail($id);
+        $courses = Course::query()
+            ->where('level_id', $level->id)
+            ->with(['subject', 'level', 'classRoom'])
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+
+        $level->setRelation('courses', $courses);
+
+        return view('front.level-courses', compact('level'));
+    }
+
+    /**
+     * Détail d’un cours public ou autorisé.
+     */
+    public function showCourse($id)
+    {
+        $course = Course::with([
+            'subject',
+            'level',
+            'classRoom',
+            'learningTests.questions.answers',
+        ])->findOrFail($id);
+
+        $user = auth()->user();
+        $canAccess = $this->paths->userCanAccessCourse($user, $course);
+
+        if (!$canAccess) {
+            if (!$user) {
+                session()->put('url.intended', request()->fullUrl());
+                return redirect()->route('login')
+                    ->with('info', 'Connectez-vous pour accéder à ce cours premium.');
+            }
+
+            if ($user->isStudent() && !$user->is_active) {
+                return redirect()->route('student.waiting');
+            }
+
+            if ($user->isStudent() && !$user->is_paid) {
+                return redirect()->route('plans')
+                    ->with('error', 'Un abonnement actif est nécessaire pour accéder à ce cours.');
+            }
+
+            abort(403, 'Ce cours ne fait pas partie de votre parcours.');
+        }
+
+        $sameFamilySubjects = $course->subject
+            ? Subject::query()
+                ->where('type', $course->subject->type)
+                ->where('id', '!=', $course->subject->id)
+                ->whereIn('name', ['Arabe', 'Coran', 'Soutien Lycée'])
+                ->withCount('courses')
+                ->get()
+            : collect();
+
+        $resourceUrls = [];
+        foreach (['video', 'pdf', 'link'] as $type) {
+            $exists = $type === 'video'
+                ? ($course->video || $course->video_url)
+                : ($type === 'pdf' ? $course->pdf : $course->course_link);
+
+            if ($exists) {
+                $resourceUrls[$type] = URL::temporarySignedRoute(
+                    'course.resource',
+                    now()->addMinutes(10),
+                    ['course' => $course->id, 'type' => $type]
+                );
+            }
+        }
+
+        return view('front.course-show', compact(
+            'course',
+            'sameFamilySubjects',
+            'resourceUrls'
+        ));
+    }
 
     private function levelNamesForSubject(
         Subject $subject

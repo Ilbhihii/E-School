@@ -2,364 +2,652 @@
 
 @section('title', 'Rendez-vous — Administration')
 @section('page_title', 'Rendez-vous')
-@section('breadcrumb', 'Rendez-vous')
+@section('breadcrumb', 'Tests reçus')
 
 @section('content')
 
-<style>
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 600;
-}
-.status-pending {
-    background: rgba(251,146,60,0.15);
-    color: #FB923C;
-    border: 1px solid rgba(251,146,60,0.2);
-}
-.status-confirmed {
-    background: rgba(34,197,94,0.15);
-    color: #4ADE80;
-    border: 1px solid rgba(34,197,94,0.2);
-}
-.status-cancelled {
-    background: rgba(239,68,68,0.15);
-    color: #FCA5A5;
-    border: 1px solid rgba(239,68,68,0.2);
-}
-.type-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-.type-test {
-    background: rgba(124,58,237,0.15);
-    color: #A78BFA;
-    border: 1px solid rgba(124,58,237,0.2);
-}
-.type-information {
-    background: rgba(6,182,212,0.15);
-    color: #22D3EE;
-    border: 1px solid rgba(6,182,212,0.2);
-}
-.type-communication {
-    background: rgba(251,146,60,0.15);
-    color: #FB923C;
-    border: 1px solid rgba(251,146,60,0.2);
-}
-.type-other {
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.6);
-    border: 1px solid rgba(255,255,255,0.1);
-}
-.appointments-panel {
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 18px;
-    background: linear-gradient(145deg,rgba(255,255,255,0.045),rgba(255,255,255,0.018));
-    box-shadow: 0 18px 50px rgba(0,0,0,0.18);
-}
-.appointments-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
-}
-.appointments-count {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    color: rgba(255,255,255,0.75);
-    font-size: 0.84rem;
-    font-weight: 600;
-}
-.appointments-count span {
-    display: grid;
-    place-items: center;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: 9px;
-    background: rgba(124,58,237,0.18);
-    color: #C4B5FD;
-}
-.appointments-search {
-    position: relative;
-    width: min(100%,320px);
-}
-.appointments-search i {
-    position: absolute;
-    left: 13px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: rgba(255,255,255,0.3);
-}
-.appointments-search input {
-    width: 100%;
-    padding: 10px 14px 10px 38px;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 11px;
-    outline: none;
-    background: rgba(255,255,255,0.035);
-    color: #fff;
-    font-size: 0.82rem;
-}
-.appointments-search input:focus { border-color: rgba(96,165,250,0.45); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-.appointments-search input::placeholder { color: rgba(255,255,255,0.3); }
-.student-name { display:flex;align-items:center;gap:10px;min-width:135px; }
-.student-avatar { width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,#7C3AED,#2563EB);color:#fff;font-weight:700;box-shadow:0 6px 16px rgba(37,99,235,.2); }
-.contact-link { display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.68);text-decoration:none;white-space:nowrap; }
-.contact-link:hover { color:#93C5FD; }
-.path-pill { display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 8px;border-radius:7px;background:rgba(255,255,255,.045);color:rgba(255,255,255,.48);font-size:.7rem; }
-.recitation-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 190px;
-    padding: 10px 16px;
-    border: 1px solid rgba(124, 58, 237, 0.28);
-    border-radius: 11px;
-    background: linear-gradient(
-        135deg,
-        rgba(124, 58, 237, 0.22),
-        rgba(37, 99, 235, 0.18)
-    );
-    color: #C4B5FD;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-decoration: none;
-    white-space: nowrap;
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        color 0.2s ease;
-}
+<div class="adm-page-header">
+    <div>
+        <h1>
+            <i
+                class="bi bi-calendar-check"
+                style="color:#60A5FA;"
+            ></i>
 
-.recitation-link:hover {
-    color: #FFFFFF;
-    border-color: rgba(167, 139, 250, 0.55);
-    box-shadow: 0 8px 22px rgba(76, 29, 149, 0.25);
-    transform: translateY(-2px);
-}
-@media(max-width:760px){.appointments-toolbar{align-items:stretch;flex-direction:column}.appointments-search{width:100%}.appointments-panel{border-radius:14px}}
-</style>
+            Rendez-vous de tests
+        </h1>
 
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-    <h3 style="color: rgba(255,255,255,0.6); font-weight: 400; font-size: 1rem;">
-        <i class="bi bi-calendar-check me-2"></i>
-        Rendez-vous de test Coran avec récitation vocale
-    </h3>
+        <div class="subtitle">
+            Récitations vocales et tests écrits envoyés
+            par les étudiants.
+        </div>
+    </div>
+
+    <span class="appointment-total">
+        {{ $appointments->count() }}
+        demande(s)
+    </span>
 </div>
+
+@if(session('success'))
+    <div class="adm-alert adm-alert-success mb-3">
+        {{ session('success') }}
+    </div>
+@endif
 
 <div class="appointments-panel">
     <div class="appointments-toolbar">
         <div class="appointments-count">
-            <i class="bi bi-mic-fill" style="color:#A78BFA;"></i>
-            Enregistrements reçus <span id="appointmentsCount">{{ $appointments->count() }}</span>
+            <i class="bi bi-inbox-fill"></i>
+            Tests reçus
         </div>
+
         <label class="appointments-search">
             <i class="bi bi-search"></i>
-            <input type="search" id="appointmentsSearch" placeholder="Rechercher un étudiant, une ville…" autocomplete="off">
+
+            <input
+                type="search"
+                id="appointmentsSearch"
+                placeholder="Rechercher un étudiant, une ville..."
+                autocomplete="off"
+            >
         </label>
     </div>
-<div class="table-responsive">
-    <table class="table adm-table">
-        <thead>
-            <tr>
-                <th>Prénom</th>
-                <th>Nom</th>
-                <th>Téléphone</th>
-                <th>Email</th>
-                <th>Ville</th>
-                <th>Pays</th>
-                <th>Parcours</th>
-                <th>Récitation</th>
-                <th>Statut</th>
-                <th>Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="appointmentsBody">
-            @forelse($appointments as $appointment)
-            <tr data-search="{{ mb_strtolower($appointment->first_name.' '.$appointment->last_name.' '.$appointment->email.' '.$appointment->phone.' '.$appointment->city.' '.$appointment->country.' '.$appointment->vocalSubmission->level->name.' '.$appointment->vocalSubmission->classRoom->name) }}">
-                <td>
-                    <div class="student-name">
-                        <span class="student-avatar">{{ mb_strtoupper(mb_substr($appointment->first_name, 0, 1)) }}</span>
-                        <span style="font-weight:600;">{{ $appointment->first_name }}</span>
-                    </div>
-                </td>
-                <td>{{ $appointment->last_name }}</td>
-                <td>
-                    <a href="tel:{{ $appointment->phone }}" class="contact-link">
-                        <i class="bi bi-telephone me-1" style="color: rgba(255,255,255,0.3);"></i>{{ $appointment->phone }}
-                    </a>
-                </td>
-                <td>
-                    <a href="mailto:{{ $appointment->email }}" class="contact-link">
-                        <i class="bi bi-envelope me-1" style="color: rgba(255,255,255,0.3);"></i>{{ $appointment->email }}
-                    </a>
-                </td>
-                <td>{{ $appointment->city ?: '—' }}</td>
-                <td>{{ $appointment->country ?: '—' }}</td>
-                <td style="min-width:170px;">
-                    <strong>{{ $appointment->vocalSubmission->subject->name }}</strong><br>
-                    <small class="path-pill">
-                        <i class="bi bi-diagram-3"></i>
-                        {{ $appointment->vocalSubmission->level->name }} · {{ $appointment->vocalSubmission->classRoom->name }}
-                    </small>
-                </td>
-                <td style="min-width:220px;">
-                    <a
-                        href="{{ route('admin.vocal-tests.submissions.index') }}"
-                        class="recitation-link"
-                        title="Consulter les enregistrements vocaux"
-                    >
-                        <i class="bi bi-mic-fill"></i>
-                        Voir les enregistrements
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-                </td>
-                <td>
-                    <span class="status-badge status-{{ $appointment->status }}">
-                        <i class="bi {{ $appointment->status == 'pending' ? 'bi-clock' : ($appointment->status == 'confirmed' ? 'bi-check-circle' : 'bi-x-circle') }}"></i>
-                        {{ $appointment->status == 'pending' ? 'En attente' : ($appointment->status == 'confirmed' ? 'Confirmé' : 'Annulé') }}
-                    </span>
-                </td>
-                <td style="color: rgba(255,255,255,0.4); font-size: 0.85rem;">
-                    {{ $appointment->created_at->format('d/m/Y H:i') }}
-                </td>
-                <td>
-                    <div class="d-flex gap-1">
-                        @if($appointment->status == 'pending')
-                        <form method="POST" action="{{ route('admin.appointments.confirm', $appointment) }}" class="d-inline">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="adm-action-btn adm-action-edit" title="Confirmer">
-                                <i class="bi bi-check-lg"></i>
-                            </button>
-                        </form>
-                        <form method="POST" action="{{ route('admin.appointments.cancel', $appointment) }}" class="d-inline">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="adm-action-btn adm-action-danger" title="Annuler">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </form>
-                        @endif
-                        <form method="POST" action="{{ route('admin.appointments.destroy', $appointment) }}" class="d-inline"
-                              onsubmit="return confirm('Supprimer ce rendez-vous ?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="adm-action-btn adm-action-danger" title="Supprimer">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="11" class="text-center py-5" style="color: rgba(255,255,255,0.3);">
-                    <i class="bi bi-inbox" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
-                    Aucun rendez-vous de test Coran avec enregistrement vocal
-                </td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
+
+    <div class="table-responsive">
+        <table class="table adm-table">
+            <thead>
+                <tr>
+                    <th>Étudiant</th>
+                    <th>Contact</th>
+                    <th>Ville / Pays</th>
+                    <th>Parcours</th>
+                    <th>Test envoyé</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody id="appointmentsBody">
+                @forelse($appointments as $appointment)
+                    @php
+                        $vocal =
+                            $appointment
+                                ->vocalSubmission;
+
+                        $written =
+                            $appointment
+                                ->highSchoolTestSubmission;
+
+                        $submission =
+                            $vocal ?? $written;
+
+                        $isWritten =
+                            (bool) $written;
+
+                        $searchValue = mb_strtolower(
+                            implode(
+                                ' ',
+                                [
+                                    $appointment->first_name,
+                                    $appointment->last_name,
+                                    $appointment->email,
+                                    $appointment->phone,
+                                    $appointment->city,
+                                    $appointment->country,
+                                    $submission?->subject?->name,
+                                    $submission?->level?->name,
+                                    $submission?->classRoom?->name,
+                                ]
+                            )
+                        );
+                    @endphp
+
+                    <tr data-search="{{ $searchValue }}">
+                        <td>
+                            <div class="student-name">
+                                <span class="student-avatar">
+                                    {{
+                                        mb_strtoupper(
+                                            mb_substr(
+                                                $appointment
+                                                    ->first_name,
+                                                0,
+                                                1
+                                            )
+                                        )
+                                    }}
+                                </span>
+
+                                <div>
+                                    <strong>
+                                        {{
+                                            $appointment
+                                                ->first_name
+                                        }}
+                                        {{
+                                            $appointment
+                                                ->last_name
+                                        }}
+                                    </strong>
+
+                                    <small>
+                                        {{ $appointment->email }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <a
+                                href="tel:{{
+                                    $appointment->phone
+                                }}"
+                                class="contact-link"
+                            >
+                                <i class="bi bi-telephone"></i>
+                                {{ $appointment->phone }}
+                            </a>
+                        </td>
+
+                        <td>
+                            <strong>
+                                {{
+                                    $appointment->city
+                                    ?: '—'
+                                }}
+                            </strong>
+
+                            <small class="d-block">
+                                {{
+                                    $appointment->country
+                                    ?: '—'
+                                }}
+                            </small>
+                        </td>
+
+                        <td style="min-width:180px;">
+                            <strong>
+                                {{
+                                    $submission
+                                        ?->subject
+                                        ?->name
+                                    ?? '—'
+                                }}
+                            </strong>
+
+                            <span class="path-pill">
+                                <i class="bi bi-diagram-3"></i>
+
+                                {{
+                                    $submission
+                                        ?->level
+                                        ?->name
+                                    ?? '—'
+                                }}
+                                ·
+                                {{
+                                    $submission
+                                        ?->classRoom
+                                        ?->name
+                                    ?? '—'
+                                }}
+                            </span>
+                        </td>
+
+                        <td style="min-width:230px;">
+                            @if($isWritten)
+                                <div class="written-answer-block">
+                                    <span class="answer-type-badge written">
+                                        <i class="bi bi-images"></i>
+                                        Test écrit
+                                    </span>
+
+                                    <a
+                                        href="{{
+                                            route(
+                                                'admin.written-tests.show',
+                                                $written
+                                            )
+                                        }}"
+                                        class="written-review-link"
+                                    >
+                                        <i class="bi bi-pencil-square"></i>
+                                        Corriger
+                                    </a>
+
+                                    <div class="answer-thumbnails">
+                                        @foreach(
+                                            $written->images()
+                                            as $imageIndex => $image
+                                        )
+                                            <a
+                                                href="{{
+                                                    route(
+                                                        'high-school-test.image',
+                                                        [
+                                                            $written,
+                                                            $imageIndex,
+                                                        ]
+                                                    )
+                                                }}"
+                                                target="_blank"
+                                                rel="noopener"
+                                                title="Ouvrir la réponse {{
+                                                    $imageIndex + 1
+                                                }}"
+                                            >
+                                                <img
+                                                    src="{{
+                                                        route(
+                                                            'high-school-test.image',
+                                                            [
+                                                                $written,
+                                                                $imageIndex,
+                                                            ]
+                                                        )
+                                                    }}"
+                                                    alt="Réponse {{
+                                                        $imageIndex + 1
+                                                    }}"
+                                                >
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @else
+                                <a
+                                    href="{{
+                                        route(
+                                            'admin.vocal-tests.submissions.index'
+                                        )
+                                    }}"
+                                    class="vocal-answer-link"
+                                >
+                                    <i class="bi bi-mic-fill"></i>
+                                    Voir la récitation
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            @endif
+                        </td>
+
+                        <td>
+                            <span
+                                class="status-badge
+                                    status-{{
+                                        $appointment->status
+                                    }}"
+                            >
+                                {{
+                                    $appointment->status
+                                    === 'pending'
+                                        ? 'En attente'
+                                        : (
+                                            $appointment->status
+                                            === 'confirmed'
+                                                ? 'Confirmé'
+                                                : 'Annulé'
+                                        )
+                                }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <small>
+                                {{
+                                    $appointment
+                                        ->created_at
+                                        ->format('d/m/Y H:i')
+                                }}
+                            </small>
+                        </td>
+
+                        <td>
+                            <div class="d-flex gap-1">
+                                @if(
+                                    $appointment->status
+                                    === 'pending'
+                                )
+                                    <form
+                                        method="POST"
+                                        action="{{
+                                            route(
+                                                'admin.appointments.confirm',
+                                                $appointment
+                                            )
+                                        }}"
+                                    >
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <button
+                                            class="adm-action-btn
+                                                adm-action-edit"
+                                            title="Confirmer"
+                                        >
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+
+                                    <form
+                                        method="POST"
+                                        action="{{
+                                            route(
+                                                'admin.appointments.cancel',
+                                                $appointment
+                                            )
+                                        }}"
+                                    >
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <button
+                                            class="adm-action-btn
+                                                adm-action-danger"
+                                            title="Annuler"
+                                        >
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                @endif
+
+                                <form
+                                    method="POST"
+                                    action="{{
+                                        route(
+                                            'admin.appointments.destroy',
+                                            $appointment
+                                        )
+                                    }}"
+                                    onsubmit="
+                                        return confirm(
+                                            'Supprimer ce rendez-vous et ses fichiers ?'
+                                        )
+                                    "
+                                >
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button
+                                        class="adm-action-btn
+                                            adm-action-danger"
+                                        title="Supprimer"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8">
+                            <div class="adm-empty">
+                                <div class="adm-empty-icon">
+                                    <i class="bi bi-inbox"></i>
+                                </div>
+
+                                <h5>Aucun test reçu</h5>
+
+                                <p>
+                                    Les futurs rendez-vous avec
+                                    réponses apparaîtront ici.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <style>
-.adm-table {
-    width: 100%;
-    border-collapse: collapse;
+.appointment-total {
+    padding: 8px 11px;
+    border: 1px solid rgba(96,165,250,0.13);
+    border-radius: 11px;
+    color: #93C5FD;
+    background: rgba(37,99,235,0.08);
+    font-size: 0.7rem;
+    font-weight: 750;
 }
-.adm-table thead th {
-    background: rgba(255,255,255,0.03);
-    padding: 12px 16px;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: rgba(255,255,255,0.35);
-    font-weight: 600;
-    text-align: left;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    backdrop-filter: blur(12px);
-    white-space: nowrap;
+
+.appointments-panel {
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 17px;
+    background: rgba(255,255,255,0.02);
 }
-.adm-table tbody td {
+
+.appointments-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
     padding: 14px 16px;
-    font-size: 0.88rem;
-    color: rgba(255,255,255,0.75);
-    border-bottom: 1px solid rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-.adm-table tbody tr:hover {
-    background: rgba(96,165,250,0.045);
-}
-.adm-table tbody tr { transition:background .2s ease; }
-.adm-action-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    border: none;
+
+.appointments-count {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
+    gap: 8px;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.76rem;
+    font-weight: 700;
 }
-.adm-action-btn:hover {
-    transform: translateY(-2px);
+
+.appointments-search {
+    position: relative;
+    width: min(100%,310px);
 }
-.adm-action-edit {
-    background: rgba(6,182,212,0.15);
-    color: #22D3EE;
+
+.appointments-search i {
+    position: absolute;
+    top: 50%;
+    left: 11px;
+    color: rgba(255,255,255,0.25);
+    transform: translateY(-50%);
 }
-.adm-action-edit:hover {
-    background: rgba(6,182,212,0.25);
-    box-shadow: 0 4px 12px rgba(6,182,212,0.2);
+
+.appointments-search input {
+    width: 100%;
+    height: 39px;
+    padding: 7px 10px 7px 34px;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 11px;
+    outline: none;
+    color: #ffffff;
+    background: rgba(255,255,255,0.035);
+    font-size: 0.7rem;
 }
-.adm-action-danger {
-    background: rgba(239,68,68,0.15);
+
+.student-name {
+    min-width: 165px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.student-avatar {
+    width: 37px;
+    height: 37px;
+    flex: 0 0 37px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    color: #ffffff;
+    background:
+        linear-gradient(135deg,#7C3AED,#2563EB);
+    font-weight: 800;
+}
+
+.student-name > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.student-name small,
+td small {
+    color: rgba(255,255,255,0.38);
+    font-size: 0.62rem;
+}
+
+.contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,0.62);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.path-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    padding: 4px 7px;
+    border-radius: 8px;
+    color: rgba(255,255,255,0.48);
+    background: rgba(255,255,255,0.04);
+    font-size: 0.62rem;
+}
+
+.answer-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    font-size: 0.62rem;
+    font-weight: 750;
+}
+
+.answer-type-badge.written {
+    color: #7DD3FC;
+    background: rgba(14,165,233,0.11);
+}
+
+.written-review-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 7px 6px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    color: #C4B5FD;
+    background: rgba(124,58,237,0.1);
+    font-size: 0.61rem;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.written-review-link:hover {
+    color: #ffffff;
+}
+
+.answer-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.answer-thumbnails a {
+    width: 42px;
+    height: 42px;
+    display: block;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.answer-thumbnails img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vocal-answer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    border: 1px solid rgba(167,139,250,0.18);
+    border-radius: 10px;
+    color: #C4B5FD;
+    background: rgba(124,58,237,0.1);
+    font-size: 0.68rem;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.status-badge {
+    display: inline-flex;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 0.61rem;
+    font-weight: 750;
+}
+
+.status-pending {
+    color: #FBBF24;
+    background: rgba(245,158,11,0.11);
+}
+
+.status-confirmed {
+    color: #4ADE80;
+    background: rgba(34,197,94,0.11);
+}
+
+.status-cancelled {
     color: #FCA5A5;
+    background: rgba(239,68,68,0.11);
 }
-.adm-action-danger:hover {
-    background: rgba(239,68,68,0.25);
-    box-shadow: 0 4px 12px rgba(239,68,68,0.2);
+
+@media (max-width:760px) {
+    .appointments-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .appointments-search {
+        width: 100%;
+    }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const search = document.getElementById('appointmentsSearch');
-    const rows = [...document.querySelectorAll('#appointmentsBody tr[data-search]')];
-    const count = document.getElementById('appointmentsCount');
+    const search =
+        document.getElementById(
+            'appointmentsSearch'
+        );
+
+    const rows =
+        Array.from(
+            document.querySelectorAll(
+                '#appointmentsBody tr[data-search]'
+            )
+        );
+
     search?.addEventListener('input', () => {
-        const term = search.value.toLocaleLowerCase().trim();
-        let visible = 0;
+        const term =
+            search.value
+                .trim()
+                .toLocaleLowerCase();
+
         rows.forEach(row => {
-            const show = !term || row.dataset.search.includes(term);
-            row.style.display = show ? '' : 'none';
-            if (show) visible++;
+            row.style.display =
+                !term
+                || row.dataset.search.includes(term)
+                    ? ''
+                    : 'none';
         });
-        count.textContent = visible;
     });
 });
 </script>

@@ -31,6 +31,10 @@ use App\Http\Controllers\LiveAccessController;
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\VocalTestController;
+use App\Http\Controllers\HighSchoolTestController;
+use App\Http\Controllers\Admin\HighSchoolTestReviewController;
+use App\Http\Controllers\Student\HighSchoolTestHistoryController;
+use App\Http\Controllers\CourseResourceController;
 /*
 |--------------------------------------------------------------------------
 | Public
@@ -42,7 +46,29 @@ Route::get('/', [HomeController::class,'index'])->name('home');
 Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appointment.create');
 Route::post('/rendez-vous', [AppointmentController::class, 'store'])->name('appointment.store');
 
+/*
+ * Test écrit Soutien Lycée.
+ * Le sujet est visible publiquement.
+ */
+Route::get(
+    '/test-lycee/{subject}/{level}/{class}',
+    [HighSchoolTestController::class, 'show']
+)->name('high-school-test.show');
+
 Route::middleware('auth')->group(function () {
+    Route::post(
+        '/test-lycee/{subject}/{level}/{class}',
+        [HighSchoolTestController::class, 'store']
+    )
+        ->middleware('throttle:10,1')
+        ->name('high-school-test.store');
+
+    Route::get(
+        '/tests-lycee/soumissions/{submission}/images/{index}',
+        [HighSchoolTestController::class, 'image']
+    )
+        ->where('index', '[0-9]+')
+        ->name('high-school-test.image');
     Route::get('/test-vocal/{subject}/{level}/{class}', [VocalTestController::class, 'create'])
         ->name('vocal-test.create');
     Route::post('/test-vocal/{subject}/{level}/{class}', [VocalTestController::class, 'store'])
@@ -69,6 +95,11 @@ Route::get('/levels/{id}/courses', [FrontController::class, 'levelCourses'])
 
 Route::get('/course/{id}', [FrontController::class, 'showCourse'])
     ->name('front.course.show');
+
+Route::get('/course/{course}/resource/{type}', [CourseResourceController::class, 'show'])
+    ->where('type', 'video|pdf|link')
+    ->middleware('throttle:60,1')
+    ->name('course.resource');
 
 // Navigation publique : Niveaux → Classes → Matières → Cours
 Route::get('/classes/{level}/classes', [FrontController::class, 'publicClasses'])
@@ -197,8 +228,10 @@ Route::middleware(['auth','isAdmin'])
     Route::delete('/levels/{level}/classes/{class}/subjects/{subject}/detach', [LevelController::class, 'detachSubject'])->name('levels.subjects.detach');
     Route::resource('levels', LevelController::class)->except(['create', 'edit', 'show']);
 
-    Route::resource('users', UserController::class)->except(['create', 'store']);
     Route::get('users/without-class', [UserController::class, 'withoutClass'])->name('users.without-class');
+    Route::resource('users', UserController::class)
+        ->except(['create', 'store'])
+        ->where(['user' => '[0-9]+']);
     Route::get('users/{user}/test-results', [UserController::class, 'testResults'])->name('users.test-results');
     Route::get('users/{userId}/test/{testId}/result', [UserController::class, 'showResult'])->name('users.test-result');
     Route::put('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
@@ -218,6 +251,7 @@ Route::middleware(['auth','isAdmin'])
     
     Route::get('/schedule', [AdminScheduleController::class, 'index'])->name('schedule.index');
     Route::post('/schedule', [AdminScheduleController::class, 'store'])->name('schedule.store');
+    Route::delete('/schedule/{id}', [AdminScheduleController::class, 'destroy'])->name('schedule.destroy');
     
 
     
@@ -258,6 +292,31 @@ Route::middleware(['auth','isAdmin'])
         Route::get('/submissions/{submission}/audio', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'audio'])->name('submissions.audio');
         Route::delete('/submissions/{submission}', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'destroy'])->name('submissions.destroy');
     });
+
+    // Centre de correction des tests écrits
+    Route::prefix('written-tests')
+        ->name('written-tests.')
+        ->group(function () {
+            Route::get(
+                '/',
+                [HighSchoolTestReviewController::class, 'index']
+            )->name('index');
+
+            Route::get(
+                '/{submission}',
+                [HighSchoolTestReviewController::class, 'show']
+            )->name('show');
+
+            Route::patch(
+                '/{submission}',
+                [HighSchoolTestReviewController::class, 'update']
+            )->name('update');
+
+            Route::get(
+                '/{submission}/report',
+                [HighSchoolTestReviewController::class, 'report']
+            )->name('report');
+        });
 
     // Rendez-vous
     Route::get('/appointments', [\App\Http\Controllers\AppointmentController::class, 'index'])->name('appointments.index');
@@ -386,14 +445,32 @@ Route::middleware(['auth'])
     Route::get('/subjects', [StudentController::class, 'indexSubjects'])->name('subjects.index');
     Route::get('/subjects/{subject}/levels', [StudentController::class, 'subjectLevels'])->name('subjects.levels');
     Route::get('/subjects/{subject}/levels/{level}/classes', [StudentController::class, 'subjectClasses'])->name('subjects.classes');
-    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [StudentController::class, 'subjectCourses'])->name('subjects.courses');
+    Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [StudentController::class, 'subjectCourses'])
+        ->middleware(['active', 'paid'])
+        ->name('subjects.courses');
     Route::get('/subjects/{level}', [StudentController::class, 'subjects'])->name('subjects');
     Route::get('/classes/{subject}/{level}', [StudentController::class, 'classes'])->name('classes');
 
     // Waiting
     Route::get('/waiting', [StudentController::class, 'waiting'])->name('waiting');
 
-    // Tests
+    // Historique des tests écrits Soutien Lycée
+    Route::get(
+        '/written-tests',
+        [HighSchoolTestHistoryController::class, 'index']
+    )->name('written-tests.index');
+
+    Route::get(
+        '/written-tests/{submission}',
+        [HighSchoolTestHistoryController::class, 'show']
+    )->name('written-tests.show');
+
+    Route::get(
+        '/written-tests/{submission}/report',
+        [HighSchoolTestHistoryController::class, 'report']
+    )->name('written-tests.report');
+
+    // Tests QCM
     Route::get('/tests', [StudentTestController::class, 'index'])->name('tests.index');
     Route::get('/tests/{test}', [StudentTestController::class, 'show'])->name('tests.show');
     Route::post('/tests/{test}', [StudentTestController::class, 'submit'])->name('tests.submit');
@@ -416,7 +493,9 @@ Route::middleware(['auth', 'active'])
 
     // Cours
     Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');
-    Route::get('/course/{id}', [StudentController::class, 'showCourse'])->name('course.show');
+    Route::get('/course/{id}', [StudentController::class, 'showCourse'])
+        ->middleware('paid')
+        ->name('course.show');
 
     // Chats
     Route::get('/chats', [ChatController::class, 'subjects'])->name('chats');
