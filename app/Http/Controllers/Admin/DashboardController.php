@@ -35,7 +35,53 @@ public function index()
 
         $testResultsCount = \App\Models\Result::count();
 
-        $students = User::where('role', 'student')->latest()->paginate(10);
+        $students = User::where('role', 'student')
+            ->latest()
+            ->paginate(10);
+
+        /*
+         * Compatibilité avec les anciens comptes : si le pays ou la ville
+         * n'ont pas été enregistrés dans users, on récupère les données du
+         * rendez-vous le plus récent possédant la même adresse e-mail.
+         */
+        $studentEmails = $students->getCollection()
+            ->pluck('email')
+            ->filter()
+            ->map(fn ($email) => mb_strtolower(trim($email)))
+            ->unique()
+            ->values();
+
+        $appointmentsByEmail = TestAppointment::query()
+            ->whereIn('email', $studentEmails)
+            ->where(function ($query) {
+                $query
+                    ->whereNotNull('country')
+                    ->orWhereNotNull('city');
+            })
+            ->latest('id')
+            ->get()
+            ->unique(function ($appointment) {
+                return mb_strtolower(trim($appointment->email));
+            })
+            ->keyBy(function ($appointment) {
+                return mb_strtolower(trim($appointment->email));
+            });
+
+        $students->setCollection(
+            $students->getCollection()->map(function ($student) use ($appointmentsByEmail) {
+                $appointment = $appointmentsByEmail->get(
+                    mb_strtolower(trim($student->email))
+                );
+
+                $student->display_country = $student->country
+                    ?: optional($appointment)->country;
+
+                $student->display_city = $student->city
+                    ?: optional($appointment)->city;
+
+                return $student;
+            })
+        );
 
         $registrationsByMonth = collect(range(5, 0))->map(function ($monthsAgo) {
             $date = now()->subMonths($monthsAgo);

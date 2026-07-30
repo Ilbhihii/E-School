@@ -149,8 +149,24 @@
                                         <span style="font-weight:500;">{{ $student->name }}</span>
                                     </div>
                                 </td>
-                                <td><span class="adm-badge adm-badge-info">{{ $student->country ?? '-' }}</span></td>
-                                <td style="color:var(--adm-text-muted);">{{ $student->city ?? '-' }}</td>
+                                <td>
+                                    @if(!empty($student->display_country))
+                                        <span class="adm-badge adm-badge-info">
+                                            <i class="bi bi-globe2 me-1"></i>
+                                            {{ $student->display_country }}
+                                        </span>
+                                    @else
+                                        <span style="color:var(--adm-text-muted);">Non renseigné</span>
+                                    @endif
+                                </td>
+                                <td style="color:var(--adm-text-muted);">
+                                    @if(!empty($student->display_city))
+                                        <i class="bi bi-geo-alt me-1" style="color:#67E8F9;"></i>
+                                        {{ $student->display_city }}
+                                    @else
+                                        Non renseignée
+                                    @endif
+                                </td>
                                 <td style="color:var(--adm-text-muted);font-size:0.8rem;">
                                     {{ $student->created_at ? $student->created_at->format('d/m/Y') : '-' }}
                                 </td>

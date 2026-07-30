@@ -80,6 +80,17 @@ class AppointmentController extends Controller
                 'vocal_test_submission_id' => $vocalSubmission?->id,
             ]);
 
+            /*
+             * Après l'inscription, l'étudiant remplit ce formulaire.
+             * On copie donc automatiquement le pays et la ville vers users.
+             */
+            if (auth()->check()) {
+                auth()->user()->update([
+                    'city' => $validated['city'],
+                    'country' => $validated['country'],
+                ]);
+            }
+
             $vocalSubmission?->update(['consumed_at' => now()]);
         });
 

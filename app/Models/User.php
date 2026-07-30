@@ -38,6 +38,9 @@ class User extends Authenticatable
         'is_active',
         'test_passed',
         'is_paid',
+        'country',
+        'city',
+        'ip_address',
     ];
 
 

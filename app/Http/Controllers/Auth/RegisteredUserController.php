@@ -39,24 +39,46 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'country' => ['nullable', 'string', 'max:100'],
+            'city' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $ip = request()->ip();
+        $ip = $request->ip();
 
-        $position = Location::get($ip);
+        $country = trim((string) $request->input('country'));
+        $city = trim((string) $request->input('city'));
 
-        $country = $position ? $position->countryName : null;
-        $city = $position ? $position->cityName : null;
+        /*
+         * La géolocalisation IP sert uniquement de secours.
+         * Sur localhost (127.0.0.1), elle ne retourne normalement rien.
+         */
+        if ($country === '' || $city === '') {
+            try {
+                $position = Location::get($ip);
 
-$user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'role' => 'student',
-        'is_active' => false,
-        'country' => $country,
-        'city' => $city,
-        'ip_address' => $ip
+                if ($position) {
+                    $country = $country !== ''
+                        ? $country
+                        : (string) $position->countryName;
+
+                    $city = $city !== ''
+                        ? $city
+                        : (string) $position->cityName;
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'student',
+            'is_active' => false,
+            'country' => $country !== '' ? $country : null,
+            'city' => $city !== '' ? $city : null,
+            'ip_address' => $ip,
         ]);
 
 
