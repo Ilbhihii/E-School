@@ -4,6 +4,50 @@
 
 @section('content')
 
+@php
+    $statusOrder = [
+        'live' => 1,
+        'upcoming' => 2,
+        'unscheduled' => 3,
+        'ended' => 4,
+    ];
+
+    $orderedLives = $lives
+        ->sortBy(function ($live) use ($statusOrder) {
+            $statusPosition =
+                $statusOrder[$live->schedule_status] ?? 9;
+
+            $datePosition = $live->start_date_time
+                ? $live->start_date_time->timestamp
+                : PHP_INT_MAX;
+
+            if ($live->schedule_status === 'ended') {
+                $datePosition *= -1;
+            }
+
+            return sprintf(
+                '%02d-%020d',
+                $statusPosition,
+                $datePosition
+            );
+        })
+        ->values();
+
+    $liveCount = $orderedLives
+        ->where('schedule_status', 'live')
+        ->count();
+
+    $upcomingCount = $orderedLives
+        ->where('schedule_status', 'upcoming')
+        ->count();
+
+    $endedCount = $orderedLives
+        ->where('schedule_status', 'ended')
+        ->count();
+
+    $hasLiveNow = $liveCount > 0;
+@endphp
+
 <!-- ══════════════════════════════════════════════════════
      HERO SECTION
      ══════════════════════════════════════════════════════ -->
@@ -13,12 +57,21 @@
     <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 50%, rgba(220,38,38,0.08), transparent 60%),
                 radial-gradient(circle at 70% 50%, rgba(124,58,237,0.08), transparent 60%);pointer-events:none;"></div>
     <div class="container position-relative" style="z-index:2;">
-        <div class="d-inline-flex align-items-center gap-2 px-4 py-2 rounded-pill mb-4"
-             style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; color: rgba(255,255,255,0.6);">
-            <span class="badge" style="background: linear-gradient(135deg, #DC2626, #EF4444); font-size: 0.65rem; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; animation: livePulseBadge 2s ease-in-out infinite;">
-                🔴 EN DIRECT
+        <div
+            class="live-hero-status-pill
+                {{ $hasLiveNow ? 'is-live' : 'is-neutral' }}"
+        >
+            <span class="live-hero-status-badge">
+                {{ $hasLiveNow
+                    ? '🔴 EN DIRECT'
+                    : '🎥 SESSIONS LIVE' }}
             </span>
-            Sessions interactives en temps réel
+
+            <span>
+                {{ $hasLiveNow
+                    ? 'Sessions interactives en temps réel'
+                    : 'Cours interactifs programmés' }}
+            </span>
         </div>
         <h1 class="fw-bold mb-3" style="font-family: 'Poppins', sans-serif; font-size: 3rem; text-shadow: 0 0 40px rgba(220,38,38,0.2);">
             Lives <span style="background: linear-gradient(135deg, #DC2626, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">en direct</span>
@@ -38,13 +91,13 @@
 <section class="py-5">
     <div class="container">
 
-        @if($lives->count() > 0)
+        @if($orderedLives->count() > 0)
         <!-- STATS ROW -->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="reveal-3d" style="background: linear-gradient(135deg, rgba(220,38,38,0.1), rgba(220,38,38,0.02)); border: 1px solid rgba(220,38,38,0.1); border-radius: 16px; padding: 1.25rem; text-align: center;">
                     <span style="font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #DC2626, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                        {{ $lives->filter(fn($l) => $l->live_date && now()->gte($l->live_date) && now()->lt(\Carbon\Carbon::parse($l->live_date)->copy()->addHours(2)))->count() }}
+                        {{ $liveCount }}
                     </span>
                     <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">En direct</div>
                 </div>
@@ -52,17 +105,57 @@
             <div class="col-md-4">
                 <div class="reveal-3d" style="background: linear-gradient(135deg, rgba(2,132,199,0.1), rgba(2,132,199,0.02)); border: 1px solid rgba(2,132,199,0.1); border-radius: 16px; padding: 1.25rem; text-align: center; transition-delay: 0.1s;">
                     <span style="font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #0284C7, #38BDF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                        {{ $lives->filter(fn($l) => $l->live_date && now()->lt($l->live_date))->count() }}
+                        {{ $upcomingCount }}
                     </span>
                     <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">À venir</div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="reveal-3d" style="background: linear-gradient(135deg, rgba(74,222,128,0.1), rgba(74,222,128,0.02)); border: 1px solid rgba(74,222,128,0.1); border-radius: 16px; padding: 1.25rem; text-align: center; transition-delay: 0.2s;">
-                    <span style="font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #16A34A, #4ADE80); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-                        {{ $lives->count() }}
+                <div
+                    class="reveal-3d"
+                    style="
+                        background:
+                            linear-gradient(
+                                135deg,
+                                rgba(100,116,139,0.1),
+                                rgba(100,116,139,0.02)
+                            );
+                        border:
+                            1px solid rgba(100,116,139,0.12);
+                        border-radius:16px;
+                        padding:1.25rem;
+                        text-align:center;
+                        transition-delay:0.2s;
+                    "
+                >
+                    <span
+                        style="
+                            font-size:1.8rem;
+                            font-weight:800;
+                            background:
+                                linear-gradient(
+                                    135deg,
+                                    #64748B,
+                                    #CBD5E1
+                                );
+                            -webkit-background-clip:text;
+                            -webkit-text-fill-color:transparent;
+                            background-clip:text;
+                        "
+                    >
+                        {{ $endedCount }}
                     </span>
-                    <div style="color: rgba(255,255,255,0.4); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase;">Total sessions</div>
+
+                    <div
+                        style="
+                            color:rgba(255,255,255,0.4);
+                            font-size:0.8rem;
+                            letter-spacing:0.05em;
+                            text-transform:uppercase;
+                        "
+                    >
+                        Terminées
+                    </div>
                 </div>
             </div>
         </div>
@@ -70,43 +163,113 @@
 
         <div class="row g-4">
 
-            @forelse($lives as $live)
+            @forelse($orderedLives as $live)
             @php
-                $liveDate = $live->live_date ? \Carbon\Carbon::parse($live->live_date) : null;
-                $startTime = $live->start_time ? $live->start_time : ($liveDate ? $liveDate->format('H:i') : '00:00');
-                $endTime = $live->end_time ? $live->end_time : date('H:i', strtotime($startTime . ' +1 hour'));
-                $startDt = $liveDate ? $liveDate->format('Y-m-d') . 'T' . $startTime . ':00Z' : now()->format('Y-m-d\TH:i:s\Z');
+                $startDateTime = $live->start_date_time;
+                $endDateTime = $live->end_date_time;
 
-                $endDt = $liveDate
-                    ? $liveDate->format('Y-m-d') . 'T' . $endTime . ':00Z'
-                    : now()->addHour()->format('Y-m-d\TH:i:s\Z');
+                $liveDate = $startDateTime;
+                $startTime = $startDateTime
+                    ? $startDateTime->format('H:i')
+                    : null;
 
-                $isLive = $liveDate && now()->gte($liveDate) && now()->lt($liveDate->copy()->addHours(2));
-                $isUpcoming = $liveDate && now()->lt($liveDate);
+                $endTime = $endDateTime
+                    ? $endDateTime->format('H:i')
+                    : null;
 
-                $outlookUrl = 'https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent';
-                $outlookUrl .= '&subject=' . urlencode($live->title);
-                $outlookUrl .= '&startdt=' . $startDt;
-                $outlookUrl .= '&enddt=' . $endDt;
-                $outlookUrl .= '&body=' . urlencode(($live->description ?? 'Session en direct') . "\n\nLien : " . ($live->stream_url ?? ''));
-                $outlookUrl .= '&location=' . urlencode($live->stream_url ?? '');
+                $isLive = $live->is_live;
+                $isUpcoming = $live->is_upcoming;
+                $isEnded = $live->is_ended;
+                $status = $live->schedule_status;
+                $statusText = $live->status_label;
 
-                // Définir la couleur du thème selon le statut
                 if ($isLive) {
                     $themeColor = '#DC2626';
-                    $themeGradient = 'linear-gradient(135deg, #DC2626, #EF4444)';
-                    $statusText = '🔴 EN DIRECT';
+                    $themeGradient =
+                        'linear-gradient(135deg,#DC2626,#EF4444)';
+                    $statusBackground = 'rgba(220,38,38,0.2)';
+                    $statusBorder = 'rgba(220,38,38,0.25)';
+                    $statusColor = '#F87171';
                 } elseif ($isUpcoming) {
                     $themeColor = '#0284C7';
-                    $themeGradient = 'linear-gradient(135deg, #0284C7, #38BDF8)';
-                    $statusText = '⏳ À VENIR';
+                    $themeGradient =
+                        'linear-gradient(135deg,#0284C7,#38BDF8)';
+                    $statusBackground = 'rgba(2,132,199,0.15)';
+                    $statusBorder = 'rgba(2,132,199,0.22)';
+                    $statusColor = '#38BDF8';
+                } elseif ($isEnded) {
+                    $themeColor = '#64748B';
+                    $themeGradient =
+                        'linear-gradient(135deg,#475569,#64748B)';
+                    $statusBackground = 'rgba(71,85,105,0.2)';
+                    $statusBorder = 'rgba(100,116,139,0.24)';
+                    $statusColor = '#CBD5E1';
                 } else {
-                    $themeColor = '#475569';
-                    $themeGradient = 'linear-gradient(135deg, #475569, #64748B)';
-                    $statusText = '✅ TERMINÉ';
+                    $themeColor = '#D97706';
+                    $themeGradient =
+                        'linear-gradient(135deg,#D97706,#F59E0B)';
+                    $statusBackground = 'rgba(217,119,6,0.16)';
+                    $statusBorder = 'rgba(245,158,11,0.22)';
+                    $statusColor = '#FBBF24';
                 }
+
+                $startDt = $startDateTime
+                    ? $startDateTime
+                        ->copy()
+                        ->utc()
+                        ->format('Y-m-d\TH:i:s\Z')
+                    : null;
+
+                $endDt = $endDateTime
+                    ? $endDateTime
+                        ->copy()
+                        ->utc()
+                        ->format('Y-m-d\TH:i:s\Z')
+                    : null;
+
+                $outlookUrl =
+                    'https://outlook.live.com/calendar/0/'
+                    . 'deeplink/compose?path=/calendar/action/'
+                    . 'compose&rru=addevent';
+
+                $outlookUrl .=
+                    '&subject=' . urlencode($live->title);
+
+                if ($startDt && $endDt) {
+                    $outlookUrl .=
+                        '&startdt=' . $startDt;
+
+                    $outlookUrl .=
+                        '&enddt=' . $endDt;
+                }
+
+                $outlookUrl .=
+                    '&body='
+                    . urlencode(
+                        ($live->description
+                            ?? 'Session en direct')
+                        . "\n\nLien : "
+                        . ($live->stream_url ?? '')
+                    );
+
+                $outlookUrl .=
+                    '&location='
+                    . urlencode($live->stream_url ?? '');
             @endphp
-            <div class="col-md-6 col-lg-4">
+            <div
+                class="col-md-6 col-lg-4"
+                data-live-boundary
+                data-start-at="{{
+                    $startDateTime
+                        ? $startDateTime->toIso8601String()
+                        : ''
+                }}"
+                data-end-at="{{
+                    $endDateTime
+                        ? $endDateTime->toIso8601String()
+                        : ''
+                }}"
+            >
                 <div class="card-3d text-center h-100 reveal-3d" style="padding: 0; overflow: hidden;">
 
                     <!-- Top colored banner -->
@@ -115,9 +278,9 @@
                     <!-- Status badge -->
                     <div style="position: absolute; top: 16px; right: 16px; z-index: 2;">
                         <span style="display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.03em;
-                            background: {{ $isLive ? 'rgba(220,38,38,0.2)' : ($isUpcoming ? 'rgba(2,132,199,0.15)' : 'rgba(71,85,105,0.2)') }};
-                            color: {{ $isLive ? '#EF4444' : ($isUpcoming ? '#38BDF8' : '#94A3B8') }};
-                            border: 1px solid {{ $isLive ? 'rgba(220,38,38,0.2)' : ($isUpcoming ? 'rgba(2,132,199,0.2)' : 'rgba(71,85,105,0.2)') }};
+                            background: {{ $statusBackground }};
+                            color: {{ $statusColor }};
+                            border: 1px solid {{ $statusBorder }};
                             {{ $isLive ? 'animation: livePulseBadge 2s ease-in-out infinite;' : '' }}">
                             {{ $statusText }}
                         </span>
@@ -128,7 +291,15 @@
                         <div style="width: 72px; height: 72px; border-radius: 20px; margin: 0 auto 1rem;
                             background: {{ $themeGradient }};
                             display: flex; align-items: center; justify-content: center;
-                            box-shadow: 0 8px 30px {{ $isLive ? 'rgba(220,38,38,0.25)' : ($isUpcoming ? 'rgba(2,132,199,0.2)' : 'rgba(71,85,105,0.15)') }};
+                            box-shadow:
+                                0 8px 30px
+                                {{ $isLive
+                                    ? 'rgba(220,38,38,0.25)'
+                                    : (
+                                        $isUpcoming
+                                            ? 'rgba(2,132,199,0.2)'
+                                            : 'rgba(71,85,105,0.15)'
+                                    ) }};
                             transition: transform 0.3s ease;">
                             <i class="bi bi-camera-video-fill" style="font-size: 1.6rem; color: white;"></i>
                         </div>
@@ -137,16 +308,62 @@
                             {{ $live->title }}
                         </h5>
 
-                        @if($liveDate)
-                        <div style="color: rgba(255,255,255,0.4); font-size: 0.78rem; display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 0.5rem;">
-                            <i class="bi bi-calendar-event" style="color: {{ $themeColor }}; font-size: 0.7rem;"></i>
-                            {{ $liveDate->format('d/m/Y') }}
-                            @if($live->start_time)
-                            <span style="color: rgba(255,255,255,0.3);">•</span>
-                            <i class="bi bi-clock" style="color: {{ $themeColor }}; font-size: 0.7rem;"></i>
-                            {{ $live->start_time }}
-                            @endif
-                        </div>
+                        @if($startDateTime)
+                            <div
+                                style="
+                                    color:rgba(255,255,255,0.4);
+                                    font-size:0.78rem;
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    flex-wrap:wrap;
+                                    gap:4px;
+                                    margin-bottom:0.5rem;
+                                "
+                            >
+                                <i
+                                    class="bi bi-calendar-event"
+                                    style="
+                                        color:{{ $themeColor }};
+                                        font-size:0.7rem;
+                                    "
+                                ></i>
+
+                                {{ $startDateTime->format('d/m/Y') }}
+
+                                <span
+                                    style="
+                                        color:rgba(255,255,255,0.3);
+                                    "
+                                >
+                                    •
+                                </span>
+
+                                <i
+                                    class="bi bi-clock"
+                                    style="
+                                        color:{{ $themeColor }};
+                                        font-size:0.7rem;
+                                    "
+                                ></i>
+
+                                {{ $startTime }}
+
+                                @if($endTime)
+                                    – {{ $endTime }}
+                                @endif
+                            </div>
+                        @else
+                            <div
+                                style="
+                                    color:#FBBF24;
+                                    font-size:0.78rem;
+                                    margin-bottom:0.5rem;
+                                "
+                            >
+                                <i class="bi bi-calendar-question"></i>
+                                Date à confirmer
+                            </div>
                         @endif
 
                         <p class="text-white-50 small mb-0" style="line-height: 1.6; font-size: 0.8rem;">
@@ -156,35 +373,110 @@
 
                     <!-- Actions -->
                     <div style="padding: 0 1.5rem 1.5rem;">
-                        @if($live->stream_url)
-                        <a href="{{ $live->stream_url }}" target="_blank"
-                           style="display: flex; align-items: center; justify-content: center; gap: 8px;
-                               width: 100%; padding: 11px 20px; border-radius: 12px; font-weight: 600; font-size: 0.9rem;
-                               background: {{ $themeGradient }}; color: white; text-decoration: none;
-                               transition: all 0.3s ease; border: none;
-                               box-shadow: 0 4px 15px {{ $isLive ? 'rgba(220,38,38,0.35)' : ($isUpcoming ? 'rgba(2,132,199,0.25)' : 'rgba(71,85,105,0.2)') }};"
-                           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 25px {{ $isLive ? 'rgba(220,38,38,0.45)' : ($isUpcoming ? 'rgba(2,132,199,0.35)' : 'rgba(71,85,105,0.3)') }}'"
-                           onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px {{ $isLive ? 'rgba(220,38,38,0.35)' : ($isUpcoming ? 'rgba(2,132,199,0.25)' : 'rgba(71,85,105,0.2)') }}'">
-                            <i class="bi bi-play-circle-fill"></i>
-                            Rejoindre le live
-                        </a>
+                        @if($isEnded)
+                            <div
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    gap:8px;
+                                    width:100%;
+                                    padding:11px 20px;
+                                    border-radius:12px;
+                                    background:rgba(71,85,105,0.16);
+                                    border:
+                                        1px solid rgba(100,116,139,0.22);
+                                    color:#CBD5E1;
+                                    font-size:0.86rem;
+                                    font-weight:700;
+                                "
+                            >
+                                <i class="bi bi-check-circle-fill"></i>
+                                Session terminée
+                            </div>
+                        @elseif($live->stream_url)
+                            <a
+                                href="{{ $live->stream_url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    gap:8px;
+                                    width:100%;
+                                    padding:11px 20px;
+                                    border-radius:12px;
+                                    font-weight:600;
+                                    font-size:0.9rem;
+                                    background:{{ $themeGradient }};
+                                    color:white;
+                                    text-decoration:none;
+                                    transition:all 0.3s ease;
+                                    border:none;
+                                "
+                            >
+                                <i class="bi bi-play-circle-fill"></i>
 
-                        <a href="{{ $outlookUrl }}" target="_blank"
-                           style="display: flex; align-items: center; justify-content: center; gap: 6px;
-                               width: 100%; padding: 9px 20px; border-radius: 12px; font-weight: 500; font-size: 0.8rem;
-                               background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5); text-decoration: none;
-                               border: 1px solid rgba(255,255,255,0.06); margin-top: 8px;
-                               transition: all 0.3s ease;"
-                           onmouseover="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.7)'"
-                           onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='rgba(255,255,255,0.5)'">
-                            <i class="bi bi-calendar-plus" style="color: {{ $themeColor }};"></i>
-                            Ajouter à Outlook
-                        </a>
+                                {{ $isLive
+                                    ? 'Rejoindre le live'
+                                    : 'Ouvrir le lien de la session' }}
+                            </a>
+
+                            @if($isUpcoming && $startDt && $endDt)
+                                <a
+                                    href="{{ $outlookUrl }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style="
+                                        display:flex;
+                                        align-items:center;
+                                        justify-content:center;
+                                        gap:6px;
+                                        width:100%;
+                                        padding:9px 20px;
+                                        border-radius:12px;
+                                        font-weight:500;
+                                        font-size:0.8rem;
+                                        background:
+                                            rgba(255,255,255,0.04);
+                                        color:
+                                            rgba(255,255,255,0.5);
+                                        text-decoration:none;
+                                        border:
+                                            1px solid
+                                            rgba(255,255,255,0.06);
+                                        margin-top:8px;
+                                    "
+                                >
+                                    <i
+                                        class="bi bi-calendar-plus"
+                                        style="color:{{ $themeColor }};"
+                                    ></i>
+                                    Ajouter à Outlook
+                                </a>
+                            @endif
                         @else
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px 20px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.08); color: rgba(255,255,255,0.3); font-size: 0.85rem;">
-                            <i class="bi bi-hourglass-split"></i>
-                            Lien à venir
-                        </div>
+                            <div
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    gap:8px;
+                                    width:100%;
+                                    padding:11px 20px;
+                                    border-radius:12px;
+                                    background:rgba(255,255,255,0.04);
+                                    border:
+                                        1px dashed
+                                        rgba(255,255,255,0.08);
+                                    color:rgba(255,255,255,0.3);
+                                    font-size:0.85rem;
+                                "
+                            >
+                                <i class="bi bi-hourglass-split"></i>
+                                Lien à venir
+                            </div>
                         @endif
                     </div>
 
@@ -249,6 +541,47 @@
 
 <!-- STYLE -->
 <style>
+.live-hero-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1.15rem;
+    padding: 5px 11px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.035);
+    color: rgba(255,255,255,0.58);
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+.live-hero-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.57rem;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+}
+
+.live-hero-status-pill.is-live
+.live-hero-status-badge {
+    background:
+        linear-gradient(135deg,#DC2626,#EF4444);
+    color: #ffffff;
+    animation:
+        livePulseBadge 2s ease-in-out infinite;
+}
+
+.live-hero-status-pill.is-neutral
+.live-hero-status-badge {
+    background: rgba(100,116,139,0.18);
+    color: #CBD5E1;
+    border: 1px solid rgba(148,163,184,0.16);
+}
+
 .card-3d:hover .bi-camera-video-fill {
     transform: scale(1.1);
 }
@@ -274,5 +607,43 @@
     }
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const now = Date.now();
+
+    const boundaries = Array.from(
+        document.querySelectorAll('[data-live-boundary]')
+    )
+        .flatMap(element => [
+            element.dataset.startAt,
+            element.dataset.endAt,
+        ])
+        .filter(Boolean)
+        .map(value => Date.parse(value))
+        .filter(value =>
+            Number.isFinite(value)
+            && value > now
+        )
+        .sort((first, second) => first - second);
+
+    if (!boundaries.length) {
+        return;
+    }
+
+    const nextBoundary = boundaries[0];
+
+    const maximumTimeout = 2147480000;
+
+    const delay = Math.min(
+        Math.max(1500, nextBoundary - now + 1500),
+        maximumTimeout
+    );
+
+    window.setTimeout(() => {
+        window.location.reload();
+    }, delay);
+});
+</script>
 
 @endsection
