@@ -19,61 +19,183 @@ class UserController extends Controller
 {
 
     /**
-     * Affiche la page d'assignation des professeurs (niveau + classe + matière)
+     * Affiche la page d'assignation des professeurs.
+     *
+     * Hiérarchie :
+     * Matière → Niveau → Classe.
      */
     public function profAssignments()
     {
-        $professors = User::where('role', 'prof')->orderBy('name')->get();
-        $subjects = Subject::with(['levels' => fn ($query) => $query
-                ->with(['classes' => fn ($classes) => $classes->orderBy('name')])
-                ->orderBy('order')->orderBy('name')])
-            ->orderBy('name')->get();
-        $hierarchy = $subjects->mapWithKeys(fn ($subject) => [
-            $subject->id => $subject->levels->map(fn ($level) => [
-                'id' => $level->id,
-                'name' => $level->name,
-                'classes' => $level->classes
-                    ->map->only(['id', 'name'])->values(),
-            ])->values(),
-        ]);
-        $assignments = ProfAssignment::with(['prof', 'level', 'classRoom', 'subject'])
+        $professors = User::query()
+            ->where('role', 'prof')
+            ->orderBy('name')
+            ->get();
+
+        $assignmentHierarchy =
+            $this->buildAssignmentHierarchy();
+
+        $subjects = collect($assignmentHierarchy)
+            ->map(
+                fn (array $subject) =>
+                    (object) [
+                        'id' => $subject['id'],
+                        'name' => $subject['name'],
+                    ]
+            )
+            ->values();
+
+        $assignments = ProfAssignment::query()
+            ->with([
+                'prof',
+                'level',
+                'classRoom',
+                'subject',
+            ])
             ->latest()
             ->get();
 
-        return view('admin.prof-assignments', compact(
-            'professors', 'subjects', 'hierarchy', 'assignments'
-        ));
+        return view(
+            'admin.prof-assignments',
+            compact(
+                'professors',
+                'subjects',
+                'assignmentHierarchy',
+                'assignments'
+            )
+        );
     }
 
     /**
      * Enregistrer une nouvelle assignation de professeur
      */
-    public function storeProfAssignment(Request $request)
-    {
-        $request->validate([
-            'prof_id' => 'required|exists:users,id',
-            'level_id' => 'required|exists:levels,id',
-            'class_id' => 'required|exists:class_rooms,id',
-            'subject_id' => 'required|exists:subjects,id',
+    public function storeProfAssignment(
+        Request $request
+    ) {
+        $validated = $request->validate([
+            'prof_id' => [
+                'required',
+                'integer',
+                'exists:users,id',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+        ], [
+            'prof_id.required' =>
+                'Veuillez sélectionner un professeur.',
+            'subject_id.required' =>
+                'Veuillez sélectionner une matière.',
+            'level_id.required' =>
+                'Veuillez sélectionner un niveau.',
+            'class_id.required' =>
+                'Veuillez sélectionner une classe.',
         ]);
 
-        // Vérifier l'unicité
-        $exists = ProfAssignment::where([
-            'prof_id' => $request->prof_id,
-            'level_id' => $request->level_id,
-            'class_id' => $request->class_id,
-            'subject_id' => $request->subject_id,
-        ])->exists();
+        $professor = User::query()
+            ->whereKey($validated['prof_id'])
+            ->where('role', 'prof')
+            ->first();
 
-        if ($exists) {
-            return back()->with('error', 'Cette assignation existe déjà pour ce professeur.');
+        if (!$professor) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'prof_id' =>
+                        'Le compte sélectionné '
+                        . 'n’est pas un professeur.',
+                ]);
         }
 
-        ProfAssignment::create($request->only([
-            'prof_id', 'level_id', 'class_id', 'subject_id'
-        ]));
+        $level = Level::query()
+            ->whereKey($validated['level_id'])
+            ->where(
+                'subject_id',
+                $validated['subject_id']
+            )
+            ->first();
 
-        return back()->with('success', 'Assignation du professeur enregistrée avec succès.');
+        if (!$level) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'level_id' =>
+                        'Ce niveau n’appartient pas '
+                        . 'à la matière sélectionnée.',
+                ]);
+        }
+
+        $classRoom = ClassRoom::query()
+            ->whereKey($validated['class_id'])
+            ->where('level_id', $level->id)
+            ->whereHas(
+                'subjects',
+                fn ($query) =>
+                    $query->where(
+                        'subjects.id',
+                        $validated['subject_id']
+                    )
+            )
+            ->first();
+
+        if (!$classRoom) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'class_id' =>
+                        'Cette classe n’appartient pas '
+                        . 'au niveau et à la matière '
+                        . 'sélectionnés.',
+                ]);
+        }
+
+        $exists = ProfAssignment::query()
+            ->where([
+                'prof_id' =>
+                    $professor->id,
+                'level_id' =>
+                    $level->id,
+                'class_id' =>
+                    $classRoom->id,
+                'subject_id' =>
+                    $validated['subject_id'],
+            ])
+            ->exists();
+
+        if ($exists) {
+            return back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'Cette assignation existe déjà '
+                    . 'pour ce professeur.'
+                );
+        }
+
+        ProfAssignment::create([
+            'prof_id' => $professor->id,
+            'subject_id' =>
+                $validated['subject_id'],
+            'level_id' => $level->id,
+            'class_id' => $classRoom->id,
+        ]);
+
+        return back()->with(
+            'success',
+            'Assignation du professeur '
+            . 'enregistrée avec succès.'
+        );
     }
 
     /**
@@ -131,7 +253,6 @@ class UserController extends Controller
         if (! $wasAlreadyActive) {
             $user->is_active = true;
             $user->test_passed = true;
-            $user->is_paid = true;
             $user->save();
         }
 
@@ -146,7 +267,7 @@ class UserController extends Controller
 
         $message = $wasAlreadyActive
             ? 'Le compte étudiant était déjà actif.'
-            : 'Compte étudiant activé et accès pédagogique validé.';
+            : 'Compte étudiant activé. Le paiement reste géré séparément.';
 
         if ($emailSent) {
             return back()->with('success', $message . ' L’email de confirmation a été envoyé à ' . $user->email . '.');
@@ -276,29 +397,79 @@ class UserController extends Controller
     }
 
     /**
-     * Show class assignment management page
+     * Page d'assignation des étudiants.
+     *
+     * Hiérarchie :
+     * Matière → Niveau → Classe.
      */
     public function assignClass()
     {
-        $students = User::where('role', 'student')->orderBy('name')->get();
-        $classRooms = ClassRoom::with(['level', 'subjects'])->orderBy('name')->get();
-        $levels = Level::with('classes.subjects')->orderBy('name')->get();
-        $subjects = Subject::with('classes')->orderBy('name')->get();
-
-        // Get assignments: students assigned to classes
-        $assignments = DB::table('class_user')
-            ->join('users', 'class_user.user_id', '=', 'users.id')
-            ->join('class_rooms', 'class_user.class_id', '=', 'class_rooms.id')
-            ->leftJoin('levels', 'class_rooms.level_id', '=', 'levels.id')
-            ->leftJoin('subjects', 'class_user.subject_id', '=', 'subjects.id')
-            ->select('class_user.id as pivot_id', 'class_user.user_id', 'class_user.class_id',
-                     'class_user.subject_id',
-                     'users.name as student_name', 'class_rooms.name as class_name',
-                     'levels.name as level_name',
-                     'subjects.name as subject_name')
+        $students = User::query()
+            ->where('role', 'student')
+            ->orderBy('name')
             ->get();
 
-        return view('admin.assign-class', compact('students', 'classRooms', 'levels', 'subjects', 'assignments'));
+        $assignmentHierarchy =
+            $this->buildAssignmentHierarchy();
+
+        $subjects = collect($assignmentHierarchy)
+            ->map(
+                fn (array $subject) =>
+                    (object) [
+                        'id' => $subject['id'],
+                        'name' => $subject['name'],
+                    ]
+            )
+            ->values();
+
+        $assignments = DB::table('class_user')
+            ->join(
+                'users',
+                'class_user.user_id',
+                '=',
+                'users.id'
+            )
+            ->join(
+                'class_rooms',
+                'class_user.class_id',
+                '=',
+                'class_rooms.id'
+            )
+            ->leftJoin(
+                'levels',
+                'class_rooms.level_id',
+                '=',
+                'levels.id'
+            )
+            ->leftJoin(
+                'subjects',
+                'class_user.subject_id',
+                '=',
+                'subjects.id'
+            )
+            ->select([
+                'class_user.id as pivot_id',
+                'class_user.user_id',
+                'class_user.class_id',
+                'class_user.subject_id',
+                'class_rooms.level_id',
+                'users.name as student_name',
+                'class_rooms.name as class_name',
+                'levels.name as level_name',
+                'subjects.name as subject_name',
+            ])
+            ->orderByDesc('class_user.id')
+            ->get();
+
+        return view(
+            'admin.assign-class',
+            compact(
+                'students',
+                'subjects',
+                'assignmentHierarchy',
+                'assignments'
+            )
+        );
     }
 
     /**
@@ -449,6 +620,109 @@ class UserController extends Controller
         $this->syncStudentClass((int) $pivot->user_id);
 
         return redirect()->back()->with('success', 'Assignation supprimée avec succès!');
+    }
+
+    /**
+     * Construit la structure active utilisée par les formulaires :
+     *
+     * Matière
+     * └── Niveaux où levels.subject_id = subject.id
+     *     └── Classes du niveau liées à la matière dans le pivot.
+     */
+    private function buildAssignmentHierarchy(): array
+    {
+        $subjects = Subject::query()
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    WHEN LOWER(name) = 'soutien lycée' THEN 3
+                    ELSE 4
+                END"
+            )
+            ->orderBy('name')
+            ->get();
+
+        $levels = Level::query()
+            ->with([
+                'classes.subjects',
+            ])
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        return $subjects
+            ->map(
+                function (
+                    Subject $subject
+                ) use ($levels) {
+                    $subjectLevels = $levels
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->map(
+                            function (
+                                Level $level
+                            ) use ($subject) {
+                                $classes = $level
+                                    ->classes
+                                    ->filter(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) =>
+                                            $classRoom
+                                                ->subjects
+                                                ->contains(
+                                                    'id',
+                                                    $subject->id
+                                                )
+                                    )
+                                    ->sortBy('name')
+                                    ->unique('id')
+                                    ->values()
+                                    ->map(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) => [
+                                            'id' =>
+                                                $classRoom->id,
+                                            'name' =>
+                                                $classRoom->name,
+                                        ]
+                                    )
+                                    ->all();
+
+                                if (empty($classes)) {
+                                    return null;
+                                }
+
+                                return [
+                                    'id' => $level->id,
+                                    'name' => $level->name,
+                                    'classes' => $classes,
+                                ];
+                            }
+                        )
+                        ->filter()
+                        ->unique('id')
+                        ->values()
+                        ->all();
+
+                    if (empty($subjectLevels)) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'levels' => $subjectLevels,
+                    ];
+                }
+            )
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function syncStudentClass(int $userId): void

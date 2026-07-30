@@ -42,6 +42,125 @@
                             </div>
                         @endif
 
+                        @if($highSchoolSubmission)
+                            <input
+                                type="hidden"
+                                name="high_school_test_submission_id"
+                                value="{{ $highSchoolSubmission->id }}"
+                            >
+
+                            <div
+                                class="mb-4"
+                                style="
+                                    padding:16px;
+                                    background:rgba(14,165,233,.1);
+                                    border:1px solid rgba(56,189,248,.22);
+                                    border-radius:14px;
+                                    color:#E0F2FE;
+                                "
+                            >
+                                <div
+                                    class="d-flex align-items-center
+                                        gap-2 mb-2"
+                                >
+                                    <i
+                                        class="bi bi-images"
+                                        style="color:#38BDF8;"
+                                    ></i>
+
+                                    <strong>
+                                        Test écrit importé
+                                    </strong>
+                                </div>
+
+                                <small
+                                    style="
+                                        color:rgba(255,255,255,.6);
+                                    "
+                                >
+                                    {{
+                                        $highSchoolSubmission
+                                            ->subject->name
+                                    }}
+                                    ·
+                                    {{
+                                        $highSchoolSubmission
+                                            ->level->name
+                                    }}
+                                    ·
+                                    {{
+                                        $highSchoolSubmission
+                                            ->classRoom->name
+                                    }}
+                                    ·
+                                    {{
+                                        count(
+                                            $highSchoolSubmission
+                                                ->images()
+                                        )
+                                    }}
+                                    image(s)
+                                </small>
+
+                                <div
+                                    style="
+                                        display:grid;
+                                        grid-template-columns:
+                                            repeat(4,1fr);
+                                        gap:7px;
+                                        margin-top:12px;
+                                    "
+                                >
+                                    @foreach(
+                                        $highSchoolSubmission->images()
+                                        as $imageIndex => $image
+                                    )
+                                        <a
+                                            href="{{
+                                                route(
+                                                    'high-school-test.image',
+                                                    [
+                                                        $highSchoolSubmission,
+                                                        $imageIndex,
+                                                    ]
+                                                )
+                                            }}"
+                                            target="_blank"
+                                            rel="noopener"
+                                            style="
+                                                aspect-ratio:1;
+                                                overflow:hidden;
+                                                border-radius:9px;
+                                                border:
+                                                    1px solid
+                                                    rgba(255,255,255,.1);
+                                            "
+                                        >
+                                            <img
+                                                src="{{
+                                                    route(
+                                                        'high-school-test.image',
+                                                        [
+                                                            $highSchoolSubmission,
+                                                            $imageIndex,
+                                                        ]
+                                                    )
+                                                }}"
+                                                alt="Réponse {{
+                                                    $imageIndex + 1
+                                                }}"
+                                                style="
+                                                    width:100%;
+                                                    height:100%;
+                                                    object-fit:cover;
+                                                "
+                                            >
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
                         @if(session('success'))
                             <div class="alert mb-4" style="background: rgba(34,197,94,0.15); color: #4ADE80; border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; padding: 14px 18px; font-size: 0.92rem;">
                                 <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
@@ -143,7 +262,8 @@
                         </div>
 
                         <button type="submit" class="btn-3d btn-3d-gradient w-100 mt-4" style="padding: 14px;">
-                            <i class="bi bi-calendar-check me-2"></i> Envoyer mon rendez-vous de test
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Envoyer mon test avec le rendez-vous
                         </button>
                     </form>
                 </div>

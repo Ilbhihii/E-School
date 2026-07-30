@@ -138,20 +138,142 @@ public function send(Request $request)
     public function adminChat($subject)
     {
         $subject = Subject::findOrFail($subject);
-        abort_unless(in_array($subject->name, ['Arabe', 'Coran', 'Administration'], true), 404);
 
-        $isAdministration = $this->isAdministrationSubject($subject);
-        $messages = Message::with(['user', 'conversationUser'])
-            ->where('subject_id', $subject->id)
+        abort_unless(
+            in_array(
+                $subject->name,
+                [
+                    'Arabe',
+                    'Coran',
+                    'Administration',
+                ],
+                true
+            ),
+            404
+        );
+
+        $isAdministration =
+            $this->isAdministrationSubject($subject);
+
+        $conversationUsers = collect();
+        $selectedConversationUser = null;
+
+        if ($isAdministration) {
+            /*
+             * Construire la liste des conversations privées
+             * Administration ↔ étudiant/professeur.
+             */
+            $conversationUsers = User::query()
+                ->whereIn(
+                    'role',
+                    ['student', 'prof']
+                )
+                ->orderByRaw(
+                    "CASE
+                        WHEN role = 'student' THEN 1
+                        WHEN role = 'prof' THEN 2
+                        ELSE 3
+                    END"
+                )
+                ->orderBy('name')
+                ->get()
+                ->map(function (User $user) use ($subject) {
+                    $conversationQuery = Message::withTrashed()
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->where(
+                            'conversation_user_id',
+                            $user->id
+                        );
+
+                    $user->setAttribute(
+                        'conversation_message_count',
+                        (clone $conversationQuery)->count()
+                    );
+
+                    $user->setAttribute(
+                        'conversation_last_message',
+                        (clone $conversationQuery)
+                            ->latest('created_at')
+                            ->first()
+                    );
+
+                    return $user;
+                })
+                ->sortByDesc(
+                    fn (User $user) =>
+                        optional(
+                            $user->conversation_last_message
+                        )->created_at?->timestamp ?? 0
+                )
+                ->values();
+
+            $selectedConversationUserId =
+                (int) request('student');
+
+            if ($selectedConversationUserId > 0) {
+                $selectedConversationUser =
+                    $conversationUsers->firstWhere(
+                        'id',
+                        $selectedConversationUserId
+                    );
+            }
+
+            /*
+             * En l'absence de paramètre, ouvrir d'abord une
+             * conversation existante, sinon le premier utilisateur.
+             */
+            if (!$selectedConversationUser) {
+                $selectedConversationUser =
+                    $conversationUsers->first(
+                        fn (User $user) =>
+                            $user->conversation_message_count > 0
+                    )
+                    ?? $conversationUsers->first();
+            }
+        }
+
+        $messages = Message::with([
+                'user',
+                'conversationUser',
+            ])
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->when(
+                $isAdministration,
+                function ($query) use (
+                    $selectedConversationUser
+                ) {
+                    if (!$selectedConversationUser) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->where(
+                        'conversation_user_id',
+                        $selectedConversationUser->id
+                    );
+                }
+            )
             ->withTrashed()
             ->orderBy('created_at', 'asc')
             ->get();
 
-        $conversationUsers = $isAdministration
-            ? User::whereIn('role', ['student', 'prof'])->orderBy('role')->orderBy('name')->get()
-            : collect();
-
-        return view('admin.chat', compact('messages', 'subject', 'conversationUsers', 'isAdministration'));
+        return view(
+            'admin.chat',
+            compact(
+                'messages',
+                'subject',
+                'conversationUsers',
+                'selectedConversationUser',
+                'isAdministration'
+            )
+        );
     }
 
     // Envoyer message admin
@@ -181,18 +303,53 @@ public function send(Request $request)
         return back();
     }
 
-    // Supprimer messages admin
+    // Supprimer un message admin
     public function adminDelete(Request $request)
     {
-        if ($request->has('messages')) {
+        $validated = $request->validate([
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'messages' => [
+                'required',
+                'array',
+                'size:1',
+            ],
+            'messages.*' => [
+                'required',
+                'integer',
+                'exists:messages,id',
+            ],
+        ], [
+            'messages.required' =>
+                'Sélectionnez le message à supprimer.',
+            'messages.size' =>
+                'Un seul message peut être supprimé à la fois.',
+        ]);
 
-            Message::whereIn('id', $request->messages)
-                ->delete();
+        $messageId = (int) $validated['messages'][0];
 
-            return back()->with('success', 'Messages supprimés !');
-        }
+        $message = Message::query()
+            ->whereKey($messageId)
+            ->where(
+                'subject_id',
+                $validated['subject_id']
+            )
+            ->firstOrFail();
 
-        return back();
+        /*
+         * Soft delete :
+         * le message n'est pas supprimé physiquement de la base.
+         * Il apparaît comme « Message supprimé » dans l'historique.
+         */
+        $message->delete();
+
+        return back()->with(
+            'success',
+            'Le message a été supprimé.'
+        );
     }
 
     /* =========================

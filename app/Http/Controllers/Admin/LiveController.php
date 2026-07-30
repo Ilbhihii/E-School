@@ -9,6 +9,7 @@ use App\Models\Subject;
 use App\Models\Level;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 
 class LiveController extends Controller
@@ -110,86 +111,365 @@ class LiveController extends Controller
     // Formulaire création
     public function create()
     {
-        $subjects = Subject::orderBy('name')->get();
-        $levels = Level::orderBy('name')->get();
-        $classes = ClassRoom::with('level', 'subjects')->orderBy('name')->get();
+        /*
+         * Structure utilisée par les deux formulaires :
+         *
+         * Matière
+         * └── Niveaux appartenant à la matière
+         *     └── Classes appartenant au niveau
+         *         et liées à la matière
+         */
+        $liveHierarchy =
+            $this->buildLiveHierarchy();
 
-        // Construire la correspondance Niveau → Matières (via les classes liées)
-        $levelSubjectMap = [];
-        foreach ($classes as $class) {
-            if (!isset($levelSubjectMap[$class->level_id])) {
-                $levelSubjectMap[$class->level_id] = [];
-            }
-            foreach ($class->subjects as $subject) {
-                if (!in_array($subject->id, $levelSubjectMap[$class->level_id])) {
-                    $levelSubjectMap[$class->level_id][] = $subject->id;
-                }
-            }
-        }
+        $subjects = collect($liveHierarchy)
+            ->map(
+                fn (array $subject) =>
+                    (object) [
+                        'id' => $subject['id'],
+                        'name' => $subject['name'],
+                    ]
+            )
+            ->values();
 
-        // Derniers lives créés (pour les afficher après enregistrement)
-        $recentLives = Live::with('classRoom.level')
-            ->orderBy('created_at', 'desc')
+        $recentLives = Live::with([
+                'classRoom.level',
+                'classRoom.subjects',
+            ])
+            ->orderBy(
+                'created_at',
+                'desc'
+            )
             ->take(10)
             ->get();
 
-        return view('admin.lives.create', compact('subjects', 'levels', 'classes', 'levelSubjectMap', 'recentLives'));
+        return view(
+            'admin.lives.create',
+            compact(
+                'subjects',
+                'liveHierarchy',
+                'recentLives'
+            )
+        );
     }
 
     // Enregistrer un live
     public function store(Request $request)
     {
-        if(!in_array(auth()->user()->role, ['admin','prof'])){
+        if (
+            !in_array(
+                auth()->user()->role,
+                ['admin', 'prof'],
+                true
+            )
+        ) {
             abort(403);
         }
 
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'class_id' => 'required|exists:class_rooms,id',
-            'provider' => 'required|in:teams,google_meet',
-            'stream_url' => 'required|url',
-            'live_date' => 'required|date',
-            'start_time' => 'required',
-            'end_time' => 'required|after:start_time',
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'provider' => [
+                'required',
+                'in:teams,google_meet',
+            ],
+            'stream_url' => [
+                'required',
+                'url',
+            ],
+            'live_date' => [
+                'required',
+                'date',
+            ],
+            'start_time' => [
+                'required',
+                'date_format:H:i',
+            ],
+            'end_time' => [
+                'required',
+                'date_format:H:i',
+                'after:start_time',
+            ],
+        ], [
+            'subject_id.required' =>
+                'Veuillez sélectionner une matière.',
+            'level_id.required' =>
+                'Veuillez sélectionner un niveau.',
+            'class_id.required' =>
+                'Veuillez sélectionner une classe.',
+            'end_time.after' =>
+                'L’heure de fin doit être après '
+                . 'l’heure de début.',
         ]);
 
-        $meetingHost = strtolower((string) parse_url($request->stream_url, PHP_URL_HOST));
-        $validProviderLink = $request->provider === 'teams'
-            ? in_array($meetingHost, ['teams.microsoft.com', 'teams.live.com'], true)
-            : $meetingHost === 'meet.google.com';
+        $subject = Subject::findOrFail(
+            $validated['subject_id']
+        );
 
-        if (!$validProviderLink) {
-            $providerName = $request->provider === 'teams' ? 'Microsoft Teams' : 'Google Meet';
+        $level = Level::findOrFail(
+            $validated['level_id']
+        );
 
-            return back()->withInput()->withErrors([
-                'stream_url' => "Le lien doit être un lien {$providerName} valide.",
+        $classRoom = ClassRoom::query()
+            ->with('subjects')
+            ->findOrFail(
+                $validated['class_id']
+            );
+
+        /*
+         * Vérification 1 :
+         * le niveau appartient à la matière.
+         */
+        if (
+            (int) $level->subject_id
+            !== (int) $subject->id
+        ) {
+            throw ValidationException::withMessages([
+                'level_id' =>
+                    'Le niveau sélectionné n’appartient pas '
+                    . 'à cette matière.',
             ]);
         }
 
-        // 🔥 Vérifier conflit
-        $conflict = Live::where('live_date', $request->live_date)
-            ->where(function($query) use ($request) {
-                $query->whereBetween('start_time', [$request->start_time, $request->end_time])
-                    ->orWhereBetween('end_time', [$request->start_time, $request->end_time]);
-            })
+        /*
+         * Vérification 2 :
+         * la classe appartient au niveau.
+         */
+        if (
+            (int) $classRoom->level_id
+            !== (int) $level->id
+        ) {
+            throw ValidationException::withMessages([
+                'class_id' =>
+                    'La classe sélectionnée n’appartient pas '
+                    . 'à ce niveau.',
+            ]);
+        }
+
+        /*
+         * Vérification 3 :
+         * la classe est liée à la matière.
+         */
+        if (
+            !$classRoom->subjects->contains(
+                'id',
+                (int) $subject->id
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'class_id' =>
+                    'Cette classe n’est pas liée à la matière '
+                    . 'sélectionnée.',
+            ]);
+        }
+
+        $meetingHost = strtolower(
+            (string) parse_url(
+                $validated['stream_url'],
+                PHP_URL_HOST
+            )
+        );
+
+        $validProviderLink =
+            $validated['provider'] === 'teams'
+                ? in_array(
+                    $meetingHost,
+                    [
+                        'teams.microsoft.com',
+                        'teams.live.com',
+                    ],
+                    true
+                )
+                : $meetingHost === 'meet.google.com';
+
+        if (!$validProviderLink) {
+            $providerName =
+                $validated['provider'] === 'teams'
+                    ? 'Microsoft Teams'
+                    : 'Google Meet';
+
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'stream_url' =>
+                        "Le lien doit être un lien "
+                        . "{$providerName} valide.",
+                ]);
+        }
+
+        /*
+         * Conflit réel :
+         * nouveau début < fin existante
+         * ET nouvelle fin > début existant.
+         */
+        $conflict = Live::query()
+            ->whereDate(
+                'live_date',
+                $validated['live_date']
+            )
+            ->where(
+                'start_time',
+                '<',
+                $validated['end_time']
+            )
+            ->where(
+                'end_time',
+                '>',
+                $validated['start_time']
+            )
             ->exists();
 
         if ($conflict) {
-            return back()->withErrors(['live_date' => '⚠️ Cette date/heure est déjà occupée par une autre classe.']);
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'live_date' =>
+                        'Cette plage horaire est déjà occupée '
+                        . 'par un autre live.',
+                ]);
         }
 
         Live::create([
-            'title' => $request->title,
-            'class_id' => $request->class_id,
-            'stream_url' => $request->stream_url,
-            'provider' => $request->provider,
+            'title' => $validated['title'],
+            'class_id' => $classRoom->id,
+            'stream_url' =>
+                $validated['stream_url'],
+            'provider' =>
+                $validated['provider'],
             'admin_id' => auth()->id(),
-            'live_date' => $request->live_date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
+            'user_id' => auth()->id(),
+            'live_date' =>
+                $validated['live_date'],
+            'start_time' =>
+                $validated['start_time'],
+            'end_time' =>
+                $validated['end_time'],
         ]);
 
-        return redirect()->to(url()->previous())->with('success', 'Live créé avec succès');
+        return redirect()
+            ->route('admin.lives.create')
+            ->with(
+                'success',
+                'Live créé avec succès.'
+            );
+    }
+
+    /**
+     * Construit la hiérarchie :
+     * Matière → Niveau → Classe.
+     */
+    private function buildLiveHierarchy(): array
+    {
+        $subjects = Subject::query()
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    WHEN LOWER(name) = 'soutien lycée' THEN 3
+                    ELSE 4
+                END"
+            )
+            ->orderBy('name')
+            ->get();
+
+        $levels = Level::query()
+            ->with([
+                'classes.subjects',
+            ])
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        return $subjects
+            ->map(
+                function (
+                    Subject $subject
+                ) use ($levels) {
+                    $subjectLevels = $levels
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->map(
+                            function (
+                                Level $level
+                            ) use ($subject) {
+                                $classes = $level
+                                    ->classes
+                                    ->filter(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) =>
+                                            $classRoom
+                                                ->subjects
+                                                ->contains(
+                                                    'id',
+                                                    $subject->id
+                                                )
+                                    )
+                                    ->sortBy('name')
+                                    ->unique('id')
+                                    ->values()
+                                    ->map(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) => [
+                                            'id' =>
+                                                $classRoom->id,
+                                            'name' =>
+                                                $classRoom->name,
+                                        ]
+                                    )
+                                    ->all();
+
+                                if (empty($classes)) {
+                                    return null;
+                                }
+
+                                return [
+                                    'id' => $level->id,
+                                    'name' => $level->name,
+                                    'classes' => $classes,
+                                ];
+                            }
+                        )
+                        ->filter()
+                        ->unique('id')
+                        ->values()
+                        ->all();
+
+                    if (empty($subjectLevels)) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'levels' => $subjectLevels,
+                    ];
+                }
+            )
+            ->filter()
+            ->values()
+            ->all();
     }
 
     // Formulaire édition

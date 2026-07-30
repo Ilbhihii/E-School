@@ -985,22 +985,33 @@ html.light-mode .card-3d .text-white-50 {
                                                     );
 
                                                 $targetRoute =
-                                                    $requiresVocalTest
+                                                    $isHighSchoolSupport
                                                         ? route(
-                                                            'vocal-test.create',
+                                                            'high-school-test.show',
                                                             [
                                                                 $subject,
                                                                 $level,
                                                                 $class,
                                                             ]
                                                         )
-                                                        : route(
-                                                            'front.courses',
-                                                            [
-                                                                $subject->id,
-                                                                $level->id,
-                                                                $class->id,
-                                                            ]
+                                                        : (
+                                                            $requiresVocalTest
+                                                                ? route(
+                                                                    'vocal-test.create',
+                                                                    [
+                                                                        $subject,
+                                                                        $level,
+                                                                        $class,
+                                                                    ]
+                                                                )
+                                                                : route(
+                                                                    'front.courses',
+                                                                    [
+                                                                        $subject->id,
+                                                                        $level->id,
+                                                                        $class->id,
+                                                                    ]
+                                                                )
                                                         );
 
                                                 $normalizedItemName =
@@ -1128,11 +1139,11 @@ html.light-mode .card-3d .text-white-50 {
                                                                 <i
                                                                     class="
                                                                         bi
-                                                                        bi-play-circle
+                                                                        bi-file-earmark-text-fill
                                                                     "
                                                                 ></i>
-                                                                Accéder aux
-                                                                cours
+                                                                Passer le
+                                                                test écrit
                                                             </span>
                                                         @elseif($requiresVocalTest)
                                                             <span

@@ -16,6 +16,7 @@ class TestAppointment extends Model
         'type',
         'status',
         'vocal_test_submission_id',
+        'high_school_test_submission_id',
     ];
 
     const STATUS_PENDING = 'pending';
@@ -54,6 +55,17 @@ class TestAppointment extends Model
 
     public function vocalSubmission()
     {
-        return $this->belongsTo(VocalTestSubmission::class, 'vocal_test_submission_id');
+        return $this->belongsTo(
+            VocalTestSubmission::class,
+            'vocal_test_submission_id'
+        );
+    }
+
+    public function highSchoolTestSubmission()
+    {
+        return $this->belongsTo(
+            HighSchoolTestSubmission::class,
+            'high_school_test_submission_id'
+        );
     }
 }

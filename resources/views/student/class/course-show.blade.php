@@ -197,15 +197,15 @@
             </div>
             <div class="video-wrapper mb-3">
                 <video controls preload="metadata">
-                    <source src="{{ asset('storage/'.$course->video) }}">
+                    <source src="{{ $resourceUrls['video'] ?? '#' }}">
                     Votre navigateur ne supporte pas la vidéo.
                 </video>
             </div>
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-                <a href="{{ asset('storage/'.$course->video) }}" target="_blank" class="btn-course-action primary">
+                <a href="{{ $resourceUrls['video'] ?? '#' }}" target="_blank" class="btn-course-action primary">
                     <i class="bi bi-eye"></i> Voir en plein écran
                 </a>
-                <a href="{{ asset('storage/'.$course->video) }}" download class="btn-course-action outline">
+                <a href="{{ $resourceUrls['video'] ?? '#' }}" download class="btn-course-action outline">
                     <i class="bi bi-download"></i> Télécharger
                 </a>
             </div>
@@ -218,10 +218,10 @@
                 <i class="bi bi-file-earmark-pdf-fill"></i> PDF du cours
             </div>
             <div style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;">
-                <a href="{{ asset('storage/'.$course->pdf) }}" target="_blank" class="btn-course-action danger">
+                <a href="{{ $resourceUrls['pdf'] ?? '#' }}" target="_blank" class="btn-course-action danger">
                     <i class="bi bi-eye"></i> Voir le PDF
                 </a>
-                <a href="{{ asset('storage/'.$course->pdf) }}" download class="btn-course-action outline">
+                <a href="{{ $resourceUrls['pdf'] ?? '#' }}" download class="btn-course-action outline">
                     <i class="bi bi-download"></i> Télécharger
                 </a>
             </div>

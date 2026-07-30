@@ -6,139 +6,134 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseTest;
 use App\Models\UserProgress;
+use App\Services\LearningPathService;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
-    /**
-     * Liste des cours (public)
-     * GET /api/courses?subject_id=1&level_id=1&class_id=1
-     */
+    private LearningPathService $paths;
+
+    public function __construct(LearningPathService $paths)
+    {
+        $this->paths = $paths;
+    }
+
     public function index(Request $request)
     {
         $query = Course::with(['subject', 'level', 'classRoom']);
 
-        if ($request->filled('subject_id')) {
-            $query->where('subject_id', $request->subject_id);
-        }
-        if ($request->filled('level_id')) {
-            $query->where('level_id', $request->level_id);
-        }
-        if ($request->filled('class_id')) {
-            $query->where('class_id', $request->class_id);
+        foreach (['subject_id', 'level_id', 'class_id'] as $field) {
+            if ($request->filled($field)) {
+                $query->where($field, $request->input($field));
+            }
         }
 
         $courses = $query->orderBy('order')->orderBy('id')->get()
-            ->map(fn($course) => $this->courseData($course));
+            ->map(function (Course $course) {
+                return $this->courseData($course);
+            });
+
+        return response()->json(['success' => true, 'data' => $courses]);
+    }
+
+    public function show(Course $course)
+    {
+        $course->load(['subject', 'level', 'classRoom']);
 
         return response()->json([
             'success' => true,
-            'data'    => $courses,
+            'data' => $this->courseData($course),
         ]);
     }
 
-    /**
-     * Détail d'un cours
-     * GET /api/courses/{course}
-     */
-    public function show(Course $course)
+    public function authorizedShow(Request $request, Course $course)
     {
-        $course->load(['subject', 'level', 'classRoom', 'learningTests']);
+        $course->load(['subject', 'level', 'classRoom', 'learningTests.questions.answers']);
 
-        $test = null;
-        if ($course->learningTests->isNotEmpty()) {
-            $test = $course->learningTests->first();
-            $test->load('questions.answers');
+        if (!$this->paths->userCanAccessCourse($request->user(), $course)) {
+            return response()->json(['success' => false, 'message' => 'Accès non autorisé à ce cours.'], 403);
         }
 
-        $userProgress = null;
-        if (auth()->check()) {
-            $userProgress = UserProgress::where('user_id', auth()->id())
-                ->where('course_id', $course->id)
-                ->first();
-        }
+        $progress = UserProgress::query()
+            ->where('user_id', $request->user()->id)
+            ->where('course_id', $course->id)
+            ->first();
 
         return response()->json([
             'success' => true,
-            'data'    => array_merge($this->courseData($course), [
-                'test'    => $test ? $this->testData($test) : null,
-                'progress' => $userProgress ? [
-                    'completed' => (bool) $userProgress->completed,
-                    'score'     => $userProgress->score,
+            'data' => array_merge($this->courseData($course), [
+                'resource_endpoints' => [
+                    'video' => ($course->video || $course->video_url)
+                        ? route('api.courses.resource', [$course, 'video']) : null,
+                    'pdf' => $course->pdf
+                        ? route('api.courses.resource', [$course, 'pdf']) : null,
+                    'link' => $course->course_link
+                        ? route('api.courses.resource', [$course, 'link']) : null,
+                ],
+                'test' => $course->learningTests->isNotEmpty()
+                    ? $this->testData($course->learningTests->first()) : null,
+                'progress' => $progress ? [
+                    'completed' => (bool) $progress->completed,
+                    'score' => $progress->score,
                 ] : null,
             ]),
         ]);
     }
 
-    /**
-     * Marquer un cours comme terminé
-     * POST /api/courses/{course}/complete
-     */
     public function complete(Request $request, Course $course)
     {
-        $user = $request->user();
+        if (!$this->paths->userCanAccessCourse($request->user(), $course)) {
+            return response()->json(['success' => false, 'message' => 'Accès non autorisé à ce cours.'], 403);
+        }
 
         $progress = UserProgress::updateOrCreate(
-            [
-                'user_id'   => $user->id,
-                'course_id' => $course->id,
-            ],
-            [
-                'completed' => true,
-                'score'     => $request->input('score', 100),
-            ]
+            ['user_id' => $request->user()->id, 'course_id' => $course->id],
+            ['completed' => true, 'score' => $request->input('score', 100)]
         );
 
         return response()->json([
             'success' => true,
             'message' => 'Cours marqué comme terminé.',
-            'data'    => [
-                'completed' => (bool) $progress->completed,
-                'score'     => $progress->score,
-            ],
+            'data' => ['completed' => (bool) $progress->completed, 'score' => $progress->score],
         ]);
     }
 
-    /**
-     * Formater un cours
-     */
     private function courseData(Course $course): array
     {
         return [
-            'id'            => $course->id,
-            'title'         => $course->title,
-            'description'   => $course->description,
-            'video_url'     => $course->video_url,
-            'video'         => $course->video ? asset('storage/' . $course->video) : null,
-            'pdf'           => $course->pdf ? asset('storage/' . $course->pdf) : null,
-            'course_link'   => $course->course_link,
-            'is_free'       => (bool) $course->is_free,
-            'order'         => $course->order,
-            'subject'       => $course->subject ? ['id' => $course->subject->id, 'name' => $course->subject->name] : null,
-            'level'         => $course->level ? ['id' => $course->level->id, 'name' => $course->level->name] : null,
-            'class'         => $course->classRoom ? ['id' => $course->classRoom->id, 'name' => $course->classRoom->name] : null,
-            'created_at'    => $course->created_at,
+            'id' => $course->id,
+            'title' => $course->title,
+            'description' => $course->description,
+            'is_free' => (bool) $course->is_free,
+            'order' => $course->order,
+            'has_video' => (bool) ($course->video || $course->video_url),
+            'has_pdf' => (bool) $course->pdf,
+            'has_external_link' => (bool) $course->course_link,
+            'subject' => $course->subject ? ['id' => $course->subject->id, 'name' => $course->subject->name] : null,
+            'level' => $course->level ? ['id' => $course->level->id, 'name' => $course->level->name] : null,
+            'class' => $course->classRoom ? ['id' => $course->classRoom->id, 'name' => $course->classRoom->name] : null,
+            'created_at' => $course->created_at,
         ];
     }
 
-    /**
-     * Formater un test
-     */
     private function testData(CourseTest $test): array
     {
         return [
-            'id'        => $test->id,
-            'title'     => $test->title ?? 'Test de validation',
-            'questions' => $test->questions->map(fn($q) => [
-                'id'      => $q->id,
-                'question' => $q->question_text ?? $q->question,
-                'type'    => $q->type ?? 'multiple_choice',
-                'answers' => $q->answers->map(fn($a) => [
-                    'id'      => $a->id,
-                    'answer'  => $a->answer_text ?? $a->answer,
-                    'is_correct' => false, // Ne pas envoyer la bonne réponse au client
-                ]),
-            ]),
+            'id' => $test->id,
+            'title' => $test->title ?: 'Test de validation',
+            'questions' => $test->questions->map(function ($question) {
+                return [
+                    'id' => $question->id,
+                    'question' => $question->question_text ?: $question->question,
+                    'type' => $question->type ?: 'multiple_choice',
+                    'answers' => $question->answers->map(function ($answer) {
+                        return [
+                            'id' => $answer->id,
+                            'answer' => $answer->answer_text ?: $answer->answer,
+                        ];
+                    }),
+                ];
+            }),
         ];
     }
 }

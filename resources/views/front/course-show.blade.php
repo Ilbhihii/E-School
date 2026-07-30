@@ -111,15 +111,35 @@ html.light-mode .course-description p {
                         <i class="bi bi-lock-fill me-2"></i> Contenu Premium — Abonnez-vous pour accéder à ce cours
                     </div>
                 @endif
-
-                <!-- Video -->
-                @if($course->video_url)
-                <div class="card-3d overflow-hidden p-0 mb-4" style="border-radius: 20px;">
-                    <div style="position: relative; padding-bottom: 56.25%; height: 0;">
-                        <iframe src="{{ $course->video_url }}" frameborder="0" allowfullscreen
-                                style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;"></iframe>
+                <!-- Ressources sécurisées -->
+                @if(!empty($resourceUrls['video']))
+                    <div class="card-3d overflow-hidden p-0 mb-4" style="border-radius:20px;">
+                        @if($course->video)
+                            <video controls controlsList="nodownload" style="width:100%;display:block;">
+                                <source src="{{ $resourceUrls['video'] }}">
+                            </video>
+                        @else
+                            <div style="position:relative;padding-bottom:56.25%;height:0;">
+                                <iframe src="{{ $resourceUrls['video'] }}" frameborder="0" allowfullscreen
+                                    style="position:absolute;width:100%;height:100%;top:0;left:0;"></iframe>
+                            </div>
+                        @endif
                     </div>
-                </div>
+                @endif
+
+                @if(!empty($resourceUrls['pdf']) || !empty($resourceUrls['link']))
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        @if(!empty($resourceUrls['pdf']))
+                            <a href="{{ $resourceUrls['pdf'] }}" target="_blank" rel="noopener" class="btn-3d btn-3d-outline">
+                                <i class="bi bi-file-earmark-pdf"></i> Voir le PDF
+                            </a>
+                        @endif
+                        @if(!empty($resourceUrls['link']))
+                            <a href="{{ $resourceUrls['link'] }}" target="_blank" rel="noopener" class="btn-3d btn-3d-gradient">
+                                <i class="bi bi-box-arrow-up-right"></i> Ouvrir la ressource
+                            </a>
+                        @endif
+                    </div>
                 @endif
 
                 <!-- Publicité / Explication du contenu -->

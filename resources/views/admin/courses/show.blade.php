@@ -51,14 +51,14 @@
             <div class="adm-card-body">
                 <div style="border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.3);">
                     <video controls preload="metadata" style="width:100%;max-height:480px;display:block;">
-                        <source src="{{ asset('storage/'.$course->video) }}">
+                        <source src="{{ $resourceUrls['video'] ?? '#' }}">
                     </video>
                 </div>
                 <div style="display:flex;gap:0.75rem;margin-top:1rem;">
-                    <a href="{{ asset('storage/'.$course->video) }}" target="_blank" class="adm-btn adm-btn-danger adm-btn-sm">
+                    <a href="{{ $resourceUrls['video'] ?? '#' }}" target="_blank" class="adm-btn adm-btn-danger adm-btn-sm">
                         <i class="bi bi-eye me-1"></i> Voir en plein écran
                     </a>
-                    <a href="{{ asset('storage/'.$course->video) }}" download class="adm-btn adm-btn-ghost adm-btn-sm">
+                    <a href="{{ $resourceUrls['video'] ?? '#' }}" download class="adm-btn adm-btn-ghost adm-btn-sm">
                         <i class="bi bi-download me-1"></i> Télécharger
                     </a>
                 </div>
@@ -82,10 +82,10 @@
                         </div>
                     </div>
                     <div style="display:flex;gap:0.5rem;">
-                        <a href="{{ asset('storage/'.$course->pdf) }}" target="_blank" class="adm-btn adm-btn-success">
+                        <a href="{{ $resourceUrls['pdf'] ?? '#' }}" target="_blank" class="adm-btn adm-btn-success">
                             <i class="bi bi-eye me-1"></i> Voir
                         </a>
-                        <a href="{{ asset('storage/'.$course->pdf) }}" download class="adm-btn adm-btn-ghost">
+                        <a href="{{ $resourceUrls['pdf'] ?? '#' }}" download class="adm-btn adm-btn-ghost">
                             <i class="bi bi-download me-1"></i>
                         </a>
                     </div>

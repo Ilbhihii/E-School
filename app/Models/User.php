@@ -9,7 +9,6 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\ClassRoom;
-use App\Models\Classe;
 use App\Models\Absence;
 use App\Notifications\ResetPasswordNotification;
 
@@ -82,7 +81,12 @@ class User extends Authenticatable
 
 public function classes()
     {
-        return $this->belongsToMany(Classe::class);
+        return $this->belongsToMany(
+            ClassRoom::class,
+            'class_user',
+            'user_id',
+            'class_id'
+        )->withPivot('subject_id')->withTimestamps();
     }
 
 public function absences()

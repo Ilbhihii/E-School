@@ -10,9 +10,18 @@ use App\Models\Level;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ProfAssignment;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\URL;
+use App\Services\LearningPathService;
 
 class CourseController extends Controller
 {
+    private LearningPathService $paths;
+
+    public function __construct(LearningPathService $paths)
+    {
+        $this->paths = $paths;
+    }
     // ================= SHOW =================
     public function show($id)
     {
@@ -22,7 +31,15 @@ class CourseController extends Controller
             abort(403, 'Accès non autorisé');
         }
 
-        return view('admin.courses.show', compact('course'));
+        $resourceUrls = [];
+        foreach (['video', 'pdf', 'link'] as $type) {
+            $exists = $type === 'video' ? ($course->video || $course->video_url) : ($type === 'pdf' ? $course->pdf : $course->course_link);
+            if ($exists) {
+                $resourceUrls[$type] = URL::temporarySignedRoute('course.resource', now()->addMinutes(10), ['course' => $course->id, 'type' => $type]);
+            }
+        }
+
+        return view('admin.courses.show', compact('course', 'resourceUrls'));
     }
 
     // ================= LISTE =================
@@ -41,78 +58,257 @@ class CourseController extends Controller
     // ================= CREATE =================
     public function create(Request $request)
     {
-        if (auth()->user()->isAdmin()) {
-            $levels = Level::with('classes')->get();
-            $classes = ClassRoom::with('level')->get();
-            $subjects = Subject::all()->unique('name');
-        } else {
-            $scope = ProfAssignment::where('prof_id', auth()->id())->get();
-            $levels = Level::whereIn('id', $scope->pluck('level_id'))->with(['classes' => fn ($query) => $query->whereIn('id', $scope->pluck('class_id'))])->get();
-            $classes = ClassRoom::whereIn('id', $scope->pluck('class_id'))->with('level')->get();
-            $subjects = Subject::whereIn('id', $scope->pluck('subject_id'))->get();
+        /*
+         * La hiérarchie envoyée à la vue respecte désormais :
+         *
+         * Matière → Niveau appartenant à la matière
+         *         → Classe appartenant au niveau et liée à la matière
+         */
+        $courseHierarchy = $this->buildCourseHierarchy();
+
+        $subjects = collect($courseHierarchy)
+            ->map(
+                fn (array $subject) =>
+                    (object) [
+                        'id' => $subject['id'],
+                        'name' => $subject['name'],
+                    ]
+            )
+            ->values();
+
+        $selectedSubjectId = $request->get(
+            'subject_id'
+        );
+
+        $selectedLevelId = $request->get(
+            'level_id'
+        );
+
+        $selectedClassId = $request->get(
+            'class_id'
+        );
+
+        /*
+         * Certaines pages ouvrent la création avec seulement class_id.
+         * Dans ce cas, le niveau est déduit pour préremplir le formulaire.
+         */
+        if (
+            $selectedClassId
+            && !$selectedLevelId
+        ) {
+            $selectedLevelId = ClassRoom::query()
+                ->whereKey($selectedClassId)
+                ->value('level_id');
         }
-        $selectedClassId = $request->get('class_id');
-        $selectedSubjectId = $request->get('subject_id');
-        return view('admin.courses.create', compact('levels', 'classes', 'subjects', 'selectedClassId', 'selectedSubjectId'));
+
+        return view(
+            'admin.courses.create',
+            compact(
+                'subjects',
+                'courseHierarchy',
+                'selectedSubjectId',
+                'selectedLevelId',
+                'selectedClassId'
+            )
+        );
     }
 
     // ================= STORE =================
     public function store(Request $request)
     {
-        if(!in_array(auth()->user()->role, ['admin','prof'])){
+        if (
+            !in_array(
+                auth()->user()->role,
+                ['admin', 'prof'],
+                true
+            )
+        ) {
             abort(403);
         }
 
-        $request->validate([
-            'title' => 'required',
-            'description' => 'nullable|string',
-            'class_id' => 'required',
-            'subject_id' => 'required|exists:subjects,id',
-            'course_link' => 'nullable|url',
-            'video' => 'nullable|mimes:mp4,mov,avi|max:204800',
-            'pdf' => 'nullable|mimes:pdf|max:20480',
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+            ],
+            'subject_id' => [
+                'required',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'exists:class_rooms,id',
+            ],
+            'course_link' => [
+                'nullable',
+                'url',
+            ],
+            'video' => [
+                'nullable',
+                'file',
+                'mimes:mp4,mov,avi',
+                'max:204800',
+            ],
+            'pdf' => [
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:20480',
+            ],
+        ], [
+            'subject_id.required' =>
+                'Veuillez sélectionner une matière.',
+            'level_id.required' =>
+                'Veuillez sélectionner un niveau.',
+            'class_id.required' =>
+                'Veuillez sélectionner une classe.',
         ]);
+
+        $subject = Subject::findOrFail(
+            $validated['subject_id']
+        );
+
+        $level = Level::findOrFail(
+            $validated['level_id']
+        );
+
+        $classRoom = ClassRoom::with([
+                'level',
+                'subjects',
+            ])
+            ->findOrFail(
+                $validated['class_id']
+            );
+
+        /*
+         * Vérification 1 :
+         * le niveau doit réellement appartenir à la matière choisie.
+         */
+        if (
+            (int) $level->subject_id
+            !== (int) $subject->id
+        ) {
+            throw ValidationException::withMessages([
+                'level_id' =>
+                    'Le niveau sélectionné n’appartient pas '
+                    . 'à cette matière.',
+            ]);
+        }
+
+        /*
+         * Vérification 2 :
+         * la classe doit réellement appartenir au niveau choisi.
+         */
+        if (
+            (int) $classRoom->level_id
+            !== (int) $level->id
+        ) {
+            throw ValidationException::withMessages([
+                'class_id' =>
+                    'La classe sélectionnée n’appartient pas '
+                    . 'à ce niveau.',
+            ]);
+        }
+
+        /*
+         * Vérification 3 :
+         * la classe doit être liée à la matière dans le pivot.
+         */
+        if (
+            !$classRoom->subjects->contains(
+                'id',
+                (int) $subject->id
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'class_id' =>
+                    'Cette classe n’est pas liée à la matière '
+                    . 'sélectionnée.',
+            ]);
+        }
+
+        /*
+         * Un professeur ne peut utiliser que ses affectations.
+         */
+        if (!auth()->user()->isAdmin()) {
+            $isAssigned = ProfAssignment::query()
+                ->where(
+                    'prof_id',
+                    auth()->id()
+                )
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->where(
+                    'level_id',
+                    $level->id
+                )
+                ->where(
+                    'class_id',
+                    $classRoom->id
+                )
+                ->exists();
+
+            abort_unless(
+                $isAssigned,
+                403,
+                'Cette structure ne fait pas partie '
+                . 'de vos affectations.'
+            );
+        }
 
         $videoPath = null;
         $pdfPath = null;
 
         if ($request->hasFile('video')) {
-            $videoPath = $request->file('video')->store('videos', 'public');
+            $videoPath = $request
+                ->file('video')
+                ->store(
+                    'course-resources/video',
+                    'local'
+                );
         }
 
         if ($request->hasFile('pdf')) {
-            $pdfPath = $request->file('pdf')->store('pdfs', 'public');
-        }
-
-        // Récupérer le niveau depuis la classe
-        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
-        if (! auth()->user()->isAdmin()) {
-            abort_unless(ProfAssignment::where('prof_id', auth()->id())
-                ->where('class_id', $classRoom->id)
-                ->where('level_id', $classRoom->level_id)
-                ->where('subject_id', $request->subject_id)->exists(), 403);
+            $pdfPath = $request
+                ->file('pdf')
+                ->store(
+                    'course-resources/pdf',
+                    'local'
+                );
         }
 
         Course::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'class_id' => $request->class_id,
-            'level_id' => $classRoom->level->id,
-            'subject_id' => $request->subject_id,
-            'video' => $videoPath ?? null,
-            'pdf' => $pdfPath ?? null,
-            'course_link' => $request->course_link,
+            'title' => $validated['title'],
+            'description' =>
+                $validated['description'] ?? null,
+            'subject_id' => $subject->id,
+            'level_id' => $level->id,
+            'class_id' => $classRoom->id,
+            'video' => $videoPath,
+            'pdf' => $pdfPath,
+            'course_link' =>
+                $validated['course_link'] ?? null,
             'admin_id' => auth()->id(),
             'user_id' => auth()->id(),
         ]);
 
-        // 2. Lier automatiquement subject <-> class
-        $subject = Subject::find($request->subject_id);
-        $subject->classes()->syncWithoutDetaching([
-            $request->class_id
-        ]);
-
-        return redirect()->back()->with('success', 'Cours créé avec succès');
+        return redirect()
+            ->route('admin.courses.index')
+            ->with(
+                'success',
+                'Cours créé avec succès.'
+            );
     }
 
     // ================= EDIT =================
@@ -131,7 +327,27 @@ class CourseController extends Controller
             $subjects = Subject::whereIn('id', $scope->pluck('subject_id'))->get();
         }
 
-        return view('admin.courses.edit', compact('course', 'levels', 'classes', 'subjects'));
+        $resourceUrls = [];
+        foreach (['video', 'pdf', 'link'] as $type) {
+            $exists = $type === 'video'
+                ? ($course->video || $course->video_url)
+                : ($type === 'pdf' ? $course->pdf : $course->course_link);
+            if ($exists) {
+                $resourceUrls[$type] = URL::temporarySignedRoute(
+                    'course.resource',
+                    now()->addMinutes(10),
+                    ['course' => $course->id, 'type' => $type]
+                );
+            }
+        }
+
+        return view('admin.courses.edit', compact(
+            'course',
+            'levels',
+            'classes',
+            'subjects',
+            'resourceUrls'
+        ));
     }
 
     // ================= UPDATE =================
@@ -143,28 +359,50 @@ class CourseController extends Controller
         $data = $request->validate([
             'title' => 'required',
             'description' => 'nullable',
-            'class_id' => 'required',
-            'subject_id' => 'required|exists:subjects,id',
+            'class_id' => 'required|integer|exists:class_rooms,id',
+            'level_id' => 'required|integer|exists:levels,id',
+            'subject_id' => 'required|integer|exists:subjects,id',
             'course_link' => 'nullable|url',
-            'video' => 'nullable|file|mimes:mp4,mov,avi',
-            'pdf' => 'nullable|file|mimes:pdf'
+            'video' => 'nullable|file|mimes:mp4,mov,avi|max:204800',
+            'pdf' => 'nullable|file|mimes:pdf|max:20480'
         ]);
 
-        // Récupérer le niveau depuis la classe
-        $classRoom = ClassRoom::with('level')->findOrFail($request->class_id);
-        if (! auth()->user()->isAdmin()) {
-            abort_unless(ProfAssignment::where('prof_id', auth()->id())
-                ->where('class_id', $classRoom->id)->where('level_id', $classRoom->level_id)
-                ->where('subject_id', $request->subject_id)->exists(), 403);
-        }
-        $data['level_id'] = $classRoom->level->id;
+        [$subject, $level, $classRoom] = $this->paths->validatePath(
+            (int) $data['subject_id'],
+            (int) $data['level_id'],
+            (int) $data['class_id']
+        );
 
-        if($request->hasFile('video')){
-            $data['video'] = $request->file('video')->store('videos','public');
+        if (!auth()->user()->isAdmin()) {
+            abort_unless(
+                $this->paths->professorCanAccessPath(
+                    auth()->user(),
+                    $subject->id,
+                    $level->id,
+                    $classRoom->id
+                ),
+                403
+            );
         }
 
-        if($request->hasFile('pdf')){
-            $data['pdf'] = $request->file('pdf')->store('pdfs','public');
+        $data['subject_id'] = $subject->id;
+        $data['level_id'] = $level->id;
+        $data['class_id'] = $classRoom->id;
+
+        if ($request->hasFile('video')) {
+            if ($course->video) {
+                Storage::disk('local')->delete($course->video);
+                Storage::disk('public')->delete($course->video);
+            }
+            $data['video'] = $request->file('video')->store('course-resources/video', 'local');
+        }
+
+        if ($request->hasFile('pdf')) {
+            if ($course->pdf) {
+                Storage::disk('local')->delete($course->pdf);
+                Storage::disk('public')->delete($course->pdf);
+            }
+            $data['pdf'] = $request->file('pdf')->store('course-resources/pdf', 'local');
         }
 
         $course->update($data);
@@ -203,6 +441,223 @@ class CourseController extends Controller
 
         return redirect()->route('admin.courses.index')
             ->with('success', 'Cours supprimé avec succès');
+    }
+
+    /**
+     * Construit les choix autorisés du formulaire :
+     * Matière → Niveaux → Classes.
+     */
+    private function buildCourseHierarchy(): array
+    {
+        if (auth()->user()->isAdmin()) {
+            $subjects = Subject::query()
+                ->orderBy('name')
+                ->get();
+
+            $levels = Level::query()
+                ->with([
+                    'classes.subjects',
+                ])
+                ->orderBy('order')
+                ->orderBy('name')
+                ->get();
+
+            return $subjects
+                ->map(
+                    function (
+                        Subject $subject
+                    ) use ($levels) {
+                        $subjectLevels = $levels
+                            ->where(
+                                'subject_id',
+                                $subject->id
+                            )
+                            ->map(
+                                function (
+                                    Level $level
+                                ) use ($subject) {
+                                    $classes = $level
+                                        ->classes
+                                        ->filter(
+                                            fn (
+                                                ClassRoom $classRoom
+                                            ) =>
+                                                $classRoom
+                                                    ->subjects
+                                                    ->contains(
+                                                        'id',
+                                                        $subject->id
+                                                    )
+                                        )
+                                        ->sortBy('name')
+                                        ->values()
+                                        ->map(
+                                            fn (
+                                                ClassRoom $classRoom
+                                            ) => [
+                                                'id' =>
+                                                    $classRoom->id,
+                                                'name' =>
+                                                    $classRoom->name,
+                                            ]
+                                        )
+                                        ->all();
+
+                                    if (empty($classes)) {
+                                        return null;
+                                    }
+
+                                    return [
+                                        'id' => $level->id,
+                                        'name' => $level->name,
+                                        'classes' => $classes,
+                                    ];
+                                }
+                            )
+                            ->filter()
+                            ->values()
+                            ->all();
+
+                        if (empty($subjectLevels)) {
+                            return null;
+                        }
+
+                        return [
+                            'id' => $subject->id,
+                            'name' => $subject->name,
+                            'levels' => $subjectLevels,
+                        ];
+                    }
+                )
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        /*
+         * Pour un professeur, la hiérarchie ne contient que les
+         * affectations exactes enregistrées dans prof_assignments.
+         */
+        $assignments = ProfAssignment::query()
+            ->where(
+                'prof_id',
+                auth()->id()
+            )
+            ->get();
+
+        $subjects = Subject::query()
+            ->whereIn(
+                'id',
+                $assignments->pluck('subject_id')
+            )
+            ->orderBy('name')
+            ->get();
+
+        $levels = Level::query()
+            ->whereIn(
+                'id',
+                $assignments->pluck('level_id')
+            )
+            ->with([
+                'classes.subjects',
+            ])
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        return $subjects
+            ->map(
+                function (
+                    Subject $subject
+                ) use (
+                    $levels,
+                    $assignments
+                ) {
+                    $subjectLevels = $levels
+                        ->filter(
+                            fn (Level $level) =>
+                                $assignments->contains(
+                                    fn ($assignment) =>
+                                        (int) $assignment
+                                            ->subject_id
+                                            === (int) $subject->id
+                                        && (int) $assignment
+                                            ->level_id
+                                            === (int) $level->id
+                                )
+                        )
+                        ->map(
+                            function (
+                                Level $level
+                            ) use (
+                                $subject,
+                                $assignments
+                            ) {
+                                $classes = $level
+                                    ->classes
+                                    ->filter(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) =>
+                                            $assignments->contains(
+                                                fn ($assignment) =>
+                                                    (int) $assignment
+                                                        ->subject_id
+                                                        === (int)
+                                                            $subject->id
+                                                    && (int) $assignment
+                                                        ->level_id
+                                                        === (int)
+                                                            $level->id
+                                                    && (int) $assignment
+                                                        ->class_id
+                                                        === (int)
+                                                            $classRoom->id
+                                            )
+                                    )
+                                    ->sortBy('name')
+                                    ->values()
+                                    ->map(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) => [
+                                            'id' =>
+                                                $classRoom->id,
+                                            'name' =>
+                                                $classRoom->name,
+                                        ]
+                                    )
+                                    ->all();
+
+                                if (empty($classes)) {
+                                    return null;
+                                }
+
+                                return [
+                                    'id' => $level->id,
+                                    'name' => $level->name,
+                                    'classes' => $classes,
+                                ];
+                            }
+                        )
+                        ->filter()
+                        ->values()
+                        ->all();
+
+                    if (empty($subjectLevels)) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'levels' => $subjectLevels,
+                    ];
+                }
+            )
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function authorizeCourseOwner(Course $course): void

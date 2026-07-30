@@ -248,6 +248,12 @@
                     @endif
                 </a>
 
+                <a href="{{ route('student.written-tests.index') }}"
+                   class="st-nav-link {{ str_contains($route ?? '', 'written-tests') ? 'active' : '' }}">
+                    <span class="nav-icon"><i class="bi bi-file-earmark-check-fill"></i></span>
+                    <span>Mes tests BAC</span>
+                </a>
+
                 <a href="{{ route('student.chats') }}"
                    class="st-nav-link {{ str_contains($route ?? '', 'chat') ? 'active' : '' }}">
                     <span class="nav-icon"><i class="bi bi-chat-dots"></i></span>

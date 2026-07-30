@@ -12,6 +12,7 @@ use App\Http\Controllers\API\VocalTestController;
 use App\Http\Controllers\API\ProgressController;
 use App\Http\Controllers\API\HomeController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\CourseResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,7 +76,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // ─── Dashboard ───
     Route::get('/dashboard', [HomeController::class, 'dashboard']);
 
-    // ─── Cours (protection pour marquer complété) ───
+    // ─── Cours autorisés ───
+    Route::get('/user/courses/{course}', [CourseController::class, 'authorizedShow']);
+    Route::get('/courses/{course}/resource/{type}', [CourseResourceController::class, 'show'])
+        ->where('type', 'video|pdf|link')
+        ->name('api.courses.resource');
     Route::post('/courses/{course}/complete', [CourseController::class, 'complete']);
 
     // ─── Lives de l'utilisateur ───

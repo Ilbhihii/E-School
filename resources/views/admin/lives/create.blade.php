@@ -2,7 +2,7 @@
 
 @section('title', 'Créer un live')
 @section('page_title', 'Nouveau live')
-@section('breadcrumb', 'Créer un live')
+@section('breadcrumb', 'Matière → Niveau → Classe → Live')
 
 @section('content')
 <div class="row justify-content-center">
@@ -50,7 +50,15 @@
                                     <select id="outlook_subject_id" class="adm-form-select" style="font-size:0.85rem;">
                                         <option value="">Choisir une matière...</option>
                                         @foreach($subjects as $subject)
-                                            <option value="{{ $subject->id }}">{{ $subject->name }}</option>
+                                            <option
+                                                value="{{ $subject->id }}"
+                                                @selected(
+                                                    (string) old('subject_id')
+                                                    === (string) $subject->id
+                                                )
+                                            >
+                                                {{ $subject->name }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -61,27 +69,30 @@
                             <div class="col-md-6">
                                 <div class="adm-form-group" style="margin-bottom:0;">
                                     <label class="adm-form-label" style="font-size:0.75rem;">Niveau</label>
-                                    <select id="outlook_level_id" class="adm-form-select" style="font-size:0.85rem;">
-                                        <option value="">D'abord choisir une matière</option>
-                                        @foreach($levels as $level)
-                                            @php $subjectIds = $levelSubjectMap[$level->id] ?? []; @endphp
-                                            <option value="{{ $level->id }}" data-subject-ids="{{ implode(',', $subjectIds) }}">{{ $level->name }}</option>
-                                        @endforeach
+                                    <select
+                                        id="outlook_level_id"
+                                        class="adm-form-select"
+                                        style="font-size:0.85rem;"
+                                        disabled
+                                    >
+                                        <option value="">
+                                            D'abord choisir une matière
+                                        </option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="adm-form-group" style="margin-bottom:0;">
                                     <label class="adm-form-label" style="font-size:0.75rem;">Classe</label>
-                                    <select id="outlook_class_id" class="adm-form-select" style="font-size:0.85rem;">
-                                        <option value="">D'abord choisir un niveau</option>
-                                        @foreach($classes as $class)
-                                            <option value="{{ $class->id }}"
-                                                data-level="{{ $class->level_id }}"
-                                                data-subject-ids="{{ $class->subjects->pluck('id')->join(',') }}">
-                                                {{ $class->name }}
-                                            </option>
-                                        @endforeach
+                                    <select
+                                        id="outlook_class_id"
+                                        class="adm-form-select"
+                                        style="font-size:0.85rem;"
+                                        disabled
+                                    >
+                                        <option value="">
+                                            D'abord choisir un niveau
+                                        </option>
                                     </select>
                                 </div>
                             </div>
@@ -176,12 +187,34 @@
                             <div class="col-md-6">
                                 <div class="adm-form-group">
                                     <label class="adm-form-label">Matière</label>
-                                    <select id="manual_subject_id" class="adm-form-select" required>
+                                    <select
+                                        name="subject_id"
+                                        id="manual_subject_id"
+                                        class="adm-form-select
+                                            @error('subject_id')
+                                                error
+                                            @enderror"
+                                        required
+                                    >
                                         <option value="">Choisir une matière...</option>
                                         @foreach($subjects as $subject)
-                                            <option value="{{ $subject->id }}">{{ $subject->name }}</option>
+                                            <option
+                                                value="{{ $subject->id }}"
+                                                @selected(
+                                                    (string) old('subject_id')
+                                                    === (string) $subject->id
+                                                )
+                                            >
+                                                {{ $subject->name }}
+                                            </option>
                                         @endforeach
                                     </select>
+
+                                    @error('subject_id')
+                                        <div class="adm-form-error">
+                                            {{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
@@ -190,27 +223,44 @@
                             <div class="col-md-6">
                                 <div class="adm-form-group">
                                     <label class="adm-form-label">Niveau</label>
-                                    <select id="manual_level_id" class="adm-form-select" required>
-                                        <option value="">D'abord choisir une matière</option>
-                                        @foreach($levels as $level)
-                                            @php $subjectIds = $levelSubjectMap[$level->id] ?? []; @endphp
-                                            <option value="{{ $level->id }}" data-subject-ids="{{ implode(',', $subjectIds) }}">{{ $level->name }}</option>
-                                        @endforeach
+                                    <select
+                                        name="level_id"
+                                        id="manual_level_id"
+                                        class="adm-form-select
+                                            @error('level_id')
+                                                error
+                                            @enderror"
+                                        disabled
+                                        required
+                                    >
+                                        <option value="">
+                                            D'abord choisir une matière
+                                        </option>
                                     </select>
+
+                                    @error('level_id')
+                                        <div class="adm-form-error">
+                                            {{ $message }}
+                                        </div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="adm-form-group">
                                     <label class="adm-form-label">Classe</label>
-                                    <select name="class_id" id="manual_class_id" class="adm-form-select @error('class_id') error @enderror" required>
-                                        <option value="">D'abord choisir un niveau</option>
-                                        @foreach($classes as $class)
-                                            <option value="{{ $class->id }}"
-                                                data-level="{{ $class->level_id }}"
-                                                data-subject-ids="{{ $class->subjects->pluck('id')->join(',') }}">
-                                                {{ $class->name }}
-                                            </option>
-                                        @endforeach
+                                    <select
+                                        name="class_id"
+                                        id="manual_class_id"
+                                        class="adm-form-select
+                                            @error('class_id')
+                                                error
+                                            @enderror"
+                                        disabled
+                                        required
+                                    >
+                                        <option value="">
+                                            D'abord choisir un niveau
+                                        </option>
                                     </select>
                                     @error('class_id') <div class="adm-form-error">{{ $message }}</div> @enderror
                                 </div>
@@ -231,13 +281,31 @@
                             <label class="adm-form-label">Date & heure</label>
                             <div class="row g-3 mt-1">
                                 <div class="col-md-4">
-                                    <input type="date" name="live_date" class="adm-form-control" required>
+                                    <input
+                                        type="date"
+                                        name="live_date"
+                                        value="{{ old('live_date') }}"
+                                        class="adm-form-control"
+                                        required
+                                    >
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="time" name="start_time" class="adm-form-control" required>
+                                    <input
+                                        type="time"
+                                        name="start_time"
+                                        value="{{ old('start_time') }}"
+                                        class="adm-form-control"
+                                        required
+                                    >
                                 </div>
                                 <div class="col-md-4">
-                                    <input type="time" name="end_time" class="adm-form-control" required>
+                                    <input
+                                        type="time"
+                                        name="end_time"
+                                        value="{{ old('end_time') }}"
+                                        class="adm-form-control"
+                                        required
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -342,167 +410,548 @@
 </div>
 
 <script>
-(function() {
-    // ─── Outlook Integration ───
-    // Remplissez le formulaire → cliquez sur "Créer dans Outlook" →
-    // Outlook s'ouvre avec les détails pré-remplis →
-    // Créez l'événement dans Outlook, récupérez le lien →
-    // Collez le lien dans le champ → Enregistrez dans Laravel
+document.addEventListener('DOMContentLoaded', () => {
+    const hierarchy = @json($liveHierarchy);
 
-    // ─── Cascading filters ───
+    const initialSubjectId = @json(
+        (string) old('subject_id', '')
+    );
 
-    function filterLevels(prefix, selectedSubjectId) {
-        const levelSelect = document.getElementById(prefix + '_level_id');
-        const options = levelSelect.querySelectorAll('option');
-        let hasVisible = false;
+    const initialLevelId = @json(
+        (string) old('level_id', '')
+    );
 
-        options.forEach(opt => {
-            if (opt.value === '') {
-                opt.hidden = false;
-                opt.text = selectedSubjectId ? 'Choisir un niveau...' : 'D\'abord choisir une matière';
-                return;
-            }
-            const subjectIds = (opt.getAttribute('data-subject-ids') || '').split(',').filter(Boolean);
-            const matches = !selectedSubjectId || subjectIds.includes(selectedSubjectId);
-            opt.hidden = !matches;
-            if (matches && opt.value) hasVisible = true;
-        });
+    const initialClassId = @json(
+        (string) old('class_id', '')
+    );
 
-        if (levelSelect.selectedOptions[0]?.hidden) {
-            levelSelect.value = '';
+    const prefixes = [
+        'outlook',
+        'manual',
+    ];
+
+    const findSubject = subjectId =>
+        hierarchy.find(
+            subject =>
+                String(subject.id)
+                === String(subjectId)
+        );
+
+    const findLevel = (
+        subject,
+        levelId
+    ) => {
+        if (!subject) {
+            return null;
         }
 
-        // Trigger class filter
-        filterClasses(prefix, levelSelect.value);
-    }
+        return subject.levels.find(
+            level =>
+                String(level.id)
+                === String(levelId)
+        );
+    };
 
-    function filterClasses(prefix, selectedLevelId) {
-        const classSelect = document.getElementById(prefix + '_class_id');
-        const subjectSelect = document.getElementById(prefix + '_subject_id');
-        const selectedSubjectId = subjectSelect ? subjectSelect.value : '';
-        const options = classSelect.querySelectorAll('option');
-        let hasVisible = false;
+    const createOption = (
+        value,
+        label,
+        selectedValue = ''
+    ) => {
+        const option =
+            document.createElement('option');
 
-        options.forEach(opt => {
-            if (opt.value === '') {
-                opt.hidden = false;
-                opt.text = selectedLevelId ? 'Choisir une classe...' : 'D\'abord choisir un niveau';
-                return;
-            }
-            const levelId = opt.getAttribute('data-level');
-            const subjectIds = (opt.getAttribute('data-subject-ids') || '').split(',').filter(Boolean);
-            const matchesLevel = !selectedLevelId || levelId === selectedLevelId;
-            const matchesSubject = !selectedSubjectId || subjectIds.includes(selectedSubjectId);
-            const matches = matchesLevel && matchesSubject;
-            opt.hidden = !matches;
-            if (matches && opt.value) hasVisible = true;
-        });
+        option.value = String(value);
+        option.textContent = label;
+        option.selected =
+            String(value)
+            === String(selectedValue);
 
-        if (classSelect.selectedOptions[0]?.hidden) {
-            classSelect.value = '';
-        }
-    }
+        return option;
+    };
 
-    // Attach cascading handlers for Outlook
-    document.addEventListener('DOMContentLoaded', function() {
-        ['outlook', 'manual'].forEach(prefix => {
-            const subjectEl = document.getElementById(prefix + '_subject_id');
-            const levelEl = document.getElementById(prefix + '_level_id');
-            const classEl = document.getElementById(prefix + '_class_id');
-
-            if (subjectEl) {
-                subjectEl.addEventListener('change', function() {
-                    filterLevels(prefix, this.value);
-                    if (prefix === 'outlook') syncFields();
-                });
-            }
-            if (levelEl) {
-                levelEl.addEventListener('change', function() {
-                    filterClasses(prefix, this.value);
-                    if (prefix === 'outlook') syncFields();
-                });
-            }
-            if (classEl && prefix === 'outlook') {
-                classEl.addEventListener('change', syncFields);
-            }
-        });
-    });
-
-    // Synchroniser le bloc principal avec le formulaire Laravel.
-    function syncFields() {
-        const form = document.getElementById('manualForm');
-        if (form) {
-            form.querySelector('[name="title"]').value = document.getElementById('outlook_title')?.value || '';
-            form.querySelector('[name="class_id"]').value = document.getElementById('outlook_class_id')?.value || '';
-            form.querySelector('[name="live_date"]').value = document.getElementById('outlook_date')?.value || '';
-            form.querySelector('[name="start_time"]').value = document.getElementById('outlook_start')?.value || '';
-            form.querySelector('[name="end_time"]').value = document.getElementById('outlook_end')?.value || '';
-            form.querySelector('[name="stream_url"]').value = document.getElementById('outlook_url')?.value || '';
-            form.querySelector('[name="provider"]').value = document.getElementById('meeting_provider')?.value || 'google_meet';
+    const resetSelect = (
+        select,
+        placeholder,
+        disabled = true
+    ) => {
+        if (!select) {
+            return;
         }
 
-        generateOutlookUrl();
-    }
+        select.innerHTML = '';
 
-    function generateOutlookUrl() {
-        const provider = document.getElementById('meeting_provider')?.value || 'google_meet';
-        const streamUrl = document.getElementById('outlook_url')?.value || '';
-        const classSelect = document.getElementById('outlook_class_id');
-        const subjectSelect = document.getElementById('outlook_subject_id');
-        const levelSelect = document.getElementById('outlook_level_id');
-        const hasDetails = document.getElementById('outlook_title')?.value
-            && document.getElementById('outlook_date')?.value
-            && document.getElementById('outlook_start')?.value
-            && document.getElementById('outlook_end')?.value
-            && classSelect?.value && subjectSelect?.value && levelSelect?.value;
-        const config = provider === 'teams'
-            ? { name: 'Microsoft Teams', url: 'https://teams.microsoft.com/', host: /(^|\.)teams\.(microsoft|live)\.com$/i, color: '#6264A7' }
-            : { name: 'Google Meet', url: 'https://meet.google.com/', host: /^meet\.google\.com$/i, color: '#0F9D58' };
-        const btn = document.getElementById('outlookMainBtn');
-        const saveBtn = document.getElementById('saveLiveBtn');
-        const status = document.getElementById('outlookStatus');
-        if (!btn) return;
+        select.appendChild(
+            createOption(
+                '',
+                placeholder
+            )
+        );
 
-        btn.href = config.url;
-        btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Ouvrir ' + config.name;
-        btn.style.background = config.color;
-        btn.style.pointerEvents = hasDetails ? 'auto' : 'none';
-        btn.style.opacity = hasDetails ? '1' : '0.4';
+        select.disabled = disabled;
+        select.value = '';
+    };
+
+    const populateClasses = (
+        prefix,
+        subject,
+        levelId,
+        selectedClassId = ''
+    ) => {
+        const classSelect =
+            document.getElementById(
+                `${prefix}_class_id`
+            );
+
+        const level = findLevel(
+            subject,
+            levelId
+        );
+
+        resetSelect(
+            classSelect,
+            level
+                ? 'Choisir une classe...'
+                : 'D’abord choisir un niveau',
+            !level
+        );
+
+        if (!level || !classSelect) {
+            return;
+        }
+
+        level.classes.forEach(classRoom => {
+            classSelect.appendChild(
+                createOption(
+                    classRoom.id,
+                    classRoom.name,
+                    selectedClassId
+                )
+            );
+        });
+
+        classSelect.disabled = false;
+
+        if (selectedClassId) {
+            classSelect.value =
+                String(selectedClassId);
+        }
+    };
+
+    const populateLevels = (
+        prefix,
+        subjectId,
+        selectedLevelId = '',
+        selectedClassId = ''
+    ) => {
+        const levelSelect =
+            document.getElementById(
+                `${prefix}_level_id`
+            );
+
+        const classSelect =
+            document.getElementById(
+                `${prefix}_class_id`
+            );
+
+        const subject = findSubject(
+            subjectId
+        );
+
+        resetSelect(
+            levelSelect,
+            subject
+                ? 'Choisir un niveau...'
+                : 'D’abord choisir une matière',
+            !subject
+        );
+
+        resetSelect(
+            classSelect,
+            'D’abord choisir un niveau',
+            true
+        );
+
+        if (!subject || !levelSelect) {
+            return;
+        }
+
+        subject.levels.forEach(level => {
+            levelSelect.appendChild(
+                createOption(
+                    level.id,
+                    level.name,
+                    selectedLevelId
+                )
+            );
+        });
+
+        levelSelect.disabled = false;
+
+        if (selectedLevelId) {
+            levelSelect.value =
+                String(selectedLevelId);
+
+            populateClasses(
+                prefix,
+                subject,
+                selectedLevelId,
+                selectedClassId
+            );
+        }
+    };
+
+    const copyMainToManual = () => {
+        const manualSubject =
+            document.getElementById(
+                'manual_subject_id'
+            );
+
+        const outlookSubject =
+            document.getElementById(
+                'outlook_subject_id'
+            );
+
+        const outlookLevel =
+            document.getElementById(
+                'outlook_level_id'
+            );
+
+        const outlookClass =
+            document.getElementById(
+                'outlook_class_id'
+            );
+
+        if (
+            manualSubject
+            && outlookSubject
+        ) {
+            manualSubject.value =
+                outlookSubject.value;
+
+            populateLevels(
+                'manual',
+                outlookSubject.value,
+                outlookLevel?.value ?? '',
+                outlookClass?.value ?? ''
+            );
+        }
+    };
+
+    const syncFields = () => {
+        const form =
+            document.getElementById(
+                'manualForm'
+            );
+
+        if (!form) {
+            return;
+        }
+
+        const setField = (
+            selector,
+            value
+        ) => {
+            const field =
+                form.querySelector(selector);
+
+            if (field) {
+                field.value = value ?? '';
+            }
+        };
+
+        setField(
+            '[name="title"]',
+            document.getElementById(
+                'outlook_title'
+            )?.value
+        );
+
+        setField(
+            '[name="live_date"]',
+            document.getElementById(
+                'outlook_date'
+            )?.value
+        );
+
+        setField(
+            '[name="start_time"]',
+            document.getElementById(
+                'outlook_start'
+            )?.value
+        );
+
+        setField(
+            '[name="end_time"]',
+            document.getElementById(
+                'outlook_end'
+            )?.value
+        );
+
+        setField(
+            '[name="stream_url"]',
+            document.getElementById(
+                'outlook_url'
+            )?.value
+        );
+
+        setField(
+            '[name="provider"]',
+            document.getElementById(
+                'meeting_provider'
+            )?.value ?? 'google_meet'
+        );
+
+        copyMainToManual();
+        updateProviderButtons();
+    };
+
+    const updateProviderButtons = () => {
+        const provider =
+            document.getElementById(
+                'meeting_provider'
+            )?.value ?? 'google_meet';
+
+        const streamUrl =
+            document.getElementById(
+                'outlook_url'
+            )?.value ?? '';
+
+        const hasDetails = Boolean(
+            document.getElementById(
+                'outlook_title'
+            )?.value
+            && document.getElementById(
+                'outlook_subject_id'
+            )?.value
+            && document.getElementById(
+                'outlook_level_id'
+            )?.value
+            && document.getElementById(
+                'outlook_class_id'
+            )?.value
+            && document.getElementById(
+                'outlook_date'
+            )?.value
+            && document.getElementById(
+                'outlook_start'
+            )?.value
+            && document.getElementById(
+                'outlook_end'
+            )?.value
+        );
+
+        const config =
+            provider === 'teams'
+                ? {
+                    name: 'Microsoft Teams',
+                    url: 'https://teams.microsoft.com/',
+                    host:
+                        /(^|\.)teams\.(microsoft|live)\.com$/i,
+                    color: '#6264A7',
+                }
+                : {
+                    name: 'Google Meet',
+                    url: 'https://meet.google.com/',
+                    host: /^meet\.google\.com$/i,
+                    color: '#0F9D58',
+                };
+
+        const createButton =
+            document.getElementById(
+                'outlookMainBtn'
+            );
+
+        const saveButton =
+            document.getElementById(
+                'saveLiveBtn'
+            );
+
+        const status =
+            document.getElementById(
+                'outlookStatus'
+            );
+
+        if (!createButton) {
+            return;
+        }
+
+        createButton.href = config.url;
+        createButton.innerHTML =
+            '<i class="bi bi-camera-video me-1"></i>'
+            + ' Ouvrir '
+            + config.name;
+
+        createButton.style.background =
+            config.color;
+
+        createButton.style.pointerEvents =
+            hasDetails
+                ? 'auto'
+                : 'none';
+
+        createButton.style.opacity =
+            hasDetails
+                ? '1'
+                : '0.4';
 
         let validMeetingUrl = false;
+
         try {
-            validMeetingUrl = config.host.test(new URL(streamUrl).hostname);
-        } catch (e) {}
-
-        const canSave = hasDetails && validMeetingUrl;
-        if (saveBtn) {
-            saveBtn.style.pointerEvents = canSave ? 'auto' : 'none';
-            saveBtn.style.opacity = canSave ? '1' : '0.4';
+            validMeetingUrl =
+                config.host.test(
+                    new URL(streamUrl).hostname
+                );
+        } catch (error) {
+            validMeetingUrl = false;
         }
+
+        const canSave =
+            hasDetails
+            && validMeetingUrl;
+
+        if (saveButton) {
+            saveButton.style.pointerEvents =
+                canSave
+                    ? 'auto'
+                    : 'none';
+
+            saveButton.style.opacity =
+                canSave
+                    ? '1'
+                    : '0.4';
+        }
+
         if (status) {
-            status.innerHTML = hasDetails
-                ? '<span style="color:#34D399;"><i class="bi bi-check-circle me-1"></i> Ouvrez ' + config.name + ', créez la réunion puis collez son lien</span>'
-                : 'Remplissez titre, matière, niveau, classe, date et heure';
+            status.innerHTML =
+                hasDetails
+                    ? '<span style="color:#34D399;">'
+                        + '<i class="bi bi-check-circle me-1"></i>'
+                        + 'Créez la réunion puis collez son lien'
+                        + '</span>'
+                    : 'Remplissez Matière → Niveau → Classe, '
+                        + 'titre, date et heures';
         }
-    }
+    };
 
-    function saveLive() {
-        syncFields();
-        document.getElementById('manualForm')?.requestSubmit();
-    }
+    prefixes.forEach(prefix => {
+        const subjectSelect =
+            document.getElementById(
+                `${prefix}_subject_id`
+            );
 
-    document.addEventListener('DOMContentLoaded', function() {
-        let fields = ['meeting_provider', 'outlook_title', 'outlook_subject_id', 'outlook_level_id', 'outlook_class_id', 'outlook_date', 'outlook_start', 'outlook_end', 'outlook_url'];
-        fields.forEach(id => {
-            let el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', syncFields);
-                if (el.tagName === 'SELECT') el.addEventListener('change', syncFields);
+        const levelSelect =
+            document.getElementById(
+                `${prefix}_level_id`
+            );
+
+        const classSelect =
+            document.getElementById(
+                `${prefix}_class_id`
+            );
+
+        subjectSelect?.addEventListener(
+            'change',
+            () => {
+                populateLevels(
+                    prefix,
+                    subjectSelect.value
+                );
+
+                if (prefix === 'outlook') {
+                    syncFields();
+                }
             }
-        });
-        generateOutlookUrl();
+        );
+
+        levelSelect?.addEventListener(
+            'change',
+            () => {
+                populateClasses(
+                    prefix,
+                    findSubject(
+                        subjectSelect?.value
+                    ),
+                    levelSelect.value
+                );
+
+                if (prefix === 'outlook') {
+                    syncFields();
+                }
+            }
+        );
+
+        classSelect?.addEventListener(
+            'change',
+            () => {
+                if (prefix === 'outlook') {
+                    syncFields();
+                }
+            }
+        );
     });
-})();
+
+    [
+        'meeting_provider',
+        'outlook_title',
+        'outlook_date',
+        'outlook_start',
+        'outlook_end',
+        'outlook_url',
+    ].forEach(id => {
+        const element =
+            document.getElementById(id);
+
+        element?.addEventListener(
+            'input',
+            syncFields
+        );
+
+        element?.addEventListener(
+            'change',
+            syncFields
+        );
+    });
+
+    /*
+     * Restaurer les anciennes valeurs après validation.
+     */
+    prefixes.forEach(prefix => {
+        const subjectSelect =
+            document.getElementById(
+                `${prefix}_subject_id`
+            );
+
+        if (
+            initialSubjectId
+            && subjectSelect
+        ) {
+            subjectSelect.value =
+                String(initialSubjectId);
+
+            populateLevels(
+                prefix,
+                initialSubjectId,
+                initialLevelId,
+                initialClassId
+            );
+        } else {
+            populateLevels(
+                prefix,
+                ''
+            );
+        }
+    });
+
+    updateProviderButtons();
+
+    window.saveLive = () => {
+        syncFields();
+
+        document.getElementById(
+            'manualForm'
+        )?.requestSubmit();
+    };
+});
 </script>
 
 @endsection

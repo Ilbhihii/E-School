@@ -75,7 +75,7 @@
                     <div class="adm-card mb-4" style="background:rgba(0,58,143,0.08);border-color:rgba(0,58,143,0.15);">
                         <div class="adm-card-body" style="padding:1rem;">
                             <label class="adm-form-label">Vidéo actuelle</label>
-                            <video src="{{ Storage::url($course->video) }}" controls style="max-width:100%;border-radius:8px;margin-top:4px;"></video>
+                            <video src="{{ $resourceUrls['video'] ?? '#' }}" controls style="max-width:100%;border-radius:8px;margin-top:4px;"></video>
                         </div>
                     </div>
                     @endif
@@ -84,7 +84,7 @@
                     <div class="adm-card mb-4" style="background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.15);">
                         <div class="adm-card-body" style="padding:1rem;">
                             <label class="adm-form-label">PDF actuel</label>
-                            <div><a href="{{ Storage::url($course->pdf) }}" target="_blank" style="color:#4ADE80;">Voir le PDF</a></div>
+                            <div><a href="{{ $resourceUrls['pdf'] ?? '#' }}" target="_blank" style="color:#4ADE80;">Voir le PDF</a></div>
                         </div>
                     </div>
                     @endif

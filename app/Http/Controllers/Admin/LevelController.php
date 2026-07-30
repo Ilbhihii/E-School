@@ -200,6 +200,27 @@ class LevelController extends Controller
      */
     public function subjectLevels(Subject $subject)
     {
+        /*
+         * La vue utilise :
+         * - $subject  : matière actuellement sélectionnée ;
+         * - $subjects : liste des matières actives ;
+         * - $levels   : parcours/niveaux de la matière.
+         */
+        $subjects = Subject::query()
+            ->whereIn(
+                'name',
+                ['Arabe', 'Coran', 'Soutien Lycée']
+            )
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    WHEN LOWER(name) = 'soutien lycée' THEN 3
+                    ELSE 4
+                END"
+            )
+            ->get();
+
         $allowedLevelNames =
             $this->levelNamesForSubject($subject);
 
@@ -287,7 +308,11 @@ class LevelController extends Controller
 
         return view(
             'admin.subjects.levels',
-            compact('subject', 'levels')
+            compact(
+                'subject',
+                'subjects',
+                'levels'
+            )
         );
     }
 
@@ -491,4 +516,3 @@ class LevelController extends Controller
         return back()->with('success','Niveau supprimé');
     }
 }
-

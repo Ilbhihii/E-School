@@ -55,7 +55,7 @@
                                 <div class="adm-form-group mb-0">
                                     <label class="adm-form-label">Niveau</label>
                                     @if($user->classRoom && $user->classRoom->level)
-                                        <a href="{{ route('admin.levels.edit', $user->classRoom->level) }}" class="adm-badge adm-badge-success" style="text-decoration:none;">
+                                        <a href="{{ route('admin.levels.classes', $user->classRoom->level) }}" class="adm-badge adm-badge-success" style="text-decoration:none;">
                                             {{ $user->classRoom->level->name }}
                                         </a>
                                     @else

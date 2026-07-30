@@ -12,6 +12,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Services\LearningPathService;
 use App\Models\Course;
 use App\Models\Live;
 use App\Models\ProfAssignment;
@@ -20,6 +21,12 @@ use Illuminate\Support\Facades\DB;
 
 class ProfController extends Controller
 {
+    private LearningPathService $paths;
+
+    public function __construct(LearningPathService $paths)
+    {
+        $this->paths = $paths;
+    }
 
 
     public function dashboard()
@@ -94,26 +101,44 @@ class ProfController extends Controller
 
     public function grade(Request $request)
     {
-        $assignment = Assignment::whereKey($request->id)
-            ->whereHas('user', fn ($query) => $query->where('role', 'student'))
-            ->findOrFail($request->id);
-        $allowed = ProfAssignment::where('prof_id', auth()->id())
-            ->where('subject_id', $assignment->subject_id)
-            ->exists();
-        abort_unless($allowed, 403);
+        $request->validate([
+            'id' => 'required|integer|exists:assignments,id',
+            'status' => 'required|in:acquis,en_cours,non_acquis',
+            'comment' => 'nullable|string|max:2000',
+        ]);
 
-        $status = $request->status;
-        $assignment->grade = match($status) {
+        $assignment = Assignment::with(['user', 'course.classRoom'])
+            ->whereKey($request->id)
+            ->whereHas('user', function ($query) {
+                $query->where('role', 'student');
+            })
+            ->firstOrFail();
+
+        $classId = (int) ($assignment->class_room_id ?: optional($assignment->course)->class_id);
+        $levelId = (int) optional(optional($assignment->course)->classRoom)->level_id;
+        $subjectId = (int) $assignment->subject_id;
+
+        abort_unless(
+            $classId && $levelId && $subjectId
+            && $this->paths->professorCanAccessStudent(
+                auth()->user(),
+                (int) $assignment->user_id,
+                $subjectId,
+                $levelId,
+                $classId
+            ),
+            403
+        );
+
+        $assignment->grade = match ($request->status) {
             'acquis' => 20,
             'en_cours' => 10,
-            'non_acquis' => 0,
             default => 0,
         };
-        $assignment->comment = $request->comment ?? '';
-
+        $assignment->comment = $request->comment ?: '';
         $assignment->save();
 
-        $label = match($assignment->grade) {
+        $label = match ($assignment->grade) {
             20 => 'Acquis',
             10 => 'En cours d\'acquisition',
             default => 'Non acquis',
@@ -172,10 +197,23 @@ class ProfController extends Controller
 
     public function getStudents($id)
     {
-        abort_unless($this->assignedClasses()->contains('id', (int) $id), 403);
-        $classRoom = ClassRoom::findOrFail($id);
+        $scope = ProfAssignment::query()
+            ->where('prof_id', auth()->id())
+            ->where('class_id', $id)
+            ->get();
+        abort_if($scope->isEmpty(), 403);
 
-        $students = $classRoom->users()->where('role', 'student')->select('id', 'name')->get();
+        $studentIds = DB::table('class_user')
+            ->where('class_id', $id)
+            ->whereIn('subject_id', $scope->pluck('subject_id'))
+            ->pluck('user_id')
+            ->unique();
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->whereIn('id', $studentIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return response()->json($students);
     }
@@ -240,9 +278,21 @@ class ProfController extends Controller
 
     public function browseLives(Level $level, ClassRoom $class)
     {
+        abort_unless(
+            (int) $class->level_id === (int) $level->id
+            && $this->paths->professorCanAccessClassLevel(
+                auth()->user(),
+                $level->id,
+                $class->id
+            ),
+            403
+        );
+
         $lives = Live::where('class_id', $class->id)
+            ->where('user_id', auth()->id())
             ->latest()
             ->get();
+
         return view('prof.lives.browse', compact('level', 'class', 'lives'));
     }
 
@@ -375,11 +425,17 @@ class ProfController extends Controller
 
     private function authorizeTeachingScope(Subject $subject, Level $level, ClassRoom $class): void
     {
-        abort_unless(ProfAssignment::where('prof_id', auth()->id())
-            ->where('subject_id', $subject->id)
-            ->where('level_id', $level->id)
-            ->where('class_id', $class->id)
-            ->exists(), 403);
+        abort_unless(
+            (int) $class->level_id === (int) $level->id
+            && (int) $level->subject_id === (int) $subject->id
+            && $this->paths->professorCanAccessPath(
+                auth()->user(),
+                $subject->id,
+                $level->id,
+                $class->id
+            ),
+            403
+        );
     }
 
 }

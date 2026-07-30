@@ -21,11 +21,11 @@ class AuthController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role'     => 'nullable|string|in:student,prof',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
-        $validated['role'] = $validated['role'] ?? 'student';
+        // Toute inscription publique crée uniquement un étudiant.
+        $validated['role'] = User::ROLE_STUDENT;
         $validated['is_active'] = false;
 
         $user = User::create($validated);

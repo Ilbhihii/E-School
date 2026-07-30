@@ -25,11 +25,37 @@ class VocalTestPromptController extends Controller
 
     public function create()
     {
-        $subjects = Subject::whereIn('name', ['Arabe', 'Coran'])->orderBy('name')->get();
-        $levels = Level::orderBy('name')->get();
-        $classes = ClassRoom::orderBy('name')->get();
+        /*
+         * Hiérarchie du formulaire :
+         *
+         * Matière
+         * └── Niveaux appartenant à cette matière
+         *     └── Classes appartenant au niveau
+         *         et liées à la matière
+         */
+        $promptHierarchy =
+            $this->buildPromptHierarchy();
 
-        return view('admin.vocal-tests.prompts.create', compact('subjects', 'levels', 'classes'));
+        $subjects = collect($promptHierarchy)
+            ->map(
+                fn (array $subject) =>
+                    (object) [
+                        'id' => $subject['id'],
+                        'name' => $subject['name'],
+                    ]
+            )
+            ->values();
+
+        $modes = VocalTestPrompt::getModes();
+
+        return view(
+            'admin.vocal-tests.prompts.create',
+            compact(
+                'subjects',
+                'promptHierarchy',
+                'modes'
+            )
+        );
     }
 
     public function store(Request $request)
@@ -145,6 +171,146 @@ class VocalTestPromptController extends Controller
     }
 
     /**
+     * Construit les choix autorisés :
+     * Matière → Niveau → Classe.
+     */
+    private function buildPromptHierarchy(): array
+    {
+        $subjects = Subject::query()
+            ->whereIn(
+                'name',
+                ['Arabe', 'Coran']
+            )
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    ELSE 3
+                END"
+            )
+            ->get();
+
+        $levels = Level::query()
+            ->with([
+                'classes.subjects',
+            ])
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        return $subjects
+            ->map(
+                function (
+                    Subject $subject
+                ) use ($levels) {
+                    $allowedLevelNames = array_map(
+                        [
+                            VocalTestPrompt::class,
+                            'normalizePathName',
+                        ],
+                        VocalTestPrompt::pathNamesForSubject(
+                            $subject
+                        )
+                    );
+
+                    $subjectLevels = $levels
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->filter(
+                            fn (Level $level) =>
+                                in_array(
+                                    VocalTestPrompt
+                                        ::normalizePathName(
+                                            $level->name
+                                        ),
+                                    $allowedLevelNames,
+                                    true
+                                )
+                        )
+                        ->map(
+                            function (
+                                Level $level
+                            ) use ($subject) {
+                                $classes = $level
+                                    ->classes
+                                    ->filter(
+                                        function (
+                                            ClassRoom $classRoom
+                                        ) use (
+                                            $subject,
+                                            $level
+                                        ) {
+                                            return
+                                                $classRoom
+                                                    ->subjects
+                                                    ->contains(
+                                                        'id',
+                                                        $subject->id
+                                                    )
+                                                && VocalTestPrompt
+                                                    ::isSupportedPath(
+                                                        $subject,
+                                                        $level,
+                                                        $classRoom
+                                                    )
+                                                && !VocalTestPrompt
+                                                    ::isExcludedPath(
+                                                        $subject,
+                                                        $level,
+                                                        $classRoom
+                                                    );
+                                        }
+                                    )
+                                    ->sortBy('name')
+                                    ->unique('id')
+                                    ->values()
+                                    ->map(
+                                        fn (
+                                            ClassRoom $classRoom
+                                        ) => [
+                                            'id' =>
+                                                $classRoom->id,
+                                            'name' =>
+                                                $classRoom->name,
+                                        ]
+                                    )
+                                    ->all();
+
+                                if (empty($classes)) {
+                                    return null;
+                                }
+
+                                return [
+                                    'id' => $level->id,
+                                    'name' => $level->name,
+                                    'classes' => $classes,
+                                ];
+                            }
+                        )
+                        ->filter()
+                        ->unique('id')
+                        ->values()
+                        ->all();
+
+                    if (empty($subjectLevels)) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $subject->id,
+                        'name' => $subject->name,
+                        'levels' => $subjectLevels,
+                    ];
+                }
+            )
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
      * Vérifier que le niveau appartient à la matière et que la classe appartient au niveau
      */
     private function validateCoherence(int $subjectId, int $levelId, int $classId): void
@@ -163,6 +329,17 @@ class VocalTestPromptController extends Controller
             (int) $class->level_id === (int) $level->id,
             422,
             'Cette classe n\'appartient pas au niveau sélectionné.'
+        );
+
+        abort_unless(
+            $class->subjects()
+                ->where(
+                    'subjects.id',
+                    $subject->id
+                )
+                ->exists(),
+            422,
+            'Cette classe n\'est pas liée à la matière sélectionnée.'
         );
 
         abort_unless(
