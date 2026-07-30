@@ -7,24 +7,37 @@ use Illuminate\Http\Request;
 
 class CheckPayment
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
-     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
-     */
-    public function handle($request, Closure $next)
-    {
+    public function handle(
+        Request $request,
+        Closure $next
+    ) {
+        $user = $request->user();
 
-        if(!auth()->user()->is_paid){
+        if (!$user) {
+            return redirect()->route('login');
+        }
 
-        return redirect()->route('payment');
+        if ($user->isAdmin() || $user->isProf()) {
+            return $next($request);
+        }
 
+        $hasPaidAccess =
+            (bool) $user->is_paid
+            || (bool) (
+                $user->getAttribute('is_subscribed')
+                ?? false
+            );
+
+        if (!$hasPaidAccess) {
+            return redirect()
+                ->route('plans')
+                ->with(
+                    'error',
+                    'Un abonnement actif est nécessaire '
+                    . 'pour accéder aux lives.'
+                );
         }
 
         return $next($request);
-
     }
-
 }

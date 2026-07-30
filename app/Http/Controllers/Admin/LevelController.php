@@ -93,36 +93,26 @@ class LevelController extends Controller
     public function subjectsIndex()
     {
         $subjects = Subject::query()
-            ->whereIn('name', ['Arabe', 'Coran'])
+            ->whereIn(
+                'name',
+                ['Arabe', 'Coran', 'Soutien Lycée']
+            )
             ->orderByRaw(
                 "CASE
                     WHEN LOWER(name) = 'arabe' THEN 1
                     WHEN LOWER(name) = 'coran' THEN 2
-                    ELSE 3
+                    WHEN LOWER(name) = 'soutien lycée' THEN 3
+                    ELSE 4
                 END"
             )
             ->get();
 
         $subjects->each(function (Subject $subject) {
             $allowedLevelNames =
-                VocalTestPrompt::pathNamesForSubject($subject);
+                $this->levelNamesForSubject($subject);
 
-            $allowedClassNames =
-                VocalTestPrompt::allowedClassNames();
-
-            if (empty($allowedLevelNames)) {
-                $subject->setAttribute(
-                    'validated_level_count',
-                    0
-                );
-
-                $subject->setAttribute(
-                    'validated_class_count',
-                    0
-                );
-
-                return;
-            }
+            $allowedItemNames =
+                $this->itemNamesForSubject($subject);
 
             $validLevels = Level::query()
                 ->where('subject_id', $subject->id)
@@ -130,10 +120,13 @@ class LevelController extends Controller
                 ->with([
                     'classes' => function ($query) use (
                         $subject,
-                        $allowedClassNames
+                        $allowedItemNames
                     ) {
                         $query
-                            ->whereIn('name', $allowedClassNames)
+                            ->whereIn(
+                                'name',
+                                $allowedItemNames
+                            )
                             ->whereHas(
                                 'subjects',
                                 fn ($subjectQuery) =>
@@ -146,10 +139,6 @@ class LevelController extends Controller
                 ])
                 ->get();
 
-            /*
-             * Les groupements par nom empêchent les anciens doublons
-             * de gonfler les nombres affichés.
-             */
             $levelGroups = $validLevels->groupBy(
                 fn (Level $level) =>
                     VocalTestPrompt::normalizePathName(
@@ -157,32 +146,34 @@ class LevelController extends Controller
                     )
             );
 
-            $levelCount = $levelGroups->count();
-
-            $classCount = $levelGroups->sum(
-                function ($levels) {
-                    return $levels
-                        ->flatMap(
-                            fn (Level $level) => $level->classes
-                        )
-                        ->unique(
-                            fn (ClassRoom $classRoom) =>
-                                VocalTestPrompt::normalizePathName(
-                                    $classRoom->name
-                                )
-                        )
-                        ->count();
-                }
-            );
-
             $subject->setAttribute(
                 'validated_level_count',
-                $levelCount
+                $levelGroups->count()
             );
 
             $subject->setAttribute(
                 'validated_class_count',
-                $classCount
+                $levelGroups->sum(
+                    fn ($levels) =>
+                        $levels
+                            ->flatMap(
+                                fn (Level $level) =>
+                                    $level->classes
+                            )
+                            ->unique(
+                                fn (ClassRoom $classRoom) =>
+                                    VocalTestPrompt
+                                        ::normalizePathName(
+                                            $classRoom->name
+                                        )
+                            )
+                            ->count()
+                )
+            );
+
+            $subject->setAttribute(
+                'is_high_school_support',
+                $this->isHighSchoolSupport($subject)
             );
         });
 
@@ -209,37 +200,11 @@ class LevelController extends Controller
      */
     public function subjectLevels(Subject $subject)
     {
-        $allowedLevelNames = VocalTestPrompt::pathNamesForSubject($subject);
-        $allowedClassNames = VocalTestPrompt::allowedClassNames();
+        $allowedLevelNames =
+            $this->levelNamesForSubject($subject);
 
-        if (empty($allowedLevelNames)) {
-            $levels = Level::query()
-                ->where(function ($query) use ($subject) {
-                    $query->where('subject_id', $subject->id)
-                        ->orWhereHas(
-                            'classes.subjects',
-                            fn ($subjectQuery) => $subjectQuery
-                                ->where('subjects.id', $subject->id)
-                        );
-                })
-                ->with([
-                    'classes' => function ($query) use ($subject) {
-                        $query->whereHas(
-                            'subjects',
-                            fn ($subjectQuery) => $subjectQuery
-                                ->where('subjects.id', $subject->id)
-                        );
-                    },
-                ])
-                ->orderBy('order')
-                ->orderBy('id')
-                ->get();
-
-            return view(
-                'admin.subjects.levels',
-                compact('subject', 'levels')
-            );
-        }
+        $allowedItemNames =
+            $this->itemNamesForSubject($subject);
 
         $levels = Level::query()
             ->where('subject_id', $subject->id)
@@ -247,44 +212,78 @@ class LevelController extends Controller
             ->with([
                 'classes' => function ($query) use (
                     $subject,
-                    $allowedClassNames
+                    $allowedItemNames
                 ) {
                     $query
-                        ->whereIn('name', $allowedClassNames)
+                        ->whereIn(
+                            'name',
+                            $allowedItemNames
+                        )
                         ->whereHas(
                             'subjects',
-                            fn ($subjectQuery) => $subjectQuery
-                                ->where('subjects.id', $subject->id)
+                            fn ($subjectQuery) =>
+                                $subjectQuery->where(
+                                    'subjects.id',
+                                    $subject->id
+                                )
                         );
                 },
             ])
             ->get()
-            ->sortBy(function (Level $level) use ($allowedLevelNames) {
-                $position = array_search(
-                    $level->name,
-                    $allowedLevelNames,
-                    true
-                );
+            ->sortBy(
+                function (Level $level) use (
+                    $allowedLevelNames
+                ) {
+                    $position = array_search(
+                        $level->name,
+                        $allowedLevelNames,
+                        true
+                    );
 
-                return $position === false ? PHP_INT_MAX : $position;
-            })
+                    return $position === false
+                        ? PHP_INT_MAX
+                        : $position;
+                }
+            )
             ->unique('name')
             ->values();
 
-        $classOrder = array_flip($allowedClassNames);
+        $itemOrder = array_flip(
+            array_map(
+                [
+                    VocalTestPrompt::class,
+                    'normalizePathName',
+                ],
+                $allowedItemNames
+            )
+        );
 
-        $levels->each(function (Level $level) use ($classOrder) {
-            $level->setRelation(
-                'classes',
-                $level->classes
-                    ->sortBy(
-                        fn (ClassRoom $classRoom) =>
-                            $classOrder[$classRoom->name] ?? PHP_INT_MAX
-                    )
-                    ->unique('name')
-                    ->values()
-            );
-        });
+        $levels->each(
+            function (Level $level) use (
+                $itemOrder
+            ) {
+                $level->setRelation(
+                    'classes',
+                    $level->classes
+                        ->sortBy(
+                            fn (ClassRoom $classRoom) =>
+                                $itemOrder[
+                                    VocalTestPrompt
+                                        ::normalizePathName(
+                                            $classRoom->name
+                                        )
+                                ] ?? PHP_INT_MAX
+                        )
+                        ->unique('name')
+                        ->values()
+                );
+            }
+        );
+
+        $subject->setAttribute(
+            'is_high_school_support',
+            $this->isHighSchoolSupport($subject)
+        );
 
         return view(
             'admin.subjects.levels',
@@ -295,35 +294,79 @@ class LevelController extends Controller
     /**
      * Affiche les classes d'un niveau pour une matière spécifique
      */
-    public function subjectClasses(Subject $subject, Level $level)
-    {
+    public function subjectClasses(
+        Subject $subject,
+        Level $level
+    ) {
         abort_unless(
-            VocalTestPrompt::isSupportedLevel($subject, $level),
-            404,
-            'Ce parcours ne fait pas partie de la structure pédagogique active.'
+            (int) $level->subject_id ===
+                (int) $subject->id,
+            404
         );
 
-        $allowedClassNames = VocalTestPrompt::allowedClassNames();
-        $classOrder = array_flip($allowedClassNames);
+        $allowedLevelNames =
+            $this->levelNamesForSubject($subject);
+
+        abort_unless(
+            in_array(
+                VocalTestPrompt::normalizePathName(
+                    $level->name
+                ),
+                array_map(
+                    [
+                        VocalTestPrompt::class,
+                        'normalizePathName',
+                    ],
+                    $allowedLevelNames
+                ),
+                true
+            ),
+            404
+        );
+
+        $allowedItemNames =
+            $this->itemNamesForSubject($subject);
+
+        $itemOrder = array_flip(
+            array_map(
+                [
+                    VocalTestPrompt::class,
+                    'normalizePathName',
+                ],
+                $allowedItemNames
+            )
+        );
 
         $classes = ClassRoom::query()
             ->where('level_id', $level->id)
-            ->whereIn('name', $allowedClassNames)
+            ->whereIn('name', $allowedItemNames)
             ->whereHas(
                 'subjects',
-                fn ($query) => $query->where('subjects.id', $subject->id)
+                fn ($query) =>
+                    $query->where(
+                        'subjects.id',
+                        $subject->id
+                    )
             )
             ->get()
             ->sortBy(
                 fn (ClassRoom $classRoom) =>
-                    $classOrder[$classRoom->name] ?? PHP_INT_MAX
+                    $itemOrder[
+                        VocalTestPrompt::normalizePathName(
+                            $classRoom->name
+                        )
+                    ] ?? PHP_INT_MAX
             )
             ->unique('name')
             ->values();
 
         return view(
             'admin.subjects.classes',
-            compact('subject', 'level', 'classes')
+            compact(
+                'subject',
+                'level',
+                'classes'
+            )
         );
     }
 
@@ -332,8 +375,49 @@ class LevelController extends Controller
      */
     public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
     {
+        $allowedLevelNames =
+            $this->levelNamesForSubject($subject);
+
+        $allowedItemNames =
+            $this->itemNamesForSubject($subject);
+
         abort_unless(
-            VocalTestPrompt::isSupportedPath($subject, $level, $class),
+            (int) $level->subject_id ===
+                (int) $subject->id
+            && (int) $class->level_id ===
+                (int) $level->id
+            && in_array(
+                VocalTestPrompt::normalizePathName(
+                    $level->name
+                ),
+                array_map(
+                    [
+                        VocalTestPrompt::class,
+                        'normalizePathName',
+                    ],
+                    $allowedLevelNames
+                ),
+                true
+            )
+            && in_array(
+                VocalTestPrompt::normalizePathName(
+                    $class->name
+                ),
+                array_map(
+                    [
+                        VocalTestPrompt::class,
+                        'normalizePathName',
+                    ],
+                    $allowedItemNames
+                ),
+                true
+            )
+            && $class->subjects()
+                ->where(
+                    'subjects.id',
+                    $subject->id
+                )
+                ->exists(),
             404,
             'Ce parcours ne fait pas partie de la structure pédagogique active.'
         );
@@ -344,6 +428,39 @@ class LevelController extends Controller
             ->get();
 
         return view('admin.subjects.courses', compact('level', 'class', 'subject', 'courses'));
+    }
+
+    private function levelNamesForSubject(
+        Subject $subject
+    ): array {
+        if ($this->isHighSchoolSupport($subject)) {
+            return ['BAC'];
+        }
+
+        return VocalTestPrompt::pathNamesForSubject(
+            $subject
+        );
+    }
+
+    private function itemNamesForSubject(
+        Subject $subject
+    ): array {
+        if ($this->isHighSchoolSupport($subject)) {
+            return [
+                'Mathématiques',
+                'Physique-Chimie',
+            ];
+        }
+
+        return VocalTestPrompt::allowedClassNames();
+    }
+
+    private function isHighSchoolSupport(
+        Subject $subject
+    ): bool {
+        return VocalTestPrompt::normalizePathName(
+            $subject->name
+        ) === 'soutien lycee';
     }
 
     public function store(Request $request)
@@ -374,3 +491,4 @@ class LevelController extends Controller
         return back()->with('success','Niveau supprimé');
     }
 }
+

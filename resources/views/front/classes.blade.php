@@ -5,75 +5,83 @@
 @section('content')
 
 <style>
-    /* Image du livre coranique dans un cadre bleu/violet */
-    .quran-icon-wrapper {
-        width: 96px !important;
-        height: 96px !important;
-        margin: 0 auto 1rem;
-        padding: 12px;
+    /* Grille et icônes harmonisées des matières */
+    #subjectsGrid {
+        justify-content: center;
+    }
 
-        display: flex !important;
+    #subjectsGrid > .subject-card {
+        display: flex;
+    }
+
+    .subject-card-panel {
+        width: 100%;
+        min-height: 390px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 1.65rem 1.35rem !important;
+    }
+
+    .subject-icon-box {
+        width: 82px !important;
+        height: 82px !important;
+        flex: 0 0 82px;
+        display: inline-flex !important;
         align-items: center;
         justify-content: center;
-
-        border-radius: 24px !important;
-        overflow: hidden !important;
-
-        background: linear-gradient(
-            135deg,
-            #2563EB 0%,
-            #4F46E5 48%,
-            #7C3AED 100%
-        ) !important;
-
-        border: 1px solid rgba(255, 255, 255, 0.16);
-
-        box-shadow:
-            0 12px 28px rgba(37, 99, 235, 0.28),
-            0 0 22px rgba(124, 58, 237, 0.22) !important;
-
-        transform: translateZ(30px);
+        margin: 0 auto 0.9rem;
+        border-radius: 21px !important;
+        color: #ffffff;
+        font-size: 2.05rem;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 13px 28px rgba(0, 0, 0, 0.22);
+        transform: translateZ(28px);
         transition:
             transform 0.3s ease,
             box-shadow 0.3s ease;
     }
 
-    .quran-subject-image {
-        width: 76px;
-        height: 76px;
-        display: block;
-        object-fit: contain;
-
-        filter: drop-shadow(
-            0 7px 10px rgba(0, 0, 0, 0.32)
-        );
-
-        transition: transform 0.3s ease;
+    .subject-card-panel:hover .subject-icon-box {
+        transform: translateZ(44px) translateY(-4px) scale(1.06);
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3);
     }
 
-    .card-3d:hover .quran-icon-wrapper {
-        transform: translateZ(50px) scale(1.08);
-
-        box-shadow:
-            0 16px 34px rgba(37, 99, 235, 0.36),
-            0 0 30px rgba(124, 58, 237, 0.32) !important;
+    .subject-card-heading {
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .card-3d:hover .quran-subject-image {
-        transform: scale(1.06);
+    .subject-levels-block {
+        margin-top: auto;
     }
 
-    @media (max-width: 576px) {
-        .quran-icon-wrapper {
-            width: 82px !important;
-            height: 82px !important;
-            padding: 10px;
-            border-radius: 20px !important;
+    @media (min-width: 1200px) {
+        #subjectsGrid > .subject-card {
+            flex: 0 0 33.333333%;
+            max-width: 33.333333%;
+        }
+    }
+
+    @media (max-width: 1199.98px) {
+        .subject-card-panel {
+            min-height: 370px;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .subject-card-panel {
+            min-height: auto;
         }
 
-        .quran-subject-image {
-            width: 64px;
-            height: 64px;
+        .subject-icon-box {
+            width: 70px !important;
+            height: 70px !important;
+            flex-basis: 70px;
+            border-radius: 18px !important;
+            font-size: 1.8rem;
         }
     }
 </style>
@@ -107,51 +115,56 @@
             </div>
         </div>
 
-        <div class="row g-4" id="subjectsGrid">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="subjectsGrid">
             @forelse($subjects as $subject)
             @php
-                $normalizedSubjectName = mb_strtolower(trim($subject->name ?? ''));
-
-                $isQuran = in_array($normalizedSubjectName, [
-                    'coran',
-                    'quran',
-                    'couran',
-                    'القرآن',
-                    'القران',
-                ], true);
+                $normalizedSubjectName = mb_strtolower(
+                    trim($subject->name ?? '')
+                );
 
                 $subjectDesign = match ($normalizedSubjectName) {
                     'arabe' => [
                         'icon' => 'bi-translate',
-                        'gradient' => 'linear-gradient(135deg,#2563EB,#06B6D4)',
+                        'gradient' =>
+                            'linear-gradient(135deg,#2563EB,#06B6D4)',
                     ],
+
+                    'coran', 'quran', 'couran', 'القرآن', 'القران' => [
+                        'icon' => 'bi-book-half',
+                        'gradient' =>
+                            'linear-gradient(135deg,#7C3AED,#A855F7)',
+                    ],
+
+                    'soutien lycée', 'soutien lycee' => [
+                        'icon' => 'bi-mortarboard-fill',
+                        'gradient' =>
+                            'linear-gradient(135deg,#F59E0B,#EA580C)',
+                    ],
+
                     default => [
                         'icon' => 'bi-journal-bookmark-fill',
-                        'gradient' => 'linear-gradient(135deg,#4F46E5,#7C3AED)',
+                        'gradient' =>
+                            'linear-gradient(135deg,#4F46E5,#7C3AED)',
                     ],
                 };
             @endphp
-            <div class="col-md-4 subject-card" data-type="{{ $subject->type }}">
-                <div class="card-3d text-center h-100 reveal-3d">
+            <div class="col subject-card" data-type="{{ $subject->type }}">
+                <div class="card-3d text-center h-100 reveal-3d subject-card-panel">
                     <a href="{{ route('front.subject.levels', $subject->id) }}" class="text-decoration-none">
                         <div
-                            class="card-3d-icon mx-auto {{ $isQuran ? 'quran-icon-wrapper' : '' }}"
-                            @if (!$isQuran)
-                                style="background: {{ $subjectDesign['gradient'] }};"
-                            @endif
+                            class="subject-icon-box"
+                            style="background:{{ $subjectDesign['gradient'] }};"
+                            aria-hidden="true"
                         >
-                            @if ($isQuran)
-                                <img
-                                    src="{{ asset('images/alquran.png') }}"
-                                    alt="Livre du Coran"
-                                    class="quran-subject-image"
-                                    loading="lazy"
-                                >
-                            @else
-                                <i class="bi {{ $subjectDesign['icon'] }}"></i>
-                            @endif
+                            <i class="bi {{ $subjectDesign['icon'] }}"></i>
                         </div>
-                        <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">{{ $subject->name }}</h5>
+
+                        <h5
+                            class="fw-bold text-white mb-2 subject-card-heading"
+                            style="font-family:'Poppins',sans-serif;"
+                        >
+                            {{ $subject->name }}
+                        </h5>
                     </a>
                         <span class="badge px-3 py-1 mb-2" style="background: {{ $subject->status_bg }}; color: {{ $subject->status_color }}; border: 1px solid {{ $subject->status_border }}; border-radius: 20px; font-weight: 500; font-size: 0.75rem;">
                             <i class="bi {{ $subject->status_icon }} me-1"></i> {{ $subject->status_label }}
@@ -162,13 +175,16 @@
                             </span>
                         </p>
 
-                        <div class="pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+                        <div class="pt-3 subject-levels-block" style="border-top:1px solid rgba(255,255,255,0.08);">
                             <div class="small fw-semibold mb-2" style="color:rgba(255,255,255,0.65);">
-                                <i class="bi bi-layers me-1"></i>Niveaux disponibles
+                                <i class="bi bi-layers me-1"></i>
+                                {{ $subject->is_high_school_support
+                                    ? 'Parcours disponible'
+                                    : 'Niveaux disponibles' }}
                             </div>
                             <div class="d-flex flex-wrap justify-content-center gap-2">
                                 @forelse($subject->available_levels as $level)
-                                    <a href="{{ route('front.subject.level.classes', [$subject->id, $level->id]) }}"
+                                    <a href="{{ route('front.subject.levels', $subject->id) }}?open={{ $level->id }}"
                                        class="badge text-decoration-none px-3 py-2"
                                        style="background:rgba(124,58,237,0.16);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25);border-radius:20px;">
                                         {{ $level->name }} <i class="bi bi-chevron-right ms-1"></i>

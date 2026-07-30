@@ -39,6 +39,13 @@ class Live extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function accessLogs()
+    {
+        return $this->hasMany(
+            LiveAccessLog::class
+        );
+    }
+
     /**
      * Date et heure exactes de début dans le fuseau de l'application.
      */

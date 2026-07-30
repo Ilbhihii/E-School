@@ -1,286 +1,258 @@
 @extends('layouts.admin')
 
-@section('title', 'Parcours - ' . $subject->name)
-@section('page_title', $subject->name)
-@section('breadcrumb', 'Matières → Parcours → Niveaux')
+@section('title', 'Gestion des Matières')
+@section('page_title', 'Matières')
+@section('breadcrumb', 'Matières')
 
 @section('content')
 
-@php
-    $normalizedSubjectName = \App\Models\VocalTestPrompt::normalizePathName(
-        $subject->name
-    );
-
-    $isArabic = $normalizedSubjectName === 'arabe';
-
-    $levelDescriptions = [
-        \App\Models\VocalTestPrompt::ARABIC_READING_WRITING =>
-            'Apprendre à lire et à écrire en arabe.',
-        \App\Models\VocalTestPrompt::ARABIC_COMMUNICATION =>
-            'Apprendre à comprendre et à communiquer en arabe.',
-        \App\Models\VocalTestPrompt::QURAN_LEARNING_TAJWID =>
-            'Comprendre, appliquer les règles du tajwid et mémoriser.',
-    ];
-
-    $levelIcons = [
-        \App\Models\VocalTestPrompt::ARABIC_READING_WRITING =>
-            'bi-book-half',
-        \App\Models\VocalTestPrompt::ARABIC_COMMUNICATION =>
-            'bi-chat-dots-fill',
-        \App\Models\VocalTestPrompt::QURAN_LEARNING_TAJWID =>
-            'bi-moon-stars-fill',
-    ];
-
-    $levelGradients = [
-        \App\Models\VocalTestPrompt::ARABIC_READING_WRITING =>
-            'linear-gradient(135deg, #047857, #22C55E)',
-        \App\Models\VocalTestPrompt::ARABIC_COMMUNICATION =>
-            'linear-gradient(135deg, #D97706, #FBBF24)',
-        \App\Models\VocalTestPrompt::QURAN_LEARNING_TAJWID =>
-            'linear-gradient(135deg, #92400E, #D97706)',
-    ];
-
-    $classDesigns = [
-        \App\Models\VocalTestPrompt::CLASS_BEGINNER => [
-            'gradient' => 'linear-gradient(135deg, #047857, #22C55E)',
-            'icon' => 'bi-journal-bookmark-fill',
-            'description' => $isArabic
-                ? 'Premiers apprentissages, sans test vocal.'
-                : 'J’apprends les premières règles.',
-        ],
-        \App\Models\VocalTestPrompt::CLASS_INTERMEDIATE => [
-            'gradient' => 'linear-gradient(135deg, #1D4ED8, #60A5FA)',
-            'icon' => 'bi-book-half',
-            'description' => $isArabic
-                ? 'Je progresse et je consolide mes acquis.'
-                : 'Je débute et j’applique le tajwid.',
-        ],
-        \App\Models\VocalTestPrompt::CLASS_ADVANCED => [
-            'gradient' => 'linear-gradient(135deg, #6D28D9, #A78BFA)',
-            'icon' => 'bi-stars',
-            'description' => $isArabic
-                ? 'Je maîtrise des compétences avancées.'
-                : 'Tajwid, mémorisation et perfectionnement.',
-        ],
-    ];
-
-    $columnCount = max(1, min(3, $levels->count()));
-@endphp
-
 <style>
-.validated-paths-grid {
-    --validated-columns: {{ $columnCount }};
-    display: grid;
-    grid-template-columns:
-        repeat(var(--validated-columns), minmax(285px, 390px));
-    justify-content: center;
-    align-items: stretch;
-    gap: 22px;
-}
+@keyframes subjFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.96);
+    }
 
-.validated-path-card {
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.14);
-    border-radius: 22px;
-    background: rgba(15, 23, 42, 0.72);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
-}
-
-.validated-path-header {
-    padding: 1.15rem;
-    color: #fff;
-}
-
-.validated-path-heading {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.validated-path-icon {
-    width: 50px;
-    height: 50px;
-    flex: 0 0 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 15px;
-    background: rgba(255, 255, 255, 0.18);
-    font-size: 1.35rem;
-}
-
-.validated-path-title {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-}
-
-.validated-path-subtitle {
-    margin: 5px 0 0;
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 0.78rem;
-    line-height: 1.5;
-}
-
-.validated-path-body {
-    display: grid;
-    gap: 12px;
-    padding: 14px;
-}
-
-.validated-class-card {
-    overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.14);
-    border-radius: 16px;
-    background: rgba(15, 23, 42, 0.72);
-}
-
-.validated-class-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 13px;
-    color: inherit;
-    text-decoration: none;
-    transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.validated-class-main:hover {
-    color: inherit;
-    text-decoration: none;
-    background: rgba(255, 255, 255, 0.035);
-}
-
-.validated-class-icon {
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    color: rgba(255, 255, 255, 0.88);
-    font-size: 1.15rem;
-}
-
-.validated-class-content {
-    min-width: 0;
-    flex: 1;
-}
-
-.validated-class-name {
-    margin: 0 0 3px;
-    color: rgba(255, 255, 255, 0.94);
-    font-size: 0.94rem;
-    font-weight: 800;
-}
-
-.validated-class-description,
-.validated-class-meta {
-    display: block;
-    color: var(--adm-text-muted);
-    font-size: 0.74rem;
-    line-height: 1.45;
-}
-
-.validated-class-status {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 0 13px 12px;
-}
-
-.validated-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 8px;
-    border-radius: 999px;
-    font-size: 0.68rem;
-    font-weight: 700;
-}
-
-.validated-status-badge.no-test {
-    color: #86EFAC;
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.22);
-}
-
-.validated-status-badge.test {
-    color: #C4B5FD;
-    background: rgba(124, 58, 237, 0.13);
-    border: 1px solid rgba(167, 139, 250, 0.23);
-}
-
-.structure-info {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 22px;
-    padding: 14px 16px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    border-radius: 15px;
-    background: rgba(37, 99, 235, 0.08);
-    color: #BFDBFE;
-}
-
-.structure-info i {
-    margin-top: 2px;
-    color: #60A5FA;
-    font-size: 1.15rem;
-}
-
-@media (max-width: 980px) {
-    .validated-paths-grid {
-        grid-template-columns: repeat(2, minmax(270px, 380px));
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
-@media (max-width: 680px) {
-    .validated-paths-grid {
-        grid-template-columns: minmax(0, 430px);
+.subject-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(250px, 310px));
+    justify-content: center;
+    align-items: stretch;
+    gap: 20px;
+    width: 100%;
+}
+
+.subject-card-outer {
+    min-width: 0;
+    opacity: 0;
+    animation:
+        subjFadeIn 0.55s
+        cubic-bezier(0.175, 0.885, 0.32, 1.275)
+        forwards;
+    will-change: transform, opacity;
+}
+
+.subject-card-outer:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.subject-card-outer:nth-child(2) {
+    animation-delay: 0.12s;
+}
+
+.subject-card-outer:nth-child(3) {
+    animation-delay: 0.19s;
+}
+
+.subject-card-link,
+.subject-card-link:hover {
+    display: block;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+}
+
+.subject-admin-card {
+    height: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+        transform 0.25s ease,
+        border-color 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+.subject-admin-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(96, 165, 250, 0.28);
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.24);
+}
+
+.subject-card-cover {
+    position: relative;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.subject-card-cover::before,
+.subject-card-cover::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.subject-card-cover::before {
+    width: 125px;
+    height: 125px;
+    top: -62px;
+    right: -38px;
+}
+
+.subject-card-cover::after {
+    width: 82px;
+    height: 82px;
+    bottom: -42px;
+    left: -26px;
+}
+
+.subject-card-icon {
+    position: relative;
+    z-index: 1;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 2.5rem;
+}
+
+.subject-card-body {
+    padding: 1.15rem;
+    text-align: center;
+}
+
+.subject-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.55rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--adm-text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.subject-card-title {
+    margin: 0 0 0.85rem;
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.subject-statistics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.subject-stat {
+    padding: 11px 8px;
+    border: 1px solid rgba(148, 163, 184, 0.13);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.subject-stat-value {
+    display: block;
+    color: rgba(255, 255, 255, 0.96);
+    font-size: 1.22rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.subject-stat-label {
+    display: block;
+    margin-top: 6px;
+    color: var(--adm-text-muted);
+    font-size: 0.7rem;
+}
+
+.subject-stat-label i {
+    margin-right: 4px;
+}
+
+.subject-structure-note {
+    margin: -0.2rem 0 0.9rem;
+    color: rgba(148, 163, 184, 0.86);
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+
+.subject-action {
+    display: inline-flex;
+    width: 100%;
+    min-height: 39px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 750;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .subject-card-outer {
+        animation: none;
+        opacity: 1;
+    }
+}
+
+@media (max-width: 1050px) {
+    .subject-cards-grid {
+        grid-template-columns:
+            repeat(2, minmax(260px, 310px));
+    }
+}
+
+@media (max-width: 700px) {
+    .subject-cards-grid {
+        grid-template-columns: minmax(0, 390px);
     }
 }
 </style>
 
 <div class="adm-page-header">
     <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.8rem;color:var(--adm-text-muted);">
-            <a
-                href="{{ route('admin.subjects.index') }}"
-                style="color:var(--adm-text-muted);text-decoration:none;"
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                gap:8px;
+                margin-bottom:6px;
+                font-size:0.8rem;
+                color:var(--adm-text-muted);
+            "
+        >
+            <span
+                style="
+                    font-weight:600;
+                    color:rgba(255,255,255,0.6);
+                "
             >
-                <i class="bi bi-book me-1"></i>Matières
-            </a>
+                Matières
+            </span>
+
             <span>/</span>
-            <span style="color:rgba(255,255,255,0.6);font-weight:500;">
-                {{ $subject->name }}
+
+            <span style="color:var(--adm-text-muted);">
+                Parcours → Niveaux → Cours
             </span>
         </div>
 
         <h1>
             <i
-                class="bi bi-diagram-3-fill me-2"
+                class="bi bi-book me-2"
                 style="color:var(--adm-primary);"
             ></i>
-            Parcours — {{ $subject->name }}
+            Gestion des Matières
         </h1>
 
         <div class="subtitle">
-            Structure validée : parcours, niveaux et accès aux cours
+            Sélectionnez une matière pour parcourir sa structure active
         </div>
-    </div>
-
-    <div class="page-actions">
-        <a
-            href="{{ route('admin.subjects.index') }}"
-            class="adm-btn adm-btn-ghost"
-        >
-            <i class="bi bi-arrow-left me-1"></i>
-            Retour aux matières
-        </a>
     </div>
 </div>
 
@@ -291,172 +263,176 @@
 @endif
 
 @if(session('info'))
-    <div class="adm-alert adm-alert-info mb-4">
+    <div
+        class="adm-alert mb-4"
+        style="
+            background:rgba(6,182,212,0.1);
+            border:1px solid rgba(6,182,212,0.2);
+            color:#67E8F9;
+            border-radius:12px;
+            padding:12px 16px;
+        "
+    >
+        <i class="bi bi-info-circle me-2"></i>
         {{ session('info') }}
     </div>
 @endif
 
-<div class="structure-info">
-    <i class="bi bi-shield-check"></i>
-    <div>
-        <strong>Structure pédagogique protégée</strong>
-        <div style="margin-top:3px;font-size:0.82rem;line-height:1.55;">
-            Les anciens parcours et les doublons ne sont plus affichés.
-            Les niveaux fixes sont Débutant, Intermédiaire et Avancé.
-        </div>
-    </div>
-</div>
+<div class="subject-cards-grid">
+    @forelse($subjects as $subject)
+        @php
+            $normalizedName =
+                \App\Models\VocalTestPrompt::normalizePathName(
+                    $subject->name
+                );
 
-@if($levels->isEmpty())
-    <div class="adm-card">
-        <div class="adm-empty" style="padding:4rem 2rem;">
-            <div class="adm-empty-icon">
-                <i class="bi bi-diagram-3"></i>
-            </div>
-            <h5>Aucun parcours valide trouvé</h5>
-            <p>
-                Exécutez la migration et les seeders de la structure validée.
-            </p>
-        </div>
-    </div>
-@else
-    <div class="validated-paths-grid">
-        @foreach($levels as $level)
-            @php
-                $gradient = $levelGradients[$level->name]
-                    ?? 'linear-gradient(135deg, #334155, #64748B)';
+            $design = match ($normalizedName) {
+                'arabe' => [
+                    'icon' => 'bi-translate',
+                    'gradient' =>
+                        'linear-gradient(135deg,#2563EB,#06B6D4)',
+                    'structure' =>
+                        'Lecture & Écriture • Communication',
+                ],
 
-                $icon = $levelIcons[$level->name]
-                    ?? 'bi-layers-fill';
+                'coran', 'quran', 'القران' => [
+                    'icon' => 'bi-book-half',
+                    'gradient' =>
+                        'linear-gradient(135deg,#7C3AED,#A855F7)',
+                    'structure' =>
+                        'Apprentissage & Tajwid',
+                ],
 
-                $description = $levelDescriptions[$level->name]
-                    ?? $level->description
-                    ?? 'Parcours pédagogique';
+                'soutien lycee' => [
+                    'icon' => 'bi-mortarboard-fill',
+                    'gradient' =>
+                        'linear-gradient(135deg,#F59E0B,#EA580C)',
+                    'structure' =>
+                        'BAC • Mathématiques • Physique-Chimie',
+                ],
 
-                $classes = $level->classes;
-            @endphp
+                default => [
+                    'icon' => 'bi-journal-bookmark-fill',
+                    'gradient' =>
+                        'linear-gradient(135deg,#4F46E5,#7C3AED)',
+                    'structure' =>
+                        'Structure pédagogique',
+                ],
+            };
 
-            <article class="validated-path-card">
-                <header
-                    class="validated-path-header"
-                    style="background:{{ $gradient }};"
-                >
-                    <div class="validated-path-heading">
-                        <div class="validated-path-icon">
-                            <i class="bi {{ $icon }}"></i>
-                        </div>
+            $levelCount = (int) (
+                $subject->validated_level_count ?? 0
+            );
 
-                        <div>
-                            <h2 class="validated-path-title">
-                                {{ $level->name }}
-                            </h2>
-                            <p class="validated-path-subtitle">
-                                {{ $description }}
-                            </p>
-                        </div>
+            $classCount = (int) (
+                $subject->validated_class_count ?? 0
+            );
+
+            $levelLabel =
+                $levelCount === 1 ? 'niveau' : 'niveaux';
+
+            $isHighSchoolSupport =
+                (bool) (
+                    $subject->is_high_school_support
+                    ?? false
+                );
+
+            $classLabel = $isHighSchoolSupport
+                ? (
+                    $classCount === 1
+                        ? 'matière'
+                        : 'matières'
+                )
+                : (
+                    $classCount === 1
+                        ? 'classe'
+                        : 'classes'
+                );
+        @endphp
+
+        <div class="subject-card-outer">
+            <a
+                href="{{ route('admin.subjects.levels', $subject) }}"
+                class="subject-card-link"
+                aria-label="Voir les niveaux de {{ $subject->name }}"
+            >
+                <article class="adm-card subject-admin-card">
+                    <div
+                        class="subject-card-cover"
+                        style="background:{{ $design['gradient'] }};"
+                    >
+                        <i
+                            class="bi {{ $design['icon'] }}
+                                subject-card-icon"
+                        ></i>
                     </div>
-                </header>
 
-                <div class="validated-path-body">
-                    @forelse($classes as $class)
-                        @php
-                            $design = $classDesigns[$class->name]
-                                ?? [
-                                    'gradient' =>
-                                        'linear-gradient(135deg, #334155, #64748B)',
-                                    'icon' => 'bi-mortarboard-fill',
-                                    'description' => 'Niveau pédagogique',
-                                ];
+                    <div class="subject-card-body">
+                        <span class="subject-type-badge">
+                            {{ $subject->type ?? 'scolaire' }}
+                        </span>
 
-                            $courseCount = $class->courses()
-                                ->where('subject_id', $subject->id)
-                                ->count();
+                        <h2 class="subject-card-title">
+                            {{ $subject->name }}
+                        </h2>
 
-                            $requiresTest = !(
-                                $isArabic
-                                && $class->name ===
-                                    \App\Models\VocalTestPrompt::CLASS_BEGINNER
-                            );
-                        @endphp
+                        <div class="subject-statistics">
+                            <div class="subject-stat">
+                                <strong class="subject-stat-value">
+                                    {{ $levelCount }}
+                                </strong>
 
-                        <section class="validated-class-card">
-                            <a
-                                href="{{ route('admin.subjects.courses', [$subject, $level, $class]) }}"
-                                class="validated-class-main"
-                                title="Voir les cours de {{ $class->name }}"
-                            >
-                                <div
-                                    class="validated-class-icon"
-                                    style="background:{{ $design['gradient'] }};"
-                                >
-                                    <i class="bi {{ $design['icon'] }}"></i>
-                                </div>
-
-                                <div class="validated-class-content">
-                                    <h3 class="validated-class-name">
-                                        {{ $class->name }}
-                                    </h3>
-
-                                    <span class="validated-class-description">
-                                        {{ $design['description'] }}
-                                    </span>
-
-                                    <span class="validated-class-meta">
-                                        <i class="bi bi-play-circle me-1"></i>
-                                        {{ $courseCount }} cours
-                                    </span>
-                                </div>
-
-                                <i
-                                    class="bi bi-chevron-right"
-                                    style="color:rgba(255,255,255,0.24);"
-                                ></i>
-                            </a>
-
-                            <div class="validated-class-status">
-                                @if($requiresTest)
-                                    <span class="validated-status-badge test">
-                                        <i class="bi bi-mic-fill"></i>
-                                        Test vocal
-                                    </span>
-                                @else
-                                    <span class="validated-status-badge no-test">
-                                        <i class="bi bi-check-circle-fill"></i>
-                                        Sans test vocal
-                                    </span>
-                                @endif
-
-                                <a
-                                    href="{{ route('admin.classes.edit', $class) }}"
-                                    class="adm-btn adm-btn-warning adm-btn-sm"
-                                    title="Modifier {{ $class->name }}"
-                                >
-                                    <i class="bi bi-pencil-square me-1"></i>
-                                    Modifier
-                                </a>
+                                <span class="subject-stat-label">
+                                    <i class="bi bi-layers"></i>
+                                    {{ $levelLabel }}
+                                </span>
                             </div>
-                        </section>
-                    @empty
-                        <div class="adm-empty" style="padding:2rem 1rem;">
-                            <div
-                                class="adm-empty-icon"
-                                style="font-size:2rem;"
-                            >
-                                <i class="bi bi-building"></i>
+
+                            <div class="subject-stat">
+                                <strong class="subject-stat-value">
+                                    {{ $classCount }}
+                                </strong>
+
+                                <span class="subject-stat-label">
+                                    <i class="bi bi-mortarboard"></i>
+                                    {{ $classLabel }}
+                                </span>
                             </div>
-                            <h5 style="font-size:1rem;">
-                                Niveaux introuvables
-                            </h5>
-                            <p style="font-size:0.85rem;">
-                                Relancez le ClassSeeder pour recréer
-                                Débutant, Intermédiaire et Avancé.
-                            </p>
                         </div>
-                    @endforelse
+
+                        <p class="subject-structure-note">
+                            {{ $design['structure'] }}
+                        </p>
+
+                        <span
+                            class="subject-action"
+                            style="
+                                background:
+                                    {{ $design['gradient'] }};
+                            "
+                        >
+                            <i class="bi bi-arrow-right"></i>
+                            Voir les niveaux
+                        </span>
+                    </div>
+                </article>
+            </a>
+        </div>
+    @empty
+        <div class="adm-card">
+            <div class="adm-empty" style="padding:4rem 2rem;">
+                <div class="adm-empty-icon">
+                    <i class="bi bi-book"></i>
                 </div>
-            </article>
-        @endforeach
-    </div>
-@endif
+
+                <h5>Aucune matière</h5>
+
+                <p>
+                    Les matières apparaîtront ici après leur création.
+                </p>
+            </div>
+        </div>
+    @endforelse
+</div>
 
 @endsection

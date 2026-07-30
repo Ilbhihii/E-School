@@ -31,6 +31,13 @@ class LevelSeeder extends Seeder
                     'order' => 1,
                 ],
             ],
+            'Soutien Lycée' => [
+                [
+                    'name' => 'BAC',
+                    'description' => 'Préparation et accompagnement pour le baccalauréat.',
+                    'order' => 1,
+                ],
+            ],
         ];
 
         foreach ($structure as $subjectName => $levels) {
@@ -58,7 +65,7 @@ class LevelSeeder extends Seeder
         }
 
         $this->command->info(
-            'Parcours créés : Lecture & Écriture, Communication, Apprentissage & Tajwid.'
+            'Parcours créés : Lecture & Écriture, Communication, Apprentissage & Tajwid et BAC.'
         );
     }
 }

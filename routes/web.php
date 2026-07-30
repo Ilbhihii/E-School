@@ -27,7 +27,7 @@ use App\Http\Controllers\Admin\DevoirController;
 use App\Http\Controllers\Front\LearningController;
 
 
-
+use App\Http\Controllers\LiveAccessController;
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\VocalTestController;
@@ -86,6 +86,37 @@ Route::get('/scolaires', [FrontController::class, 'scolaires'])
 
 Route::get('/all-classes-courses', [HomeController::class,'allClassesCourses'])->name('front.all-classes-courses');
 Route::get('/lives', [HomeController::class,'lives'])->name('front.lives');
+
+/*
+|--------------------------------------------------------------------------
+| ACCÈS SÉCURISÉ AUX LIVES
+|--------------------------------------------------------------------------
+|
+| 1. Vérification de la connexion, du paiement, de la classe et de l'horaire.
+| 2. Redirection par une URL Laravel signée et temporaire.
+|
+*/
+
+Route::middleware([
+    'auth',
+    'throttle:30,1',
+])->group(function () {
+    Route::get(
+        '/lives/{live}/access',
+        [LiveAccessController::class, 'requestAccess']
+    )->name('live.access.request');
+
+    Route::get(
+        '/lives/{live}/join',
+        [LiveAccessController::class, 'join']
+    )
+        ->middleware([
+            'signed',
+            'throttle:10,1',
+        ])
+        ->name('live.join.signed');
+});
+
 
 Route::get('/account/blocked', function () {
     return view('auth.account-blocked');
@@ -376,7 +407,12 @@ Route::middleware(['auth', 'active'])
     ->group(function () {
 
     Route::get('/dashboard', [StudentController::class, 'dashboard'])->name('dashboard');
-    Route::get('/lives', [StudentController::class, 'lives'])->name('lives');
+    Route::get(
+        '/lives',
+        [StudentController::class, 'lives']
+    )
+        ->middleware('paid')
+        ->name('lives');
 
     // Cours
     Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');
@@ -421,6 +457,3 @@ Route::get('/paypal/checkout', [PaymentController::class, 'paypalCheckout'])->na
 
 Route::get('/payment', [PaymentController::class, 'index'])->name('student.payment');
 Route::post('/checkout', [PaymentController::class, 'checkout'])->name('student.checkout');
-
-?>
-

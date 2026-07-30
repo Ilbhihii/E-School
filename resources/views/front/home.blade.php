@@ -5,63 +5,77 @@
 @section('content')
 
 <style>
-    /* Image coranique affichée uniquement pour la matière Coran */
-    .home-quran-icon-wrapper {
-        width: 96px !important;
-        height: 96px !important;
-        margin: 0 auto 1rem;
-        padding: 12px;
+    /* Cartes harmonisées pour Arabe, Coran et Soutien Lycée */
+    .home-subjects-grid {
+        max-width: 1080px;
+    }
 
-        display: flex !important;
+    .home-subjects-grid > [class*="col-"] {
+        display: flex;
+    }
+
+    .home-subject-card {
+        width: 100%;
+        min-height: 245px;
+        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding: 1.75rem 1.35rem !important;
+    }
 
-        border-radius: 24px !important;
-        overflow: hidden !important;
-
-        background: linear-gradient(135deg, #2563EB 0%, #4F46E5 48%, #7C3AED 100%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        box-shadow:
-            0 12px 28px rgba(37, 99, 235, 0.28),
-            0 0 22px rgba(124, 58, 237, 0.22) !important;
-
-        transform: translateZ(30px);
+    .home-subject-icon {
+        width: 78px !important;
+        height: 78px !important;
+        flex: 0 0 78px;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.75rem;
+        border-radius: 21px !important;
+        color: #ffffff;
+        font-size: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 13px 28px rgba(0, 0, 0, 0.2);
+        transform: translateZ(28px);
         transition:
             transform 0.3s ease,
             box-shadow 0.3s ease;
     }
 
-    .home-quran-subject-image {
-        width: 76px;
-        height: 76px;
-        display: block;
-        object-fit: contain;
-        filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.32));
-        transition: transform 0.3s ease;
+    .home-subject-card:hover .home-subject-icon {
+        transform: translateZ(44px) translateY(-4px) scale(1.06);
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
     }
 
-    .card-3d:hover .home-quran-icon-wrapper {
-        transform: translateZ(50px) scale(1.08);
-        box-shadow:
-            0 16px 34px rgba(37, 99, 235, 0.36),
-            0 0 30px rgba(124, 58, 237, 0.32) !important;
+    .home-subject-card-title {
+        min-height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .card-3d:hover .home-quran-subject-image {
-        transform: scale(1.06);
+    @media (max-width: 991.98px) {
+        .home-subjects-grid {
+            max-width: 760px;
+        }
     }
 
-    @media (max-width: 576px) {
-        .home-quran-icon-wrapper {
-            width: 82px !important;
-            height: 82px !important;
-            padding: 10px;
-            border-radius: 20px !important;
+    @media (max-width: 575.98px) {
+        .home-subjects-grid {
+            max-width: 390px;
         }
 
-        .home-quran-subject-image {
-            width: 64px;
-            height: 64px;
+        .home-subject-card {
+            min-height: 220px;
+        }
+
+        .home-subject-icon {
+            width: 68px !important;
+            height: 68px !important;
+            flex-basis: 68px;
+            border-radius: 18px !important;
+            font-size: 1.75rem;
         }
     }
 </style>
@@ -82,44 +96,54 @@
             tout ce qu'il vous faut pour exceller, accessible partout et à tout moment.
         </p>
 
-        <div class="row g-4 justify-content-center mb-5 mx-auto" style="max-width:760px;">
+        <div class="row g-4 justify-content-center mb-5 mx-auto home-subjects-grid">
             @foreach($subjectsGrouped as $group)
                 @foreach($group['subjects'] as $subject)
                     @php
-                        $normalizedSubjectName = mb_strtolower(trim($subject->name ?? ''));
+                        $normalizedSubjectName = mb_strtolower(
+                            trim($subject->name ?? '')
+                        );
 
-                        $isQuran = in_array($normalizedSubjectName, [
-                            'coran',
-                            'quran',
-                            'couran',
-                            'القرآن',
-                            'القران',
-                        ], true);
+                        $subjectDesign = match ($normalizedSubjectName) {
+                            'arabe' => [
+                                'icon' => 'bi-translate',
+                                'gradient' =>
+                                    'linear-gradient(135deg,#2563EB,#06B6D4)',
+                            ],
 
-                        $subjectIcon = match ($normalizedSubjectName) {
-                            'arabe' => 'bi-translate',
-                            default => 'bi-journal-bookmark-fill',
+                            'coran', 'quran', 'couran', 'القرآن', 'القران' => [
+                                'icon' => 'bi-book-half',
+                                'gradient' =>
+                                    'linear-gradient(135deg,#7C3AED,#A855F7)',
+                            ],
+
+                            'soutien lycée', 'soutien lycee' => [
+                                'icon' => 'bi-mortarboard-fill',
+                                'gradient' =>
+                                    'linear-gradient(135deg,#F59E0B,#EA580C)',
+                            ],
+
+                            default => [
+                                'icon' => 'bi-journal-bookmark-fill',
+                                'gradient' =>
+                                    'linear-gradient(135deg,#4F46E5,#7C3AED)',
+                            ],
                         };
                     @endphp
 
-                    <div class="col-md-6">
+                    <div class="col-lg-4 col-md-6">
                         <a href="{{ route('front.subject.levels', $subject->id) }}"
                            class="text-decoration-none d-block h-100"
                            aria-label="Voir les niveaux de {{ $subject->name }}">
-                            <div class="card-3d text-center h-100 reveal-3d" style="cursor:pointer;padding:2rem;">
-                                <div class="card-3d-icon mx-auto {{ $isQuran ? 'home-quran-icon-wrapper' : '' }}">
-                                    @if ($isQuran)
-                                        <img
-                                            src="{{ asset('images/alquran.png') }}"
-                                            alt="Livre du Coran"
-                                            class="home-quran-subject-image"
-                                            loading="lazy"
-                                        >
-                                    @else
-                                        <i class="bi {{ $subjectIcon }}"></i>
-                                    @endif
+                            <div class="card-3d text-center h-100 reveal-3d home-subject-card" style="cursor:pointer;">
+                                <div
+                                    class="home-subject-icon"
+                                    style="background:{{ $subjectDesign['gradient'] }};"
+                                    aria-hidden="true"
+                                >
+                                    <i class="bi {{ $subjectDesign['icon'] }}"></i>
                                 </div>
-                                <h5 class="fw-bold text-white mt-3 mb-2" style="font-family:'Poppins',sans-serif;">
+                                <h5 class="fw-bold text-white mt-2 mb-2 home-subject-card-title" style="font-family:'Poppins',sans-serif;">
                                     {{ $subject->name }}
                                 </h5>
                                 <span class="badge mx-auto mb-3" style="background:{{ $subject->type === 'religieux' ? 'rgba(155,89,182,0.2)' : 'rgba(52,152,219,0.2)' }};color:{{ $subject->type === 'religieux' ? '#D7A1F9' : '#7DD3FC' }};border-radius:20px;font-size:0.72rem;">

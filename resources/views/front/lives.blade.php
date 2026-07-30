@@ -59,12 +59,17 @@
     <div class="container position-relative" style="z-index:2;">
         <div
             class="live-hero-status-pill
-                {{ $hasLiveNow ? 'is-live' : 'is-neutral' }}"
+                {{ $hasLiveNow ? 'is-live' : 'is-scheduled' }}"
         >
             <span class="live-hero-status-badge">
+                <span
+                    class="live-red-lamp"
+                    aria-hidden="true"
+                ></span>
+
                 {{ $hasLiveNow
-                    ? '🔴 EN DIRECT'
-                    : '🎥 SESSIONS LIVE' }}
+                    ? 'EN DIRECT'
+                    : 'SESSIONS LIVE' }}
             </span>
 
             <span>
@@ -567,19 +572,59 @@
 }
 
 .live-hero-status-pill.is-live
+.live-hero-status-badge,
+.live-hero-status-pill.is-scheduled
 .live-hero-status-badge {
     background:
-        linear-gradient(135deg,#DC2626,#EF4444);
+        linear-gradient(135deg,#B91C1C,#EF4444);
     color: #ffffff;
+    border: 1px solid rgba(248,113,113,0.34);
+    box-shadow: 0 5px 18px rgba(220,38,38,0.24);
+}
+
+.live-hero-status-pill.is-live
+.live-hero-status-badge {
     animation:
         livePulseBadge 2s ease-in-out infinite;
 }
 
-.live-hero-status-pill.is-neutral
-.live-hero-status-badge {
-    background: rgba(100,116,139,0.18);
-    color: #CBD5E1;
-    border: 1px solid rgba(148,163,184,0.16);
+.live-red-lamp {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    display: inline-block;
+    border-radius: 50%;
+    background: #FCA5A5;
+    box-shadow:
+        0 0 0 3px rgba(248,113,113,0.16),
+        0 0 10px rgba(248,113,113,0.95);
+}
+
+.live-red-lamp::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid rgba(252,165,165,0.55);
+    border-radius: 50%;
+    animation: liveLampPulse 1.5s ease-out infinite;
+}
+
+@keyframes liveLampPulse {
+    0% {
+        opacity: 0.85;
+        transform: scale(0.7);
+    }
+
+    70% {
+        opacity: 0;
+        transform: scale(1.8);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.8);
+    }
 }
 
 .card-3d:hover .bi-camera-video-fill {

@@ -29,15 +29,28 @@ class FrontController extends Controller
         $subject = Subject::findOrFail($id);
 
         $allowedLevelNames =
-            VocalTestPrompt::pathNamesForSubject($subject);
+            $this->levelNamesForSubject($subject);
 
-        $allowedClassNames =
-            VocalTestPrompt::allowedClassNames();
+        $allowedItemNames =
+            $this->itemNamesForSubject($subject);
 
-        $classOrder = array_flip(
+        $levelOrder = array_flip(
             array_map(
-                [VocalTestPrompt::class, 'normalizePathName'],
-                $allowedClassNames
+                [
+                    VocalTestPrompt::class,
+                    'normalizePathName',
+                ],
+                $allowedLevelNames
+            )
+        );
+
+        $itemOrder = array_flip(
+            array_map(
+                [
+                    VocalTestPrompt::class,
+                    'normalizePathName',
+                ],
+                $allowedItemNames
             )
         );
 
@@ -61,12 +74,16 @@ class FrontController extends Controller
             ->with([
                 'classes' => function ($query) use (
                     $subject,
-                    $allowedClassNames
+                    $allowedItemNames
                 ) {
                     $query
-                        ->whereIn(
-                            'name',
-                            $allowedClassNames
+                        ->when(
+                            !empty($allowedItemNames),
+                            fn ($classQuery) =>
+                                $classQuery->whereIn(
+                                    'name',
+                                    $allowedItemNames
+                                )
                         )
                         ->whereHas(
                             'subjects',
@@ -81,19 +98,17 @@ class FrontController extends Controller
             ->orderBy('order')
             ->orderBy('id')
             ->get()
-            ->sortBy(function (Level $level) use (
-                $allowedLevelNames
-            ) {
-                $position = array_search(
-                    $level->name,
-                    $allowedLevelNames,
-                    true
-                );
-
-                return $position === false
-                    ? PHP_INT_MAX
-                    : $position;
-            })
+            ->sortBy(
+                function (Level $level) use (
+                    $levelOrder
+                ) {
+                    return $levelOrder[
+                        VocalTestPrompt::normalizePathName(
+                            $level->name
+                        )
+                    ] ?? PHP_INT_MAX;
+                }
+            )
             ->unique(
                 fn (Level $level) =>
                     VocalTestPrompt::normalizePathName(
@@ -102,19 +117,19 @@ class FrontController extends Controller
             )
             ->values();
 
-        /*
-         * On ne compte que les trois classes actives :
-         * Débutant, Intermédiaire et Avancé.
-         *
-         * Les anciennes classes et les doublons présents
-         * dans la base ne sont pas inclus.
-         */
+        $isHighSchoolSupport =
+            $this->isHighSchoolSupport($subject);
+
         $levels->each(
-            function (Level $level) use ($classOrder) {
-                $validClasses = $level->classes
+            function (Level $level) use (
+                $itemOrder,
+                $subject,
+                $isHighSchoolSupport
+            ) {
+                $validItems = $level->classes
                     ->sortBy(
                         fn (ClassRoom $classRoom) =>
-                            $classOrder[
+                            $itemOrder[
                                 VocalTestPrompt::normalizePathName(
                                     $classRoom->name
                                 )
@@ -128,26 +143,46 @@ class FrontController extends Controller
                     )
                     ->values();
 
+                $validItems->each(
+                    function (ClassRoom $classRoom) use (
+                        $subject,
+                        $level,
+                        $isHighSchoolSupport
+                    ) {
+                        $classRoom->setAttribute(
+                            'requires_vocal_test',
+                            !$isHighSchoolSupport
+                            && VocalTestPrompt::requiresVocalTest(
+                                $subject,
+                                $level,
+                                $classRoom
+                            )
+                        );
+
+                        $classRoom->setAttribute(
+                            'is_without_vocal_test',
+                            !$isHighSchoolSupport
+                            && VocalTestPrompt::isExcludedPath(
+                                $subject,
+                                $level,
+                                $classRoom
+                            )
+                        );
+                    }
+                );
+
                 $level->setRelation(
                     'classes',
-                    $validClasses
+                    $validItems
                 );
 
                 $level->setAttribute(
                     'available_classes_count',
-                    $validClasses->count()
+                    $validItems->count()
                 );
             }
         );
 
-        /*
-         * Cette valeur est utilisée dans la partie supérieure
-         * de resources/views/front/subject-levels.blade.php.
-         *
-         * Résultat :
-         * - Arabe : 2 parcours × 3 classes = 6
-         * - Coran : 1 parcours × 3 classes = 3
-         */
         $subject->setAttribute(
             'classes_count',
             $levels->sum('available_classes_count')
@@ -158,10 +193,25 @@ class FrontController extends Controller
             $levels->count()
         );
 
+        $subject->setAttribute(
+            'is_high_school_support',
+            $isHighSchoolSupport
+        );
+
+        $subject->setAttribute(
+            'child_plural_label',
+            $isHighSchoolSupport
+                ? 'Matières'
+                : 'Classes'
+        );
+
         $sameFamilySubjects = Subject::query()
             ->where('type', $subject->type)
             ->where('id', '!=', $subject->id)
-            ->whereIn('name', ['Arabe', 'Coran'])
+            ->whereIn(
+                'name',
+                ['Arabe', 'Coran', 'Soutien Lycée']
+            )
             ->withCount('courses')
             ->get();
 
@@ -178,78 +228,109 @@ class FrontController extends Controller
     public function levelClasses($subjectId, $levelId)
     {
         $subject = Subject::findOrFail($subjectId);
-        $level = Level::whereKey($levelId)
+
+        $level = Level::query()
+            ->whereKey($levelId)
             ->where('subject_id', $subject->id)
             ->firstOrFail();
 
+        $allowedLevelNames =
+            $this->levelNamesForSubject($subject);
+
         abort_unless(
-            VocalTestPrompt::isSupportedLevel($subject, $level),
+            in_array(
+                VocalTestPrompt::normalizePathName(
+                    $level->name
+                ),
+                array_map(
+                    [
+                        VocalTestPrompt::class,
+                        'normalizePathName',
+                    ],
+                    $allowedLevelNames
+                ),
+                true
+            ),
             404,
             'Ce parcours ne fait pas partie de la structure actuelle.'
         );
 
-        $allowedClassNames = VocalTestPrompt::allowedClassNames();
-        $classOrder = array_flip(array_map(
-            [VocalTestPrompt::class, 'normalizePathName'],
-            $allowedClassNames
-        ));
+        $allowedItemNames =
+            $this->itemNamesForSubject($subject);
 
-        $classes = ClassRoom::where('level_id', $level->id)
-            ->whereIn('name', $allowedClassNames)
+        $itemOrder = array_flip(
+            array_map(
+                [
+                    VocalTestPrompt::class,
+                    'normalizePathName',
+                ],
+                $allowedItemNames
+            )
+        );
+
+        $classes = ClassRoom::query()
+            ->where('level_id', $level->id)
+            ->whereIn('name', $allowedItemNames)
             ->whereHas(
                 'subjects',
-                fn($query) => $query->where('subjects.id', $subject->id)
+                fn ($query) =>
+                    $query->where(
+                        'subjects.id',
+                        $subject->id
+                    )
             )
             ->get()
-            ->sortBy(function (ClassRoom $class) use ($classOrder) {
-                return $classOrder[
-                    VocalTestPrompt::normalizePathName($class->name)
-                ] ?? 99;
-            })
+            ->sortBy(
+                fn (ClassRoom $classRoom) =>
+                    $itemOrder[
+                        VocalTestPrompt::normalizePathName(
+                            $classRoom->name
+                        )
+                    ] ?? PHP_INT_MAX
+            )
+            ->unique(
+                fn (ClassRoom $classRoom) =>
+                    VocalTestPrompt::normalizePathName(
+                        $classRoom->name
+                    )
+            )
             ->values();
 
-        $classes->each(function (ClassRoom $class) use ($subject, $level) {
-            $class->requires_vocal_test = VocalTestPrompt::requiresVocalTest(
-                $subject,
-                $level,
-                $class
-            );
+        $isHighSchoolSupport =
+            $this->isHighSchoolSupport($subject);
 
-            $class->is_without_vocal_test = VocalTestPrompt::isExcludedPath(
+        $classes->each(
+            function (ClassRoom $classRoom) use (
                 $subject,
                 $level,
-                $class
-            );
-        });
+                $isHighSchoolSupport
+            ) {
+                $classRoom->requires_vocal_test =
+                    !$isHighSchoolSupport
+                    && VocalTestPrompt::requiresVocalTest(
+                        $subject,
+                        $level,
+                        $classRoom
+                    );
+
+                $classRoom->is_without_vocal_test =
+                    !$isHighSchoolSupport
+                    && VocalTestPrompt::isExcludedPath(
+                        $subject,
+                        $level,
+                        $classRoom
+                    );
+            }
+        );
 
         return view(
             'front.level-classes',
-            compact('subject', 'level', 'classes')
+            compact(
+                'subject',
+                'level',
+                'classes'
+            )
         );
-    }
-
-    public function levelCourses($id)
-    {
-        $level = Level::with('courses')->findOrFail($id);
-
-        return view('front.level-courses', compact('level'));
-    }
-
-    public function showCourse($id)
-    {
-        $course = Course::with(['learningTests', 'subject', 'level', 'classRoom'])->findOrFail($id);
-
-        // Autres matières de la même famille (même type : religieux / scolaire)
-        $sameFamilySubjects = collect([]);
-        if ($course->subject) {
-            $sameFamilySubjects = Subject::where('type', $course->subject->type)
-                ->where('id', '!=', $course->subject->id)
-                ->withCount('courses')
-                ->limit(4)
-                ->get();
-        }
-
-        return view('front.course-show', compact('course', 'sameFamilySubjects'));
     }
 
     public function courses($subject_id, $level_id, $class_id)
@@ -353,6 +434,39 @@ class FrontController extends Controller
     }
 
 
+    private function levelNamesForSubject(
+        Subject $subject
+    ): array {
+        if ($this->isHighSchoolSupport($subject)) {
+            return ['BAC'];
+        }
+
+        return VocalTestPrompt::pathNamesForSubject(
+            $subject
+        );
+    }
+
+    private function itemNamesForSubject(
+        Subject $subject
+    ): array {
+        if ($this->isHighSchoolSupport($subject)) {
+            return [
+                'Mathématiques',
+                'Physique-Chimie',
+            ];
+        }
+
+        return VocalTestPrompt::allowedClassNames();
+    }
+
+    private function isHighSchoolSupport(
+        Subject $subject
+    ): bool {
+        return VocalTestPrompt::normalizePathName(
+            $subject->name
+        ) === 'soutien lycee';
+    }
+
     /**
      * Affiche les classes d'un niveau (navigation publique)
      */
@@ -430,7 +544,7 @@ class FrontController extends Controller
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
             ->where('type', 'scolaire')
-            ->where('name', 'Arabe')
+            ->whereIn('name', ['Arabe', 'Soutien Lycée'])
             ->get();
 
         $subjects->each(function ($subject) {

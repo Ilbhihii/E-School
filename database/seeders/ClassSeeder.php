@@ -14,41 +14,71 @@ class ClassSeeder extends Seeder
     {
         $structure = [
             'Arabe' => [
-                VocalTestPrompt::ARABIC_READING_WRITING,
-                VocalTestPrompt::ARABIC_COMMUNICATION,
+                'levels' => [
+                    VocalTestPrompt::ARABIC_READING_WRITING,
+                    VocalTestPrompt::ARABIC_COMMUNICATION,
+                ],
+                'items' => VocalTestPrompt::allowedClassNames(),
             ],
+
             'Coran' => [
-                VocalTestPrompt::QURAN_LEARNING_TAJWID,
+                'levels' => [
+                    VocalTestPrompt::QURAN_LEARNING_TAJWID,
+                ],
+                'items' => VocalTestPrompt::allowedClassNames(),
+            ],
+
+            /*
+             * Pour Soutien Lycée, les éléments sont stockés dans
+             * class_rooms afin de conserver l'architecture existante.
+             * L'interface les présente comme des matières.
+             */
+            'Soutien Lycée' => [
+                'levels' => ['BAC'],
+                'items' => [
+                    'Mathématiques',
+                    'Physique-Chimie',
+                ],
             ],
         ];
 
-        foreach ($structure as $subjectName => $levelNames) {
-            $subject = Subject::where('name', $subjectName)->first();
+        foreach ($structure as $subjectName => $config) {
+            $subject = Subject::where(
+                'name',
+                $subjectName
+            )->first();
 
             if (!$subject) {
+                $this->command->warn(
+                    "Matière '{$subjectName}' introuvable."
+                );
                 continue;
             }
 
-            $levels = Level::where('subject_id', $subject->id)
-                ->whereIn('name', $levelNames)
+            $levels = Level::query()
+                ->where('subject_id', $subject->id)
+                ->whereIn('name', $config['levels'])
                 ->get();
 
             foreach ($levels as $level) {
-                foreach (VocalTestPrompt::allowedClassNames() as $className) {
+                foreach ($config['items'] as $itemName) {
                     $classRoom = ClassRoom::firstOrCreate([
                         'level_id' => $level->id,
-                        'name' => $className,
+                        'name' => $itemName,
                     ]);
 
-                    $classRoom->subjects()->syncWithoutDetaching([
-                        $subject->id,
-                    ]);
+                    $classRoom->subjects()
+                        ->syncWithoutDetaching([
+                            $subject->id,
+                        ]);
                 }
             }
         }
 
         $this->command->info(
-            'Classes créées : Débutant, Intermédiaire et Avancé.'
+            'Classes et matières créées : '
+            . 'Débutant, Intermédiaire, Avancé, '
+            . 'Mathématiques et Physique-Chimie.'
         );
     }
 }

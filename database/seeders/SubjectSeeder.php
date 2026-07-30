@@ -24,6 +24,12 @@ class SubjectSeeder extends Seeder
                 'image' => null,
             ],
             [
+                'name' => 'Soutien Lycée',
+                'type' => 'scolaire',
+                'description' => 'Soutien scolaire destiné aux élèves du lycée et du baccalauréat en Mathématiques et Physique-Chimie',
+                'image' => null,
+            ],
+            [
                 'name' => 'Maths',
                 'type' => 'scolaire',
                 'description' => 'Mathématiques : calcul, géométrie, algèbre et résolution de problèmes',
