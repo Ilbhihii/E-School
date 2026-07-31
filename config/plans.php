@@ -2,17 +2,6 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Offres commerciales
-    |--------------------------------------------------------------------------
-    |
-    | amount_minor correspond au montant dans la plus petite unité :
-    | - 20000 = 200 EUR
-    | - 100000 = 1000 MAD
-    |
-    */
-
     'default' => 'premium',
 
     'offers' => [
@@ -20,7 +9,7 @@ return [
         'premium' => [
             'code' => 'premium',
             'name' => 'Premium',
-            'subtitle' => 'Accès complet à toute la plateforme',
+            'subtitle' => 'Accès complet et illimité',
             'scope' => 'Tous les parcours',
             'amount_display' => '200',
             'amount_minor' => 20000,
@@ -29,14 +18,15 @@ return [
             'period' => 'an',
             'badge' => 'Recommandé',
             'icon' => 'bi-stars',
+            'restricted_to_high_school' => false,
             'features' => [
-                'Tous les cours Arabe, Coran et Soutien Lycée',
+                'Arabe, Coran et Soutien Lycée',
+                'Tous les cours et documents PDF',
                 'Lives interactifs illimités',
                 'Chat avec les professeurs',
                 'Devoirs, quiz et tests',
                 'Suivi pédagogique complet',
-                'Téléchargement des ressources PDF',
-                'Certificats et accompagnement personnalisé',
+                'Accompagnement personnalisé',
             ],
         ],
 
@@ -52,13 +42,14 @@ return [
             'period' => 'an',
             'badge' => 'Offre BAC',
             'icon' => 'bi-mortarboard-fill',
+            'restricted_to_high_school' => true,
             'features' => [
                 'Mathématiques BAC',
                 'Physique-Chimie BAC',
                 'Test diagnostic avec correction',
                 'Cours, vidéos et documents PDF',
                 'Lives avec les professeurs',
-                'Devoirs, exercices et suivi des notes',
+                'Devoirs, exercices et notes',
                 'Chat et accompagnement pédagogique',
             ],
         ],
