@@ -130,7 +130,7 @@ Route::get('/lives', [HomeController::class,'lives'])->name('front.lives');
 | ACCÈS SÉCURISÉ AUX LIVES
 |--------------------------------------------------------------------------
 |
-| 1. Vérification de la connexion, du paiement, de la classe et de l'horaire.
+| 1. Vérification de la connexion, du compte actif, de la classe et de l'horaire.
 | 2. Redirection par une URL Laravel signée et temporaire.
 |
 */
@@ -498,9 +498,7 @@ Route::middleware(['auth', 'active'])
     Route::get(
         '/lives',
         [StudentController::class, 'lives']
-    )
-        ->middleware('paid')
-        ->name('lives');
+    )->name('lives');
 
     // Cours
     Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');

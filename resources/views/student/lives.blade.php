@@ -128,7 +128,7 @@
                     <div class="d-flex align-items-center justify-content-between pt-2" style="border-top:1px solid rgba(255,255,255,0.04);">
                         <small style="color:#475569;font-size:0.7rem;"><i class="bi bi-calendar3 me-1"></i>{{ $isLive ? 'En cours...' : $liveDate->format('d/m/Y H:i') }}</small>
                         @if($isLive || $isUpcoming)
-                        <a href="{{ $live->stream_url }}" target="_blank" class="pr-btn {{ $isLive ? 'pr-btn-danger' : 'pr-btn-ghost' }} pr-btn-sm" style="font-size:0.75rem;">
+                        <a href="{{ route('live.access.request', $live) }}" target="_blank" rel="noopener noreferrer" class="pr-btn {{ $isLive ? 'pr-btn-danger' : 'pr-btn-ghost' }} pr-btn-sm" style="font-size:0.75rem;">
                             {{ $isLive ? 'Rejoindre' : 'Programmé' }} <i class="bi bi-arrow-right ms-1"></i>
                         </a>
                         @else
@@ -175,7 +175,7 @@
                 </div>
             </div>
             @if($live->stream_url)
-            <a href="{{ $live->stream_url }}" target="_blank" rel="noopener noreferrer"
+            <a href="{{ route('live.access.request', $live) }}" target="_blank" rel="noopener noreferrer"
                style="flex-shrink:0;padding:7px 16px;border-radius:8px;background:{{ $providerColor }}22;border:1px solid {{ $providerColor }}55;color:{{ $providerColor }};font-size:0.75rem;text-decoration:none;transition:all 0.2s;white-space:nowrap;">
                 <i class="bi {{ $providerIcon }} me-1"></i> {{ $providerName }}
             </a>
@@ -227,13 +227,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: '{{ \Illuminate\Support\Str::limit($live->title, 30) }}',
                 start: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->start_time ?? '00:00' }}',
                 end: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->end_time ?? date('H:i', strtotime(($live->start_time ?? '00:00') . ' +1 hour')) }}',
-                url: '{{ $live->stream_url ?? '#' }}',
+                url: '{{ $live->stream_url
+                    ? route('live.access.request', $live)
+                    : '#' }}',
                 backgroundColor: '#DC2626',
                 borderColor: '#EF4444',
                 textColor: '#FFF',
                 extendedProps: {
                     class: '{{ $live->classRoom?->name ?? "-" }}',
-                    stream: '{{ $live->stream_url ?? "" }}'
+                    stream: '{{ $live->stream_url
+                        ? route('live.access.request', $live)
+                        : "" }}'
                 }
             },
             @endif

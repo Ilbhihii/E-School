@@ -79,7 +79,6 @@ class LiveAccessController extends Controller
             && auth()->user()->isStudent()
         ) {
             $route = match ($decision['code']) {
-                'payment_required' => 'plans',
                 'account_inactive' => 'student.waiting',
                 default => 'student.lives',
             };

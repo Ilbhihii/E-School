@@ -272,17 +272,7 @@ class HomeController extends Controller
             ->latest();
 
         if ($user && $user->isStudent()) {
-            $hasPaidAccess =
-                (bool) $user->is_paid
-                || (bool) (
-                    $user->getAttribute('is_subscribed')
-                    ?? false
-                );
-
-            if (
-                !(bool) $user->is_active
-                || !$hasPaidAccess
-            ) {
+            if (!(bool) $user->is_active) {
                 $accessRestricted = true;
                 $lives = collect();
             } else {

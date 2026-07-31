@@ -55,13 +55,6 @@ class LiveAccessService
             );
         }
 
-        if (!$this->hasPaidAccess($user)) {
-            return $this->denied(
-                'payment_required',
-                'Un abonnement actif est nécessaire pour rejoindre les lives.'
-            );
-        }
-
         if (!$live->class_id) {
             return $this->denied(
                 'class_missing',
@@ -138,15 +131,6 @@ class LiveAccessService
              */
             report($exception);
         }
-    }
-
-    public function hasPaidAccess(User $user): bool
-    {
-        return (bool) $user->is_paid
-            || (bool) (
-                $user->getAttribute('is_subscribed')
-                ?? false
-            );
     }
 
     private function belongsToLiveClass(

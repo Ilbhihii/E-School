@@ -186,7 +186,7 @@
             </div>
         @endif
 
-        <!-- Utilisateur connecté mais compte/paiement non autorisé -->
+        <!-- Étudiant connecté mais compte non activé -->
         @auth
             @if($accessRestricted)
                 <div class="live-access-card">
@@ -195,21 +195,21 @@
                     </div>
 
                     <div class="live-access-information">
-                        <h2>Accès réservé aux abonnés</h2>
+                        <h2>Compte en attente d’activation</h2>
 
                         <p>
-                            Votre compte doit être actif et votre
-                            abonnement doit être payé pour consulter
-                            les sessions de votre classe.
+                            Votre compte doit être activé par
+                            l’administration pour consulter les
+                            sessions affectées à votre classe.
                         </p>
                     </div>
 
                     <a
-                        href="{{ route('plans') }}"
+                        href="{{ route('student.waiting') }}"
                         class="live-button live-button-primary"
                     >
-                        <i class="bi bi-credit-card"></i>
-                        Voir les offres
+                        <i class="bi bi-hourglass-split"></i>
+                        Voir l’état du compte
                     </a>
                 </div>
             @endif
@@ -229,7 +229,8 @@
 
                     <span>
                         Le lien de connexion reste protégé. Connectez-vous
-                        avec un compte actif et payé pour rejoindre un live.
+                        avec un compte actif et affecté à la bonne classe
+                        pour rejoindre un live.
                     </span>
                 </div>
 
@@ -551,7 +552,7 @@
 
                                 <p class="live-security-note">
                                     Accès contrôlé selon votre compte,
-                                    votre paiement et votre classe.
+                                    votre classe et l’horaire du live.
                                 </p>
                                 @endguest
                             @endif
