@@ -16,7 +16,16 @@ class ArabicVocalTestPromptSeeder extends Seeder
             'class_name' => VocalTestPrompt::CLASS_INTERMEDIATE,
             'title' => 'Lecture et compréhension d’un texte',
             'instructions' => 'Lisez le texte avec une prononciation claire, un rythme régulier et des pauses correctes.',
-            'reading_text' => 'مِنْ هِوَايَاتِي الْمُفَضَّلَةِ قِرَاءَةُ الْكُتُبِ وَرَسْمُ اللَّوْحَاتِ وَمُمَارَسَةُ الرِّيَاضَةِ. أَقْرَأُ كُلَّ يَوْمٍ قَبْلَ النَّوْمِ، وَأُحَاوِلُ أَنْ أَكْتُبَ مَا تَعَلَّمْتُهُ فِي دَفْتَرِي.',
+            'reading_text' => "كَتَبَ
+ذَهَبَ
+جَمَلٌ
+قَمَرٌ
+وَلَدٌ
+كِتَابٌ
+سَمَكٌ
+مَلِكٌ
+رَجُلٌ
+زَهَرٌ",
             'maximum_duration' => 120,
         ],
         [
