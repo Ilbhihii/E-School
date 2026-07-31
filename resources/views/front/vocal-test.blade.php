@@ -70,6 +70,12 @@
         border-color: rgba(245, 158, 11, 0.3);
     }
 
+    .vocal-badge.mode-observation {
+        background: rgba(6, 182, 212, 0.14);
+        color: #67e8f9;
+        border-color: rgba(34, 211, 238, 0.3);
+    }
+
     .vocal-title {
         margin: 0 0 0.5rem;
         padding: 0;
@@ -398,6 +404,242 @@
         border-radius: 12px;
     }
 
+    .observation-card {
+        margin-bottom: 1.75rem;
+    }
+
+    .observation-image-frame {
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+    }
+
+    .observation-image-frame img {
+        width: 100%;
+        max-height: 560px;
+        display: block;
+        object-fit: contain;
+        background: #ffffff;
+    }
+
+    .observation-question {
+        margin-bottom: 1rem;
+        padding: 1rem 1.2rem;
+        color: rgba(255, 255, 255, 0.82);
+        background: rgba(6, 182, 212, 0.08);
+        border: 1px solid rgba(34, 211, 238, 0.2);
+        border-radius: 14px;
+        line-height: 1.7;
+    }
+
+    .observation-arabic-title {
+        display: block;
+        margin-top: 0.45rem;
+        color: #ffffff;
+        font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+        font-size: 1.25rem;
+        direction: rtl;
+    }
+
+    .observation-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin: 1.25rem 0;
+    }
+
+    .observation-option {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .observation-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .observation-option-card {
+        min-height: 120px;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.9rem;
+        padding: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.035);
+        transition:
+            transform 0.2s ease,
+            border-color 0.2s ease,
+            background 0.2s ease;
+    }
+
+    .observation-option input:checked
+        + .observation-option-card {
+        transform: translateY(-2px);
+        border-color: rgba(34, 211, 238, 0.7);
+        background: rgba(6, 182, 212, 0.13);
+        box-shadow: 0 12px 28px rgba(6, 182, 212, 0.12);
+    }
+
+    .observation-option-icon {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 13px;
+        color: #ffffff;
+        background: linear-gradient(135deg, #0891b2, #2563eb);
+        font-size: 1rem;
+    }
+
+    .observation-option-card strong {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: #ffffff;
+        font-size: 0.92rem;
+    }
+
+    .observation-option-card small {
+        display: block;
+        color: rgba(255, 255, 255, 0.5);
+        line-height: 1.5;
+    }
+
+    .observation-panel {
+        display: none;
+        margin-top: 1rem;
+    }
+
+    .observation-panel.is-active {
+        display: block;
+    }
+
+    .observation-label {
+        display: block;
+        margin-bottom: 0.55rem;
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 700;
+    }
+
+    .observation-textarea {
+        width: 100%;
+        min-height: 190px;
+        resize: vertical;
+        padding: 1rem;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        outline: none;
+        font-family: 'Amiri', 'Noto Naskh Arabic', serif;
+        font-size: 1.15rem;
+        line-height: 1.9;
+        direction: rtl;
+    }
+
+    .observation-textarea:focus {
+        border-color: rgba(34, 211, 238, 0.7);
+        box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
+    }
+
+    .observation-char-count {
+        margin-top: 0.45rem;
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 0.78rem;
+        text-align: right;
+    }
+
+    .observation-upload {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 190px;
+        padding: 1.25rem;
+        cursor: pointer;
+        border: 2px dashed rgba(34, 211, 238, 0.35);
+        border-radius: 16px;
+        background: rgba(6, 182, 212, 0.05);
+        text-align: center;
+    }
+
+    .observation-upload:hover {
+        border-color: rgba(34, 211, 238, 0.75);
+        background: rgba(6, 182, 212, 0.09);
+    }
+
+    .observation-upload input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        opacity: 0;
+    }
+
+    .observation-upload i {
+        margin-bottom: 0.7rem;
+        color: #67e8f9;
+        font-size: 2rem;
+    }
+
+    .observation-upload strong {
+        display: block;
+        color: #ffffff;
+    }
+
+    .observation-upload small {
+        display: block;
+        margin-top: 0.4rem;
+        color: rgba(255, 255, 255, 0.45);
+    }
+
+    .observation-preview {
+        display: none;
+        margin-top: 1rem;
+        text-align: center;
+    }
+
+    .observation-preview.is-visible {
+        display: block;
+    }
+
+    .observation-preview img {
+        max-width: 100%;
+        max-height: 380px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .observation-submit {
+        width: 100%;
+        margin-top: 1.25rem;
+        padding: 14px;
+    }
+
+    .observation-error {
+        margin-bottom: 1rem;
+        padding: 0.85rem 1rem;
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.22);
+        border-radius: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .observation-options {
+            grid-template-columns: 1fr;
+        }
+
+        .observation-image-frame img {
+            max-height: 420px;
+        }
+    }
+
     @media (max-width: 768px) {
         .vocal-test-section {
             padding-top: 2.5rem;
@@ -429,8 +671,10 @@
     <div class="container vocal-test-container">
 
         <div class="text-center vocal-header">
-            <span class="badge vocal-badge @if($isCompletionTest) mode-completion @elseif($prompt->test_mode === 'tajwid') mode-tajwid @elseif($prompt->test_mode === 'hifd') mode-hifd @endif">
-                @if ($isCompletionTest)
+            <span class="badge vocal-badge @if($isObservationTest) mode-observation @elseif($isCompletionTest) mode-completion @elseif($prompt->test_mode === 'tajwid') mode-tajwid @elseif($prompt->test_mode === 'hifd') mode-hifd @endif">
+                @if ($isObservationTest)
+                    <i class="bi bi-eye-fill"></i>
+                @elseif ($isCompletionTest)
                     <i class="bi bi-puzzle-fill"></i>
                 @elseif ($prompt->test_mode === 'hifd')
                     <i class="bi bi-lock-fill"></i>
@@ -441,7 +685,9 @@
                 @endif
 
                 {{ $subject->name }} ·
-                @if ($isCompletionTest)
+                @if ($isObservationTest)
+                    Test d’observation
+                @elseif ($isCompletionTest)
                     Complétion des versets
                 @else
                     {{ \App\Models\VocalTestPrompt::getModes()[$prompt->test_mode] ?? 'Lecture' }}
@@ -449,7 +695,9 @@
             </span>
 
             <h1 class="vocal-title">
-                {{ $prompt->title }}
+                {{ $isObservationTest
+                    ? $observationDefinition['title']
+                    : $prompt->title }}
             </h1>
 
             <p class="vocal-subtitle">
@@ -457,7 +705,194 @@
             </p>
         </div>
 
-        @if($isCompletionTest)
+        @if($isObservationTest)
+            <form
+                method="POST"
+                action="{{ route('vocal-test.store', [$subject, $level, $class]) }}"
+                enctype="multipart/form-data"
+                id="observationTestForm"
+            >
+                @csrf
+
+                <div class="card-3d p-4 p-md-5 observation-card">
+                    <div class="vocal-card-header">
+                        <div class="card-3d-icon vocal-card-icon">
+                            <i class="bi bi-eye-fill text-white"></i>
+                        </div>
+
+                        <div>
+                            <h5 class="text-white mb-1">
+                                Observez puis décrivez
+                            </h5>
+                            <small class="text-white-50">
+                                Communication · {{ $class->name }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="observation-question">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        {{ $observationDefinition['question'] }}
+
+                        <span class="observation-arabic-title">
+                            {{ $observationDefinition['arabic_title'] }}
+                        </span>
+                    </div>
+
+                    <div class="vocal-instructions">
+                        <i class="bi bi-lightbulb-fill"></i>
+                        {{ $observationDefinition['instructions'] }}
+                    </div>
+
+                    <div class="observation-image-frame">
+                        <img
+                            src="{{ asset($observationDefinition['image']) }}"
+                            alt="Image du test d’observation : une ferme avec des animaux et des véhicules agricoles"
+                        >
+                    </div>
+
+                    @if(
+                        $errors->has('response_mode')
+                        || $errors->has('observation_text')
+                        || $errors->has('observation_image')
+                    )
+                        <div class="observation-error">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            {{ $errors->first('response_mode')
+                                ?: $errors->first('observation_text')
+                                ?: $errors->first('observation_image') }}
+                        </div>
+                    @endif
+
+                    <h5 class="text-white mb-2">
+                        Choisissez une façon de répondre
+                    </h5>
+
+                    <div class="observation-options">
+                        <label class="observation-option">
+                            <input
+                                type="radio"
+                                name="response_mode"
+                                value="text"
+                                {{ old('response_mode', 'text') === 'text'
+                                    ? 'checked'
+                                    : '' }}
+                            >
+
+                            <span class="observation-option-card">
+                                <span class="observation-option-icon">
+                                    <i class="bi bi-pencil-square"></i>
+                                </span>
+
+                                <span>
+                                    <strong>Écrire ma réponse</strong>
+                                    <small>
+                                        Rédigez directement en arabe
+                                        dans la zone de texte.
+                                    </small>
+                                </span>
+                            </span>
+                        </label>
+
+                        <label class="observation-option">
+                            <input
+                                type="radio"
+                                name="response_mode"
+                                value="image"
+                                {{ old('response_mode') === 'image'
+                                    ? 'checked'
+                                    : '' }}
+                            >
+
+                            <span class="observation-option-card">
+                                <span class="observation-option-icon">
+                                    <i class="bi bi-image-fill"></i>
+                                </span>
+
+                                <span>
+                                    <strong>Importer une photo</strong>
+                                    <small>
+                                        Écrivez sur une feuille puis
+                                        prenez une photo lisible.
+                                    </small>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div
+                        id="observationTextPanel"
+                        class="observation-panel"
+                    >
+                        <label
+                            for="observationText"
+                            class="observation-label"
+                        >
+                            Votre observation en arabe
+                        </label>
+
+                        <textarea
+                            name="observation_text"
+                            id="observationText"
+                            class="observation-textarea"
+                            maxlength="3000"
+                            placeholder="اكتب هنا ما تراه في الصورة..."
+                        >{{ old('observation_text') }}</textarea>
+
+                        <div class="observation-char-count">
+                            <span id="observationCharCount">0</span>
+                            / 3000 caractères · minimum
+                            {{ $observationDefinition['minimum_characters'] }}
+                        </div>
+                    </div>
+
+                    <div
+                        id="observationImagePanel"
+                        class="observation-panel"
+                    >
+                        <label class="observation-upload">
+                            <input
+                                type="file"
+                                name="observation_image"
+                                id="observationImage"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+
+                            <span>
+                                <i class="bi bi-cloud-arrow-up-fill"></i>
+                                <strong>
+                                    Sélectionner la photo de la feuille
+                                </strong>
+                                <small>
+                                    JPG, PNG ou WEBP · 8 Mo maximum
+                                </small>
+                            </span>
+                        </label>
+
+                        <div
+                            id="observationPreview"
+                            class="observation-preview"
+                        >
+                            <img
+                                id="observationPreviewImage"
+                                src=""
+                                alt="Aperçu de la réponse manuscrite"
+                            >
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="submitObservation"
+                        class="btn-3d btn-3d-gradient observation-submit"
+                    >
+                        <i class="bi bi-send-fill me-2"></i>
+                        Envoyer mon observation et continuer
+                        <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </form>
+        @elseif($isCompletionTest)
             <form
                 method="POST"
                 action="{{ route('vocal-test.store', [$subject, $level, $class]) }}"
@@ -796,7 +1231,181 @@
     </div>
 </section>
 
-@if($isCompletionTest)
+@if($isObservationTest)
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById(
+        'observationTestForm'
+    );
+    const modeInputs = document.querySelectorAll(
+        'input[name="response_mode"]'
+    );
+    const textPanel = document.getElementById(
+        'observationTextPanel'
+    );
+    const imagePanel = document.getElementById(
+        'observationImagePanel'
+    );
+    const textarea = document.getElementById(
+        'observationText'
+    );
+    const charCount = document.getElementById(
+        'observationCharCount'
+    );
+    const imageInput = document.getElementById(
+        'observationImage'
+    );
+    const preview = document.getElementById(
+        'observationPreview'
+    );
+    const previewImage = document.getElementById(
+        'observationPreviewImage'
+    );
+    const submitButton = document.getElementById(
+        'submitObservation'
+    );
+    const minimumCharacters = Number(
+        @json($observationDefinition['minimum_characters'])
+    );
+
+    let previewUrl = null;
+
+    const selectedMode = () => {
+        const selected = document.querySelector(
+            'input[name="response_mode"]:checked'
+        );
+
+        return selected
+            ? selected.value
+            : 'text';
+    };
+
+    const updatePanels = () => {
+        const mode = selectedMode();
+
+        textPanel.classList.toggle(
+            'is-active',
+            mode === 'text'
+        );
+        imagePanel.classList.toggle(
+            'is-active',
+            mode === 'image'
+        );
+
+        textarea.required = mode === 'text';
+        imageInput.required = mode === 'image';
+    };
+
+    const updateCharacterCount = () => {
+        charCount.textContent =
+            textarea.value.length;
+    };
+
+    modeInputs.forEach(input => {
+        input.addEventListener(
+            'change',
+            updatePanels
+        );
+    });
+
+    textarea.addEventListener(
+        'input',
+        updateCharacterCount
+    );
+
+    imageInput.addEventListener('change', () => {
+        const file = imageInput.files
+            && imageInput.files[0];
+
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            previewUrl = null;
+        }
+
+        if (!file) {
+            preview.classList.remove(
+                'is-visible'
+            );
+            previewImage.src = '';
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            imageInput.value = '';
+            preview.classList.remove(
+                'is-visible'
+            );
+            alert(
+                'Sélectionnez une image JPG, PNG ou WEBP.'
+            );
+            return;
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+            imageInput.value = '';
+            preview.classList.remove(
+                'is-visible'
+            );
+            alert(
+                'La photo ne doit pas dépasser 8 Mo.'
+            );
+            return;
+        }
+
+        previewUrl = URL.createObjectURL(file);
+        previewImage.src = previewUrl;
+        preview.classList.add('is-visible');
+    });
+
+    form.addEventListener('submit', event => {
+        const mode = selectedMode();
+
+        if (
+            mode === 'text'
+            && textarea.value.trim().length
+                < minimumCharacters
+        ) {
+            event.preventDefault();
+            textarea.focus();
+            alert(
+                'Votre observation doit contenir au moins '
+                + minimumCharacters
+                + ' caractères.'
+            );
+            return;
+        }
+
+        if (
+            mode === 'image'
+            && !(
+                imageInput.files
+                && imageInput.files[0]
+            )
+        ) {
+            event.preventDefault();
+            alert(
+                'Importez la photo de votre réponse manuscrite.'
+            );
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.innerHTML =
+            '<i class="bi bi-hourglass-split me-2"></i>'
+            + 'Envoi en cours…';
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+        }
+    });
+
+    updatePanels();
+    updateCharacterCount();
+});
+</script>
+@elseif($isCompletionTest)
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('completionTestForm');

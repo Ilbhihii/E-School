@@ -63,6 +63,7 @@ class VocalTestSubmission extends Model
 
     public const TYPE_AUDIO = 'audio';
     public const TYPE_COMPLETION = 'completion';
+    public const TYPE_OBSERVATION = 'observation';
 
     const MODE_READING = 'reading';
     const MODE_TAJWID = 'tajwid';
@@ -118,6 +119,84 @@ class VocalTestSubmission extends Model
     public function isCompletionSubmission(): bool
     {
         return $this->submission_type === self::TYPE_COMPLETION;
+    }
+
+    public function isObservationSubmission(): bool
+    {
+        return $this->submission_type
+            === self::TYPE_OBSERVATION;
+    }
+
+    public function observationResponseMode(): ?string
+    {
+        $value = data_get(
+            $this->answer_data,
+            'response_mode'
+        );
+
+        return is_string($value)
+            ? $value
+            : null;
+    }
+
+    public function observationText(): ?string
+    {
+        $value = data_get(
+            $this->answer_data,
+            'observation_text'
+        );
+
+        return is_string($value)
+            ? trim($value)
+            : null;
+    }
+
+    public function observationImagePath(): ?string
+    {
+        $value = data_get(
+            $this->answer_data,
+            'observation_image.path'
+        );
+
+        return is_string($value)
+            ? $value
+            : null;
+    }
+
+    public function observationImageOriginalName(): ?string
+    {
+        $value = data_get(
+            $this->answer_data,
+            'observation_image.original_name'
+        );
+
+        return is_string($value)
+            ? $value
+            : null;
+    }
+
+    public function observationImageMimeType(): ?string
+    {
+        $value = data_get(
+            $this->answer_data,
+            'observation_image.mime_type'
+        );
+
+        return is_string($value)
+            ? $value
+            : null;
+    }
+
+    public function observationImageSize(): ?int
+    {
+        $value = data_get(
+            $this->answer_data,
+            'observation_image.size'
+        );
+
+        return is_numeric($value)
+            ? (int) $value
+            : null;
     }
 
     public function completionAnswers(): array

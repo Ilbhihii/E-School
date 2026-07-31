@@ -2,9 +2,15 @@
 
 @section(
     'title',
-    ($submission->isCompletionSubmission()
-        ? 'Exercice de complétion — '
-        : 'Soumission vocale — ')
+    (
+        $submission->isObservationSubmission()
+            ? 'Test d’observation — '
+            : (
+                $submission->isCompletionSubmission()
+                    ? 'Exercice de complétion — '
+                    : 'Soumission vocale — '
+            )
+    )
     . $submission->user?->name
 )
 @section('page_title', 'Détail de la soumission')
@@ -127,6 +133,45 @@
     color: #FCA5A5;
 }
 
+.observation-admin-answer {
+    padding: 1rem;
+    color: rgba(255,255,255,0.86);
+    background: rgba(6,182,212,0.07);
+    border: 1px solid rgba(34,211,238,0.18);
+    border-radius: 14px;
+    font-family: 'Amiri','Noto Naskh Arabic',serif;
+    font-size: 1.2rem;
+    line-height: 2;
+    white-space: pre-wrap;
+    direction: rtl;
+    text-align: right;
+}
+
+.observation-admin-image {
+    width: 100%;
+    max-height: 620px;
+    object-fit: contain;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: #ffffff;
+}
+
+.observation-admin-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    color: var(--adm-text-muted);
+    font-size: 0.75rem;
+}
+
+.observation-admin-meta span {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.07);
+}
+
 @media (max-width: 700px) {
     .completion-review-row {
         grid-template-columns: 36px 1fr;
@@ -143,14 +188,26 @@
     <div>
         <h1>
             <i
-                class="bi {{ $submission->isCompletionSubmission()
-                    ? 'bi-puzzle-fill'
-                    : 'bi-file-earmark-text' }} me-2"
+                class="bi {{
+                    $submission->isObservationSubmission()
+                        ? 'bi-eye-fill'
+                        : (
+                            $submission->isCompletionSubmission()
+                                ? 'bi-puzzle-fill'
+                                : 'bi-file-earmark-text'
+                        )
+                }} me-2"
                 style="color:var(--adm-primary);"
             ></i>
-            {{ $submission->isCompletionSubmission()
-                ? 'Exercice de complétion'
-                : 'Soumission vocale' }}
+            {{
+                $submission->isObservationSubmission()
+                    ? 'Test d’observation'
+                    : (
+                        $submission->isCompletionSubmission()
+                            ? 'Exercice de complétion'
+                            : 'Soumission vocale'
+                    )
+            }}
         </h1>
         <div class="subtitle">{{ $submission->user?->name }} — {{ $submission->subject?->name }} / {{ $submission->level?->name }} / {{ $submission->classRoom?->name }}</div>
     </div>
@@ -188,7 +245,12 @@
                     </div>
                     <div>
                         <small style="color:var(--adm-text-muted);display:block;">Mode de test</small>
-                        @if($submission->test_mode)
+                        @if($submission->isObservationSubmission())
+                            <span class="mode-badge reading">
+                                <i class="bi bi-eye-fill"></i>
+                                Observation
+                            </span>
+                        @elseif($submission->test_mode)
                             <span class="mode-badge {{ $submission->test_mode }}">
                                 {{ \App\Models\VocalTestSubmission::getModes()[$submission->test_mode] ?? $submission->test_mode }}
                             </span>
@@ -265,17 +327,143 @@
             </div>
         </div>
 
-        <!-- Texte lu -->
+        <!-- Consigne du test -->
         <div class="adm-card mb-4">
             <div class="adm-card-header">
-                <h4><i class="bi bi-file-text" style="color:rgba(255,255,255,0.35);"></i> Texte à réciter</h4>
+                <h4>
+                    <i
+                        class="bi {{
+                            $isObservationSubmission
+                                ? 'bi-eye-fill'
+                                : 'bi-file-text'
+                        }}"
+                        style="color:rgba(255,255,255,0.35);"
+                    ></i>
+                    {{ $isObservationSubmission
+                        ? 'Consigne d’observation'
+                        : 'Texte à réciter' }}
+                </h4>
             </div>
             <div class="adm-card-body">
-                <div dir="rtl" lang="ar" style="font-family:'Amiri','Noto Naskh Arabic',serif;font-size:1.3rem;line-height:2;padding:1rem;background:rgba(255,255,255,0.03);border-radius:12px;text-align:center;">
+                <div
+                    dir="{{ $isObservationSubmission ? 'ltr' : 'rtl' }}"
+                    lang="{{ $isObservationSubmission ? 'fr' : 'ar' }}"
+                    style="
+                        font-family:
+                            {{ $isObservationSubmission
+                                ? "'Inter',sans-serif"
+                                : "'Amiri','Noto Naskh Arabic',serif" }};
+                        font-size:1.15rem;
+                        line-height:2;
+                        padding:1rem;
+                        background:rgba(255,255,255,0.03);
+                        border-radius:12px;
+                        text-align:center;
+                    "
+                >
                     {{ $submission->reading_text }}
                 </div>
             </div>
         </div>
+
+        @if($isObservationSubmission && $observationReview)
+            <div class="adm-card mb-4">
+                <div class="adm-card-header">
+                    <h4>
+                        <i
+                            class="bi bi-eye-fill"
+                            style="color:rgba(255,255,255,0.35);"
+                        ></i>
+                        Réponse d’observation
+                    </h4>
+                </div>
+
+                <div class="adm-card-body">
+                    @if($observationReview['text'])
+                        <small
+                            style="
+                                color:var(--adm-text-muted);
+                                display:block;
+                                margin-bottom:8px;
+                            "
+                        >
+                            Texte rédigé par l’élève
+                        </small>
+
+                        <div class="observation-admin-answer">
+                            {{ $observationReview['text'] }}
+                        </div>
+                    @endif
+
+                    @if($observationReview['image_path'])
+                        @if($observationReview['text'])
+                            <hr
+                                style="
+                                    border-color:rgba(255,255,255,0.08);
+                                    margin:1.25rem 0;
+                                "
+                            >
+                        @endif
+
+                        <small
+                            style="
+                                color:var(--adm-text-muted);
+                                display:block;
+                                margin-bottom:8px;
+                            "
+                        >
+                            Photo de la réponse manuscrite
+                        </small>
+
+                        <a
+                            href="{{ route(
+                                'admin.vocal-tests.submissions.audio',
+                                $submission
+                            ) }}"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            <img
+                                src="{{ route(
+                                    'admin.vocal-tests.submissions.audio',
+                                    $submission
+                                ) }}?v={{
+                                    $submission->updated_at?->timestamp
+                                    ?? $submission->id
+                                }}"
+                                alt="Réponse manuscrite de l’élève"
+                                class="observation-admin-image"
+                            >
+                        </a>
+
+                        <div class="observation-admin-meta">
+                            @if($observationReview['image_original_name'])
+                                <span>
+                                    <i class="bi bi-file-image me-1"></i>
+                                    {{ $observationReview['image_original_name'] }}
+                                </span>
+                            @endif
+
+                            @if($observationReview['image_size'])
+                                <span>
+                                    <i class="bi bi-hdd me-1"></i>
+                                    {{
+                                        number_format(
+                                            $observationReview['image_size']
+                                                / 1024,
+                                            1,
+                                            ',',
+                                            ' '
+                                        )
+                                    }}
+                                    Ko
+                                </span>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         @if($isCompletionSubmission && $completionReview)
             <div class="adm-card mb-4">
@@ -384,7 +572,10 @@
 
     <!-- Audio & Évaluation -->
     <div class="col-lg-5">
-        @unless($isCompletionSubmission)
+        @if(
+            !$isCompletionSubmission
+            && !$isObservationSubmission
+        )
         <!-- Audio Player -->
         <div class="adm-card mb-4">
             <div class="adm-card-header">
@@ -446,7 +637,7 @@
             </div>
         </div>
 
-        @endunless
+        @endif
 
         <!-- Formulaire d'évaluation -->
         <div class="adm-card">
@@ -471,31 +662,35 @@
                         <input type="number" name="score" class="adm-form-control" value="{{ old('score', $submission->score) }}" min="0" max="100" placeholder="Optionnel si scores détaillés">
                     </div>
 
-                    <hr style="border-color:rgba(255,255,255,0.08);">
-                    <small style="color:var(--adm-text-muted);display:block;margin-bottom:10px;">Scores détaillés (remplir au moins un)</small>
+                    @unless($isObservationSubmission)
+                        <hr style="border-color:rgba(255,255,255,0.08);">
+                        <small style="color:var(--adm-text-muted);display:block;margin-bottom:10px;">Scores détaillés (remplir au moins un)</small>
 
-                    <div class="score-input-group">
-                        <div class="adm-form-group">
-                            <label class="adm-form-label">Prononciation</label>
-                            <input type="number" name="score_pronunciation" class="adm-form-control" value="{{ old('score_pronunciation', $submission->score_pronunciation) }}" min="0" max="100" placeholder="0-100">
+                        <div class="score-input-group">
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Prononciation</label>
+                                <input type="number" name="score_pronunciation" class="adm-form-control" value="{{ old('score_pronunciation', $submission->score_pronunciation) }}" min="0" max="100" placeholder="0-100">
+                            </div>
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Tajwid</label>
+                                <input type="number" name="score_tajwid" class="adm-form-control" value="{{ old('score_tajwid', $submission->score_tajwid) }}" min="0" max="100" placeholder="0-100">
+                            </div>
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Mémorisation</label>
+                                <input type="number" name="score_memorization" class="adm-form-control" value="{{ old('score_memorization', $submission->score_memorization) }}" min="0" max="100" placeholder="0-100">
+                            </div>
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">Fluidité</label>
+                                <input type="number" name="score_fluency" class="adm-form-control" value="{{ old('score_fluency', $submission->score_fluency) }}" min="0" max="100" placeholder="0-100">
+                            </div>
                         </div>
-                        <div class="adm-form-group">
-                            <label class="adm-form-label">Tajwid</label>
-                            <input type="number" name="score_tajwid" class="adm-form-control" value="{{ old('score_tajwid', $submission->score_tajwid) }}" min="0" max="100" placeholder="0-100">
-                        </div>
-                        <div class="adm-form-group">
-                            <label class="adm-form-label">Mémorisation</label>
-                            <input type="number" name="score_memorization" class="adm-form-control" value="{{ old('score_memorization', $submission->score_memorization) }}" min="0" max="100" placeholder="0-100">
-                        </div>
-                        <div class="adm-form-group">
-                            <label class="adm-form-label">Fluidité</label>
-                            <input type="number" name="score_fluency" class="adm-form-control" value="{{ old('score_fluency', $submission->score_fluency) }}" min="0" max="100" placeholder="0-100">
-                        </div>
-                    </div>
+                    @endunless
 
                     <div class="adm-form-group" style="margin-top:10px;">
                         <label class="adm-form-label">Commentaire professeur</label>
-                        <textarea name="teacher_comment" class="adm-form-control" rows="3" placeholder="Donnez votre avis sur la récitation...">{{ old('teacher_comment', $submission->teacher_comment) }}</textarea>
+                        <textarea name="teacher_comment" class="adm-form-control" rows="3" placeholder="{{ $isObservationSubmission
+    ? 'Donnez votre avis sur la description et le vocabulaire...'
+    : 'Donnez votre avis sur la récitation...' }}">{{ old('teacher_comment', $submission->teacher_comment) }}</textarea>
                     </div>
 
                     <button type="submit" class="adm-btn adm-btn-primary w-100">

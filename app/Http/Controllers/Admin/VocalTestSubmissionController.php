@@ -51,7 +51,13 @@ class VocalTestSubmissionController extends Controller
         $isCompletionSubmission =
             $submission->isCompletionSubmission();
 
-        $audioState = $isCompletionSubmission
+        $isObservationSubmission =
+            $submission->isObservationSubmission();
+
+        $audioState = (
+            $isCompletionSubmission
+            || $isObservationSubmission
+        )
             ? [
                 'exists' => false,
                 'playable' => false,
@@ -60,6 +66,30 @@ class VocalTestSubmissionController extends Controller
                 'error' => null,
             ]
             : $this->getAudioState($submission);
+
+        $observationReview =
+            $isObservationSubmission
+                ? [
+                    'response_mode' =>
+                        $submission
+                            ->observationResponseMode(),
+                    'text' =>
+                        $submission
+                            ->observationText(),
+                    'image_path' =>
+                        $submission
+                            ->observationImagePath(),
+                    'image_original_name' =>
+                        $submission
+                            ->observationImageOriginalName(),
+                    'image_mime_type' =>
+                        $submission
+                            ->observationImageMimeType(),
+                    'image_size' =>
+                        $submission
+                            ->observationImageSize(),
+                ]
+                : null;
 
         $completionReview = $isCompletionSubmission
             ? [
@@ -76,6 +106,10 @@ class VocalTestSubmissionController extends Controller
             'submission' => $submission,
             'isCompletionSubmission' =>
                 $isCompletionSubmission,
+            'isObservationSubmission' =>
+                $isObservationSubmission,
+            'observationReview' =>
+                $observationReview,
             'completionReview' => $completionReview,
             'audioExists' => $audioState['exists'],
             'audioPlayable' => $audioState['playable'],
@@ -131,6 +165,12 @@ class VocalTestSubmissionController extends Controller
 
     public function audio(Request $request, VocalTestSubmission $submission)
     {
+        if ($submission->isObservationSubmission()) {
+            return $this->observationImage(
+                $submission
+            );
+        }
+
         abort_if(
             $submission->isCompletionSubmission(),
             404,
@@ -292,11 +332,78 @@ class VocalTestSubmissionController extends Controller
             Storage::disk('local')->delete($submission->audio_path);
         }
 
+        $observationImagePath =
+            $submission->observationImagePath();
+
+        if (
+            $observationImagePath
+            && Storage::disk('local')
+                ->exists($observationImagePath)
+        ) {
+            Storage::disk('local')
+                ->delete($observationImagePath);
+        }
+
         $submission->delete();
 
         return redirect()
             ->route('admin.vocal-tests.submissions.index')
             ->with('success', 'Soumission vocale supprimée.');
+    }
+
+    private function observationImage(
+        VocalTestSubmission $submission
+    ) {
+        $path =
+            $submission->observationImagePath();
+
+        abort_unless(
+            $path,
+            404,
+            'Aucune photo n’est associée à cette réponse.'
+        );
+
+        $disk = Storage::disk('local');
+
+        abort_unless(
+            $disk->exists($path),
+            404,
+            'La photo de la réponse est introuvable.'
+        );
+
+        $absolutePath = $disk->path($path);
+        $mimeType =
+            $submission->observationImageMimeType()
+            ?: 'image/jpeg';
+
+        $filename = basename(
+            $submission
+                ->observationImageOriginalName()
+            ?: 'observation-' . $submission->id
+        );
+
+        $safeFilename = preg_replace(
+            '/[^A-Za-z0-9._-]/',
+            '-',
+            $filename
+        ) ?: 'observation-' . $submission->id . '.jpg';
+
+        return response()->file(
+            $absolutePath,
+            [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' =>
+                    'inline; filename="'
+                    . $safeFilename
+                    . '"',
+                'Cache-Control' =>
+                    'private, no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+                'X-Content-Type-Options' =>
+                    'nosniff',
+            ]
+        );
     }
 
     /**

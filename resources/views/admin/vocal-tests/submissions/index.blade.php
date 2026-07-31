@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Soumissions vocales')
-@section('page_title', 'Soumissions vocales')
+@section('title', 'Soumissions des tests')
+@section('page_title', 'Soumissions des tests')
 @section('breadcrumb', 'Tests vocaux → Soumissions')
 
 @section('content')
@@ -86,8 +86,8 @@
 
 <div class="adm-page-header">
     <div>
-        <h1><i class="bi bi-list-check me-2" style="color:var(--adm-primary);"></i> Soumissions vocales</h1>
-        <div class="subtitle">Consultez et évaluez les enregistrements vocaux des étudiants</div>
+        <h1><i class="bi bi-list-check me-2" style="color:var(--adm-primary);"></i> Soumissions des tests</h1>
+        <div class="subtitle">Consultez et évaluez les tests vocaux, de complétion et d’observation</div>
     </div>
     <div class="page-actions">
         <a href="{{ route('admin.vocal-tests.prompts.index') }}" class="adm-btn adm-btn-ghost">
@@ -102,7 +102,7 @@
 
 <div class="adm-card">
     <div class="adm-card-header">
-        <h4><i class="bi bi-mic" style="color:rgba(255,255,255,0.35);"></i> Enregistrements reçus</h4>
+        <h4><i class="bi bi-mic" style="color:rgba(255,255,255,0.35);"></i> Réponses reçues</h4>
         <div class="card-actions">
             <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $submissions->total() }} soumission(s)</span>
         </div>
@@ -157,7 +157,17 @@
                             <small>{{ $submission->classRoom?->name ?? '-' }}</small>
                         </td>
                         <td>
-                            @if($submission->test_mode)
+                            @if($submission->isObservationSubmission())
+                                <span class="mode-badge reading">
+                                    <i class="bi bi-eye-fill"></i>
+                                    Observation
+                                </span>
+                            @elseif($submission->isCompletionSubmission())
+                                <span class="mode-badge hifd">
+                                    <i class="bi bi-puzzle-fill"></i>
+                                    Complétion
+                                </span>
+                            @elseif($submission->test_mode)
                                 <span class="mode-badge {{ $submission->test_mode }}">
                                     {{ \App\Models\VocalTestSubmission::getModes()[$submission->test_mode] ?? $submission->test_mode }}
                                 </span>
@@ -166,7 +176,16 @@
                             @endif
                         </td>
                         <td style="font-size:0.85rem;">
-                            @if($submission->duration_seconds)
+                            @if($submission->isObservationSubmission())
+                                <span class="adm-badge adm-badge-info">
+                                    {{
+                                        $submission->observationResponseMode()
+                                            === 'image'
+                                            ? 'Photo'
+                                            : 'Texte'
+                                    }}
+                                </span>
+                            @elseif($submission->duration_seconds)
                                 <span class="adm-badge adm-badge-info">{{ $submission->duration_seconds }}s</span>
                             @else
                                 <span style="color:var(--adm-text-muted);">—</span>
@@ -206,7 +225,7 @@
                                     method="POST"
                                     action="{{ route('admin.vocal-tests.submissions.destroy', $submission) }}"
                                     class="submission-delete-form"
-                                    onsubmit="return confirm('Voulez-vous vraiment supprimer cette soumission vocale ? Le fichier audio sera également supprimé.');"
+                                    onsubmit="return confirm('Voulez-vous vraiment supprimer cette soumission ? Les fichiers associés seront également supprimés.');"
                                 >
                                     @csrf
                                     @method('DELETE')
@@ -215,7 +234,7 @@
                                         type="submit"
                                         class="submission-delete-btn"
                                         title="Supprimer cette soumission"
-                                        aria-label="Supprimer la soumission vocale de {{ $submission->user?->name ?? 'cet élève' }}"
+                                        aria-label="Supprimer la soumission de {{ $submission->user?->name ?? 'cet élève' }}"
                                     >
                                         <i class="bi bi-trash3-fill"></i>
                                         Supprimer
@@ -229,8 +248,8 @@
                         <td colspan="9">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-mic-mute"></i></div>
-                                <h5>Aucune soumission vocale</h5>
-                                <p>Les enregistrements des étudiants apparaîtront ici.</p>
+                                <h5>Aucune soumission</h5>
+                                <p>Les réponses des étudiants apparaîtront ici.</p>
                             </div>
                         </td>
                     </tr>

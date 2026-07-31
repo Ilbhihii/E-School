@@ -191,6 +191,85 @@ class VocalTestPrompt extends Model
     }
 
     /**
+     * Les parcours Arabe → Communication → Intermédiaire/Avancé
+     * utilisent un test d'observation avec réponse écrite ou photo.
+     */
+    public static function isObservationPath(
+        Subject $subject,
+        Level $level,
+        ClassRoom $classRoom
+    ): bool {
+        if (!self::isSupportedPath($subject, $level, $classRoom)) {
+            return false;
+        }
+
+        $isArabic =
+            self::normalizePathName($subject->name)
+            === 'arabe';
+
+        $isCommunication =
+            self::normalizePathName($level->name)
+            === self::normalizePathName(
+                self::ARABIC_COMMUNICATION
+            );
+
+        $className =
+            self::normalizePathName($classRoom->name);
+
+        $isIntermediateOrAdvanced = in_array(
+            $className,
+            [
+                self::normalizePathName(
+                    self::CLASS_INTERMEDIATE
+                ),
+                self::normalizePathName(
+                    self::CLASS_ADVANCED
+                ),
+            ],
+            true
+        );
+
+        return $isArabic
+            && $isCommunication
+            && $isIntermediateOrAdvanced;
+    }
+
+    /**
+     * Contenu du test d'observation.
+     */
+    public static function observationDefinition(
+        ClassRoom $classRoom
+    ): array {
+        $isAdvanced =
+            self::normalizePathName($classRoom->name)
+            === self::normalizePathName(
+                self::CLASS_ADVANCED
+            );
+
+        return [
+            'title' =>
+                'Test d’observation et d’expression',
+            'arabic_title' =>
+                'اِخْتِبَارُ الْمُلَاحَظَةِ وَالتَّعْبِيرِ',
+            'image' =>
+                'images/vocal-tests/observation-ferme.jpeg',
+            'question' =>
+                'Observez attentivement l’image puis '
+                . 'décrivez en arabe ce que vous voyez.',
+            'instructions' => $isAdvanced
+                ? 'Niveau avancé : écrivez de 5 à 8 phrases '
+                    . 'en décrivant les personnages, les animaux, '
+                    . 'les objets, les actions et les lieux.'
+                : 'Niveau intermédiaire : écrivez de 3 à 5 phrases '
+                    . 'simples en décrivant les animaux, les objets '
+                    . 'et les actions visibles.',
+            'minimum_characters' => $isAdvanced
+                ? 60
+                : 30,
+        ];
+    }
+
+    /**
      * Le niveau Coran avancé utilise un exercice interactif de complétion
      * au lieu d'un enregistrement vocal.
      */
