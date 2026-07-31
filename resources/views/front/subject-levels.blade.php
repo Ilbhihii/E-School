@@ -987,11 +987,10 @@ html.light-mode .card-3d .text-white-50 {
                                                 $targetRoute =
                                                     $isHighSchoolSupport
                                                         ? route(
-                                                            'high-school-test.show',
+                                                            'plans',
                                                             [
-                                                                $subject,
-                                                                $level,
-                                                                $class,
+                                                                'offer' =>
+                                                                    'soutien_lycee',
                                                             ]
                                                         )
                                                         : (

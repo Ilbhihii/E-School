@@ -4,59 +4,70 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Stripe\Checkout\Session;
 use Stripe\Stripe;
 
 class PlanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $plans = config('plans.offers', []);
+
+        $showOnlySoutien =
+            $request->query('offer')
+            === 'soutien_lycee';
+
+        if ($showOnlySoutien) {
+            abort_unless(
+                isset($plans['soutien_lycee']),
+                404,
+                'L’offre Soutien Lycée est indisponible.'
+            );
+
+            $plans = [
+                'soutien_lycee' =>
+                    $plans['soutien_lycee'],
+            ];
+        }
 
         return view(
             'plans.index',
-            compact('plans')
+            compact(
+                'plans',
+                'showOnlySoutien'
+            )
         );
     }
 
-    /*
-     * Cette méthode est conservée pour compatibilité.
-     * Le flux actuellement utilisé par les vues passe
-     * principalement par PaymentController.
+    /**
+     * Flux Stripe conservé pour compatibilité.
+     * Le paiement doit ensuite être confirmé par un webhook
+     * avant d'accorder définitivement l'accès.
      */
     public function checkout(Request $request)
     {
+        $plans = config('plans.offers', []);
+
         $validated = $request->validate([
             'plan' => [
                 'required',
-                'string',
+                Rule::in(array_keys($plans)),
             ],
         ]);
-
-        $plans = config('plans.offers', []);
-        $planCode = $validated['plan'];
-
-        abort_unless(
-            isset($plans[$planCode]),
-            422,
-            'L’offre sélectionnée est invalide.'
-        );
 
         if (!Auth::check()) {
             return redirect()
                 ->route('login')
                 ->with(
                     'error',
-                    'Connectez-vous avant de continuer le paiement.'
+                    'Connectez-vous avant de choisir une offre.'
                 );
         }
 
+        $planCode = $validated['plan'];
         $plan = $plans[$planCode];
 
-        /*
-         * Le choix est mémorisé, mais aucun accès payant
-         * n’est activé avant confirmation du paiement.
-         */
         Auth::user()->forceFill([
             'subscription_type' => $planCode,
         ])->save();
@@ -71,28 +82,25 @@ class PlanController extends Controller
                 'price_data' => [
                     'currency' => $plan['currency'],
                     'product_data' => [
-                        'name' =>
-                            'Abonnement '
-                            . $plan['name'],
-                        'description' =>
-                            $plan['scope'],
+                        'name' => 'Abonnement ' . $plan['name'],
+                        'description' => $plan['scope'],
                     ],
-                    'unit_amount' =>
-                        $plan['amount_minor'],
+                    'unit_amount' => $plan['amount_minor'],
                 ],
                 'quantity' => 1,
             ]],
             'mode' => 'payment',
-            'success_url' =>
-                url(
-                    '/payment-success?plan='
-                    . urlencode($planCode)
-                ),
-            'cancel_url' =>
-                route(
-                    'plans',
-                    ['plan' => $planCode]
-                ),
+            'success_url' => route(
+                'student.payment',
+                [
+                    'plan' => $planCode,
+                    'checkout' => 'success',
+                ]
+            ),
+            'cancel_url' => route(
+                'plans',
+                ['plan' => $planCode]
+            ),
             'metadata' => [
                 'user_id' => Auth::id(),
                 'plan' => $planCode,
