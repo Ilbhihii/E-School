@@ -1000,10 +1000,6 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('front.lives') }}">Lives</a>
-                </li>
-
-                <li class="nav-item">
                     <a class="nav-link" href="{{ route('appointment.create') }}" style="color: #FFD166;">
                         Rendez-vous
                     </a>
@@ -1087,7 +1083,6 @@
                 <div class="d-flex flex-column gap-2">
                     <a href="{{ route('home') }}" class="footer-link-3d">Accueil</a>
                     <a href="{{ route('front.classes') }}" class="footer-link-3d">Matières</a>
-                    <a href="{{ route('front.lives') }}" class="footer-link-3d">Lives</a>
                     <a href="{{ route('appointment.create') }}" class="footer-link-3d">Rendez-vous</a>
                     <a href="{{ route('plans') }}" class="footer-link-3d">Offres</a>
                 </div>
