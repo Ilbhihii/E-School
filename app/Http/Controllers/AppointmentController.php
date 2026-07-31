@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AppointmentPaymentInvitationMailable;
 use App\Models\ClassRoom;
 use App\Models\HighSchoolTestSubmission;
 use App\Models\Level;
@@ -11,8 +12,11 @@ use App\Models\VocalTestPrompt;
 use App\Models\VocalTestSubmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class AppointmentController extends Controller
 {
@@ -495,6 +499,7 @@ class AppointmentController extends Controller
                         );
                 })
                 ->with([
+                    'user',
                     'subject',
                     'level',
                     'classRoom',
@@ -539,6 +544,104 @@ class AppointmentController extends Controller
         return back()->with(
             'success',
             'Rendez-vous annulé.'
+        );
+    }
+
+    public function sendPaymentEmail(
+        TestAppointment $appointment
+    ) {
+        $appointment->load([
+            'user',
+            'subject',
+            'level',
+            'classRoom',
+            'vocalSubmission.subject',
+            'vocalSubmission.level',
+            'vocalSubmission.classRoom',
+            'highSchoolTestSubmission.subject',
+            'highSchoolTestSubmission.level',
+            'highSchoolTestSubmission.classRoom',
+        ]);
+
+        if (!$appointment->canReceivePaymentInvitation()) {
+            return back()->with(
+                'error',
+                'Confirmez d’abord le rendez-vous '
+                . 'et vérifiez l’adresse e-mail.'
+            );
+        }
+
+        $planCode = $appointment->payment_plan_code;
+        $plan = $appointment->payment_plan_details;
+        $paymentUrl = $this->temporaryPaymentUrl($appointment);
+
+        try {
+            Mail::to($appointment->email)->send(
+                new AppointmentPaymentInvitationMailable(
+                    $appointment,
+                    $paymentUrl,
+                    $plan
+                )
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with(
+                'error',
+                'L’e-mail n’a pas pu être envoyé. '
+                . 'Vérifiez la configuration MAIL du serveur.'
+            );
+        }
+
+        $appointment->forceFill([
+            'payment_plan' => $planCode,
+            'payment_invited_at' => now(),
+            'payment_invitation_count' =>
+                (int) $appointment->payment_invitation_count + 1,
+        ])->save();
+
+        return back()->with(
+            'success',
+            'L’e-mail de paiement a été envoyé à '
+            . $appointment->email
+            . '.'
+        );
+    }
+
+    public function paymentInvitation(
+        Request $request,
+        TestAppointment $appointment
+    ) {
+        abort_unless(
+            $request->hasValidSignature(),
+            403,
+            'Le lien de paiement est invalide ou a expiré.'
+        );
+
+        abort_unless(
+            $appointment->status === TestAppointment::STATUS_CONFIRMED,
+            403,
+            'Ce rendez-vous n’est pas confirmé.'
+        );
+
+        return redirect()->route(
+            'student.payment',
+            [
+                'plan' => $appointment->payment_plan_code,
+                'appointment' => $appointment->id,
+            ]
+        );
+    }
+
+    private function temporaryPaymentUrl(
+        TestAppointment $appointment
+    ): string {
+        return URL::temporarySignedRoute(
+            'appointment.payment',
+            now()->addDays(7),
+            [
+                'appointment' => $appointment->id,
+            ]
         );
     }
 

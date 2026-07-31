@@ -35,6 +35,12 @@
     </div>
 @endif
 
+@if(session('error'))
+    <div class="adm-alert adm-alert-danger mb-3">
+        {{ session('error') }}
+    </div>
+@endif
+
 <div class="appointments-panel">
     <div class="appointments-toolbar">
         <div class="appointments-count">
@@ -109,6 +115,25 @@
                             '',
                             (string) $appointment->phone
                         );
+
+                        $paymentPlan =
+                            $appointment->payment_plan_details;
+
+                        $canSendPayment =
+                            $appointment->canReceivePaymentInvitation();
+
+                        $paymentUrl =
+                            $canSendPayment
+                                ? \Illuminate\Support\Facades\URL
+                                    ::temporarySignedRoute(
+                                        'appointment.payment',
+                                        now()->addDays(7),
+                                        [
+                                            'appointment' =>
+                                                $appointment->id,
+                                        ]
+                                    )
+                                : null;
 
                         $searchValue = mb_strtolower(
                             implode(
@@ -424,80 +449,87 @@
                             </small>
                         </td>
 
-                        <td>
-                            <div class="d-flex gap-1">
-                                @if(
-                                    $appointment->status
-                                    === 'pending'
-                                )
-                                    <form
-                                        method="POST"
-                                        action="{{
-                                            route(
-                                                'admin.appointments.confirm',
-                                                $appointment
-                                            )
-                                        }}"
-                                    >
-                                        @csrf
-                                        @method('PATCH')
+                        <td style="min-width:205px;">
+                            <div class="appointment-actions">
+                                <div class="appointment-actions-main">
+                                    @if($appointment->status === 'pending')
+                                        <form method="POST" action="{{ route('admin.appointments.confirm', $appointment) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button class="adm-action-btn adm-action-edit" title="Confirmer">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                        </form>
 
-                                        <button
-                                            class="adm-action-btn
-                                                adm-action-edit"
-                                            title="Confirmer"
-                                        >
-                                            <i class="bi bi-check-lg"></i>
+                                        <form method="POST" action="{{ route('admin.appointments.cancel', $appointment) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button class="adm-action-btn adm-action-danger" title="Annuler">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    <form method="POST" action="{{ route('admin.appointments.destroy', $appointment) }}" onsubmit="return confirm('Supprimer ce rendez-vous et ses fichiers ?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="adm-action-btn adm-action-danger" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
+                                </div>
 
-                                    <form
-                                        method="POST"
-                                        action="{{
-                                            route(
-                                                'admin.appointments.cancel',
-                                                $appointment
-                                            )
-                                        }}"
-                                    >
-                                        @csrf
-                                        @method('PATCH')
-
-                                        <button
-                                            class="adm-action-btn
-                                                adm-action-danger"
-                                            title="Annuler"
-                                        >
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </form>
-                                @endif
-
-                                <form
-                                    method="POST"
-                                    action="{{
-                                        route(
-                                            'admin.appointments.destroy',
-                                            $appointment
-                                        )
-                                    }}"
-                                    onsubmit="
-                                        return confirm(
-                                            'Supprimer ce rendez-vous et ses fichiers ?'
-                                        )
-                                    "
-                                >
-                                    @csrf
-                                    @method('DELETE')
+                                <div class="payment-actions">
+                                    <div class="payment-plan-label">
+                                        <i class="bi bi-credit-card-2-front"></i>
+                                        {{ $paymentPlan['name'] }}
+                                        <strong>{{ $paymentPlan['amount_display'] }} {{ $paymentPlan['currency_symbol'] }}</strong>
+                                    </div>
 
                                     <button
-                                        class="adm-action-btn
-                                            adm-action-danger"
-                                        title="Supprimer"
+                                        type="button"
+                                        class="payment-action-button payment-copy-button"
+                                        data-payment-url="{{ $paymentUrl }}"
+                                        {{ !$canSendPayment ? 'disabled' : '' }}
+                                        title="{{ $canSendPayment ? 'Copier le lien de paiement' : 'Confirmez d’abord le rendez-vous' }}"
                                     >
-                                        <i class="bi bi-trash"></i>
+                                        <i class="bi bi-link-45deg"></i>
+                                        Copier le lien
                                     </button>
-                                </form>
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route('admin.appointments.payment-email', $appointment) }}"
+                                        class="payment-email-form"
+                                        onsubmit="return confirm('Envoyer le lien de paiement à {{ addslashes($appointment->email) }} ?')"
+                                    >
+                                        @csrf
+                                        <button
+                                            type="submit"
+                                            class="payment-action-button payment-email-button"
+                                            {{ !$canSendPayment ? 'disabled' : '' }}
+                                            title="{{ $canSendPayment ? 'Envoyer l’e-mail de paiement' : 'Confirmez d’abord le rendez-vous' }}"
+                                        >
+                                            <i class="bi bi-envelope-arrow-up-fill"></i>
+                                            Envoyer l’e-mail
+                                        </button>
+                                    </form>
+
+                                    @if($appointment->payment_invited_at)
+                                        <small class="payment-sent-status">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                            Envoyé le {{ $appointment->payment_invited_at->format('d/m/Y H:i') }}
+                                            @if($appointment->payment_invitation_count > 1)
+                                                · {{ $appointment->payment_invitation_count }} envois
+                                            @endif
+                                        </small>
+                                    @elseif(!$canSendPayment)
+                                        <small class="payment-disabled-status">
+                                            <i class="bi bi-lock-fill"></i>
+                                            Confirmez le rendez-vous avant l’envoi.
+                                        </small>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -730,6 +762,121 @@ td small {
     background: rgba(239,68,68,0.11);
 }
 
+.appointment-actions {
+    min-width: 190px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.appointment-actions-main {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.payment-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.payment-plan-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,0.48);
+    font-size: 0.6rem;
+}
+
+.payment-plan-label i {
+    color: #60A5FA;
+}
+
+.payment-plan-label strong {
+    margin-left: auto;
+    color: #FCD34D;
+    font-size: 0.62rem;
+}
+
+.payment-action-button {
+    width: 100%;
+    min-height: 31px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 0.61rem;
+    font-weight: 780;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+}
+
+.payment-action-button:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.payment-action-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.38;
+}
+
+.payment-copy-button {
+    border-color: rgba(14,165,233,0.2);
+    color: #7DD3FC;
+    background: rgba(14,165,233,0.09);
+}
+
+.payment-email-button {
+    color: #ffffff;
+    background: linear-gradient(135deg,#2563EB,#7C3AED);
+}
+
+.payment-email-form {
+    margin: 0;
+}
+
+.payment-sent-status,
+.payment-disabled-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    font-size: 0.56rem;
+    line-height: 1.45;
+}
+
+.payment-sent-status {
+    color: #86EFAC;
+}
+
+.payment-disabled-status {
+    color: rgba(255,255,255,0.32);
+}
+
+.payment-copy-feedback {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border: 1px solid rgba(34,197,94,0.23);
+    border-radius: 11px;
+    color: #DCFCE7;
+    background: rgba(20,83,45,0.96);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+    font-size: 0.7rem;
+    font-weight: 750;
+}
+
 @media (max-width:760px) {
     .appointments-toolbar {
         align-items: stretch;
@@ -825,6 +972,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 || row.dataset.search.includes(term)
                     ? ''
                     : 'none';
+        });
+    });
+
+    const copyButtons = document.querySelectorAll(
+        '.payment-copy-button'
+    );
+
+    const showCopyFeedback = message => {
+        document.querySelector('.payment-copy-feedback')?.remove();
+
+        const feedback = document.createElement('div');
+        feedback.className = 'payment-copy-feedback';
+        feedback.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + message;
+        document.body.appendChild(feedback);
+
+        window.setTimeout(() => {
+            feedback.remove();
+        }, 2600);
+    };
+
+    const fallbackCopy = value => {
+        const input = document.createElement('textarea');
+        input.value = value;
+        input.setAttribute('readonly', 'readonly');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand('copy');
+        input.remove();
+        return copied;
+    };
+
+    copyButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const url = button.dataset.paymentUrl;
+
+            if (!url) {
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(url);
+                } else if (!fallbackCopy(url)) {
+                    throw new Error('Copie impossible');
+                }
+
+                showCopyFeedback('Lien de paiement copié.');
+            } catch (error) {
+                window.prompt('Copiez le lien de paiement :', url);
+            }
         });
     });
 });

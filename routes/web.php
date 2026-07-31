@@ -46,6 +46,13 @@ Route::get('/', [HomeController::class,'index'])->name('home');
 Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appointment.create');
 Route::post('/rendez-vous', [AppointmentController::class, 'store'])->name('appointment.store');
 
+Route::get(
+    '/paiement/rendez-vous/{appointment}',
+    [AppointmentController::class, 'paymentInvitation']
+)
+    ->middleware('signed')
+    ->name('appointment.payment');
+
 /*
  * Test écrit Soutien Lycée.
  * Le sujet est visible publiquement.
@@ -324,6 +331,10 @@ Route::middleware(['auth','isAdmin'])
     Route::patch('/appointments/{appointment}/cancel', [\App\Http\Controllers\AppointmentController::class, 'cancel'])->name('appointments.cancel');
     Route::delete('/appointments/{appointment}', [\App\Http\Controllers\AppointmentController::class, 'destroy'])->name('appointments.destroy');
     Route::get('/appointments/{appointment}/audio', [\App\Http\Controllers\AppointmentController::class, 'audio'])->name('appointments.audio');
+    Route::post(
+        '/appointments/{appointment}/payment-email',
+        [\App\Http\Controllers\AppointmentController::class, 'sendPaymentEmail']
+    )->name('appointments.payment-email');
 
     Route::get('/profile', function () {
         return view('admin.profile');
