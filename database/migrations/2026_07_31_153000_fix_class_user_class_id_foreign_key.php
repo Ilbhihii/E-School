@@ -16,14 +16,10 @@ return new class extends Migration
         }
 
         /*
-         * Nettoyer uniquement les anciennes assignations
-         * dont l'utilisateur ou la matière n'existe plus.
-         *
-         * Aucune assignation valide n'est supprimée.
+         * Supprimer uniquement les assignations réellement
+         * orphelines : utilisateur ou matière supprimé.
          */
-        $orphanAssignmentIds = DB::table(
-                'class_user as cu'
-            )
+        $orphanIds = DB::table('class_user as cu')
             ->leftJoin(
                 'users as u',
                 'cu.user_id',
@@ -45,31 +41,28 @@ return new class extends Migration
             )
             ->pluck('cu.id');
 
-        if ($orphanAssignmentIds->isNotEmpty()) {
+        if ($orphanIds->isNotEmpty()) {
             DB::table('class_user')
-                ->whereIn(
-                    'id',
-                    $orphanAssignmentIds
-                )
+                ->whereIn('id', $orphanIds)
                 ->delete();
         }
 
         /*
-         * Après le nettoyage des lignes réellement
-         * orphelines, vérifier qu'il ne reste aucun
-         * class_id impossible à relier à class_rooms.
-         *
-         * Une ligne liée à un utilisateur valide n'est
-         * jamais supprimée automatiquement.
+         * Rechercher les assignations utilisant encore les IDs
+         * de l'ancienne table classes.
          */
-        $invalidRows = DB::table(
-                'class_user as cu'
-            )
+        $legacyRows = DB::table('class_user as cu')
             ->leftJoin(
-                'class_rooms as cr',
+                'class_rooms as current_class',
                 'cu.class_id',
                 '=',
-                'cr.id'
+                'current_class.id'
+            )
+            ->leftJoin(
+                'classes as legacy_class',
+                'cu.class_id',
+                '=',
+                'legacy_class.id'
             )
             ->leftJoin(
                 'users as u',
@@ -83,7 +76,7 @@ return new class extends Migration
                 '=',
                 's.id'
             )
-            ->whereNull('cr.id')
+            ->whereNull('current_class.id')
             ->select([
                 'cu.id',
                 'cu.user_id',
@@ -91,39 +84,121 @@ return new class extends Migration
                 'cu.subject_id',
                 'u.name as user_name',
                 's.name as subject_name',
+                'legacy_class.name as legacy_class_name',
             ])
-            ->limit(20)
             ->get();
 
-        if ($invalidRows->isNotEmpty()) {
-            $details = $invalidRows
-                ->map(
-                    function ($row) {
-                        return sprintf(
-                            '#%s user=%s (%s) class=%s '
-                            . 'subject=%s (%s)',
-                            $row->id,
-                            $row->user_id,
-                            $row->user_name
-                                ?? 'utilisateur absent',
-                            $row->class_id,
-                            $row->subject_id
-                                ?? 'NULL',
-                            $row->subject_name
-                                ?? 'matière absente'
-                        );
+        $mappings = [];
+        $mappingErrors = [];
+
+        foreach ($legacyRows as $row) {
+            if (!$row->legacy_class_name) {
+                $mappingErrors[] = sprintf(
+                    '#%s user=%s class=%s : '
+                    . 'ancienne classe introuvable',
+                    $row->id,
+                    $row->user_id,
+                    $row->class_id
+                );
+
+                continue;
+            }
+
+            $candidates = DB::table(
+                    'class_rooms as cr'
+                )
+                ->join(
+                    'levels as l',
+                    'cr.level_id',
+                    '=',
+                    'l.id'
+                )
+                ->leftJoin(
+                    'class_room_subject as crs',
+                    'crs.class_room_id',
+                    '=',
+                    'cr.id'
+                )
+                ->whereRaw(
+                    'LOWER(TRIM(cr.name)) = '
+                    . 'LOWER(TRIM(?))',
+                    [$row->legacy_class_name]
+                )
+                ->where(
+                    function ($query) use ($row) {
+                        $query
+                            ->where(
+                                'l.subject_id',
+                                $row->subject_id
+                            )
+                            ->orWhere(
+                                'crs.subject_id',
+                                $row->subject_id
+                            );
                     }
                 )
-                ->implode('; ');
+                ->select([
+                    'cr.id',
+                    'cr.name',
+                    'l.id as level_id',
+                    'l.name as level_name',
+                ])
+                ->distinct()
+                ->get();
 
+            if ($candidates->count() !== 1) {
+                $candidateDetails = $candidates
+                    ->map(
+                        function ($candidate) {
+                            return sprintf(
+                                '%s:%s/%s',
+                                $candidate->id,
+                                $candidate->level_name,
+                                $candidate->name
+                            );
+                        }
+                    )
+                    ->implode(', ');
+
+                $mappingErrors[] = sprintf(
+                    '#%s user=%s (%s), ancienne classe '
+                    . '%s (%s), matière %s (%s), '
+                    . 'candidats=%s',
+                    $row->id,
+                    $row->user_id,
+                    $row->user_name ?? 'inconnu',
+                    $row->class_id,
+                    $row->legacy_class_name,
+                    $row->subject_id,
+                    $row->subject_name ?? 'inconnue',
+                    $candidateDetails !== ''
+                        ? $candidateDetails
+                        : 'aucun'
+                );
+
+                continue;
+            }
+
+            $candidate = $candidates->first();
+
+            $mappings[] = [
+                'pivot_id' => (int) $row->id,
+                'old_class_id' =>
+                    (int) $row->class_id,
+                'new_class_id' =>
+                    (int) $candidate->id,
+            ];
+        }
+
+        /*
+         * Tout valider avant de supprimer l'ancienne clé.
+         */
+        if (!empty($mappingErrors)) {
             throw new \RuntimeException(
-                'La clé étrangère ne peut pas encore '
-                . 'être remplacée. Certaines assignations '
-                . 'appartiennent à des utilisateurs valides, '
-                . 'mais leur class_id ne correspond à aucune '
-                . 'ligne de class_rooms. Corrigez ces lignes '
-                . 'manuellement. Détails : '
-                . $details
+                'Certaines anciennes classes ne peuvent '
+                . 'pas être associées automatiquement à '
+                . 'class_rooms. Détails : '
+                . implode('; ', $mappingErrors)
             );
         }
 
@@ -154,6 +229,9 @@ return new class extends Migration
             return;
         }
 
+        /*
+         * Supprimer l'ancienne clé classes.id.
+         */
         foreach ($foreignKeys as $foreignKey) {
             $constraintName = str_replace(
                 '`',
@@ -169,6 +247,72 @@ return new class extends Migration
             );
         }
 
+        /*
+         * Convertir les anciens IDs vers les IDs class_rooms.
+         */
+        foreach ($mappings as $mapping) {
+            DB::table('class_user')
+                ->where(
+                    'id',
+                    $mapping['pivot_id']
+                )
+                ->where(
+                    'class_id',
+                    $mapping['old_class_id']
+                )
+                ->update([
+                    'class_id' =>
+                        $mapping['new_class_id'],
+                    'updated_at' => now(),
+                ]);
+        }
+
+        /*
+         * Vérification finale avant l'ajout de la nouvelle clé.
+         */
+        $remainingInvalidRows = DB::table(
+                'class_user as cu'
+            )
+            ->leftJoin(
+                'class_rooms as cr',
+                'cu.class_id',
+                '=',
+                'cr.id'
+            )
+            ->whereNull('cr.id')
+            ->select([
+                'cu.id',
+                'cu.user_id',
+                'cu.class_id',
+                'cu.subject_id',
+            ])
+            ->get();
+
+        if ($remainingInvalidRows->isNotEmpty()) {
+            $details = $remainingInvalidRows
+                ->map(
+                    function ($row) {
+                        return sprintf(
+                            '#%s user=%s class=%s subject=%s',
+                            $row->id,
+                            $row->user_id,
+                            $row->class_id,
+                            $row->subject_id ?? 'NULL'
+                        );
+                    }
+                )
+                ->implode('; ');
+
+            throw new \RuntimeException(
+                'Des class_id invalides restent après '
+                . 'la conversion : '
+                . $details
+            );
+        }
+
+        /*
+         * Nouvelle relation officielle.
+         */
         DB::statement(
             "
                 ALTER TABLE `class_user`
@@ -184,69 +328,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (
-            !Schema::hasTable('class_user')
-            || !Schema::hasTable('classes')
-        ) {
-            return;
-        }
-
-        $invalidRows = DB::table(
-                'class_user as cu'
-            )
-            ->leftJoin(
-                'classes as c',
-                'cu.class_id',
-                '=',
-                'c.id'
-            )
-            ->whereNull('c.id')
-            ->exists();
-
-        if ($invalidRows) {
-            throw new \RuntimeException(
-                'Rollback impossible : des class_id '
-                . 'de class_user n’existent pas dans '
-                . 'l’ancienne table classes.'
-            );
-        }
-
-        $foreignKeys = DB::select(
-            "
-                SELECT CONSTRAINT_NAME
-                FROM information_schema.KEY_COLUMN_USAGE
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = 'class_user'
-                  AND COLUMN_NAME = 'class_id'
-                  AND REFERENCED_TABLE_NAME IS NOT NULL
-            "
-        );
-
-        foreach ($foreignKeys as $foreignKey) {
-            $constraintName = str_replace(
-                '`',
-                '``',
-                $foreignKey->CONSTRAINT_NAME
-            );
-
-            DB::statement(
-                "ALTER TABLE `class_user` "
-                . "DROP FOREIGN KEY `"
-                . $constraintName
-                . "`"
-            );
-        }
-
-        DB::statement(
-            "
-                ALTER TABLE `class_user`
-                ADD CONSTRAINT
-                    `class_user_class_id_foreign`
-                FOREIGN KEY (`class_id`)
-                REFERENCES `classes` (`id`)
-                ON DELETE CASCADE
-                ON UPDATE CASCADE
-            "
+        throw new \RuntimeException(
+            'Cette migration convertit des identifiants '
+            . 'historiques vers class_rooms. Le rollback '
+            . 'automatique est volontairement désactivé.'
         );
     }
 };
