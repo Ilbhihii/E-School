@@ -140,24 +140,229 @@ class StudentController extends Controller
     }
 
 
-    public function lives()
-    {
+    public function lives(
+        Request $request
+    ) {
         $user = auth()->user();
 
-        // 🔒 Classes accessibles : classe principale + classes via class_user (assignations individuelles)
-        $classIds = collect([$user->class_id])->filter();
+        /*
+         * Conserver les assignations class_user ainsi que
+         * l'éventuelle classe principale historique.
+         */
+        $assignmentRows = $this->paths
+            ->studentAssignmentRows($user->id);
 
-        $assignedClassIds = \DB::table('class_user')
-            ->where('user_id', $user->id)
-            ->whereNotNull('class_id')
+        $assignedClassIds = $assignmentRows
             ->pluck('class_id')
-            ->unique();
+            ->push($user->class_id)
+            ->filter()
+            ->map(
+                function ($classId) {
+                    return (int) $classId;
+                }
+            )
+            ->unique()
+            ->values();
 
-        $classIds = $classIds->merge($assignedClassIds)->unique()->values();
+        $assignedClasses = ClassRoom::query()
+            ->whereIn('id', $assignedClassIds)
+            ->with('level')
+            ->orderBy('name')
+            ->get()
+            ->filter(
+                function ($classRoom) {
+                    return $classRoom->level !== null;
+                }
+            )
+            ->values();
 
-        $lives = Live::whereIn('class_id', $classIds)->latest()->get();
+        $assignedLevels = Level::query()
+            ->whereIn(
+                'id',
+                $assignedClasses
+                    ->pluck('level_id')
+                    ->unique()
+            )
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
 
-        return view('student.lives', compact('lives'));
+        /*
+         * Sans level_id :
+         * afficher tous les lives des classes assignées.
+         */
+        $requestedLevelId = $request->query(
+            'level_id'
+        );
+
+        $selectedLevel = null;
+
+        if (
+            $requestedLevelId !== null
+            && $requestedLevelId !== ''
+        ) {
+            $selectedLevel = $assignedLevels
+                ->firstWhere(
+                    'id',
+                    (int) $requestedLevelId
+                );
+        }
+
+        $classesForSelectedLevel = collect();
+        $selectedClass = null;
+
+        if ($selectedLevel) {
+            $classesForSelectedLevel =
+                $assignedClasses
+                    ->filter(
+                        function ($classRoom) use (
+                            $selectedLevel
+                        ) {
+                            return
+                                (int) $classRoom->level_id
+                                === (int) $selectedLevel->id;
+                        }
+                    )
+                    ->sortBy('name')
+                    ->values();
+
+            $requestedClassId = $request->query(
+                'class_id'
+            );
+
+            if (
+                $requestedClassId !== null
+                && $requestedClassId !== ''
+            ) {
+                $selectedClass =
+                    $classesForSelectedLevel
+                        ->firstWhere(
+                            'id',
+                            (int) $requestedClassId
+                        );
+            }
+
+            /*
+             * Si seul le niveau est choisi, sélectionner
+             * automatiquement la première classe assignée.
+             */
+            if (!$selectedClass) {
+                $selectedClass =
+                    $classesForSelectedLevel
+                        ->first();
+            }
+        }
+
+        if ($selectedClass) {
+            $visibleClassIds = collect([
+                (int) $selectedClass->id,
+            ]);
+        } elseif ($selectedLevel) {
+            $visibleClassIds =
+                $classesForSelectedLevel
+                    ->pluck('id')
+                    ->map(
+                        function ($classId) {
+                            return (int) $classId;
+                        }
+                    )
+                    ->values();
+        } else {
+            $visibleClassIds =
+                $assignedClasses
+                    ->pluck('id')
+                    ->map(
+                        function ($classId) {
+                            return (int) $classId;
+                        }
+                    )
+                    ->values();
+        }
+
+        $lives = Live::query()
+            ->with([
+                'classRoom.level',
+            ])
+            ->when(
+                $visibleClassIds->isNotEmpty(),
+                function ($query) use (
+                    $visibleClassIds
+                ) {
+                    $query->whereIn(
+                        'class_id',
+                        $visibleClassIds
+                    );
+                },
+                function ($query) {
+                    $query->whereRaw('1 = 0');
+                }
+            )
+            ->orderByDesc('live_date')
+            ->orderByDesc('start_time')
+            ->orderByDesc('id')
+            ->get();
+
+        /*
+         * Données utilisées par JavaScript pour remplir
+         * automatiquement les classes du niveau choisi.
+         */
+        $classOptionsByLevel = $assignedLevels
+            ->mapWithKeys(
+                function ($level) use (
+                    $assignedClasses
+                ) {
+                    $options = $assignedClasses
+                        ->filter(
+                            function (
+                                $classRoom
+                            ) use ($level) {
+                                return
+                                    (int) $classRoom->level_id
+                                    === (int) $level->id;
+                            }
+                        )
+                        ->sortBy('name')
+                        ->values()
+                        ->map(
+                            function ($classRoom) {
+                                return [
+                                    'id' =>
+                                        (int) $classRoom->id,
+                                    'name' =>
+                                        $classRoom->name,
+                                ];
+                            }
+                        )
+                        ->all();
+
+                    return [
+                        (string) $level->id =>
+                            $options,
+                    ];
+                }
+            )
+            ->all();
+
+        $hasActiveFilter =
+            $selectedLevel !== null;
+
+        $visibleClassCount =
+            $visibleClassIds->count();
+
+        return view(
+            'student.lives',
+            compact(
+                'lives',
+                'assignedLevels',
+                'assignedClasses',
+                'selectedLevel',
+                'selectedClass',
+                'classesForSelectedLevel',
+                'classOptionsByLevel',
+                'hasActiveFilter',
+                'visibleClassCount'
+            )
+        );
     }
 
 
@@ -475,16 +680,289 @@ public function settings()
         return back()->with('success', 'Mot de passe mis à jour avec succès !');
     }
 
-    public function indexSubjects()
-    {
+    public function indexSubjects(
+        Request $request
+    ) {
         $user = auth()->user();
-        $rows = $this->paths->studentAssignmentRows($user->id);
-        $subjects = Subject::whereIn('id', $rows->pluck('subject_id'))->orderBy('name')->get();
-        $firstRow = $rows->first();
-        $classRoom = $firstRow ? ClassRoom::with('level')->find($firstRow->class_id) : null;
-        $level = $classRoom ? $classRoom->level : null;
 
-        return view('student.subjects.index', compact('subjects', 'level', 'classRoom'));
+        $rows = $this->paths
+            ->studentAssignmentRows($user->id);
+
+        $assignedLevels = Level::query()
+            ->whereIn(
+                'id',
+                $rows->pluck('level_id')
+            )
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        $assignedClasses = ClassRoom::query()
+            ->whereIn(
+                'id',
+                $rows->pluck('class_id')
+            )
+            ->with('level')
+            ->orderBy('name')
+            ->get();
+
+        $assignedSubjects = Subject::query()
+            ->whereIn(
+                'id',
+                $rows->pluck('subject_id')
+            )
+            ->orderBy('name')
+            ->get();
+
+        $levelsById =
+            $assignedLevels->keyBy('id');
+
+        $classesById =
+            $assignedClasses->keyBy('id');
+
+        $subjectsById =
+            $assignedSubjects->keyBy('id');
+
+        /*
+         * Une carte correspond à un parcours exact :
+         * matière + niveau + classe.
+         *
+         * Cela évite de mélanger les matières de plusieurs
+         * niveaux lorsque l'étudiant possède plusieurs
+         * assignations.
+         */
+        $assignments = $rows
+            ->map(
+                function ($row) use (
+                    $levelsById,
+                    $classesById,
+                    $subjectsById
+                ) {
+                    $level = $levelsById->get(
+                        (int) $row->level_id
+                    );
+
+                    $classRoom = $classesById->get(
+                        (int) $row->class_id
+                    );
+
+                    $subject = $subjectsById->get(
+                        (int) $row->subject_id
+                    );
+
+                    if (
+                        !$level
+                        || !$classRoom
+                        || !$subject
+                    ) {
+                        return null;
+                    }
+
+                    return (object) [
+                        'subject_id' =>
+                            (int) $subject->id,
+                        'level_id' =>
+                            (int) $level->id,
+                        'class_id' =>
+                            (int) $classRoom->id,
+                        'subject' => $subject,
+                        'level' => $level,
+                        'classRoom' => $classRoom,
+                    ];
+                }
+            )
+            ->filter()
+            ->sortBy(
+                function ($assignment) {
+                    return sprintf(
+                        '%06d|%s|%s|%s',
+                        (int) (
+                            $assignment
+                                ->level
+                                ->order
+                            ?? 999999
+                        ),
+                        mb_strtolower(
+                            $assignment->level->name
+                        ),
+                        mb_strtolower(
+                            $assignment
+                                ->classRoom
+                                ->name
+                        ),
+                        mb_strtolower(
+                            $assignment
+                                ->subject
+                                ->name
+                        )
+                    );
+                }
+            )
+            ->values();
+
+        /*
+         * Le filtre est facultatif.
+         * Sans level_id, toutes les assignations sont
+         * affichées.
+         */
+        $requestedLevelId = $request->query(
+            'level_id'
+        );
+
+        $selectedLevel = null;
+
+        if (
+            $requestedLevelId !== null
+            && $requestedLevelId !== ''
+        ) {
+            $selectedLevel =
+                $assignedLevels->firstWhere(
+                    'id',
+                    (int) $requestedLevelId
+                );
+        }
+
+        $classesForSelectedLevel = collect();
+        $selectedClass = null;
+
+        if ($selectedLevel) {
+            $classesForSelectedLevel =
+                $assignedClasses
+                    ->filter(
+                        function ($classRoom) use (
+                            $selectedLevel
+                        ) {
+                            return
+                                (int) $classRoom
+                                    ->level_id
+                                === (int) $selectedLevel
+                                    ->id;
+                        }
+                    )
+                    ->sortBy('name')
+                    ->values();
+
+            $requestedClassId =
+                $request->query('class_id');
+
+            if (
+                $requestedClassId !== null
+                && $requestedClassId !== ''
+            ) {
+                $selectedClass =
+                    $classesForSelectedLevel
+                        ->firstWhere(
+                            'id',
+                            (int) $requestedClassId
+                        );
+            }
+
+            /*
+             * Lorsqu'un niveau est choisi sans classe,
+             * sélectionner automatiquement la première
+             * classe assignée dans ce niveau.
+             */
+            if (!$selectedClass) {
+                $selectedClass =
+                    $classesForSelectedLevel
+                        ->first();
+            }
+        }
+
+        $visibleAssignments = $assignments;
+
+        if ($selectedLevel) {
+            $visibleAssignments =
+                $visibleAssignments->where(
+                    'level_id',
+                    (int) $selectedLevel->id
+                );
+        }
+
+        if ($selectedClass) {
+            $visibleAssignments =
+                $visibleAssignments->where(
+                    'class_id',
+                    (int) $selectedClass->id
+                );
+        }
+
+        $visibleAssignments =
+            $visibleAssignments->values();
+
+        /*
+         * Données utilisées par JavaScript pour remplir
+         * automatiquement le sélecteur des classes.
+         */
+        $classOptionsByLevel =
+            $assignedLevels
+                ->mapWithKeys(
+                    function ($level) use (
+                        $assignedClasses
+                    ) {
+                        $options =
+                            $assignedClasses
+                                ->filter(
+                                    function (
+                                        $classRoom
+                                    ) use ($level) {
+                                        return
+                                            (int) $classRoom
+                                                ->level_id
+                                            === (int) $level
+                                                ->id;
+                                    }
+                                )
+                                ->sortBy('name')
+                                ->values()
+                                ->map(
+                                    function (
+                                        $classRoom
+                                    ) {
+                                        return [
+                                            'id' =>
+                                                (int) $classRoom
+                                                    ->id,
+                                            'name' =>
+                                                $classRoom
+                                                    ->name,
+                                        ];
+                                    }
+                                )
+                                ->all();
+
+                        return [
+                            (string) $level->id =>
+                                $options,
+                        ];
+                    }
+                )
+                ->all();
+
+        $hasActiveFilter =
+            $selectedLevel !== null;
+
+        $visibleSubjectCount =
+            $visibleAssignments
+                ->pluck('subject_id')
+                ->unique()
+                ->count();
+
+        return view(
+            'student.subjects.index',
+            compact(
+                'assignedLevels',
+                'assignedClasses',
+                'assignments',
+                'visibleAssignments',
+                'selectedLevel',
+                'selectedClass',
+                'classesForSelectedLevel',
+                'classOptionsByLevel',
+                'hasActiveFilter',
+                'visibleSubjectCount'
+            )
+        );
     }
 
 // ═══ Navigation hiérarchique : Matières → Niveaux → Classes → Cours ═══
