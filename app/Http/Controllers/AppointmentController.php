@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClassRoom;
 use App\Models\HighSchoolTestSubmission;
+use App\Models\Level;
+use App\Models\Subject;
 use App\Models\TestAppointment;
+use App\Models\VocalTestPrompt;
 use App\Models\VocalTestSubmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AppointmentController extends Controller
 {
@@ -21,6 +26,38 @@ class AppointmentController extends Controller
 
         $vocalSubmission = null;
         $highSchoolSubmission = null;
+
+        $interviewSubject = null;
+        $interviewLevel = null;
+        $interviewClass = null;
+
+        $hasAnyInterviewPath = (
+            $request->filled('subject_id')
+            || $request->filled('level_id')
+            || $request->filled('class_id')
+        );
+
+        if ($hasAnyInterviewPath) {
+            abort_unless(
+                $request->filled('subject_id')
+                && $request->filled('level_id')
+                && $request->filled('class_id'),
+                422,
+                'Le parcours de l’entretien est incomplet.'
+            );
+
+            [
+                $interviewSubject,
+                $interviewLevel,
+                $interviewClass,
+            ] = $this->resolveHighSchoolPath(
+                (int) $request->query('subject_id'),
+                (int) $request->query('level_id'),
+                (int) $request->query('class_id')
+            );
+
+            $type = TestAppointment::TYPE_TEST;
+        }
 
         if ($request->filled('vocal_submission')) {
             abort_unless($user, 403);
@@ -96,13 +133,20 @@ class AppointmentController extends Controller
             $type = TestAppointment::TYPE_TEST;
         }
 
+        $interviewMethods =
+            TestAppointment::getInterviewMethods();
+
         return view(
             'front.appointment',
             compact(
                 'type',
                 'user',
                 'vocalSubmission',
-                'highSchoolSubmission'
+                'highSchoolSubmission',
+                'interviewSubject',
+                'interviewLevel',
+                'interviewClass',
+                'interviewMethods'
             )
         );
     }
@@ -118,28 +162,96 @@ class AppointmentController extends Controller
             'last_name' =>
                 'required|string|max:255',
             'phone' =>
-                'required|string|max:20',
+                'required|string|max:30',
             'email' =>
                 'required|email|max:255',
             'city' =>
                 'required|string|max:255',
             'country' =>
                 'required|string|max:255',
-            'type' =>
-                'required|string|in:'
-                . implode(
-                    ',',
+            'type' => [
+                'required',
+                'string',
+                Rule::in(
                     array_keys(
                         TestAppointment::getTypes()
                     )
                 ),
+            ],
             'vocal_test_submission_id' =>
                 'nullable|integer|exists:'
                 . 'vocal_test_submissions,id',
             'high_school_test_submission_id' =>
                 'nullable|integer|exists:'
                 . 'high_school_test_submissions,id',
+            'interview_path' =>
+                'nullable|boolean',
         ]);
+
+        $isDirectInterview =
+            $request->boolean('interview_path');
+
+        if ($isDirectInterview) {
+            $interviewData =
+                $request->validate([
+                    'subject_id' =>
+                        'required|integer|exists:subjects,id',
+                    'level_id' =>
+                        'required|integer|exists:levels,id',
+                    'class_id' =>
+                        'required|integer|exists:class_rooms,id',
+                    'interview_method' => [
+                        'required',
+                        'string',
+                        Rule::in(
+                            array_keys(
+                                TestAppointment
+                                    ::getInterviewMethods()
+                            )
+                        ),
+                    ],
+                    'preferred_date' =>
+                        'required|date|after_or_equal:today',
+                    'preferred_time' =>
+                        'required|date_format:H:i',
+                    'notes' =>
+                        'nullable|string|max:1000',
+                ]);
+
+            $validated = array_merge(
+                $validated,
+                $interviewData
+            );
+
+            abort_unless(
+                $validated['type']
+                === TestAppointment::TYPE_TEST,
+                422,
+                'Le type de rendez-vous est invalide.'
+            );
+
+            abort_if(
+                !empty(
+                    $validated[
+                        'vocal_test_submission_id'
+                    ]
+                )
+                || !empty(
+                    $validated[
+                        'high_school_test_submission_id'
+                    ]
+                ),
+                422,
+                'Un entretien direct ne peut pas contenir '
+                . 'une autre soumission de test.'
+            );
+
+            $this->resolveHighSchoolPath(
+                (int) $validated['subject_id'],
+                (int) $validated['level_id'],
+                (int) $validated['class_id']
+            );
+        }
 
         abort_if(
             !empty(
@@ -224,10 +336,12 @@ class AppointmentController extends Controller
             function () use (
                 $validated,
                 $vocalSubmission,
-                $highSchoolSubmission
+                $highSchoolSubmission,
+                $isDirectInterview
             ) {
                 $appointment =
                     TestAppointment::create([
+                        'user_id' => auth()->id(),
                         'first_name' =>
                             $validated['first_name'],
                         'last_name' =>
@@ -245,6 +359,43 @@ class AppointmentController extends Controller
                         'status' =>
                             TestAppointment
                                 ::STATUS_PENDING,
+                        'subject_id' =>
+                            $isDirectInterview
+                                ? $validated['subject_id']
+                                : null,
+                        'level_id' =>
+                            $isDirectInterview
+                                ? $validated['level_id']
+                                : null,
+                        'class_id' =>
+                            $isDirectInterview
+                                ? $validated['class_id']
+                                : null,
+                        'interview_method' =>
+                            $isDirectInterview
+                                ? $validated[
+                                    'interview_method'
+                                ]
+                                : null,
+                        'preferred_date' =>
+                            $isDirectInterview
+                                ? $validated[
+                                    'preferred_date'
+                                ]
+                                : null,
+                        'preferred_time' =>
+                            $isDirectInterview
+                                ? $validated[
+                                    'preferred_time'
+                                ]
+                                : null,
+                        'notes' =>
+                            $isDirectInterview
+                                ? (
+                                    $validated['notes']
+                                    ?? null
+                                )
+                                : null,
                         'vocal_test_submission_id' =>
                             $vocalSubmission?->id,
                         'high_school_test_submission_id' =>
@@ -273,9 +424,16 @@ class AppointmentController extends Controller
         );
 
         if (
-            $vocalSubmission
+            $isDirectInterview
+            || $vocalSubmission
             || $highSchoolSubmission
         ) {
+            $appointment->load([
+                'subject',
+                'level',
+                'classRoom',
+            ]);
+
             return view(
                 'front.appointment-confirmation',
                 compact(
@@ -314,7 +472,7 @@ class AppointmentController extends Controller
     }
 
     /**
-     * Rendez-vous de tests reçus par l'administration.
+     * Rendez-vous reçus par l'administration.
      */
     public function index()
     {
@@ -331,9 +489,15 @@ class AppointmentController extends Controller
                         )
                         ->orWhereNotNull(
                             'high_school_test_submission_id'
+                        )
+                        ->orWhereNotNull(
+                            'subject_id'
                         );
                 })
                 ->with([
+                    'subject',
+                    'level',
+                    'classRoom',
                     'vocalSubmission.subject',
                     'vocalSubmission.level',
                     'vocalSubmission.classRoom',
@@ -448,5 +612,52 @@ class AppointmentController extends Controller
                     'private, no-store',
             ]
         );
+    }
+
+    private function resolveHighSchoolPath(
+        int $subjectId,
+        int $levelId,
+        int $classId
+    ): array {
+        $subject =
+            Subject::findOrFail($subjectId);
+
+        abort_unless(
+            VocalTestPrompt::normalizePathName(
+                $subject->name
+            ) === 'soutien lycee',
+            404
+        );
+
+        $level = Level::query()
+            ->whereKey($levelId)
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->firstOrFail();
+
+        $class = ClassRoom::query()
+            ->whereKey($classId)
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->whereHas(
+                'subjects',
+                function ($query) use ($subject) {
+                    $query->where(
+                        'subjects.id',
+                        $subject->id
+                    );
+                }
+            )
+            ->firstOrFail();
+
+        return [
+            $subject,
+            $level,
+            $class,
+        ];
     }
 }

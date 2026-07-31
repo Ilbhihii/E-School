@@ -987,10 +987,16 @@ html.light-mode .card-3d .text-white-50 {
                                                 $targetRoute =
                                                     $isHighSchoolSupport
                                                         ? route(
-                                                            'plans',
+                                                            'appointment.create',
                                                             [
-                                                                'offer' =>
-                                                                    'soutien_lycee',
+                                                                'type' =>
+                                                                    'test',
+                                                                'subject_id' =>
+                                                                    $subject->id,
+                                                                'level_id' =>
+                                                                    $level->id,
+                                                                'class_id' =>
+                                                                    $class->id,
                                                             ]
                                                         )
                                                         : (
@@ -1138,11 +1144,11 @@ html.light-mode .card-3d .text-white-50 {
                                                                 <i
                                                                     class="
                                                                         bi
-                                                                        bi-file-earmark-text-fill
+                                                                        bi-camera-video-fill
                                                                     "
                                                                 ></i>
-                                                                Passer le
-                                                                test écrit
+                                                                Réserver
+                                                                l’entretien
                                                             </span>
                                                         @elseif($requiresVocalTest)
                                                             <span

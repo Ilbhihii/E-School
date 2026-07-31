@@ -14,12 +14,12 @@
                 style="color:#60A5FA;"
             ></i>
 
-            Rendez-vous de tests
+            Rendez-vous et entretiens
         </h1>
 
         <div class="subtitle">
-            Récitations vocales et tests écrits envoyés
-            par les étudiants.
+            Entretiens BAC, récitations vocales et
+            tests écrits demandés par les étudiants.
         </div>
     </div>
 
@@ -39,7 +39,7 @@
     <div class="appointments-toolbar">
         <div class="appointments-count">
             <i class="bi bi-inbox-fill"></i>
-            Tests reçus
+            Demandes reçues
         </div>
 
         <label class="appointments-search">
@@ -62,7 +62,7 @@
                     <th>Contact</th>
                     <th>Ville / Pays</th>
                     <th>Parcours</th>
-                    <th>Test envoyé</th>
+                    <th>Entretien / Test</th>
                     <th>Statut</th>
                     <th>Date</th>
                     <th>Actions</th>
@@ -86,6 +86,30 @@
                         $isWritten =
                             (bool) $written;
 
+                        $isDirectInterview =
+                            !$submission
+                            && !empty(
+                                $appointment->subject_id
+                            );
+
+                        $pathSubject =
+                            $submission?->subject
+                            ?? $appointment->subject;
+
+                        $pathLevel =
+                            $submission?->level
+                            ?? $appointment->level;
+
+                        $pathClass =
+                            $submission?->classRoom
+                            ?? $appointment->classRoom;
+
+                        $whatsAppNumber = preg_replace(
+                            '/\D+/',
+                            '',
+                            (string) $appointment->phone
+                        );
+
                         $searchValue = mb_strtolower(
                             implode(
                                 ' ',
@@ -96,9 +120,11 @@
                                     $appointment->phone,
                                     $appointment->city,
                                     $appointment->country,
-                                    $submission?->subject?->name,
-                                    $submission?->level?->name,
-                                    $submission?->classRoom?->name,
+                                    $pathSubject?->name,
+                                    $pathLevel?->name,
+                                    $pathClass?->name,
+                                    $appointment
+                                        ->interview_method_label,
                                 ]
                             )
                         );
@@ -170,9 +196,7 @@
                         <td style="min-width:180px;">
                             <strong>
                                 {{
-                                    $submission
-                                        ?->subject
-                                        ?->name
+                                    $pathSubject?->name
                                     ?? '—'
                                 }}
                             </strong>
@@ -181,23 +205,120 @@
                                 <i class="bi bi-diagram-3"></i>
 
                                 {{
-                                    $submission
-                                        ?->level
-                                        ?->name
+                                    $pathLevel?->name
                                     ?? '—'
                                 }}
                                 ·
                                 {{
-                                    $submission
-                                        ?->classRoom
-                                        ?->name
+                                    $pathClass?->name
                                     ?? '—'
                                 }}
                             </span>
                         </td>
 
                         <td style="min-width:230px;">
-                            @if($isWritten)
+                            @if($isDirectInterview)
+                                <div class="direct-interview-block">
+                                    <span
+                                        class="answer-type-badge
+                                            interview"
+                                    >
+                                        <i class="bi bi-headset"></i>
+                                        Entretien BAC
+                                    </span>
+
+                                    <strong>
+                                        {{
+                                            $appointment
+                                                ->interview_method_label
+                                        }}
+                                    </strong>
+
+                                    <small>
+                                        <i class="bi bi-calendar3"></i>
+
+                                        {{
+                                            $appointment
+                                                ->preferred_date
+                                                ?->format('d/m/Y')
+                                            ?? 'Date non précisée'
+                                        }}
+
+                                        à
+
+                                        {{
+                                            $appointment
+                                                ->preferred_time_label
+                                        }}
+                                    </small>
+
+                                    @if($appointment->notes)
+                                        <p
+                                            title="{{
+                                                $appointment->notes
+                                            }}"
+                                        >
+                                            {{
+                                                \Illuminate\Support\Str
+                                                    ::limit(
+                                                        $appointment
+                                                            ->notes,
+                                                        80
+                                                    )
+                                            }}
+                                        </p>
+                                    @endif
+
+                                    <div
+                                        class="direct-interview-actions"
+                                    >
+                                        @if(
+                                            $appointment
+                                                ->interview_method
+                                            === 'whatsapp'
+                                        )
+                                            <a
+                                                href="https://wa.me/{{
+                                                    $whatsAppNumber
+                                                }}"
+                                                target="_blank"
+                                                rel="noopener"
+                                            >
+                                                <i
+                                                    class="bi bi-whatsapp"
+                                                ></i>
+                                                WhatsApp
+                                            </a>
+                                        @elseif(
+                                            $appointment
+                                                ->interview_method
+                                            === 'phone_call'
+                                        )
+                                            <a
+                                                href="tel:{{
+                                                    $appointment->phone
+                                                }}"
+                                            >
+                                                <i
+                                                    class="bi bi-telephone"
+                                                ></i>
+                                                Appeler
+                                            </a>
+                                        @else
+                                            <a
+                                                href="mailto:{{
+                                                    $appointment->email
+                                                }}"
+                                            >
+                                                <i
+                                                    class="bi bi-camera-video"
+                                                ></i>
+                                                Envoyer le lien
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @elseif($isWritten)
                                 <div class="written-answer-block">
                                     <span class="answer-type-badge written">
                                         <i class="bi bi-images"></i>
@@ -388,11 +509,11 @@
                                     <i class="bi bi-inbox"></i>
                                 </div>
 
-                                <h5>Aucun test reçu</h5>
+                                <h5>Aucune demande reçue</h5>
 
                                 <p>
-                                    Les futurs rendez-vous avec
-                                    réponses apparaîtront ici.
+                                    Les futurs entretiens et tests
+                                    apparaîtront ici.
                                 </p>
                             </div>
                         </td>
@@ -619,6 +740,63 @@ td small {
         width: 100%;
     }
 }
+
+.direct-interview-block {
+    min-width: 205px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.answer-type-badge.interview {
+    width: fit-content;
+    color: #C4B5FD;
+    background: rgba(124,58,237,.12);
+}
+
+.direct-interview-block > strong {
+    color: rgba(255,255,255,.82);
+    font-size: .72rem;
+}
+
+.direct-interview-block > small {
+    color: rgba(255,255,255,.42);
+    font-size: .62rem;
+}
+
+.direct-interview-block > p {
+    max-width: 240px;
+    margin: 0;
+    color: rgba(255,255,255,.38);
+    font-size: .59rem;
+    line-height: 1.45;
+}
+
+.direct-interview-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.direct-interview-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border: 1px solid rgba(96,165,250,.14);
+    border-radius: 8px;
+    color: #93C5FD;
+    background: rgba(37,99,235,.07);
+    font-size: .59rem;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.direct-interview-actions a:hover {
+    color: #fff;
+    background: rgba(37,99,235,.14);
+}
+
 </style>
 
 <script>
