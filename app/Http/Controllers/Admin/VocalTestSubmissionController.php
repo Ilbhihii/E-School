@@ -54,9 +54,17 @@ class VocalTestSubmissionController extends Controller
         $isObservationSubmission =
             $submission->isObservationSubmission();
 
+        $isObservationAudioSubmission =
+            $isObservationSubmission
+            && !empty($submission->audio_path);
+
+        $isLegacyObservationSubmission =
+            $isObservationSubmission
+            && !$isObservationAudioSubmission;
+
         $audioState = (
             $isCompletionSubmission
-            || $isObservationSubmission
+            || $isLegacyObservationSubmission
         )
             ? [
                 'exists' => false,
@@ -88,6 +96,11 @@ class VocalTestSubmissionController extends Controller
                     'image_size' =>
                         $submission
                             ->observationImageSize(),
+                    'prompt_image' =>
+                        data_get(
+                            $submission->answer_data,
+                            'prompt_image'
+                        ),
                 ]
                 : null;
 
@@ -108,6 +121,10 @@ class VocalTestSubmissionController extends Controller
                 $isCompletionSubmission,
             'isObservationSubmission' =>
                 $isObservationSubmission,
+            'isObservationAudioSubmission' =>
+                $isObservationAudioSubmission,
+            'isLegacyObservationSubmission' =>
+                $isLegacyObservationSubmission,
             'observationReview' =>
                 $observationReview,
             'completionReview' => $completionReview,
@@ -165,7 +182,10 @@ class VocalTestSubmissionController extends Controller
 
     public function audio(Request $request, VocalTestSubmission $submission)
     {
-        if ($submission->isObservationSubmission()) {
+        if (
+            $submission->isObservationSubmission()
+            && empty($submission->audio_path)
+        ) {
             return $this->observationImage(
                 $submission
             );

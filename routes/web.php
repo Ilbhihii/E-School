@@ -9,8 +9,11 @@ use App\Http\Controllers\Admin\LiveController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProfessorController;
 use App\Http\Controllers\Admin\AdminScheduleController;
+use App\Http\Controllers\PublicScheduleController;
+use App\Http\Controllers\Student\StudentScheduleController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Front\HomeController;
+
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\PlanController;
@@ -43,6 +46,10 @@ use App\Http\Controllers\CourseResourceController;
 |--------------------------------------------------------------------------
 */
 Route::get('/', [HomeController::class,'index'])->name('home');
+
+// Planning public des classes
+Route::get('/planning-des-classes', [PublicScheduleController::class, 'index'])
+    ->name('public.schedule.index');
 
 // Rendez-vous pour test
 Route::get('/rendez-vous', [AppointmentController::class, 'create'])->name('appointment.create');
@@ -282,9 +289,22 @@ Route::middleware(['auth','isAdmin'])
     Route::put('/lives/{live}', [LiveController::class, 'update'])->name('lives.update');
     Route::delete('/lives/{live}', [LiveController::class, 'destroy'])->name('lives.destroy');
     
-    Route::get('/schedule', [AdminScheduleController::class, 'index'])->name('schedule.index');
-    Route::post('/schedule', [AdminScheduleController::class, 'store'])->name('schedule.store');
-    Route::delete('/schedule/{id}', [AdminScheduleController::class, 'destroy'])->name('schedule.destroy');
+    // Planning hebdomadaire des classes
+    // La route events doit rester avant les routes paramétrées.
+    Route::get('/schedule/events', [AdminScheduleController::class, 'events'])
+        ->name('schedule.events');
+
+    Route::get('/schedule', [AdminScheduleController::class, 'index'])
+        ->name('schedule.index');
+
+    Route::post('/schedule', [AdminScheduleController::class, 'store'])
+        ->name('schedule.store');
+
+    Route::put('/schedule/{schedule}', [AdminScheduleController::class, 'update'])
+        ->name('schedule.update');
+
+    Route::delete('/schedule/{schedule}', [AdminScheduleController::class, 'destroy'])
+        ->name('schedule.destroy');
     
 
     
@@ -535,6 +555,9 @@ Route::middleware(['auth', 'active'])
     ->group(function () {
 
     Route::get('/dashboard', [StudentController::class, 'dashboard'])->name('dashboard');
+
+    Route::get('/planning', [StudentScheduleController::class, 'index'])
+        ->name('schedule.index');
     Route::get(
         '/lives',
         [StudentController::class, 'lives']

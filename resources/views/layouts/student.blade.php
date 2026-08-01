@@ -190,6 +190,8 @@
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
     <link rel="stylesheet" href="{{ asset('css/student-refresh.css') }}">
+
+    @stack('styles')
 </head>
 <body>
 
@@ -220,7 +222,57 @@
             </div>
 
             <nav class="st-sidebar-nav">
-                @php $route = request()->route()->getName(); @endphp
+                @php
+                    $route =
+                        request()->route()?->getName();
+
+                    $studentPathService = app(
+                        \App\Services\LearningPathService::class
+                    );
+
+                    $studentAssignmentRows =
+                        $studentPathService
+                            ->studentAssignmentRows(
+                                auth()->id()
+                            );
+
+                    $studentAssignedClassIds =
+                        $studentAssignmentRows
+                            ->pluck('class_id')
+                            ->push(
+                                auth()->user()->class_id
+                            )
+                            ->filter()
+                            ->map(
+                                function ($classId) {
+                                    return (int) $classId;
+                                }
+                            )
+                            ->unique()
+                            ->values();
+
+                    $studentUpcomingLivesCount =
+                        $studentAssignedClassIds
+                            ->isNotEmpty()
+                            ? \App\Models\Live::query()
+                                ->whereIn(
+                                    'class_id',
+                                    $studentAssignedClassIds
+                                )
+                                ->whereDate(
+                                    'live_date',
+                                    '>=',
+                                    now()->toDateString()
+                                )
+                                ->count()
+                            : 0;
+
+                    $showStudentBacTests =
+                        $studentPathService
+                            ->studentHasSoutienLyceeBacPath(
+                                auth()->id()
+                            );
+                @endphp
 
                 <div class="nav-heading">Principal</div>
 
@@ -236,23 +288,50 @@
                     <span>Matières</span>
                 </a>
 
+                <a href="{{ route('student.schedule.index') }}"
+                   class="st-nav-link {{ request()->routeIs('student.schedule.*') ? 'active' : '' }}">
+                    <span class="nav-icon"><i class="bi bi-calendar-week"></i></span>
+                    <span>Emploi du temps</span>
+                </a>
+
                 <div class="nav-heading">Activités</div>
 
                 <a href="{{ route('student.lives') }}"
                    class="st-nav-link {{ str_contains($route ?? '', 'lives') ? 'active' : '' }}">
                     <span class="nav-icon"><i class="bi bi-camera-video"></i></span>
                     <span>Lives</span>
-                    @php $livesCount = \App\Models\Live::whereDate('live_date', '>=', now())->count(); @endphp
-                    @if($livesCount > 0)
-                        <span class="nav-badge">{{ $livesCount }}</span>
+                    @if($studentUpcomingLivesCount > 0)
+                        <span class="nav-badge">
+                            {{ $studentUpcomingLivesCount }}
+                        </span>
                     @endif
                 </a>
 
-                <a href="{{ route('student.written-tests.index') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'written-tests') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-file-earmark-check-fill"></i></span>
-                    <span>Mes tests BAC</span>
-                </a>
+                @if($showStudentBacTests)
+                    <a
+                        href="{{
+                            route(
+                                'student.written-tests.index'
+                            )
+                        }}"
+                        class="st-nav-link {{
+                            str_contains(
+                                $route ?? '',
+                                'written-tests'
+                            )
+                                ? 'active'
+                                : ''
+                        }}"
+                    >
+                        <span class="nav-icon">
+                            <i
+                                class="bi bi-file-earmark-check-fill"
+                            ></i>
+                        </span>
+
+                        <span>Mes tests BAC</span>
+                    </a>
+                @endif
 
                 <a href="{{ route('student.chats') }}"
                    class="st-nav-link {{ str_contains($route ?? '', 'chat') ? 'active' : '' }}">
@@ -329,6 +408,9 @@
                     </a>
                     <a href="{{ route('student.subjects.index') }}" class="st-tb-link {{ str_contains($route ?? '', 'subject') ? 'active' : '' }}">
                         <i class="bi bi-book"></i> <span class="d-none d-md-inline">Matières</span>
+                    </a>
+                    <a href="{{ route('student.schedule.index') }}" class="st-tb-link {{ request()->routeIs('student.schedule.*') ? 'active' : '' }}">
+                        <i class="bi bi-calendar-week"></i> <span class="d-none d-lg-inline">Emploi du temps</span>
                     </a>
                     <a href="{{ route('student.lives') }}" class="st-tb-link {{ str_contains($route ?? '', 'lives') ? 'active' : '' }}">
                         <i class="bi bi-camera-video"></i> <span class="d-none d-md-inline">Lives</span>

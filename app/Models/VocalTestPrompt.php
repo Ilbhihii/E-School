@@ -192,7 +192,7 @@ class VocalTestPrompt extends Model
 
     /**
      * Les parcours Arabe → Communication → Intermédiaire/Avancé
-     * utilisent un test d'observation avec réponse écrite ou photo.
+     * utilisent un test d'observation avec réponse vocale.
      */
     public static function isObservationPath(
         Subject $subject,
@@ -248,24 +248,27 @@ class VocalTestPrompt extends Model
 
         return [
             'title' =>
-                'Test d’observation et d’expression',
+                'Test d’observation et d’expression orale',
             'arabic_title' =>
-                'اِخْتِبَارُ الْمُلَاحَظَةِ وَالتَّعْبِيرِ',
+                'اِخْتِبَارُ الْمُلَاحَظَةِ وَالتَّعْبِيرِ الشَّفَهِيِّ',
             'image' =>
                 'images/vocal-tests/observation-ferme.jpeg',
             'question' =>
                 'Observez attentivement l’image puis '
-                . 'décrivez en arabe ce que vous voyez.',
+                . 'décrivez oralement en arabe ce que vous voyez.',
             'instructions' => $isAdvanced
-                ? 'Niveau avancé : écrivez de 5 à 8 phrases '
-                    . 'en décrivant les personnages, les animaux, '
-                    . 'les objets, les actions et les lieux.'
-                : 'Niveau intermédiaire : écrivez de 3 à 5 phrases '
-                    . 'simples en décrivant les animaux, les objets '
-                    . 'et les actions visibles.',
-            'minimum_characters' => $isAdvanced
-                ? 60
-                : 30,
+                ? 'Niveau avancé : enregistrez une description '
+                    . 'détaillée en arabe. Parlez des personnages, '
+                    . 'des animaux, des objets, des actions et des lieux.'
+                : 'Niveau intermédiaire : enregistrez une description '
+                    . 'simple en arabe. Nommez les animaux, les objets '
+                    . 'et les actions que vous observez.',
+            'minimum_duration' => $isAdvanced
+                ? 20
+                : 10,
+            'maximum_duration' => $isAdvanced
+                ? 180
+                : 120,
         ];
     }
 

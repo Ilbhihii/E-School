@@ -160,7 +160,7 @@
                             @if($submission->isObservationSubmission())
                                 <span class="mode-badge reading">
                                     <i class="bi bi-eye-fill"></i>
-                                    Observation
+                                    Observation vocale
                                 </span>
                             @elseif($submission->isCompletionSubmission())
                                 <span class="mode-badge hifd">
@@ -176,7 +176,15 @@
                             @endif
                         </td>
                         <td style="font-size:0.85rem;">
-                            @if($submission->isObservationSubmission())
+                            @if(
+                                $submission->isObservationSubmission()
+                                && $submission->duration_seconds
+                            )
+                                <span class="adm-badge adm-badge-info">
+                                    Audio ·
+                                    {{ $submission->duration_seconds }}s
+                                </span>
+                            @elseif($submission->isObservationSubmission())
                                 <span class="adm-badge adm-badge-info">
                                     {{
                                         $submission->observationResponseMode()

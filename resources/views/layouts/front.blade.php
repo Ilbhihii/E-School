@@ -471,6 +471,22 @@
             background: rgba(8, 12, 20, 0.92) !important;
         }
 
+        .navbar-3d .nav-link.active {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.20), rgba(124, 58, 237, 0.20));
+            box-shadow: inset 0 0 0 1px rgba(129, 140, 248, 0.20), 0 8px 24px rgba(15, 23, 42, 0.22);
+        }
+
+        .navbar-3d .nav-link.active::after {
+            width: calc(100% - 28px) !important;
+            transform: translateX(-50%) scaleX(1) !important;
+            background: linear-gradient(90deg, #60A5FA, #A78BFA, #FFD166) !important;
+        }
+
+        .navbar-3d .nav-link.nav-link-planning i {
+            color: #FFD166;
+        }
+
         /* ── FOOTER OVERRIDES ── */
         .footer-3d {
             background: rgba(8, 12, 20, 0.95);
@@ -935,6 +951,7 @@
     <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
     <link rel="stylesheet" href="{{ asset('css/front-refresh.css') }}?v={{ filemtime(public_path('css/front-refresh.css')) }}">
+    @stack('styles')
 </head>
 
 <body>
@@ -992,21 +1009,45 @@
             <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('home') }}">Accueil</a>
+                    <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}"
+                       href="{{ route('home') }}"
+                       @if(request()->routeIs('home')) aria-current="page" @endif>
+                        Accueil
+                    </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('front.classes') }}">Matières</a>
+                    <a class="nav-link {{ request()->routeIs('front.*') ? 'active' : '' }}"
+                       href="{{ route('front.classes') }}"
+                       @if(request()->routeIs('front.*')) aria-current="page" @endif>
+                        Matières
+                    </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('appointment.create') }}" style="color: #FFD166;">
+                    <a class="nav-link nav-link-planning {{ request()->routeIs('public.schedule.index') ? 'active' : '' }}"
+                       href="{{ route('public.schedule.index') }}"
+                       @if(request()->routeIs('public.schedule.index')) aria-current="page" @endif>
+                        <i class="bi bi-calendar3-week me-1"></i>
+                        Planning
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('appointment.*') ? 'active' : '' }}"
+                       href="{{ route('appointment.create') }}"
+                       style="color: #FFD166;"
+                       @if(request()->routeIs('appointment.*')) aria-current="page" @endif>
                         Rendez-vous
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('plans') }}">Offres</a>
+                    <a class="nav-link {{ request()->routeIs('plans') ? 'active' : '' }}"
+                       href="{{ route('plans') }}"
+                       @if(request()->routeIs('plans')) aria-current="page" @endif>
+                        Offres
+                    </a>
                 </li>
 
                 @auth
@@ -1083,6 +1124,7 @@
                 <div class="d-flex flex-column gap-2">
                     <a href="{{ route('home') }}" class="footer-link-3d">Accueil</a>
                     <a href="{{ route('front.classes') }}" class="footer-link-3d">Matières</a>
+                    <a href="{{ route('public.schedule.index') }}" class="footer-link-3d">Planning</a>
                     <a href="{{ route('appointment.create') }}" class="footer-link-3d">Rendez-vous</a>
                     <a href="{{ route('plans') }}" class="footer-link-3d">Offres</a>
                 </div>

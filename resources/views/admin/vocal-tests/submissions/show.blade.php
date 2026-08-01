@@ -4,7 +4,7 @@
     'title',
     (
         $submission->isObservationSubmission()
-            ? 'Test d’observation — '
+            ? 'Observation vocale — '
             : (
                 $submission->isCompletionSubmission()
                     ? 'Exercice de complétion — '
@@ -248,7 +248,7 @@
                         @if($submission->isObservationSubmission())
                             <span class="mode-badge reading">
                                 <i class="bi bi-eye-fill"></i>
-                                Observation
+                                Observation vocale
                             </span>
                         @elseif($submission->test_mode)
                             <span class="mode-badge {{ $submission->test_mode }}">
@@ -366,7 +366,14 @@
             </div>
         </div>
 
-        @if($isObservationSubmission && $observationReview)
+        @if(
+            $isObservationSubmission
+            && $observationReview
+            && (
+                $observationReview['text']
+                || $observationReview['image_path']
+            )
+        )
             <div class="adm-card mb-4">
                 <div class="adm-card-header">
                     <h4>
@@ -574,12 +581,23 @@
     <div class="col-lg-5">
         @if(
             !$isCompletionSubmission
-            && !$isObservationSubmission
+            && (
+                !$isObservationSubmission
+                || $isObservationAudioSubmission
+            )
         )
         <!-- Audio Player -->
         <div class="adm-card mb-4">
             <div class="adm-card-header">
-                <h4><i class="bi bi-headphones" style="color:rgba(255,255,255,0.35);"></i> Enregistrement audio</h4>
+                <h4>
+                    <i
+                        class="bi bi-headphones"
+                        style="color:rgba(255,255,255,0.35);"
+                    ></i>
+                    {{ $isObservationSubmission
+                        ? 'Description orale enregistrée'
+                        : 'Enregistrement audio' }}
+                </h4>
             </div>
             <div class="adm-card-body">
                 <div class="audio-player-card">
@@ -662,15 +680,20 @@
                         <input type="number" name="score" class="adm-form-control" value="{{ old('score', $submission->score) }}" min="0" max="100" placeholder="Optionnel si scores détaillés">
                     </div>
 
-                    @unless($isObservationSubmission)
-                        <hr style="border-color:rgba(255,255,255,0.08);">
-                        <small style="color:var(--adm-text-muted);display:block;margin-bottom:10px;">Scores détaillés (remplir au moins un)</small>
+                    <hr style="border-color:rgba(255,255,255,0.08);">
+                    <small style="color:var(--adm-text-muted);display:block;margin-bottom:10px;">
+                        {{ $isObservationSubmission
+                            ? 'Évaluation de la description orale'
+                            : 'Scores détaillés (remplir au moins un)' }}
+                    </small>
 
-                        <div class="score-input-group">
-                            <div class="adm-form-group">
-                                <label class="adm-form-label">Prononciation</label>
-                                <input type="number" name="score_pronunciation" class="adm-form-control" value="{{ old('score_pronunciation', $submission->score_pronunciation) }}" min="0" max="100" placeholder="0-100">
-                            </div>
+                    <div class="score-input-group">
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">Prononciation</label>
+                            <input type="number" name="score_pronunciation" class="adm-form-control" value="{{ old('score_pronunciation', $submission->score_pronunciation) }}" min="0" max="100" placeholder="0-100">
+                        </div>
+
+                        @unless($isObservationSubmission)
                             <div class="adm-form-group">
                                 <label class="adm-form-label">Tajwid</label>
                                 <input type="number" name="score_tajwid" class="adm-form-control" value="{{ old('score_tajwid', $submission->score_tajwid) }}" min="0" max="100" placeholder="0-100">
@@ -679,12 +702,13 @@
                                 <label class="adm-form-label">Mémorisation</label>
                                 <input type="number" name="score_memorization" class="adm-form-control" value="{{ old('score_memorization', $submission->score_memorization) }}" min="0" max="100" placeholder="0-100">
                             </div>
-                            <div class="adm-form-group">
-                                <label class="adm-form-label">Fluidité</label>
-                                <input type="number" name="score_fluency" class="adm-form-control" value="{{ old('score_fluency', $submission->score_fluency) }}" min="0" max="100" placeholder="0-100">
-                            </div>
+                        @endunless
+
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">Fluidité</label>
+                            <input type="number" name="score_fluency" class="adm-form-control" value="{{ old('score_fluency', $submission->score_fluency) }}" min="0" max="100" placeholder="0-100">
                         </div>
-                    @endunless
+                    </div>
 
                     <div class="adm-form-group" style="margin-top:10px;">
                         <label class="adm-form-label">Commentaire professeur</label>

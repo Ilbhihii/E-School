@@ -5,12 +5,31 @@
 @section('content')
 
 @php
-    $isCompletionTest = $isCompletionTest
-        ?? \App\Models\VocalTestPrompt::isInteractiveCompletionPath(
+    $isObservationTest = $isObservationTest
+        ?? \App\Models\VocalTestPrompt::isObservationPath(
             $subject,
             $level,
-            $class,
-            $prompt
+            $class
+        );
+
+    $observationDefinition = $observationDefinition
+        ?? (
+            $isObservationTest
+                ? \App\Models\VocalTestPrompt::observationDefinition(
+                    $class
+                )
+                : null
+        );
+
+    $isCompletionTest = $isCompletionTest
+        ?? (
+            !$isObservationTest
+            && \App\Models\VocalTestPrompt::isInteractiveCompletionPath(
+                $subject,
+                $level,
+                $class,
+                $prompt
+            )
         );
 
     $completionDefinition = $completionDefinition
@@ -19,6 +38,20 @@
                 ? \App\Models\VocalTestPrompt::completionDefinition()
                 : null
         );
+
+    $recordingMaximumDuration = $isObservationTest
+        ? (
+            $observationDefinition['maximum_duration']
+            ?? 120
+        )
+        : $prompt->maximum_duration;
+
+    $recordingMinimumDuration = $isObservationTest
+        ? (
+            $observationDefinition['minimum_duration']
+            ?? 5
+        )
+        : 1;
 @endphp
 
 <style>
@@ -705,194 +738,7 @@
             </p>
         </div>
 
-        @if($isObservationTest)
-            <form
-                method="POST"
-                action="{{ route('vocal-test.store', [$subject, $level, $class]) }}"
-                enctype="multipart/form-data"
-                id="observationTestForm"
-            >
-                @csrf
-
-                <div class="card-3d p-4 p-md-5 observation-card">
-                    <div class="vocal-card-header">
-                        <div class="card-3d-icon vocal-card-icon">
-                            <i class="bi bi-eye-fill text-white"></i>
-                        </div>
-
-                        <div>
-                            <h5 class="text-white mb-1">
-                                Observez puis décrivez
-                            </h5>
-                            <small class="text-white-50">
-                                Communication · {{ $class->name }}
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="observation-question">
-                        <i class="bi bi-info-circle-fill me-1"></i>
-                        {{ $observationDefinition['question'] }}
-
-                        <span class="observation-arabic-title">
-                            {{ $observationDefinition['arabic_title'] }}
-                        </span>
-                    </div>
-
-                    <div class="vocal-instructions">
-                        <i class="bi bi-lightbulb-fill"></i>
-                        {{ $observationDefinition['instructions'] }}
-                    </div>
-
-                    <div class="observation-image-frame">
-                        <img
-                            src="{{ asset($observationDefinition['image']) }}"
-                            alt="Image du test d’observation : une ferme avec des animaux et des véhicules agricoles"
-                        >
-                    </div>
-
-                    @if(
-                        $errors->has('response_mode')
-                        || $errors->has('observation_text')
-                        || $errors->has('observation_image')
-                    )
-                        <div class="observation-error">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                            {{ $errors->first('response_mode')
-                                ?: $errors->first('observation_text')
-                                ?: $errors->first('observation_image') }}
-                        </div>
-                    @endif
-
-                    <h5 class="text-white mb-2">
-                        Choisissez une façon de répondre
-                    </h5>
-
-                    <div class="observation-options">
-                        <label class="observation-option">
-                            <input
-                                type="radio"
-                                name="response_mode"
-                                value="text"
-                                {{ old('response_mode', 'text') === 'text'
-                                    ? 'checked'
-                                    : '' }}
-                            >
-
-                            <span class="observation-option-card">
-                                <span class="observation-option-icon">
-                                    <i class="bi bi-pencil-square"></i>
-                                </span>
-
-                                <span>
-                                    <strong>Écrire ma réponse</strong>
-                                    <small>
-                                        Rédigez directement en arabe
-                                        dans la zone de texte.
-                                    </small>
-                                </span>
-                            </span>
-                        </label>
-
-                        <label class="observation-option">
-                            <input
-                                type="radio"
-                                name="response_mode"
-                                value="image"
-                                {{ old('response_mode') === 'image'
-                                    ? 'checked'
-                                    : '' }}
-                            >
-
-                            <span class="observation-option-card">
-                                <span class="observation-option-icon">
-                                    <i class="bi bi-image-fill"></i>
-                                </span>
-
-                                <span>
-                                    <strong>Importer une photo</strong>
-                                    <small>
-                                        Écrivez sur une feuille puis
-                                        prenez une photo lisible.
-                                    </small>
-                                </span>
-                            </span>
-                        </label>
-                    </div>
-
-                    <div
-                        id="observationTextPanel"
-                        class="observation-panel"
-                    >
-                        <label
-                            for="observationText"
-                            class="observation-label"
-                        >
-                            Votre observation en arabe
-                        </label>
-
-                        <textarea
-                            name="observation_text"
-                            id="observationText"
-                            class="observation-textarea"
-                            maxlength="3000"
-                            placeholder="اكتب هنا ما تراه في الصورة..."
-                        >{{ old('observation_text') }}</textarea>
-
-                        <div class="observation-char-count">
-                            <span id="observationCharCount">0</span>
-                            / 3000 caractères · minimum
-                            {{ $observationDefinition['minimum_characters'] }}
-                        </div>
-                    </div>
-
-                    <div
-                        id="observationImagePanel"
-                        class="observation-panel"
-                    >
-                        <label class="observation-upload">
-                            <input
-                                type="file"
-                                name="observation_image"
-                                id="observationImage"
-                                accept="image/jpeg,image/png,image/webp"
-                            >
-
-                            <span>
-                                <i class="bi bi-cloud-arrow-up-fill"></i>
-                                <strong>
-                                    Sélectionner la photo de la feuille
-                                </strong>
-                                <small>
-                                    JPG, PNG ou WEBP · 8 Mo maximum
-                                </small>
-                            </span>
-                        </label>
-
-                        <div
-                            id="observationPreview"
-                            class="observation-preview"
-                        >
-                            <img
-                                id="observationPreviewImage"
-                                src=""
-                                alt="Aperçu de la réponse manuscrite"
-                            >
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        id="submitObservation"
-                        class="btn-3d btn-3d-gradient observation-submit"
-                    >
-                        <i class="bi bi-send-fill me-2"></i>
-                        Envoyer mon observation et continuer
-                        <i class="bi bi-arrow-right ms-2"></i>
-                    </button>
-                </div>
-            </form>
-        @elseif($isCompletionTest)
+        @if($isCompletionTest)
             <form
                 method="POST"
                 action="{{ route('vocal-test.store', [$subject, $level, $class]) }}"
@@ -1036,6 +882,60 @@
                 </div>
             </form>
         @else
+            @if($isObservationTest)
+                <div class="card-3d p-4 p-md-5 vocal-recitation-card">
+                    <div class="vocal-card-header">
+                        <div class="card-3d-icon vocal-card-icon">
+                            <i class="bi bi-eye-fill text-white"></i>
+                        </div>
+
+                        <div>
+                            <h5 class="text-white mb-1">
+                                Observez puis décrivez à l’oral
+                            </h5>
+
+                            <small class="text-white-50">
+                                Durée recommandée :
+                                {{ $recordingMinimumDuration }}
+                                à
+                                {{ $recordingMaximumDuration }}
+                                secondes
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="observation-question">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        {{ $observationDefinition['question'] }}
+
+                        <span class="observation-arabic-title">
+                            {{ $observationDefinition['arabic_title'] }}
+                        </span>
+                    </div>
+
+                    <div class="vocal-instructions">
+                        <i class="bi bi-lightbulb-fill"></i>
+                        {{ $observationDefinition['instructions'] }}
+                    </div>
+
+                    <div class="observation-image-frame">
+                        <img
+                            src="{{ asset(
+                                $observationDefinition['image']
+                            ) }}"
+                            alt="Image de ferme utilisée pour le test d’observation"
+                        >
+                    </div>
+
+                    <div class="text-center">
+                        <span class="vocal-duration-badge">
+                            <i class="bi bi-mic-fill"></i>
+                            Description orale · Max
+                            {{ $recordingMaximumDuration }}s
+                        </span>
+                    </div>
+                </div>
+            @else
             <div class="card-3d p-4 p-md-5 vocal-recitation-card">
                 <div class="vocal-card-header">
                     <div class="card-3d-icon vocal-card-icon">
@@ -1056,7 +956,7 @@
                         </h5>
                         <small class="text-white-50">
                             Durée maximale :
-                            {{ $prompt->maximum_duration }} secondes
+                            {{ $recordingMaximumDuration }} secondes
                             @if ($prompt->preparation_seconds > 0)
                                 · Préparation :
                                 {{ $prompt->preparation_seconds }}s
@@ -1086,19 +986,21 @@
                         @if ($prompt->test_mode === 'hifd')
                             <i class="bi bi-lock"></i>
                             Mémorisation · Max
-                            {{ $prompt->maximum_duration }}s
+                            {{ $recordingMaximumDuration }}s
                         @elseif ($prompt->test_mode === 'tajwid')
                             <i class="bi bi-music-note"></i>
                             Tajwid · Max
-                            {{ $prompt->maximum_duration }}s
+                            {{ $recordingMaximumDuration }}s
                         @else
                             <i class="bi bi-clock"></i>
-                            Max {{ $prompt->maximum_duration }}
+                            Max {{ $recordingMaximumDuration }}
                             secondes
                         @endif
                     </span>
                 </div>
             </div>
+
+            @endif
 
             <div class="card-3d p-4 p-md-5 vocal-recording-card">
                 <form
@@ -1144,7 +1046,11 @@
                             id="recordingStatus"
                             class="vocal-status"
                         >
-                            @if ($prompt->test_mode === 'hifd')
+                            @if($isObservationTest)
+                                Observez attentivement l’image,
+                                autorisez le microphone puis décrivez
+                                oralement ce que vous voyez en arabe.
+                            @elseif ($prompt->test_mode === 'hifd')
                                 Prenez le temps de mémoriser le texte,
                                 puis commencez l’enregistrement.
                             @else
@@ -1161,7 +1067,7 @@
                                 class="bi bi-exclamation-triangle-fill me-1"
                             ></i>
                             Vous approchez de la durée maximale autorisée
-                            ({{ $prompt->maximum_duration }} secondes).
+                            ({{ $recordingMaximumDuration }} secondes).
                         </div>
 
                         <div id="timer" class="vocal-timer">
@@ -1175,7 +1081,9 @@
                                 class="btn-3d btn-3d-gradient vocal-action-button"
                             >
                                 <i class="bi bi-mic-fill me-2"></i>
-                                @if ($prompt->test_mode === 'hifd')
+                                @if($isObservationTest)
+                                    Commencer ma description
+                                @elseif ($prompt->test_mode === 'hifd')
                                     Commencer la récitation
                                 @else
                                     Commencer
@@ -1220,7 +1128,9 @@
                             disabled
                         >
                             <i class="bi bi-send-fill me-2"></i>
-                            Envoyer et continuer vers le rendez-vous
+                            {{ $isObservationTest
+                                ? 'Envoyer ma description vocale'
+                                : 'Envoyer et continuer vers le rendez-vous' }}
                             <i class="bi bi-arrow-right ms-2"></i>
                         </button>
                     </div>
@@ -1231,181 +1141,7 @@
     </div>
 </section>
 
-@if($isObservationTest)
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById(
-        'observationTestForm'
-    );
-    const modeInputs = document.querySelectorAll(
-        'input[name="response_mode"]'
-    );
-    const textPanel = document.getElementById(
-        'observationTextPanel'
-    );
-    const imagePanel = document.getElementById(
-        'observationImagePanel'
-    );
-    const textarea = document.getElementById(
-        'observationText'
-    );
-    const charCount = document.getElementById(
-        'observationCharCount'
-    );
-    const imageInput = document.getElementById(
-        'observationImage'
-    );
-    const preview = document.getElementById(
-        'observationPreview'
-    );
-    const previewImage = document.getElementById(
-        'observationPreviewImage'
-    );
-    const submitButton = document.getElementById(
-        'submitObservation'
-    );
-    const minimumCharacters = Number(
-        @json($observationDefinition['minimum_characters'])
-    );
-
-    let previewUrl = null;
-
-    const selectedMode = () => {
-        const selected = document.querySelector(
-            'input[name="response_mode"]:checked'
-        );
-
-        return selected
-            ? selected.value
-            : 'text';
-    };
-
-    const updatePanels = () => {
-        const mode = selectedMode();
-
-        textPanel.classList.toggle(
-            'is-active',
-            mode === 'text'
-        );
-        imagePanel.classList.toggle(
-            'is-active',
-            mode === 'image'
-        );
-
-        textarea.required = mode === 'text';
-        imageInput.required = mode === 'image';
-    };
-
-    const updateCharacterCount = () => {
-        charCount.textContent =
-            textarea.value.length;
-    };
-
-    modeInputs.forEach(input => {
-        input.addEventListener(
-            'change',
-            updatePanels
-        );
-    });
-
-    textarea.addEventListener(
-        'input',
-        updateCharacterCount
-    );
-
-    imageInput.addEventListener('change', () => {
-        const file = imageInput.files
-            && imageInput.files[0];
-
-        if (previewUrl) {
-            URL.revokeObjectURL(previewUrl);
-            previewUrl = null;
-        }
-
-        if (!file) {
-            preview.classList.remove(
-                'is-visible'
-            );
-            previewImage.src = '';
-            return;
-        }
-
-        if (!file.type.startsWith('image/')) {
-            imageInput.value = '';
-            preview.classList.remove(
-                'is-visible'
-            );
-            alert(
-                'Sélectionnez une image JPG, PNG ou WEBP.'
-            );
-            return;
-        }
-
-        if (file.size > 8 * 1024 * 1024) {
-            imageInput.value = '';
-            preview.classList.remove(
-                'is-visible'
-            );
-            alert(
-                'La photo ne doit pas dépasser 8 Mo.'
-            );
-            return;
-        }
-
-        previewUrl = URL.createObjectURL(file);
-        previewImage.src = previewUrl;
-        preview.classList.add('is-visible');
-    });
-
-    form.addEventListener('submit', event => {
-        const mode = selectedMode();
-
-        if (
-            mode === 'text'
-            && textarea.value.trim().length
-                < minimumCharacters
-        ) {
-            event.preventDefault();
-            textarea.focus();
-            alert(
-                'Votre observation doit contenir au moins '
-                + minimumCharacters
-                + ' caractères.'
-            );
-            return;
-        }
-
-        if (
-            mode === 'image'
-            && !(
-                imageInput.files
-                && imageInput.files[0]
-            )
-        ) {
-            event.preventDefault();
-            alert(
-                'Importez la photo de votre réponse manuscrite.'
-            );
-            return;
-        }
-
-        submitButton.disabled = true;
-        submitButton.innerHTML =
-            '<i class="bi bi-hourglass-split me-2"></i>'
-            + 'Envoi en cours…';
-    });
-
-    window.addEventListener('beforeunload', () => {
-        if (previewUrl) {
-            URL.revokeObjectURL(previewUrl);
-        }
-    });
-
-    updatePanels();
-    updateCharacterCount();
-});
-</script>
-@elseif($isCompletionTest)
+@if($isCompletionTest)
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('completionTestForm');
@@ -1642,10 +1378,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioFile = document.getElementById('audioFile');
     const durationSecondsInput = document.getElementById('durationSeconds');
     const maxDurationWarning = document.getElementById('maxDurationWarning');
-    const maxDuration = {{ $prompt->maximum_duration }};
+    const maxDuration = {{ $recordingMaximumDuration }};
+    const minDuration = {{ $recordingMinimumDuration }};
+    const isObservationTest = @json($isObservationTest);
 
     const textBlock = document.getElementById('recitationText');
-    const hideTextDuringRecording = @json($prompt->hide_text_during_recording ?? false);
+    const hideTextDuringRecording = @json(
+        !$isObservationTest
+        && ($prompt->hide_text_during_recording ?? false)
+    );
 
     let recorder = null;
     let stream = null;
@@ -1784,6 +1525,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     Math.floor((Date.now() - startedAt) / 1000)
                 );
 
+                if (elapsedSeconds < minDuration) {
+                    showRecordingError(
+                        `L’enregistrement est trop court. Parlez pendant au moins ${minDuration} secondes.`
+                    );
+                    return;
+                }
+
                 const mimeType = recorder.mimeType || preferredType || 'audio/webm';
                 const blob = new Blob(chunks, { type: mimeType });
 
@@ -1856,6 +1604,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hideTextDuringRecording && textBlock) {
                 textBlock.classList.add('hidden-text');
                 status.textContent = '🔒 Texte masqué — récitation de mémoire en cours…';
+            } else if (isObservationTest) {
+                status.textContent = 'Enregistrement en cours… décrivez l’image en arabe.';
             } else {
                 status.textContent = 'Enregistrement en cours… lisez le texte affiché.';
             }

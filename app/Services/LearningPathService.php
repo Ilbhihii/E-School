@@ -238,6 +238,80 @@ class LearningPathService
             ->values();
     }
 
+    /**
+     * Indique si l'étudiant possède au moins une assignation
+     * Soutien Lycée → BAC → classe.
+     *
+     * Cette méthode sert notamment à afficher ou masquer
+     * l'entrée « Mes tests BAC » dans le menu étudiant.
+     */
+    public function studentHasSoutienLyceeBacPath(
+        int $studentId
+    ): bool {
+        $rows = $this->studentAssignmentRows(
+            $studentId
+        );
+
+        if ($rows->isEmpty()) {
+            return false;
+        }
+
+        $subjects = Subject::query()
+            ->whereIn(
+                'id',
+                $rows->pluck('subject_id')
+            )
+            ->get()
+            ->keyBy('id');
+
+        $levels = Level::query()
+            ->whereIn(
+                'id',
+                $rows->pluck('level_id')
+            )
+            ->get()
+            ->keyBy('id');
+
+        foreach ($rows as $row) {
+            $subject = $subjects->get(
+                (int) $row->subject_id
+            );
+
+            $level = $levels->get(
+                (int) $row->level_id
+            );
+
+            if (!$subject || !$level) {
+                continue;
+            }
+
+            $subjectName = Str::lower(
+                Str::ascii(
+                    trim(
+                        (string) $subject->name
+                    )
+                )
+            );
+
+            $levelName = Str::lower(
+                Str::ascii(
+                    trim(
+                        (string) $level->name
+                    )
+                )
+            );
+
+            if (
+                $subjectName === 'soutien lycee'
+                && $levelName === 'bac'
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function validatePath(
         int $subjectId,
         int $levelId,

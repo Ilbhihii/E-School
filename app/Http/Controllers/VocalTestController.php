@@ -101,24 +101,23 @@ class VocalTestController extends Controller
 
         $prompt = $this->findPrompt($subject, $level, $class);
 
-        if (
+        $isObservationTest =
             VocalTestPrompt::isObservationPath(
                 $subject,
                 $level,
                 $class
-            )
-        ) {
-            return $this->storeObservationTest(
-                $request,
-                $subject,
-                $level,
-                $class,
-                $prompt
             );
-        }
+
+        $observationDefinition =
+            $isObservationTest
+                ? VocalTestPrompt::observationDefinition(
+                    $class
+                )
+                : null;
 
         if (
-            VocalTestPrompt::isInteractiveCompletionPath(
+            !$isObservationTest
+            && VocalTestPrompt::isInteractiveCompletionPath(
                 $subject,
                 $level,
                 $class,
@@ -134,6 +133,24 @@ class VocalTestController extends Controller
             );
         }
 
+        $maximumDuration =
+            $isObservationTest
+                ? (int) (
+                    $observationDefinition[
+                        'maximum_duration'
+                    ] ?? 120
+                )
+                : (int) $prompt->maximum_duration;
+
+        $minimumDuration =
+            $isObservationTest
+                ? (int) (
+                    $observationDefinition[
+                        'minimum_duration'
+                    ] ?? 5
+                )
+                : 1;
+
         $validated = $request->validate([
             'audio' => [
                 'required',
@@ -145,16 +162,20 @@ class VocalTestController extends Controller
             'duration_seconds' => [
                 'required',
                 'integer',
-                'min:1',
-                'max:' . $prompt->maximum_duration,
+                'min:' . $minimumDuration,
+                'max:' . $maximumDuration,
             ],
         ], [
-            'audio.required' => 'Veuillez enregistrer votre lecture avant de continuer.',
+            'audio.required' => $isObservationTest
+                ? 'Veuillez enregistrer votre description orale avant de continuer.'
+                : 'Veuillez enregistrer votre lecture avant de continuer.',
             'audio.min' => 'L’enregistrement est vide. Vérifiez votre microphone et recommencez.',
             'audio.max' => 'L’enregistrement ne doit pas dépasser 20 Mo.',
             'audio.mimetypes' => 'Format audio non supporté.',
             'duration_seconds.required' => 'La durée de l’enregistrement est manquante.',
-            'duration_seconds.min' => 'L’enregistrement doit durer au moins une seconde.',
+            'duration_seconds.min' => $isObservationTest
+                ? 'Votre description orale est trop courte.'
+                : 'L’enregistrement doit durer au moins une seconde.',
             'duration_seconds.max' => 'La durée de l’enregistrement dépasse la durée maximale autorisée.',
         ]);
 
@@ -202,8 +223,30 @@ class VocalTestController extends Controller
                 'subject_id' => $subject->id,
                 'level_id' => $level->id,
                 'class_id' => $class->id,
-                'reading_text' => $prompt->reading_text,
-                'test_mode' => $prompt->test_mode,
+                'reading_text' => $isObservationTest
+                    ? (
+                        $observationDefinition['question']
+                        . "\n"
+                        . $observationDefinition['instructions']
+                    )
+                    : $prompt->reading_text,
+                'test_mode' => $isObservationTest
+                    ? VocalTestPrompt::MODE_READING
+                    : $prompt->test_mode,
+                'submission_type' => $isObservationTest
+                    ? VocalTestSubmission::TYPE_OBSERVATION
+                    : VocalTestSubmission::TYPE_AUDIO,
+                'answer_data' => $isObservationTest
+                    ? [
+                        'observation_mode' => 'audio',
+                        'prompt_image' =>
+                            $observationDefinition['image'],
+                        'minimum_duration' =>
+                            $minimumDuration,
+                        'maximum_duration' =>
+                            $maximumDuration,
+                    ]
+                    : null,
                 'audio_path' => $finalPath,
                 'audio_original_name' => ($originalBaseName ?: 'enregistrement') . '.mp3',
                 'audio_mime_type' => 'audio/mpeg',
@@ -228,190 +271,11 @@ class VocalTestController extends Controller
             ])
             ->with(
                 'success',
-                '✅ Votre test vocal a été enregistré. Complétez maintenant votre rendez-vous.'
-            );
-    }
-
-    private function storeObservationTest(
-        Request $request,
-        Subject $subject,
-        Level $level,
-        ClassRoom $class,
-        VocalTestPrompt $prompt
-    ): RedirectResponse {
-        $definition =
-            VocalTestPrompt::observationDefinition(
-                $class
-            );
-
-        $minimumCharacters = (int) (
-            $definition['minimum_characters']
-            ?? 30
-        );
-
-        $validated = $request->validate([
-            'response_mode' => [
-                'required',
-                Rule::in([
-                    'text',
-                    'image',
-                ]),
-            ],
-            'observation_text' => [
-                'nullable',
-                'required_if:response_mode,text',
-                'string',
-                'min:' . $minimumCharacters,
-                'max:3000',
-            ],
-            'observation_image' => [
-                'nullable',
-                'required_if:response_mode,image',
-                'image',
-                'mimes:jpeg,jpg,png,webp',
-                'max:8192',
-            ],
-        ], [
-            'response_mode.required' =>
-                'Choisissez comment vous souhaitez répondre.',
-            'response_mode.in' =>
-                'Le mode de réponse sélectionné est invalide.',
-            'observation_text.required_if' =>
-                'Écrivez votre observation avant de continuer.',
-            'observation_text.min' =>
-                'Votre observation est trop courte. '
-                . 'Écrivez au moins '
-                . $minimumCharacters
-                . ' caractères.',
-            'observation_text.max' =>
-                'Votre texte ne doit pas dépasser 3000 caractères.',
-            'observation_image.required_if' =>
-                'Importez la photo de votre réponse manuscrite.',
-            'observation_image.image' =>
-                'Le fichier importé doit être une image.',
-            'observation_image.mimes' =>
-                'Formats acceptés : JPG, JPEG, PNG ou WEBP.',
-            'observation_image.max' =>
-                'La photo ne doit pas dépasser 8 Mo.',
-        ]);
-
-        $storedImagePath = null;
-        $imageMetadata = null;
-
-        if ($request->hasFile('observation_image')) {
-            $image = $request->file(
-                'observation_image'
-            );
-
-            if (!$image || !$image->isValid()) {
-                throw ValidationException::withMessages([
-                    'observation_image' =>
-                        'La photo est invalide. '
-                        . 'Veuillez la sélectionner à nouveau.',
-                ]);
-            }
-
-            $storedImagePath = $image->store(
-                'vocal-tests/observations',
-                'local'
-            );
-
-            if (
-                !$storedImagePath
-                || !Storage::disk('local')
-                    ->exists($storedImagePath)
-            ) {
-                throw ValidationException::withMessages([
-                    'observation_image' =>
-                        'Impossible d’enregistrer la photo.',
-                ]);
-            }
-
-            $imageMetadata = [
-                'path' => $storedImagePath,
-                'original_name' =>
-                    basename(
-                        $image->getClientOriginalName()
-                    ),
-                'mime_type' =>
-                    (string) (
-                        $image->getClientMimeType()
-                        ?: $image->getMimeType()
-                        ?: 'image/jpeg'
-                    ),
-                'size' =>
-                    (int) $image->getSize(),
-            ];
-        }
-
-        try {
-            $submission =
-                VocalTestSubmission::create([
-                    'user_id' => auth()->id(),
-                    'vocal_test_prompt_id' =>
-                        $prompt->id,
-                    'subject_id' => $subject->id,
-                    'level_id' => $level->id,
-                    'class_id' => $class->id,
-                    'reading_text' =>
-                        $definition['question'],
-                    'test_mode' =>
-                        $prompt->test_mode,
-                    'submission_type' =>
-                        VocalTestSubmission
-                            ::TYPE_OBSERVATION,
-                    'answer_data' => [
-                        'response_mode' =>
-                            $validated[
-                                'response_mode'
-                            ],
-                        'observation_text' =>
-                            isset(
-                                $validated[
-                                    'observation_text'
-                                ]
-                            )
-                                ? trim(
-                                    $validated[
-                                        'observation_text'
-                                    ]
-                                )
-                                : null,
-                        'observation_image' =>
-                            $imageMetadata,
-                        'prompt_image' =>
-                            $definition['image'],
-                    ],
-                    'audio_path' => null,
-                    'audio_original_name' => null,
-                    'audio_mime_type' => null,
-                    'audio_size' => null,
-                    'duration_seconds' => null,
-                    'status' =>
-                        VocalTestSubmission
-                            ::STATUS_SUBMITTED,
-                    'submitted_at' => now(),
-                ]);
-        } catch (Throwable $exception) {
-            if ($storedImagePath) {
-                Storage::disk('local')
-                    ->delete($storedImagePath);
-            }
-
-            throw $exception;
-        }
-
-        return redirect()
-            ->route('appointment.create', [
-                'type' => 'test',
-                'vocal_submission' =>
-                    $submission->id,
-            ])
-            ->with(
-                'success',
-                '✅ Votre test d’observation a été '
-                . 'enregistré. Complétez maintenant '
-                . 'votre rendez-vous.'
+                $isObservationTest
+                    ? '✅ Votre description orale a été enregistrée. '
+                        . 'Complétez maintenant votre rendez-vous.'
+                    : '✅ Votre test vocal a été enregistré. '
+                        . 'Complétez maintenant votre rendez-vous.'
             );
     }
 

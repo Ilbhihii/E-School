@@ -46,7 +46,6 @@ return [
             'features' => [
                 'Mathématiques BAC',
                 'Physique-Chimie BAC',
-                'Test diagnostic avec correction',
                 'Cours, vidéos et documents PDF',
                 'Lives avec les professeurs',
                 'Devoirs, exercices et notes',
