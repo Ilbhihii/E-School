@@ -3,12 +3,18 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 
 class Live extends Model
 {
     use HasFactory;
+    use SoftDeletes;
+
+    public const RETENTION_HOURS = 24;
 
     protected $fillable = [
         'title',
@@ -20,11 +26,68 @@ class Live extends Model
         'live_date',
         'start_time',
         'end_time',
+        'auto_delete_at',
     ];
 
     protected $casts = [
         'live_date' => 'date',
+        'auto_delete_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        /*
+         * Masquer immédiatement les lives arrivés à leur
+         * date de suppression, même si le cron du serveur
+         * n'a pas encore exécuté la commande de nettoyage.
+         */
+        if (
+            Schema::hasColumn(
+                'lives',
+                'auto_delete_at'
+            )
+        ) {
+            static::addGlobalScope(
+                'within_live_retention',
+                function (Builder $builder) {
+                    $builder->where(
+                        function (Builder $query) {
+                            $query
+                                ->whereNull(
+                                    'auto_delete_at'
+                                )
+                                ->orWhere(
+                                    'auto_delete_at',
+                                    '>',
+                                    now()
+                                );
+                        }
+                    );
+                }
+            );
+
+            /*
+             * Recalculer automatiquement la date de
+             * suppression à chaque création/modification.
+             */
+            static::saving(
+                function (Live $live) {
+                    $endDateTime =
+                        $live->end_date_time;
+
+                    $live->auto_delete_at =
+                        $endDateTime
+                            ? $endDateTime
+                                ->copy()
+                                ->addHours(
+                                    self::RETENTION_HOURS
+                                )
+                            : null;
+                }
+            );
+        }
+    }
 
     public function classRoom()
     {
