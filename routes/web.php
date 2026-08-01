@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ClassController;
 use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\LiveController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ProfessorController;
 use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\Student\StudentController;
 use App\Http\Controllers\Front\HomeController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Student\TestController as StudentTestController;
 use App\Http\Controllers\Prof\ProfController;
+use App\Http\Controllers\Prof\FirstPasswordController;
 use App\Http\Controllers\Prof\ProfLevelController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Prof\ScheduleController;
@@ -130,7 +132,7 @@ Route::get('/lives', [HomeController::class,'lives'])->name('front.lives');
 | ACCÈS SÉCURISÉ AUX LIVES
 |--------------------------------------------------------------------------
 |
-| 1. Vérification de la connexion, du compte actif, de la classe et de l'horaire.
+| 1. Vérification de la connexion, du paiement, de la classe et de l'horaire.
 | 2. Redirection par une URL Laravel signée et temporaire.
 |
 */
@@ -216,6 +218,30 @@ Route::middleware(['auth','isAdmin'])
     ->group(function(){
 
     Route::get('/dashboard', [DashboardController::class,'index'])->name('dashboard');
+
+    Route::prefix('professors')
+        ->name('professors.')
+        ->group(function () {
+            Route::get(
+                '/',
+                [ProfessorController::class, 'index']
+            )->name('index');
+
+            Route::get(
+                '/create',
+                [ProfessorController::class, 'create']
+            )->name('create');
+
+            Route::post(
+                '/',
+                [ProfessorController::class, 'store']
+            )->name('store');
+
+            Route::post(
+                '/{professor}/resend',
+                [ProfessorController::class, 'resend']
+            )->name('resend');
+        });
 
     Route::resource('devoirs', DevoirController::class)->except(['show']);
 
@@ -354,10 +380,24 @@ Route::middleware(['auth','isAdmin'])
 | PROF - UNIFIED GROUP
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth','isProf'])
+Route::middleware([
+    'auth',
+    'isProf',
+    'force.prof.password',
+])
     ->prefix('prof')
     ->name('prof.')
     ->group(function(){
+
+    Route::get(
+        '/premier-mot-de-passe',
+        [FirstPasswordController::class, 'edit']
+    )->name('password.first.edit');
+
+    Route::put(
+        '/premier-mot-de-passe',
+        [FirstPasswordController::class, 'update']
+    )->name('password.first.update');
 
     Route::get('/dashboard', [ProfController::class,'dashboard'])->name('dashboard');
 
@@ -498,7 +538,9 @@ Route::middleware(['auth', 'active'])
     Route::get(
         '/lives',
         [StudentController::class, 'lives']
-    )->name('lives');
+    )
+        ->middleware('paid')
+        ->name('lives');
 
     // Cours
     Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');

@@ -237,6 +237,28 @@
                     <span>Utilisateurs</span>
                 </a>
 
+                <a
+                    href="{{
+                        route(
+                            'admin.professors.index'
+                        )
+                    }}"
+                    class="adm-nav-link {{
+                        preg_match(
+                            '/professors/',
+                            $route ?? ''
+                        )
+                            ? 'active'
+                            : ''
+                    }}"
+                >
+                    <span class="nav-link-icon">
+                        <i class="bi bi-person-video3"></i>
+                    </span>
+
+                    <span>Comptes professeurs</span>
+                </a>
+
                 <a href="{{ route('admin.subjects.index') }}"
                    class="adm-nav-link {{ preg_match('/subjects/', $route ?? '') ? 'active' : '' }}">
                     <span class="nav-link-icon"><i class="bi bi-book"></i></span>

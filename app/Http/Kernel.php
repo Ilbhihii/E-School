@@ -73,6 +73,8 @@ class Kernel extends HttpKernel
         'student.access' => \App\Http\Middleware\CheckStudentAccess::class,
         'isAdmin' => \App\Http\Middleware\IsAdmin::class,
         'isProf' => \App\Http\Middleware\IsProf::class,
+        'force.prof.password' =>
+            \App\Http\Middleware\ForceProfessorPasswordChange::class,
     ];
 
 }
