@@ -149,23 +149,25 @@ class ProfController extends Controller
 
     public function absences()
     {
+        $profAssignments = ProfAssignment::query()
+            ->with(['subject', 'level', 'classRoom'])
+            ->where('prof_id', auth()->id())
+            ->orderBy('subject_id')
+            ->orderBy('level_id')
+            ->orderBy('class_id')
+            ->get();
 
-        $classes = $this->assignedClasses();
-
-        return view('prof.absences',compact('classes'));
-
+        return view('prof.absences', compact('profAssignments'));
     }
 
     public function absencesList(Request $request)
     {
         $studentIds = $this->assignedStudentIds();
-        $query = Absence::with(['user.classRoom'])->whereIn('user_id', $studentIds)->latest('created_at');
+        $query = Absence::with(['user', 'subject', 'level', 'classRoom'])->whereIn('user_id', $studentIds)->latest('created_at');
 
         // Filter by class
         if ($request->class_id) {
-            $query->whereHas('user.classRoom', function($q) use ($request) {
-                $q->where('id', $request->class_id);
-            });
+            $query->where('class_id', (int) $request->class_id);
         }
 
         // Sorting
@@ -195,22 +197,30 @@ class ProfController extends Controller
         return back()->with('success', "Absence mise à jour: {$status}");
     }
 
-    public function getStudents($id)
+    public function getStudents(Request $request, $id)
     {
+        $validated = $request->validate([
+            'subject_id' => ['required', 'integer'],
+            'level_id' => ['required', 'integer'],
+        ]);
+
         $scope = ProfAssignment::query()
             ->where('prof_id', auth()->id())
             ->where('class_id', $id)
-            ->get();
-        abort_if($scope->isEmpty(), 403);
+            ->where('subject_id', $validated['subject_id'])
+            ->where('level_id', $validated['level_id'])
+            ->first();
+
+        abort_unless($scope, 403);
 
         $studentIds = DB::table('class_user')
             ->where('class_id', $id)
-            ->whereIn('subject_id', $scope->pluck('subject_id'))
+            ->where('subject_id', $validated['subject_id'])
             ->pluck('user_id')
             ->unique();
 
         $students = User::query()
-            ->where('role', 'student')
+            ->where('role', User::ROLE_STUDENT)
             ->whereIn('id', $studentIds)
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -218,41 +228,69 @@ class ProfController extends Controller
         return response()->json($students);
     }
 
-
-
     public function storeAbsence(Request $request)
     {
-        $request->validate(['students' => ['required', 'array']]);
-        $allowedStudentIds = $this->assignedStudentIds();
+        $validated = $request->validate([
+            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
+            'level_id' => ['required', 'integer', 'exists:levels,id'],
+            'class_id' => ['required', 'integer', 'exists:class_rooms,id'],
+            'date' => ['required', 'date'],
+            'students' => ['required', 'array'],
+            'students.*' => ['required', 'boolean'],
+        ]);
+
+        $scope = ProfAssignment::query()
+            ->where('prof_id', auth()->id())
+            ->where('subject_id', $validated['subject_id'])
+            ->where('level_id', $validated['level_id'])
+            ->where('class_id', $validated['class_id'])
+            ->first();
+
+        abort_unless($scope, 403);
+
         $alertStudents = [];
 
-        foreach($request->students as $studentId => $status){
-            abort_unless($allowedStudentIds->contains((int) $studentId), 403);
+        foreach ($validated['students'] as $studentId => $status) {
+            abort_unless(
+                $this->paths->professorCanAccessStudent(
+                    auth()->user(),
+                    (int) $studentId,
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
+                ),
+                403
+            );
 
-            Absence::create([
-            'user_id'=>$studentId,
-            'date'=>now(),
-            'present'=>$status == '1' ? 1 : 0
-            ]);
+            Absence::query()->updateOrCreate(
+                [
+                    'user_id' => (int) $studentId,
+                    'subject_id' => (int) $validated['subject_id'],
+                    'level_id' => (int) $validated['level_id'],
+                    'class_id' => (int) $validated['class_id'],
+                    'date' => $validated['date'],
+                ],
+                [
+                    'present' => (bool) $status,
+                ]
+            );
 
-            // Count previous absences today or before
-            $prevAbsences = Absence::where('user_id',$studentId)
-            ->where('present',0)
-            ->whereDate('date', '<=', now())
-            ->count();
+            $absenceCount = Absence::query()
+                ->where('user_id', $studentId)
+                ->where('present', false)
+                ->whereDate('date', '<=', $validated['date'])
+                ->count();
 
-            if($prevAbsences >= 3){
-                $alertStudents[$studentId] = $studentId;
+            if ($absenceCount >= 3) {
+                $alertStudents[] = (int) $studentId;
             }
-
         }
 
-        if(!empty($alertStudents)){
-            session()->flash('alert', '⚠️ Ces étudiants ont dépassé 3 absences');
+        if (!empty($alertStudents)) {
+            session()->flash('alert', 'Ces étudiants ont atteint ou dépassé 3 absences.');
         }
 
-    return back()->with('success','Absences enregistrées');
-
+        return back()->with('success', 'Présences enregistrées.');
     }
 
     public function updateProfile(Request $request)

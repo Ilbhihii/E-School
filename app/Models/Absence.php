@@ -6,11 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Absence extends Model
 {
-
     protected $fillable = [
         'user_id',
+        'subject_id',
+        'level_id',
+        'class_id',
         'date',
-        'present'
+        'present',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'present' => 'boolean',
     ];
 
     public function user()
@@ -18,10 +25,18 @@ class Absence extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Using user() relation (matches DB schema: user_id)
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class);
+    }
 
+    public function level()
+    {
+        return $this->belongsTo(Level::class);
+    }
 
-
-
+    public function classRoom()
+    {
+        return $this->belongsTo(ClassRoom::class, 'class_id');
+    }
 }
-
