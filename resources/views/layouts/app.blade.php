@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'SChool bridge')</title>
 
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -154,6 +157,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app-navigation-v19.css?v=19.0') }}">
 </head>
 
 <body>
@@ -167,40 +171,40 @@
 </div>
 
 <!-- ═══ NAVBAR ═══ -->
-<nav class="navbar-3d d-flex align-items-center justify-content-between px-4 py-3 flex-wrap gap-3">
+<nav class="navbar-3d app-navbar d-flex align-items-center justify-content-between px-4 py-3 flex-wrap gap-3" aria-label="Navigation principale">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
         <img src="{{ asset('images/logoSSA.jpeg') }}" width="48" height="48" alt="" class="logo-theme-dark me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
         <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="48" height="48" alt="" class="logo-theme-light me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-        SChool bridge
+        <span class="app-brand-text">SChool bridge</span>
     </a>
 
     <div class="app-nav d-flex flex-wrap align-items-center gap-1">
 
         @auth
             @if(auth()->user()->role === 'admin')
-                <a href="{{ route('admin.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
-                <a href="{{ route('admin.users.index') }}"><i class="bi bi-people me-1"></i>Utilisateurs</a>
-                <a href="{{ route('admin.courses.index') }}"><i class="bi bi-book me-1"></i>Cours</a>
-                <a href="{{ route('admin.subjects.index') }}"><i class="bi bi-book me-1"></i>Matières</a>
+                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
+                <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people me-1"></i>Utilisateurs</a>
+                <a href="{{ route('admin.courses.index') }}" class="{{ request()->routeIs('admin.courses.*') ? 'active' : '' }}"><i class="bi bi-book me-1"></i>Cours</a>
+                <a href="{{ route('admin.subjects.index') }}" class="{{ request()->routeIs('admin.subjects.*') ? 'active' : '' }}"><i class="bi bi-book me-1"></i>Matières</a>
             @endif
 
             @if(auth()->user()->role === 'prof')
-                <a href="{{ route('prof.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
-                <a href="{{ route('prof.courses.index') }}"><i class="bi bi-book me-1"></i>Mes Cours</a>
-                <a href="{{ route('prof.lives.index') }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
-                <a href="{{ route('prof.devoir.index') }}"><i class="bi bi-file-earmark-check me-1"></i>Devoirs</a>
+                <a href="{{ route('prof.dashboard') }}" class="{{ request()->routeIs('prof.dashboard') ? 'active' : '' }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
+                <a href="{{ route('prof.courses.index') }}" class="{{ request()->routeIs('prof.courses.*') ? 'active' : '' }}"><i class="bi bi-book me-1"></i>Mes Cours</a>
+                <a href="{{ route('prof.lives.index') }}" class="{{ request()->routeIs('prof.lives.*') ? 'active' : '' }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
+                <a href="{{ route('prof.devoir.index') }}" class="{{ request()->routeIs('prof.devoir.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-check me-1"></i>Devoirs</a>
             @endif
 
             @if(auth()->user()->role === 'student')
-                <a href="{{ route('student.dashboard') }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
-                <a href="{{ route('student.subjects') }}"><i class="bi bi-book me-1"></i>Matières</a>
-                <a href="{{ route('student.lives') }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
-                <a href="{{ route('student.courses.index') }}"><i class="bi bi-collection me-1"></i>Cours</a>
+                <a href="{{ route('student.dashboard') }}" class="{{ request()->routeIs('student.dashboard') ? 'active' : '' }}"><i class="bi bi-speedometer2 me-1"></i>Tableau de bord</a>
+                <a href="{{ route('student.subjects') }}" class="{{ request()->routeIs('student.subjects') ? 'active' : '' }}"><i class="bi bi-book me-1"></i>Matières</a>
+                <a href="{{ route('student.lives') }}" class="{{ request()->routeIs('student.lives') ? 'active' : '' }}"><i class="bi bi-camera-video me-1"></i>Lives</a>
+                <a href="{{ route('student.courses.index') }}" class="{{ request()->routeIs('student.courses.*') ? 'active' : '' }}"><i class="bi bi-collection me-1"></i>Cours</a>
             @endif
 
-            <form method="POST" action="{{ route('logout') }}" class="d-inline ms-2">
+            <form method="POST" action="{{ route('logout') }}" class="app-logout-form d-inline ms-2">
                 @csrf
-                <button class="btn nav-btn-3d nav-btn-3d-danger py-1 px-3" style="font-size: 0.85rem;">
+                <button class="btn nav-btn-3d nav-btn-3d-danger app-logout-button py-1 px-3" style="font-size: 0.85rem;">
                     <i class="bi bi-box-arrow-right me-1"></i> Déconnexion
                 </button>
             </form>
@@ -209,7 +213,7 @@
 </nav>
 
 <!-- ═══ CONTENT ═══ -->
-<main class="app-content">
+<main class="app-content app-content-v19">
     @yield('content')
 </main>
 
