@@ -369,6 +369,42 @@
         @if(
             $isObservationSubmission
             && $observationReview
+            && $observationReview['prompt_image']
+        )
+            <div class="adm-card mb-4">
+                <div class="adm-card-header">
+                    <h4>
+                        <i
+                            class="bi bi-image-fill"
+                            style="color:rgba(255,255,255,0.35);"
+                        ></i>
+                        Image présentée au candidat
+                    </h4>
+                </div>
+
+                <div class="adm-card-body">
+                    <img
+                        src="{{ asset(
+                            $observationReview['prompt_image']
+                        ) }}"
+                        alt="Scène du test d’observation"
+                        class="observation-admin-image"
+                    >
+
+                    <div class="observation-admin-meta">
+                        <span>
+                            <i class="bi bi-check-circle me-1"></i>
+                            Cette image correspond exactement
+                            à la scène décrite dans l’audio.
+                        </span>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if(
+            $isObservationSubmission
+            && $observationReview
             && (
                 $observationReview['text']
                 || $observationReview['image_path']

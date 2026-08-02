@@ -439,27 +439,11 @@ class FrontController extends Controller
         }
 
         if (VocalTestPrompt::isExcludedPath($subject, $level, $class)) {
-            $appointmentUrl = route(
-                'appointment.create',
-                ['type' => 'test']
-            );
-
-            if (auth()->guest()) {
-                session()->put('url.intended', $appointmentUrl);
-
-                return redirect()
-                    ->route('register')
-                    ->with(
-                        'info',
-                        'Ce parcours débutant ne nécessite aucun test vocal. Créez votre compte pour continuer.'
-                    );
-            }
-
             return redirect()
-                ->to($appointmentUrl)
+                ->route('appointment.create', ['type' => 'test'])
                 ->with(
                     'info',
-                    'Aucun test vocal n’est demandé pour ce parcours débutant. Vous pouvez prendre rendez-vous directement.'
+                    'Aucun test vocal n’est demandé pour ce parcours débutant. Prenez votre rendez-vous, puis créez votre compte.'
                 );
         }
 
@@ -470,46 +454,17 @@ class FrontController extends Controller
         );
 
         if ($prompt) {
-            $vocalTestUrl = route(
+            return redirect()->route(
                 'vocal-test.create',
                 [$subject, $level, $class]
             );
-
-            if (auth()->guest()) {
-                session()->put('url.intended', $vocalTestUrl);
-
-                return redirect()
-                    ->route('register')
-                    ->with(
-                        'info',
-                        'Créez votre compte pour passer le test vocal.'
-                    );
-            }
-
-            return redirect()->to($vocalTestUrl);
-        }
-
-        $appointmentUrl = route(
-            'appointment.create',
-            ['type' => 'test']
-        );
-
-        if (auth()->guest()) {
-            session()->put('url.intended', $appointmentUrl);
-
-            return redirect()
-                ->route('register')
-                ->with(
-                    'info',
-                    'Créez votre compte pour poursuivre votre inscription.'
-                );
         }
 
         return redirect()
-            ->to($appointmentUrl)
+            ->route('appointment.create', ['type' => 'test'])
             ->with(
                 'info',
-                'Aucun test vocal actif n’est configuré pour cette sélection. Vous pouvez prendre rendez-vous.'
+                'Aucun test vocal actif n’est configuré pour cette sélection. Prenez votre rendez-vous, puis créez votre compte.'
             );
     }
 

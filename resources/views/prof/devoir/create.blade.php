@@ -1,184 +1,185 @@
 @extends('layouts.prof')
 
+@section('title', 'Créer un devoir')
+@section('page_title', 'Nouveau devoir')
+@section('breadcrumb', 'Création d’un devoir')
+
 @section('content')
-<div class="container-fluid py-5">
-    <!-- BACK -->
-    <div class="mb-6">
-        <a href="{{ route('prof.devoir.index', ['course_id' => $course_id ?? '']) }}"
-           class="btn btn-outline-primary">
-            ← Retour
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow"><i class="bi bi-file-earmark-plus-fill"></i> Nouvelle activité</span>
+        <h1 class="pp-page-title">Créer un devoir</h1>
+        <p class="pp-page-description">
+            Renseignez les consignes, sélectionnez la classe concernée et définissez une date limite de remise.
+        </p>
+    </div>
+
+    <div class="pp-page-actions">
+        <a href="{{ route('prof.devoir.index', ['course_id' => $course_id ?? null]) }}" class="adm-btn adm-btn-ghost">
+            <i class="bi bi-arrow-left"></i>
+            Retour aux devoirs
         </a>
     </div>
+</section>
 
-    <!-- COURSE INFO -->
-    @if($course)
-    <div class="card bg-primary bg-opacity-10 border-primary-subtle mb-5">
-        <div class="card-body">
-            <h2 class="card-title h3 fw-bold text-primary">{{ $course->title }}</h2>
-            <p class="card-text text-primary">
-                {{ $course->classRoom->name ?? '' }} • {{ $course->subject->name ?? '' }}
-            </p>
-        </div>
-    </div>
-    @endif
-
-    <!-- Enhanced Header -->
-    <div class="d-flex align-items-center mb-5">
-        <div class="bg-primary bg-opacity-10 p-3 rounded-4 shadow-sm me-4">
-            <i class="bi bi-plus-circle-fill fs-1 text-primary"></i>
-        </div>
+@if($errors->any())
+    <div class="adm-alert adm-alert-danger">
+        <span class="adm-alert-icon"><i class="bi bi-exclamation-circle-fill"></i></span>
         <div>
-            <h1 class="mb-1 fw-bold text-dark">Ajouter un Devoir</h1>
-            <p class="mb-0 text-muted fs-6">{{ $course ? 'pour le cours: ' . $course->title : 'Créez et assignez un nouveau devoir à votre classe' }}</p>
+            <strong>Le formulaire contient des erreurs.</strong>
+            <ul class="mb-0 mt-2 ps-3">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     </div>
+@endif
 
-    <!-- Enhanced Form -->
-    <div class="row justify-content-center">
-        <div class="col-lg-10 col-xl-8">
-            <div class="card border-0 shadow-xl">
-                <div class="card-body p-5">
-                    <form method="POST" action="{{ route('prof.devoir.store') }}" enctype="multipart/form-data">
-                        @csrf
+@if($course)
+    <div class="pp-course-context">
+        <span class="pp-course-context-icon"><i class="bi bi-book-fill"></i></span>
+        <span>
+            <strong>{{ $course->title }}</strong>
+            <span>{{ $course->classRoom?->name ?? 'Classe' }} · {{ $course->subject?->name ?? 'Matière' }}</span>
+        </span>
+    </div>
+@endif
 
-                        <div class="row g-4">
-                            <!-- Left Column: Title & Description -->
-                            <div class="col-lg-8">
-                                <!-- Title Field -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold mb-3">
-                                        <i class="bi bi-file-earmark-text text-primary me-2"></i>
-                                        Titre du devoir <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-primary-subtle">
-                                            <i class="bi bi-pencil-square text-primary"></i>
-                                        </span>
-                                        <input type="text" 
-                                               name="title" 
-                                               class="form-control form-control-lg border-primary-subtle shadow-sm @error('title') is-invalid @enderror" 
-                                               placeholder="Ex: Devoir de mathématiques - Chapitre 3"
-                                               required>
-                                        @error('title')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
+<form method="POST" action="{{ route('prof.devoir.store') }}" enctype="multipart/form-data">
+    @csrf
 
-                                <!-- Description Field -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold mb-3">
-                                        <i class="bi bi-card-text text-primary me-2"></i>
-                                        Description détaillée
-                                    </label>
-                                    <textarea name="description" 
-                                              rows="5"
-                                              class="form-control form-control-lg border-primary-subtle shadow-sm @error('description') is-invalid @enderror"
-                                              placeholder="Expliquez les consignes, les objectifs et les critères d'évaluation..."></textarea>
-                                    @error('description')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+    <div class="pp-form-grid">
+        <section class="pp-panel">
+            <header class="pp-panel-head">
+                <div class="pp-panel-title-wrap">
+                    <h2 class="pp-panel-title"><i class="bi bi-card-text"></i> Contenu du devoir</h2>
+                    <p class="pp-panel-subtitle">Donnez un titre clair et des consignes compréhensibles.</p>
+                </div>
+            </header>
 
-                            <!-- Right Column: Classe, Date, File -->
-                            <div class="col-lg-4">
-                                <!-- Classe Field -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold mb-3">
-                                        <i class="bi bi-building text-primary me-2"></i>
-                                        Classe *
-                                    </label>
-                                    <select name="class_room_id" required class="form-select form-select-lg border-primary-subtle shadow-sm @error('class_room_id') is-invalid @enderror">
-                                        <option value="">Choisir une classe...</option>
-                                        @foreach($classes as $class)
-                                            <option value="{{ $class->id }}" {{ old('class_room_id') == $class->id ? 'selected' : '' }}>
-                                                {{ $class->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('class_room_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+            <div class="pp-form-section">
+                <div class="pp-field">
+                    <label for="title" class="pp-label">
+                        <i class="bi bi-type"></i> Titre du devoir <span class="required">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="title"
+                        name="title"
+                        value="{{ old('title') }}"
+                        class="adm-form-control @error('title') is-invalid @enderror"
+                        placeholder="Ex. Exercices du chapitre 3"
+                        maxlength="255"
+                        required
+                        autofocus
+                    >
+                    @error('title') <span class="adm-form-error">{{ $message }}</span> @enderror
+                </div>
 
-                                @if(isset($courses) && $courses->count() > 0)
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold mb-3">
-                                        <i class="bi bi-book text-primary me-2"></i>
-                                        Cours *
-                                    </label>
-                                    <select name="course_id" required class="form-select form-select-lg border-primary-subtle shadow-sm @error('course_id') is-invalid @enderror">
-                                        <option value="">Sélectionner un cours</option>
-                                        @foreach($courses as $c)
-                                            <option value="{{ $c->id }}" {{ old('course_id', $course_id ?? '') == $c->id ? 'selected' : '' }}>
-                                                {{ $c->title }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('course_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                @endif
-
-                                <!-- Due Date Field -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold mb-3">
-                                        <i class="bi bi-calendar-check text-primary me-2"></i>
-                                        Date limite
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-primary-subtle">
-                                            <i class="bi bi-calendar3"></i>
-                                        </span>
-                                        <input type="date" 
-                                               name="due_date" 
-                                               class="form-control form-control-lg border-primary-subtle shadow-sm @error('due_date') is-invalid @enderror"
-                                               value="{{ old('due_date') }}">
-                                        @error('due_date')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                    </div>
-                                </div>
-
-                                <!-- File Upload Field -->
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold mb-3">
-                                        <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
-                                        Fichier PDF (Optionnel)
-                                    </label>
-                                    <div class="border border-dashed border-primary-subtle rounded-3 p-4 text-center bg-light hover-border-primary transition-all">
-                                        <i class="bi bi-cloud-upload fs-1 text-primary-subtle mb-3 d-block"></i>
-                                        <input type="file" 
-                                               name="file" 
-                                               accept=".pdf" 
-                                               class="form-control form-control-lg border-0 bg-transparent @error('file') is-invalid @enderror">
-                                        <div class="text-muted small mt-2">Maximum 10 Mo - Format PDF uniquement</div>
-                                    </div>
-                                    @error('file')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-
-                        <input type="hidden" name="course_id" value="{{ old('course_id', $course_id ?? '') }}">
-
-                        <!-- Action Buttons -->
-                        <hr class="my-5">
-                        <div class="d-flex gap-3 justify-content-end flex-wrap">
-                            <a href="{{ route('prof.devoir.index', ['course_id' => $course_id ?? '']) }}" class="btn btn-outline-secondary btn-lg px-4">
-                                <i class="bi bi-arrow-left me-2"></i>Annuler
-                            </a>
-                            <button type="submit" class="btn btn-primary btn-lg px-5">
-                                <i class="bi bi-check-circle-fill me-2"></i>{{ $course ? 'Créer pour ' . $course->title : 'Enregistrer le devoir' }}
-                            </button>
-                        </div>
-                    </form>
+                <div class="pp-field">
+                    <label for="description" class="pp-label">
+                        <i class="bi bi-text-paragraph"></i> Description et consignes
+                    </label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="9"
+                        class="adm-form-control @error('description') is-invalid @enderror"
+                        placeholder="Précisez les exercices à réaliser, les objectifs et les consignes de remise..."
+                    >{{ old('description') }}</textarea>
+                    @error('description') <span class="adm-form-error">{{ $message }}</span> @enderror
+                    <p class="pp-help">Une consigne précise aide les étudiants à rendre un travail conforme.</p>
                 </div>
             </div>
+        </section>
+
+        <aside class="pp-panel">
+            <header class="pp-panel-head">
+                <div class="pp-panel-title-wrap">
+                    <h2 class="pp-panel-title"><i class="bi bi-sliders2"></i> Affectation</h2>
+                    <p class="pp-panel-subtitle">Classe, cours, échéance et document.</p>
+                </div>
+            </header>
+
+            <div class="pp-form-section">
+                <div class="pp-field">
+                    <label for="class_room_id" class="pp-label">
+                        <i class="bi bi-people-fill"></i> Classe <span class="required">*</span>
+                    </label>
+                    <select id="class_room_id" name="class_room_id" class="adm-form-select @error('class_room_id') is-invalid @enderror" required>
+                        <option value="">Sélectionner une classe</option>
+                        @foreach($classes as $class)
+                            <option value="{{ $class->id }}" {{ (string) old('class_room_id') === (string) $class->id ? 'selected' : '' }}>
+                                {{ $class->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('class_room_id') <span class="adm-form-error">{{ $message }}</span> @enderror
+                </div>
+
+                @if(isset($courses) && $courses->isNotEmpty())
+                    <div class="pp-field">
+                        <label for="course_id" class="pp-label"><i class="bi bi-book"></i> Cours associé</label>
+                        <select id="course_id" name="course_id" class="adm-form-select @error('course_id') is-invalid @enderror">
+                            <option value="">Aucun cours spécifique</option>
+                            @foreach($courses as $courseOption)
+                                <option value="{{ $courseOption->id }}" {{ (string) old('course_id', $course_id ?? '') === (string) $courseOption->id ? 'selected' : '' }}>
+                                    {{ $courseOption->title }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('course_id') <span class="adm-form-error">{{ $message }}</span> @enderror
+                    </div>
+                @elseif(!empty($course_id))
+                    <input type="hidden" name="course_id" value="{{ $course_id }}">
+                @endif
+
+                <div class="pp-field">
+                    <label for="due_date" class="pp-label">
+                        <i class="bi bi-calendar-check"></i> Date limite <span class="required">*</span>
+                    </label>
+                    <input
+                        type="date"
+                        id="due_date"
+                        name="due_date"
+                        value="{{ old('due_date') }}"
+                        min="{{ now()->addDay()->toDateString() }}"
+                        class="adm-form-control @error('due_date') is-invalid @enderror"
+                        required
+                    >
+                    @error('due_date') <span class="adm-form-error">{{ $message }}</span> @enderror
+                    <p class="pp-help">La date doit être postérieure à aujourd’hui.</p>
+                </div>
+
+                <div class="pp-field">
+                    <label for="file" class="pp-label"><i class="bi bi-paperclip"></i> Document PDF</label>
+                    <div class="pp-upload">
+                        <span class="pp-upload-icon"><i class="bi bi-cloud-arrow-up-fill"></i></span>
+                        <input
+                            type="file"
+                            id="file"
+                            name="file"
+                            accept="application/pdf,.pdf"
+                            class="adm-form-control @error('file') is-invalid @enderror"
+                        >
+                        <p class="pp-help">PDF uniquement · taille maximale 5 Mo.</p>
+                    </div>
+                    @error('file') <span class="adm-form-error">{{ $message }}</span> @enderror
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="pp-panel pp-section-gap">
+        <div class="pp-form-actions">
+            <a href="{{ route('prof.devoir.index', ['course_id' => $course_id ?? null]) }}" class="adm-btn adm-btn-ghost">
+                <i class="bi bi-x-lg"></i> Annuler
+            </a>
+            <button type="submit" class="adm-btn adm-btn-success">
+                <i class="bi bi-check-circle-fill"></i> Publier le devoir
+            </button>
         </div>
     </div>
-</div>
+</form>
 @endsection

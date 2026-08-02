@@ -150,6 +150,14 @@
                 >
                     @csrf
 
+                    @if(!empty($submissionToken))
+                        <input
+                            type="hidden"
+                            name="submission_token"
+                            value="{{ $submissionToken }}"
+                        >
+                    @endif
+
                     @if($vocalSubmission)
                         <input
                             type="hidden"

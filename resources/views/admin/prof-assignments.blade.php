@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation professeurs')
 @section(
     'breadcrumb',
-    'Professeurs → Matière → Niveau → Classe'
+    'Professeurs → Parcours → Jour → Horaire'
 )
 
 @section('content')
@@ -21,8 +21,8 @@
         </h1>
 
         <div class="subtitle">
-            Choisissez la matière, puis son niveau,
-            puis la classe appartenant à ce niveau.
+            Choisissez le parcours du professeur,
+            puis définissez son jour et son horaire hebdomadaire.
         </div>
     </div>
 </div>
@@ -61,7 +61,7 @@
                     </h4>
 
                     <p class="prof-assignment-subtitle">
-                        Matière → Niveau → Classe
+                        Parcours pédagogique + horaire
                     </p>
                 </div>
             </div>
@@ -275,6 +275,139 @@
                         </div>
                     </div>
 
+
+                    <div class="prof-assignment-schedule">
+                        <div class="prof-schedule-heading">
+                            <span class="prof-schedule-icon">
+                                <i class="bi bi-calendar-week-fill"></i>
+                            </span>
+
+                            <div>
+                                <strong>
+                                    Horaire du professeur
+                                </strong>
+
+                                <small>
+                                    Cet horaire apparaîtra uniquement
+                                    dans l’espace professeur.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="adm-form-group">
+                            <label
+                                class="adm-form-label"
+                                for="prof_assignment_day_of_week"
+                            >
+                                Jour
+                                <span class="assignment-required">*</span>
+                            </label>
+
+                            <select
+                                name="day_of_week"
+                                id="prof_assignment_day_of_week"
+                                class="adm-form-select
+                                    @error('day_of_week')
+                                        error
+                                    @enderror"
+                                required
+                            >
+                                <option value="">
+                                    Sélectionner un jour
+                                </option>
+
+                                @foreach(
+                                    \App\Models\ProfAssignment::DAYS
+                                    as $dayNumber => $dayLabel
+                                )
+                                    <option
+                                        value="{{ $dayNumber }}"
+                                        @selected(
+                                            (string) old('day_of_week')
+                                            === (string) $dayNumber
+                                        )
+                                    >
+                                        {{ $dayLabel }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            @error('day_of_week')
+                                <div class="adm-form-error">
+                                    {{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+
+                        <div class="prof-time-grid">
+                            <div class="adm-form-group mb-0">
+                                <label
+                                    class="adm-form-label"
+                                    for="prof_assignment_start_time"
+                                >
+                                    Heure de début
+                                    <span class="assignment-required">*</span>
+                                </label>
+
+                                <input
+                                    type="time"
+                                    name="start_time"
+                                    id="prof_assignment_start_time"
+                                    value="{{ old('start_time') }}"
+                                    class="adm-form-input
+                                        @error('start_time')
+                                            error
+                                        @enderror"
+                                    required
+                                >
+
+                                @error('start_time')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+
+                            <div class="adm-form-group mb-0">
+                                <label
+                                    class="adm-form-label"
+                                    for="prof_assignment_end_time"
+                                >
+                                    Heure de fin
+                                    <span class="assignment-required">*</span>
+                                </label>
+
+                                <input
+                                    type="time"
+                                    name="end_time"
+                                    id="prof_assignment_end_time"
+                                    value="{{ old('end_time') }}"
+                                    class="adm-form-input
+                                        @error('end_time')
+                                            error
+                                        @enderror"
+                                    required
+                                >
+
+                                @error('end_time')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="prof-schedule-note">
+                            <i class="bi bi-info-circle-fill"></i>
+
+                            <span>
+                                Si cette assignation existe déjà,
+                                le nouvel horaire remplacera
+                                l’ancien horaire.
+                            </span>
+                        </div>
+                    </div>
+
                     <button
                         type="submit"
                         class="adm-btn adm-btn-accent w-100"
@@ -320,6 +453,8 @@
                                     <th>Matière</th>
                                     <th>Niveau</th>
                                     <th>Classe</th>
+                                    <th>Jour</th>
+                                    <th>Horaire</th>
                                     <th style="text-align:right;">
                                         Action
                                     </th>
@@ -400,6 +535,60 @@
                                                     ?? '—'
                                                 }}
                                             </span>
+                                        </td>
+
+                                        <td>
+                                            @if(
+                                                $assignment
+                                                    ->has_schedule
+                                            )
+                                                <span
+                                                    class="prof-day-badge"
+                                                >
+                                                    <i
+                                                        class="bi
+                                                            bi-calendar3"
+                                                    ></i>
+
+                                                    {{
+                                                        $assignment
+                                                            ->day_label
+                                                    }}
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="prof-no-schedule"
+                                                >
+                                                    Non défini
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <td>
+                                            @if(
+                                                $assignment
+                                                    ->has_schedule
+                                            )
+                                                <span
+                                                    class="prof-time-badge"
+                                                >
+                                                    <i
+                                                        class="bi
+                                                            bi-clock-fill"
+                                                    ></i>
+
+                                                    {{
+                                                        $assignment
+                                                            ->time_range_label
+                                                    }}
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="prof-no-schedule"
+                                                >
+                                                    Non défini
+                                                </span>
+                                            @endif
                                         </td>
 
                                         <td style="text-align:right;">
@@ -551,6 +740,120 @@
         linear-gradient(135deg,#7C3AED,#A78BFA);
     font-size: 0.68rem;
 }
+
+.prof-assignment-schedule {
+    margin: 0 0 1rem;
+    padding: 0.9rem;
+    border: 1px solid rgba(56,189,248,0.13);
+    border-radius: 15px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(14,116,144,0.055),
+            rgba(59,130,246,0.035)
+        );
+}
+
+.prof-schedule-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.85rem;
+}
+
+.prof-schedule-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    place-items: center;
+    color: #67E8F9;
+    border: 1px solid rgba(34,211,238,0.14);
+    border-radius: 11px;
+    background: rgba(8,145,178,0.10);
+}
+
+.prof-schedule-heading > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.prof-schedule-heading strong {
+    color: var(--adm-text);
+    font-size: 0.74rem;
+}
+
+.prof-schedule-heading small {
+    color: var(--adm-text-muted);
+    font-size: 0.61rem;
+    line-height: 1.45;
+}
+
+.prof-time-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.prof-schedule-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin-top: 0.75rem;
+    padding: 8px 10px;
+    color: rgba(255,255,255,0.43);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.018);
+    font-size: 0.59rem;
+    line-height: 1.5;
+}
+
+.prof-schedule-note i {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: #60A5FA;
+}
+
+.prof-day-badge,
+.prof-time-badge {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 9px;
+    border-radius: 9px;
+    font-size: 0.63rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.prof-day-badge {
+    color: #93C5FD;
+    border: 1px solid rgba(59,130,246,0.15);
+    background: rgba(59,130,246,0.08);
+}
+
+.prof-time-badge {
+    color: #67E8F9;
+    border: 1px solid rgba(34,211,238,0.15);
+    background: rgba(8,145,178,0.08);
+}
+
+.prof-no-schedule {
+    color: var(--adm-text-muted);
+    font-size: 0.62rem;
+    font-style: italic;
+}
+
+@media (max-width: 575.98px) {
+    .prof-time-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 </style>
 
 <script>

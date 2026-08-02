@@ -476,30 +476,40 @@ public function index()
 
     public function updateProfile(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . auth()->id(),
-            'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . auth()->id()],
+            'profile_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'remove_profile_photo' => ['nullable', 'boolean'],
+        ], [
+            'profile_photo.image' => 'Le fichier choisi doit être une image.',
+            'profile_photo.mimes' => 'La photo doit être au format JPG, JPEG, PNG ou WEBP.',
+            'profile_photo.max' => 'La photo ne doit pas dépasser 4 Mo.',
         ]);
 
-        $user = auth()->user();
+        $user = $request->user();
 
-        // Upload image
-        if ($request->hasFile('profile_photo')) {
-            // delete old
+        if ($request->boolean('remove_profile_photo') && ! $request->hasFile('profile_photo')) {
             if ($user->profile_photo) {
-                Storage::delete('public/' . $user->profile_photo);
+                Storage::disk('public')->delete($user->profile_photo);
             }
 
-            $path = $request->file('profile_photo')->store('profiles', 'public');
-            $user->profile_photo = $path;
+            $user->profile_photo = null;
         }
 
-        $user->name = $request->name;
-        $user->email = $request->email;
+        if ($request->hasFile('profile_photo')) {
+            if ($user->profile_photo) {
+                Storage::disk('public')->delete($user->profile_photo);
+            }
+
+            $user->profile_photo = $request->file('profile_photo')->store('profiles', 'public');
+        }
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
         $user->save();
 
-        return back()->with('success', 'Profil mis à jour !');
+        return back()->with('success', 'Votre profil a été mis à jour avec succès.');
     }
 
     public function updatePassword(Request $request)

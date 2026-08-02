@@ -89,3 +89,11 @@
 
 @endsection
 
+{{-- Design global V12 : présentation uniquement, aucun contenu modifié. --}}
+@push('scripts')
+<link
+    rel="stylesheet"
+    href="{{ asset('css/front-design-v12.css?v=12.0') }}"
+>
+@endpush
+

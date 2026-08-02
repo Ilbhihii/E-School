@@ -235,10 +235,45 @@ class VocalTestPrompt extends Model
     }
 
     /**
+     * Images disponibles pour le test d'observation.
+     *
+     * Une image manquante dans public/ est automatiquement ignorée.
+     * Il suffit donc d'ajouter les nouveaux fichiers avec les noms
+     * ci-dessous pour les activer.
+     */
+    public static function observationImages(): array
+    {
+        $images = [
+            'images/vocal-tests/observation-ferme.jpeg',
+            'images/vocal-tests/observation-classe.jpeg',
+            'images/vocal-tests/observation-marche.jpeg',
+            'images/vocal-tests/observation-parc.jpeg',
+            'images/vocal-tests/observation-plage.jpeg',
+        ];
+
+        $existingImages =
+            array_values(
+                array_filter(
+                    $images,
+                    static fn (string $image): bool =>
+                        is_file(
+                            public_path($image)
+                        )
+                )
+            );
+
+        return $existingImages
+            ?: [
+                'images/vocal-tests/observation-ferme.jpeg',
+            ];
+    }
+
+    /**
      * Contenu du test d'observation.
      */
     public static function observationDefinition(
-        ClassRoom $classRoom
+        ClassRoom $classRoom,
+        ?string $image = null
     ): array {
         $isAdvanced =
             self::normalizePathName($classRoom->name)
@@ -252,7 +287,11 @@ class VocalTestPrompt extends Model
             'arabic_title' =>
                 'اِخْتِبَارُ الْمُلَاحَظَةِ وَالتَّعْبِيرِ الشَّفَهِيِّ',
             'image' =>
-                'images/vocal-tests/observation-ferme.jpeg',
+                $image
+                ?: (
+                    self::observationImages()[0]
+                    ?? 'images/vocal-tests/observation-ferme.jpeg'
+                ),
             'question' =>
                 'Observez attentivement l’image puis '
                 . 'décrivez oralement en arabe ce que vous voyez.',

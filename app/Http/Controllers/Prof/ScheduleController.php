@@ -3,100 +3,339 @@
 namespace App\Http\Controllers\Prof;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Schedule;
 use App\Models\ClassRoom;
 use App\Models\ProfAssignment;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
 {
     public function index()
     {
-        $classes = $this->assignedClasses();
-        return view('prof.schedule', compact('classes'));
+        $assignments =
+            $this->scheduledAssignments();
+
+        $classes =
+            ClassRoom::query()
+                ->whereIn(
+                    'id',
+                    $this->assignedClassIds()
+                )
+                ->orderBy('name')
+                ->get();
+
+        return view(
+            'prof.schedule',
+            compact(
+                'classes',
+                'assignments'
+            )
+        );
     }
 
     public function classes()
     {
-        $classes = $this->assignedClasses(['id', 'name']);
-        return response()->json($classes);
+        $classes =
+            ClassRoom::query()
+                ->whereIn(
+                    'id',
+                    $this->assignedClassIds()
+                )
+                ->orderBy('name')
+                ->get([
+                    'id',
+                    'name',
+                ]);
+
+        return response()->json(
+            $classes
+        );
     }
 
-    public function store(Request $request)
-    {
-        if(!in_array(auth()->user()->role, ['admin','prof'])){
-            abort(403);
-        }
-
-        $request->validate([
-            'class_id' => 'required|integer|exists:class_rooms,id',
-            'subject' => 'required|string|max:255',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time'
-        ]);
-        abort_unless($this->assignedClassIds()->contains((int) $request->class_id), 403);
-
-        Schedule::create([
-            'prof_id' => auth()->id(),
-            'class_id' => $request->class_id,
-            'subject' => $request->subject,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-        ]);
-
-        return back()->with('success', 'Planning ajouté');
-    }
-
+    /**
+     * Retourne les occurrences hebdomadaires
+     * enregistrées par l'administration.
+     */
     public function data(Request $request)
     {
-        $user = auth()->user();
+        $rangeStart =
+            Carbon::parse(
+                $request->query(
+                    'start',
+                    now()
+                        ->startOfWeek()
+                        ->toIso8601String()
+                )
+            )->startOfDay();
 
-        $query = Schedule::where('prof_id', $user->id);
+        $rangeEnd =
+            Carbon::parse(
+                $request->query(
+                    'end',
+                    now()
+                        ->endOfWeek()
+                        ->addDay()
+                        ->toIso8601String()
+                )
+            )->startOfDay();
 
-        if($request->class_id){
-            $query->where('class_id', $request->class_id);
+        if ($rangeEnd->lessThanOrEqualTo(
+            $rangeStart
+        )) {
+            $rangeEnd =
+                $rangeStart
+                    ->copy()
+                    ->addWeek();
         }
 
-        $events = $query->get()->map(function ($item) {
-            $className = $item->classRoom ? $item->classRoom->name : 'N/A';
-            return [
-                'id' => $item->id,
-                'title' => $item->subject . ' (' . $className . ')',
-                'start' => $item->start_time->toISOString(),
-                'end' => $item->end_time->toISOString(),
-                'subject' => $item->subject
-            ];
-        });
+        $query =
+            ProfAssignment::query()
+                ->with([
+                    'subject',
+                    'level',
+                    'classRoom',
+                ])
+                ->where(
+                    'prof_id',
+                    auth()->id()
+                )
+                ->whereNotNull(
+                    'day_of_week'
+                )
+                ->whereNotNull(
+                    'start_time'
+                )
+                ->whereNotNull(
+                    'end_time'
+                );
 
-        return response()->json($events);
+        if ($request->filled('class_id')) {
+            abort_unless(
+                $this
+                    ->assignedClassIds()
+                    ->contains(
+                        (int) $request->class_id
+                    ),
+                403
+            );
+
+            $query->where(
+                'class_id',
+                $request->class_id
+            );
+        }
+
+        $assignments =
+            $query
+                ->orderBy('day_of_week')
+                ->orderBy('start_time')
+                ->get();
+
+        $events = collect();
+
+        foreach ($assignments as $assignment) {
+            $firstOccurrence =
+                $rangeStart
+                    ->copy()
+                    ->addDays(
+                        (
+                            (int) $assignment
+                                ->day_of_week
+                            - $rangeStart
+                                ->dayOfWeekIso
+                            + 7
+                        ) % 7
+                    );
+
+            $startClock =
+                Carbon::parse(
+                    $assignment->start_time
+                )->format('H:i:s');
+
+            $endClock =
+                Carbon::parse(
+                    $assignment->end_time
+                )->format('H:i:s');
+
+            for (
+                $date =
+                    $firstOccurrence->copy();
+                $date->lessThan($rangeEnd);
+                $date->addWeek()
+            ) {
+                $start =
+                    $date
+                        ->copy()
+                        ->setTimeFromTimeString(
+                            $startClock
+                        );
+
+                $end =
+                    $date
+                        ->copy()
+                        ->setTimeFromTimeString(
+                            $endClock
+                        );
+
+                $color =
+                    $this->eventColor(
+                        (int) $assignment
+                            ->subject_id
+                    );
+
+                $events->push([
+                    'id' =>
+                        $assignment->id
+                        . '-'
+                        . $date->format(
+                            'Ymd'
+                        ),
+                    'title' =>
+                        (
+                            $assignment
+                                ->subject
+                                ?->name
+                            ?? 'Matière'
+                        )
+                        . ' ('
+                        . (
+                            $assignment
+                                ->classRoom
+                                ?->name
+                            ?? 'Classe'
+                        )
+                        . ')',
+                    'start' =>
+                        $start
+                            ->toIso8601String(),
+                    'end' =>
+                        $end
+                            ->toIso8601String(),
+                    'backgroundColor' =>
+                        $color,
+                    'borderColor' =>
+                        $color,
+                    'textColor' =>
+                        '#ffffff',
+                    'extendedProps' => [
+                        'assignment_id' =>
+                            $assignment->id,
+                        'subject' =>
+                            $assignment
+                                ->subject
+                                ?->name,
+                        'level' =>
+                            $assignment
+                                ->level
+                                ?->name,
+                        'class' =>
+                            $assignment
+                                ->classRoom
+                                ?->name,
+                        'day' =>
+                            $assignment
+                                ->day_label,
+                        'time' =>
+                            $assignment
+                                ->time_range_label,
+                    ],
+                ]);
+            }
+        }
+
+        return response()->json(
+            $events->values()
+        );
+    }
+
+    /**
+     * Le planning du professeur est géré
+     * uniquement par l'administration.
+     */
+    public function store(Request $request)
+    {
+        abort(
+            403,
+            'Le planning est géré '
+            . 'par l’administration.'
+        );
     }
 
     public function update(Request $request)
     {
-        $request->validate(['id' => ['required', 'integer'], 'start' => ['required', 'date'], 'end' => ['required', 'date', 'after:start']]);
-        $schedule = Schedule::where('prof_id', auth()->id())->findOrFail($request->id);
-
-        $schedule->update([
-            'start_time' => $request->start,
-            'end_time' => $request->end,
-        ]);
-
-        return response()->json(['success' => true]);
+        abort(
+            403,
+            'Le planning est géré '
+            . 'par l’administration.'
+        );
     }
 
     public function destroy($id)
     {
-        Schedule::where('prof_id', auth()->id())->findOrFail($id)->delete();
-        return response()->json(['success' => true]);
+        abort(
+            403,
+            'Le planning est géré '
+            . 'par l’administration.'
+        );
     }
 
     private function assignedClassIds()
     {
-        return ProfAssignment::where('prof_id', auth()->id())->pluck('class_id')->unique();
+        return ProfAssignment::query()
+            ->where(
+                'prof_id',
+                auth()->id()
+            )
+            ->pluck('class_id')
+            ->unique()
+            ->values();
     }
 
-    private function assignedClasses(array $columns = ['*'])
+    private function scheduledAssignments()
     {
-        return ClassRoom::whereIn('id', $this->assignedClassIds())->orderBy('name')->get($columns);
+        return ProfAssignment::query()
+            ->with([
+                'subject',
+                'level',
+                'classRoom',
+            ])
+            ->where(
+                'prof_id',
+                auth()->id()
+            )
+            ->whereNotNull(
+                'day_of_week'
+            )
+            ->whereNotNull(
+                'start_time'
+            )
+            ->whereNotNull(
+                'end_time'
+            )
+            ->orderBy(
+                'day_of_week'
+            )
+            ->orderBy(
+                'start_time'
+            )
+            ->get();
+    }
+
+    private function eventColor(
+        int $subjectId
+    ): string {
+        $colors = [
+            '#4F6FF5',
+            '#7C3AED',
+            '#0891B2',
+            '#16A34A',
+            '#D97706',
+            '#DC2626',
+        ];
+
+        return $colors[
+            $subjectId
+            % count($colors)
+        ];
     }
 }

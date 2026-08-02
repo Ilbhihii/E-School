@@ -1,31 +1,40 @@
 @extends('layouts.prof')
 
-@section('title', 'Gestion des Absences')
-@section('page_title', 'Absences')
-@section('breadcrumb', 'Gestion des présences')
+@section('title', 'Présences et absences')
+@section('page_title', 'Présences et absences')
+@section('breadcrumb', 'Faire l’appel')
 
 @section('content')
-<div class="adm-page-header">
-    <div>
-        <h1><i class="bi bi-calendar-check me-2" style="color:var(--adm-primary);"></i> Gestion des Absences</h1>
-        <div class="subtitle">Enregistrez les présences dans le parcours exact</div>
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow"><i class="bi bi-person-check-fill"></i> Suivi des étudiants</span>
+        <h1 class="pp-page-title">Faire l’appel</h1>
+        <p class="pp-page-description">
+            Sélectionnez le parcours pédagogique et la date, puis indiquez la présence de chaque étudiant.
+        </p>
     </div>
-    <div class="page-actions">
-        <a href="{{ route('prof.absences.list') }}" class="adm-btn adm-btn-ghost"><i class="bi bi-clock-history me-1"></i> Historique</a>
+
+    <div class="pp-page-actions">
+        <a href="{{ route('prof.absences.list') }}" class="adm-btn adm-btn-ghost">
+            <i class="bi bi-clock-history"></i> Consulter l’historique
+        </a>
     </div>
-</div>
+</section>
 
-@if(session('success')) <div class="adm-alert adm-alert-success mb-4">{{ session('success') }}</div> @endif
-@if(session('alert')) <div class="adm-alert adm-alert-danger mb-4">{{ session('alert') }}</div> @endif
-
-<div class="adm-card">
-    <div class="adm-card-header"><h4><i class="bi bi-diagram-3" style="color:rgba(255,255,255,0.35);"></i> Parcours et date</h4></div>
-    <div class="adm-card-body">
-        <div class="row g-3">
-            <div class="col-md-8">
-                <label class="adm-form-label">Matière → Niveau → Classe</label>
+<section class="pp-panel">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title"><i class="bi bi-diagram-3-fill"></i> Parcours et date</h2>
+            <p class="pp-panel-subtitle">Choisissez exactement la matière, le niveau et la classe concernés.</p>
+        </div>
+        <span class="pp-panel-meta">Étape 1</span>
+    </header>
+    <div class="pp-panel-body">
+        <div class="pp-attendance-toolbar">
+            <div>
+                <label for="pathSelect" class="pp-label"><i class="bi bi-signpost-split"></i> Matière → Niveau → Classe</label>
                 <select id="pathSelect" class="adm-form-select">
-                    <option value="">-- Sélectionner un parcours --</option>
+                    <option value="">Sélectionner un parcours</option>
                     @foreach($profAssignments as $assignment)
                         @if($assignment->subject && $assignment->level && $assignment->classRoom)
                             <option
@@ -39,96 +48,188 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="adm-form-label" for="attendanceDate">Date</label>
+            <div>
+                <label for="attendanceDate" class="pp-label"><i class="bi bi-calendar3"></i> Date de la séance</label>
                 <input type="date" id="attendanceDate" class="adm-form-control" value="{{ now()->toDateString() }}">
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<div class="adm-card">
-    <div class="adm-card-header"><h4><i class="bi bi-people" style="color:rgba(255,255,255,0.35);"></i> Liste des étudiants</h4></div>
-    <div class="adm-card-body p-0">
-        <form method="POST" action="{{ route('prof.absences.store') }}" id="attendanceForm">
-            @csrf
-            <input type="hidden" name="subject_id" id="subjectId">
-            <input type="hidden" name="level_id" id="levelId">
-            <input type="hidden" name="class_id" id="classId">
-            <input type="hidden" name="date" id="formDate" value="{{ now()->toDateString() }}">
-            <div class="adm-table-wrap">
-                <table class="adm-table">
-                    <thead><tr><th>Étudiant</th><th style="text-align:center;">Présent</th><th style="text-align:center;">Absent</th></tr></thead>
-                    <tbody id="studentsTable">
-                        <tr><td colspan="3"><div class="adm-empty" style="padding:3rem 2rem;"><div class="adm-empty-icon"><i class="bi bi-people-fill"></i></div><h5>Aucun parcours sélectionné</h5><p>Choisissez une matière, un niveau et une classe.</p></div></td></tr>
-                    </tbody>
-                </table>
+<section class="pp-panel pp-section-gap">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title"><i class="bi bi-people-fill"></i> Liste des étudiants</h2>
+            <p class="pp-panel-subtitle" id="attendancePathLabel">Aucun parcours sélectionné.</p>
+        </div>
+        <div class="pp-attendance-head">
+            <span class="pp-student-count" id="studentCount"><i class="bi bi-person"></i> 0 étudiant</span>
+            <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" id="markAllPresent" disabled>
+                <i class="bi bi-check2-all"></i> Tous présents
+            </button>
+        </div>
+    </header>
+
+    <form method="POST" action="{{ route('prof.absences.store') }}" id="attendanceForm">
+        @csrf
+        <input type="hidden" name="subject_id" id="subjectId">
+        <input type="hidden" name="level_id" id="levelId">
+        <input type="hidden" name="class_id" id="classId">
+        <input type="hidden" name="date" id="formDate" value="{{ now()->toDateString() }}">
+
+        <div class="pp-attendance-list" id="studentsTable">
+            <div class="pp-empty">
+                <div>
+                    <span class="pp-empty-icon"><i class="bi bi-people"></i></span>
+                    <h3>Sélectionnez un parcours</h3>
+                    <p>La liste des étudiants sera chargée automatiquement.</p>
+                </div>
             </div>
-            <div style="padding:1.25rem 1.5rem;text-align:right;">
-                <button type="submit" class="adm-btn adm-btn-success" id="submitBtn" disabled><i class="bi bi-check-circle-fill me-2"></i> Enregistrer</button>
-            </div>
-        </form>
-    </div>
-</div>
+        </div>
 
-<style>
-.radio-label-prof { cursor:pointer; font-weight:500; color:rgba(255,255,255,.6); user-select:none; padding:8px 16px; border-radius:20px; transition:.2s; display:inline-flex; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.03); }
-.radio-label-prof:has(input:checked) { background:var(--adm-gradient-primary); color:white; border-color:transparent; box-shadow:0 4px 15px rgba(37,99,235,.3); }
-.loading-spinner { border:3px solid rgba(255,255,255,.1); border-top:3px solid #6366F1; border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; margin:20px auto; }
-@keyframes spin { to { transform:rotate(360deg); } }
-</style>
+        <div class="pp-attendance-footer">
+            <span class="pp-panel-meta"><i class="bi bi-info-circle me-1"></i> Une réponse est requise pour chaque étudiant.</span>
+            <button type="submit" class="adm-btn adm-btn-success" id="submitBtn" disabled>
+                <i class="bi bi-check-circle-fill"></i> Enregistrer les présences
+            </button>
+        </div>
+    </form>
+</section>
 
+@push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function () {
     const pathSelect = document.getElementById('pathSelect');
     const dateInput = document.getElementById('attendanceDate');
     const formDate = document.getElementById('formDate');
     const subjectId = document.getElementById('subjectId');
     const levelId = document.getElementById('levelId');
     const classId = document.getElementById('classId');
-    const table = document.getElementById('studentsTable');
-    const button = document.getElementById('submitBtn');
+    const list = document.getElementById('studentsTable');
+    const submitButton = document.getElementById('submitBtn');
+    const markAllButton = document.getElementById('markAllPresent');
+    const count = document.getElementById('studentCount');
+    const pathLabel = document.getElementById('attendancePathLabel');
+    const studentsBaseUrl = @json(url('/prof/class-students'));
 
-    dateInput.addEventListener('change', () => formDate.value = dateInput.value);
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
 
-    pathSelect.addEventListener('change', async () => {
+    function initials(name) {
+        return String(name || 'Étudiant')
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map(function (part) { return part.charAt(0).toLocaleUpperCase('fr'); })
+            .join('') || 'ET';
+    }
+
+    function setStudentCount(value) {
+        count.innerHTML = '<i class="bi bi-person"></i> ' + value + ' étudiant' + (value > 1 ? 's' : '');
+    }
+
+    dateInput.addEventListener('change', function () {
+        formDate.value = dateInput.value;
+    });
+
+    markAllButton.addEventListener('click', function () {
+        document.querySelectorAll('#studentsTable input[type="radio"][value="1"]').forEach(function (radio) {
+            radio.checked = true;
+        });
+    });
+
+    pathSelect.addEventListener('change', async function () {
         const selected = pathSelect.options[pathSelect.selectedIndex];
         const selectedClass = selected.value;
+
         subjectId.value = selected.dataset.subject || '';
         levelId.value = selected.dataset.level || '';
         classId.value = selectedClass;
-        button.disabled = true;
+        submitButton.disabled = true;
+        markAllButton.disabled = true;
+        setStudentCount(0);
+        pathLabel.textContent = selectedClass ? selected.text.trim() : 'Aucun parcours sélectionné.';
 
         if (!selectedClass) {
-            table.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;">Choisissez un parcours.</td></tr>';
+            list.innerHTML = `
+                <div class="pp-empty">
+                    <div>
+                        <span class="pp-empty-icon"><i class="bi bi-people"></i></span>
+                        <h3>Sélectionnez un parcours</h3>
+                        <p>La liste des étudiants sera chargée automatiquement.</p>
+                    </div>
+                </div>`;
             return;
         }
 
-        table.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;"><div class="loading-spinner"></div></td></tr>';
+        list.innerHTML = '<div class="pp-loader"><span class="pp-spinner" aria-label="Chargement"></span></div>';
 
         try {
-            const params = new URLSearchParams({ subject_id: subjectId.value, level_id: levelId.value });
-            const response = await fetch(`/prof/class-students/${selectedClass}?${params.toString()}`);
-            if (!response.ok) throw new Error();
+            const params = new URLSearchParams({
+                subject_id: subjectId.value,
+                level_id: levelId.value
+            });
+            const response = await fetch(studentsBaseUrl + '/' + encodeURIComponent(selectedClass) + '?' + params.toString(), {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) throw new Error('Chargement impossible');
             const students = await response.json();
 
             if (!students.length) {
-                table.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;">Aucun étudiant assigné à ce parcours.</td></tr>';
+                list.innerHTML = `
+                    <div class="pp-empty">
+                        <div>
+                            <span class="pp-empty-icon"><i class="bi bi-person-x"></i></span>
+                            <h3>Aucun étudiant assigné</h3>
+                            <p>Ce parcours ne contient actuellement aucun étudiant.</p>
+                        </div>
+                    </div>`;
                 return;
             }
 
-            table.innerHTML = students.map(student => `
-                <tr>
-                    <td><strong>${student.name}</strong></td>
-                    <td style="text-align:center;"><label class="radio-label-prof"><input type="radio" name="students[${student.id}]" value="1" checked style="display:none;"><span>Présent</span></label></td>
-                    <td style="text-align:center;"><label class="radio-label-prof"><input type="radio" name="students[${student.id}]" value="0" style="display:none;"><span>Absent</span></label></td>
-                </tr>
-            `).join('');
-            button.disabled = false;
+            list.innerHTML = students.map(function (student) {
+                const safeName = escapeHtml(student.name);
+                return `
+                    <div class="pp-attendance-row">
+                        <div class="pp-attendance-student">
+                            <span class="pp-attendance-avatar">${escapeHtml(initials(student.name))}</span>
+                            <strong class="pp-attendance-name">${safeName}</strong>
+                        </div>
+                        <div class="pp-attendance-options">
+                            <label class="pp-attendance-option" style="--option-color:#4ade80;">
+                                <input type="radio" name="students[${Number(student.id)}]" value="1" checked required>
+                                <span><i class="bi bi-check-circle-fill"></i> Présent</span>
+                            </label>
+                            <label class="pp-attendance-option" style="--option-color:#f87171;">
+                                <input type="radio" name="students[${Number(student.id)}]" value="0" required>
+                                <span><i class="bi bi-x-circle-fill"></i> Absent</span>
+                            </label>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            setStudentCount(students.length);
+            submitButton.disabled = false;
+            markAllButton.disabled = false;
         } catch (error) {
-            table.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--adm-danger);">Erreur de chargement.</td></tr>';
+            list.innerHTML = `
+                <div class="pp-empty">
+                    <div>
+                        <span class="pp-empty-icon" style="color:#f87171;"><i class="bi bi-exclamation-triangle"></i></span>
+                        <h3>Erreur de chargement</h3>
+                        <p>Impossible de récupérer les étudiants. Réessayez dans quelques instants.</p>
+                    </div>
+                </div>`;
         }
     });
 });
 </script>
+@endpush
 @endsection

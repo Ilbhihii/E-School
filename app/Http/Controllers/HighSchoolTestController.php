@@ -24,13 +24,6 @@ class HighSchoolTestController extends Controller
             $class
         );
 
-        if (auth()->guest()) {
-            session()->put(
-                'url.intended',
-                request()->fullUrl()
-            );
-        }
-
         $latestSubmission =
             auth()->check()
                 ? $this->latestSubmission(
@@ -98,12 +91,13 @@ class HighSchoolTestController extends Controller
             $class
         );
 
-        $latestSubmission =
-            $this->latestSubmission(
+        $latestSubmission = auth()->check()
+            ? $this->latestSubmission(
                 $subject,
                 $level,
                 $class
-            );
+            )
+            : null;
 
         if (
             $latestSubmission
@@ -166,15 +160,16 @@ class HighSchoolTestController extends Controller
                 'Confirmez que les images sont lisibles.',
         ]);
 
-        $existingSubmission =
-            HighSchoolTestSubmission::query()
+        $existingSubmission = auth()->check()
+            ? HighSchoolTestSubmission::query()
                 ->where('user_id', auth()->id())
                 ->where('subject_id', $subject->id)
                 ->where('level_id', $level->id)
                 ->where('class_id', $class->id)
                 ->whereNull('consumed_at')
                 ->latest()
-                ->first();
+                ->first()
+            : null;
 
         if ($existingSubmission) {
             return redirect()->route(
@@ -192,6 +187,12 @@ class HighSchoolTestController extends Controller
         }
 
         $storedImages = [];
+        $guestToken = auth()->check()
+            ? null
+            : (string) Str::uuid();
+
+        $storageOwner = auth()->id()
+            ?: 'guest-' . $guestToken;
 
         try {
             foreach (
@@ -200,7 +201,7 @@ class HighSchoolTestController extends Controller
             ) {
                 $path = $image->store(
                     'high-school-tests/'
-                    . auth()->id(),
+                    . $storageOwner,
                     'local'
                 );
 
@@ -218,6 +219,7 @@ class HighSchoolTestController extends Controller
             $submission =
                 HighSchoolTestSubmission::create([
                     'user_id' => auth()->id(),
+                    'guest_token' => $guestToken,
                     'subject_id' => $subject->id,
                     'level_id' => $level->id,
                     'class_id' => $class->id,
@@ -246,11 +248,7 @@ class HighSchoolTestController extends Controller
 
         return redirect()->route(
             'appointment.create',
-            [
-                'type' => 'test',
-                'written_submission' =>
-                    $submission->id,
-            ]
+            $this->appointmentParameters($submission)
         )->with(
             'success',
             'Vos réponses ont été importées. '
@@ -358,11 +356,32 @@ class HighSchoolTestController extends Controller
         return $test;
     }
 
+
+    private function appointmentParameters(
+        HighSchoolTestSubmission $submission
+    ): array {
+        $parameters = [
+            'type' => 'test',
+            'written_submission' => $submission->id,
+        ];
+
+        if ($submission->guest_token) {
+            $parameters['submission_token'] =
+                $submission->guest_token;
+        }
+
+        return $parameters;
+    }
+
     private function latestSubmission(
         Subject $subject,
         Level $level,
         ClassRoom $class
     ): ?HighSchoolTestSubmission {
+        if (!auth()->check()) {
+            return null;
+        }
+
         return HighSchoolTestSubmission::query()
             ->where(
                 'user_id',

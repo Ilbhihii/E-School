@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+
     <title>@yield('title', 'Espace Étudiant') — Smart School Academy</title>
 
     <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
@@ -10,366 +12,277 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-
     @stack('head')
 
+    {{-- Styles existants du projet --}}
     <link rel="stylesheet" href="{{ asset('css/student-premium.css') }}">
-
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: #0A101E;
-            color: rgba(255,255,255,0.85);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        a { text-decoration: none; }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-        /* Mobile sidebar overlay */
-        .st-sidebar-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 99;
-        }
-        .st-sidebar-overlay.show { display: block; }
-
-        @media (max-width: 768px) {
-            .st-sidebar { transition: transform 0.3s ease; }
-            .st-sidebar:not(.open) { transform: translateX(-100%); }
-            .st-sidebar.open { transform: translateX(0); }
-        }
-        /* ── TOGGLE ICONS ── */
-        .theme-toggle-btn .icon-sun { display: none; }
-        .theme-toggle-btn .icon-moon { display: inline; }
-        html.light-mode .theme-toggle-btn .icon-sun { display: inline; }
-        html.light-mode .theme-toggle-btn .icon-moon { display: none; }
-        html.light-mode .theme-toggle-btn {
-            border-color: rgba(0,0,0,0.1) !important;
-            background: rgba(0,0,0,0.03) !important;
-            color: #64748b !important;
-        }
-        html.light-mode .theme-toggle-btn:hover {
-            color: #003A8F !important;
-        }
-
-        /* ══════════════════════════════════════════════════════════════
-           MODE CLAIR — Student Layout
-           ══════════════════════════════════════════════════════════════ */
-        html.light-mode body {
-            background: #f0f2f5;
-            color: #1e293b;
-        }
-        html.light-mode .st-wrapper {
-            background: #f0f2f5;
-        }
-        html.light-mode .st-sidebar {
-            background: rgba(255,255,255,0.98) !important;
-            border-right: 1px solid rgba(0,0,0,0.06);
-        }
-        html.light-mode .st-sidebar-brand h3 {
-            color: #1e293b !important;
-            -webkit-text-fill-color: #1e293b !important;
-        }
-        html.light-mode .st-sidebar-brand .brand-sub {
-            color: #94a3b8 !important;
-        }
-        html.light-mode .st-sidebar-profile {
-            background: rgba(0,0,0,0.02);
-            border-color: rgba(0,0,0,0.06);
-        }
-        html.light-mode .st-sp-name {
-            color: #1e293b !important;
-        }
-        html.light-mode .st-sp-role {
-            color: #64748b !important;
-        }
-        html.light-mode .st-nav-link {
-            color: #475569 !important;
-        }
-        html.light-mode .st-nav-link:hover {
-            color: #1e293b !important;
-            background: rgba(0,0,0,0.03) !important;
-        }
-        html.light-mode .st-nav-link .nav-icon {
-            background: rgba(0,0,0,0.04) !important;
-            color: #64748b !important;
-        }
-        html.light-mode .st-nav-link.active {
-            background: linear-gradient(135deg, rgba(0,58,143,0.08), rgba(37,99,235,0.04)) !important;
-            color: #003A8F !important;
-        }
-        html.light-mode .st-nav-link.active .nav-icon {
-            background: linear-gradient(135deg, #003A8F, #2563EB) !important;
-            color: white !important;
-        }
-        html.light-mode .st-nav-link .nav-badge {
-            background: rgba(0,58,143,0.1) !important;
-            color: #003A8F !important;
-        }
-        html.light-mode .st-sidebar-footer {
-            border-color: rgba(0,0,0,0.06);
-        }
-        html.light-mode .st-sidebar-nav .nav-heading {
-            color: rgba(0,0,0,0.25) !important;
-        }
-        html.light-mode .st-topbar {
-            background: rgba(255,255,255,0.85) !important;
-            border-bottom: 1px solid rgba(0,0,0,0.06);
-        }
-        html.light-mode .st-topbar-page-title {
-            color: #1e293b !important;
-        }
-        html.light-mode .st-topbar-breadcrumb,
-        html.light-mode .st-topbar-breadcrumb a {
-            color: #94a3b8 !important;
-        }
-        html.light-mode .st-topbar-breadcrumb a:hover {
-            color: #1e293b !important;
-        }
-        html.light-mode .st-tb-link {
-            color: #64748b !important;
-        }
-        html.light-mode .st-tb-link:hover {
-            color: #1e293b !important;
-            background: rgba(0,0,0,0.04) !important;
-        }
-        html.light-mode .st-tb-link.active {
-            color: #003A8F !important;
-        }
-        html.light-mode .st-user-trigger {
-            background: rgba(0,0,0,0.03) !important;
-        }
-        html.light-mode .st-user-name {
-            color: #1e293b !important;
-        }
-        html.light-mode .st-user-avatar {
-            background: linear-gradient(135deg, #003A8F, #2563EB) !important;
-            color: white !important;
-        }
-        html.light-mode .st-content {
-            background: #f0f2f5;
-        }
-        html.light-mode .st-alert-success {
-            background: rgba(34,197,94,0.1) !important;
-            color: #15803d !important;
-            border-color: rgba(34,197,94,0.15) !important;
-        }
-        html.light-mode .st-alert-danger {
-            background: rgba(239,68,68,0.1) !important;
-            color: #b91c1c !important;
-            border-color: rgba(239,68,68,0.15) !important;
-        }
-        html.light-mode ::-webkit-scrollbar-track {
-            background: #f0f2f5 !important;
-        }
-
-        @media (max-width: 768px) {
-            html.light-mode .st-sidebar:not(.open) {
-                background: rgba(255,255,255,0.98) !important;
-            }
-        }
-
-        /* ── LOGO THEME SWITCH ── */
-        .logo-theme-dark { display: inline-block; }
-        .logo-theme-light { display: none; }
-        html.light-mode .logo-theme-dark { display: none; }
-        html.light-mode .logo-theme-light { display: inline-block; }
-    </style>
-    <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
-    <script src="{{ asset('js/global-theme-sync.js') }}"></script>
-    <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
+<link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
     <link rel="stylesheet" href="{{ asset('css/student-refresh.css') }}">
+
+    {{-- Nouveau design harmonisé avec les espaces Admin et Professeur --}}
+    <link rel="stylesheet" href="{{ asset('css/student-admin-prof-v4.css') }}">
 
     @stack('styles')
 </head>
-<body>
 
-    <!-- Mobile sidebar overlay -->
-    <div class="st-sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+@php
+    $route = request()->route()?->getName() ?? '';
+    $student = auth()->user();
 
-    <div class="st-wrapper">
+    $studentPathService = app(
+        \App\Services\LearningPathService::class
+    );
 
-        <!-- ═══ SIDEBAR ═══ -->
-        <aside class="st-sidebar" id="mainSidebar">
+    $studentAssignmentRows = $studentPathService
+        ->studentAssignmentRows(auth()->id());
 
-            <div class="st-sidebar-brand">
-                <a href="{{ route('home') }}" class="portal-brand-home" title="Retour à l’accueil principal" aria-label="Retour à l’accueil principal">
-                    <span class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                        <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Smart School Academy" class="logo-theme-dark">
-                        <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Smart School Academy" class="logo-theme-light">
+    $studentAssignedClassIds = $studentAssignmentRows
+        ->pluck('class_id')
+        ->push($student->class_id)
+        ->filter()
+        ->map(fn ($classId) => (int) $classId)
+        ->unique()
+        ->values();
+
+    $studentUpcomingLivesCount = $studentAssignedClassIds->isNotEmpty()
+        ? \App\Models\Live::query()
+            ->whereIn('class_id', $studentAssignedClassIds)
+            ->whereDate('live_date', '>=', now()->toDateString())
+            ->count()
+        : 0;
+
+    $showStudentBacTests = $studentPathService
+        ->studentHasSoutienLyceeBacPath(auth()->id());
+
+    $studentInitial = strtoupper(
+        mb_substr(trim($student->name ?? 'E'), 0, 1)
+    );
+
+    $studentPhoto = $student->profile_photo ?? null;
+
+    $studentPhotoUrl = $studentPhoto
+        ? asset('storage/' . ltrim($studentPhoto, '/'))
+        : null;
+@endphp
+
+<body class="student-portal {{ Route::is('student.dashboard') ? 'student-dashboard-page' : '' }}">
+
+    <button
+        type="button"
+        class="student-sidebar-overlay"
+        id="studentSidebarOverlay"
+        aria-label="Fermer le menu"
+        onclick="StudentSpace.closeSidebar()"
+    ></button>
+
+    <div class="student-shell">
+
+        {{-- SIDEBAR --}}
+        <aside class="student-sidebar" id="studentSidebar">
+
+            <div class="student-sidebar-brand">
+                <a href="{{ route('home') }}" class="student-brand-link">
+                    <span class="student-brand-logo">
+                        <img
+                            src="{{ asset('images/logoSSA-removebg-preview.png') }}"
+                            alt="Smart School Academy"
+                        >
                     </span>
-                    <h3>Smart School Academy</h3>
-                    <span class="brand-sub">Espace Étudiant</span>
-                    <span class="brand-home-hint"><i class="bi bi-arrow-up-right"></i> Accueil principal</span>
+
+                    <span class="student-brand-text">
+                        <strong>SmartSchool</strong>
+                        <small>Espace étudiant</small>
+                    </span>
                 </a>
+
+                <button
+                    type="button"
+                    class="student-sidebar-close d-xl-none"
+                    onclick="StudentSpace.closeSidebar()"
+                    aria-label="Fermer le menu"
+                >
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
 
-            <div class="st-sidebar-profile">
-                <div class="st-sp-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
-                <div class="st-sp-name">{{ auth()->user()->name }}</div>
-                <div class="st-sp-role"><span class="dot"></span> Étudiant</div>
-            </div>
+            <nav class="student-sidebar-nav">
 
-            <nav class="st-sidebar-nav">
-                @php
-                    $route =
-                        request()->route()?->getName();
+                <div class="student-nav-section">
+                    <div class="student-nav-heading">Vue générale</div>
 
-                    $studentPathService = app(
-                        \App\Services\LearningPathService::class
-                    );
-
-                    $studentAssignmentRows =
-                        $studentPathService
-                            ->studentAssignmentRows(
-                                auth()->id()
-                            );
-
-                    $studentAssignedClassIds =
-                        $studentAssignmentRows
-                            ->pluck('class_id')
-                            ->push(
-                                auth()->user()->class_id
-                            )
-                            ->filter()
-                            ->map(
-                                function ($classId) {
-                                    return (int) $classId;
-                                }
-                            )
-                            ->unique()
-                            ->values();
-
-                    $studentUpcomingLivesCount =
-                        $studentAssignedClassIds
-                            ->isNotEmpty()
-                            ? \App\Models\Live::query()
-                                ->whereIn(
-                                    'class_id',
-                                    $studentAssignedClassIds
-                                )
-                                ->whereDate(
-                                    'live_date',
-                                    '>=',
-                                    now()->toDateString()
-                                )
-                                ->count()
-                            : 0;
-
-                    $showStudentBacTests =
-                        $studentPathService
-                            ->studentHasSoutienLyceeBacPath(
-                                auth()->id()
-                            );
-                @endphp
-
-                <div class="nav-heading">Principal</div>
-
-                <a href="{{ route('student.dashboard') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'dashboard') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
-                    <span>Tableau de bord</span>
-                </a>
-
-                <a href="{{ route('student.subjects.index') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'subject') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-book"></i></span>
-                    <span>Matières</span>
-                </a>
-
-                <a href="{{ route('student.schedule.index') }}"
-                   class="st-nav-link {{ request()->routeIs('student.schedule.*') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-calendar-week"></i></span>
-                    <span>Emploi du temps</span>
-                </a>
-
-                <div class="nav-heading">Activités</div>
-
-                <a href="{{ route('student.lives') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'lives') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-camera-video"></i></span>
-                    <span>Lives</span>
-                    @if($studentUpcomingLivesCount > 0)
-                        <span class="nav-badge">
-                            {{ $studentUpcomingLivesCount }}
-                        </span>
-                    @endif
-                </a>
-
-                @if($showStudentBacTests)
                     <a
-                        href="{{
-                            route(
-                                'student.written-tests.index'
-                            )
-                        }}"
-                        class="st-nav-link {{
-                            str_contains(
-                                $route ?? '',
-                                'written-tests'
-                            )
+                        href="{{ route('student.dashboard') }}"
+                        class="student-nav-link {{ request()->routeIs('student.dashboard') ? 'active' : '' }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-grid-1x2-fill"></i>
+                        </span>
+                        <span>Tableau de bord</span>
+                    </a>
+                </div>
+
+                <div class="student-nav-section">
+                    <div class="student-nav-heading">Apprentissage</div>
+
+                    <a
+                        href="{{ route('student.subjects.index') }}"
+                        class="student-nav-link {{ request()->routeIs('student.subjects.*') ? 'active' : '' }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-journal-bookmark-fill"></i>
+                        </span>
+                        <span>Matières</span>
+                    </a>
+
+                    <a
+                        href="{{ route('student.schedule.index') }}"
+                        class="student-nav-link {{ request()->routeIs('student.schedule.*') ? 'active' : '' }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-calendar-week-fill"></i>
+                        </span>
+                        <span>Emploi du temps</span>
+                    </a>
+
+                    <a
+                        href="{{ route('student.lives') }}"
+                        class="student-nav-link {{ request()->routeIs('student.lives*') ? 'active' : '' }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-camera-video-fill"></i>
+                        </span>
+                        <span>Lives</span>
+
+                        @if($studentUpcomingLivesCount > 0)
+                            <span class="student-nav-count">
+                                {{ $studentUpcomingLivesCount }}
+                            </span>
+                        @endif
+                    </a>
+
+                    @if($showStudentBacTests)
+                        <a
+                            href="{{ route('student.written-tests.index') }}"
+                            class="student-nav-link {{ request()->routeIs('student.written-tests.*') ? 'active' : '' }}"
+                        >
+                            <span class="student-nav-icon">
+                                <i class="bi bi-file-earmark-check-fill"></i>
+                            </span>
+                            <span>Mes tests BAC</span>
+                        </a>
+                    @endif
+                </div>
+
+                <div class="student-nav-section">
+                    <div class="student-nav-heading">Suivi</div>
+
+                    <a
+                        href="{{ route('student.assignments') }}"
+                        class="student-nav-link {{
+                            request()->routeIs('student.assignment*')
+                            || request()->routeIs('student.assignments*')
                                 ? 'active'
                                 : ''
                         }}"
                     >
-                        <span class="nav-icon">
-                            <i
-                                class="bi bi-file-earmark-check-fill"
-                            ></i>
+                        <span class="student-nav-icon">
+                            <i class="bi bi-file-earmark-arrow-up-fill"></i>
                         </span>
-
-                        <span>Mes tests BAC</span>
+                        <span>Mes devoirs</span>
                     </a>
-                @endif
 
-                <a href="{{ route('student.chats') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'chat') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-chat-dots"></i></span>
-                    <span>Chat</span>
-                </a>
+                    <a
+                        href="{{ route('student.chats') }}"
+                        class="student-nav-link {{
+                            request()->routeIs('student.chat*')
+                            || request()->routeIs('student.chats*')
+                                ? 'active'
+                                : ''
+                        }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-chat-square-text-fill"></i>
+                        </span>
+                        <span>Discussions</span>
+                    </a>
 
-                <a href="{{ route('student.assignments') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'assignment') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-upload"></i></span>
-                    <span>Mes Devoirs</span>
-                </a>
+                    <a
+                        href="{{ route('student.absences') }}"
+                        class="student-nav-link {{
+                            request()->routeIs('student.absence*')
+                            || request()->routeIs('student.absences*')
+                                ? 'active'
+                                : ''
+                        }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-calendar2-x-fill"></i>
+                        </span>
+                        <span>Absences</span>
+                    </a>
+                </div>
 
-                <a href="{{ route('student.absences') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'absence') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-calendar-x"></i></span>
-                    <span>Absences</span>
-                </a>
+                <div class="student-nav-section">
+                    <div class="student-nav-heading">Compte</div>
 
-                <div class="nav-heading">Compte</div>
+                    <a
+                        href="{{ route('student.profile') }}"
+                        class="student-nav-link {{ request()->routeIs('student.profile*') ? 'active' : '' }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-person-fill"></i>
+                        </span>
+                        <span>Profil</span>
+                    </a>
 
-                <a href="{{ route('student.profile') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'profile') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-person-circle"></i></span>
-                    <span>Profil</span>
-                </a>
-
-                <a href="{{ route('student.settings') }}"
-                   class="st-nav-link {{ str_contains($route ?? '', 'settings') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="bi bi-gear"></i></span>
-                    <span>Paramètres</span>
-                </a>
+                    <a
+                        href="{{ route('student.settings') }}"
+                        class="student-nav-link {{ request()->routeIs('student.settings*') ? 'active' : '' }}"
+                    >
+                        <span class="student-nav-icon">
+                            <i class="bi bi-gear-fill"></i>
+                        </span>
+                        <span>Paramètres</span>
+                    </a>
+                </div>
             </nav>
 
-            <div class="st-sidebar-footer">
+            {{-- Profil en bas, comme Admin et Professeur --}}
+            <div class="student-sidebar-footer">
+
+                <a
+                    href="{{ route('student.profile') }}"
+                    class="student-sidebar-user"
+                >
+                    <span class="student-avatar student-avatar-medium">
+                        @if($studentPhotoUrl)
+                            <img
+                                src="{{ $studentPhotoUrl }}"
+                                alt="Photo de {{ $student->name }}"
+                                onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+                            >
+                            <span hidden>{{ $studentInitial }}</span>
+                        @else
+                            <span>{{ $studentInitial }}</span>
+                        @endif
+                    </span>
+
+                    <span class="student-sidebar-user-copy">
+                        <strong>{{ $student->name }}</strong>
+                        <small>Étudiant</small>
+                    </span>
+
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button class="st-logout-btn" type="submit">
+
+                    <button class="student-logout-button" type="submit">
                         <i class="bi bi-box-arrow-right"></i>
                         <span>Déconnexion</span>
                     </button>
@@ -377,69 +290,147 @@
             </div>
         </aside>
 
-        <!-- ═══ MAIN ═══ -->
-        <div class="st-main">
+        {{-- PARTIE PRINCIPALE --}}
+        <div class="student-main">
 
-            <!-- TOPBAR -->
-            <header class="st-topbar">
-                <div class="st-topbar-left">
-                    <button onclick="toggleSidebar()" class="d-md-none" style="width:36px;height:36px;border-radius:9px;border:none;background:transparent;color:rgba(255,255,255,0.45);font-size:1.2rem;cursor:pointer;">
+            {{-- TOPBAR, même structure que l’Admin et le Professeur --}}
+            <header class="student-topbar">
+
+                <div class="student-topbar-left">
+
+                    <button
+                        type="button"
+                        class="student-icon-button d-xl-none"
+                        onclick="StudentSpace.openSidebar()"
+                        aria-label="Ouvrir le menu"
+                    >
                         <i class="bi bi-list"></i>
                     </button>
-                    <div>
-                        <h2 class="st-topbar-page-title">
+
+                    <div class="student-page-heading">
+                        <span class="student-page-kicker">
+                            Espace étudiant
+                        </span>
+
+                        <h1>
                             @yield('page_title', 'Tableau de bord')
-                        </h2>
+                        </h1>
+
                         @unless(Route::is('student.dashboard'))
-                        <div class="st-topbar-breadcrumb">
-                            <a href="{{ route('student.dashboard') }}">Accueil</a>
-                            <span>/</span>
-                            <span>@yield('breadcrumb', 'Tableau de bord')</span>
-                        </div>
+                            <div class="student-breadcrumb">
+                                <a href="{{ route('student.dashboard') }}">
+                                    Accueil
+                                </a>
+                                <i class="bi bi-chevron-right"></i>
+                                <span>
+                                    @yield('breadcrumb', 'Espace étudiant')
+                                </span>
+                            </div>
                         @endunless
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
+                <div class="student-topbar-actions">
 
-                    @if(!Route::is('student.waiting'))
-                    <a href="{{ route('home') }}" class="st-tb-link">
-                        <i class="bi bi-house-door"></i> <span class="d-none d-md-inline">Accueil principal</span>
+                    <a
+                        href="{{ route('home') }}"
+                        class="student-site-button"
+                    >
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        <span>Voir le site</span>
                     </a>
-                    <a href="{{ route('student.subjects.index') }}" class="st-tb-link {{ str_contains($route ?? '', 'subject') ? 'active' : '' }}">
-                        <i class="bi bi-book"></i> <span class="d-none d-md-inline">Matières</span>
-                    </a>
-                    <a href="{{ route('student.schedule.index') }}" class="st-tb-link {{ request()->routeIs('student.schedule.*') ? 'active' : '' }}">
-                        <i class="bi bi-calendar-week"></i> <span class="d-none d-lg-inline">Emploi du temps</span>
-                    </a>
-                    <a href="{{ route('student.lives') }}" class="st-tb-link {{ str_contains($route ?? '', 'lives') ? 'active' : '' }}">
-                        <i class="bi bi-camera-video"></i> <span class="d-none d-md-inline">Lives</span>
-                    </a>
-                    <a href="{{ route('student.chats') }}" class="st-tb-link {{ str_contains($route ?? '', 'chat') ? 'active' : '' }}">
-                        <i class="bi bi-chat-dots"></i> <span class="d-none d-md-inline">Chat</span>
-                    </a>
-                    @endif
+<div class="student-user-menu">
 
-                    <div class="position-relative">
-                        <div class="st-user-trigger" onclick="toggleUserMenu()" id="userMenuBtn">
-                            <div class="st-user-avatar">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                        <button
+                            type="button"
+                            class="student-user-trigger"
+                            id="studentUserButton"
+                            onclick="StudentSpace.toggleUserMenu()"
+                            aria-expanded="false"
+                        >
+                            <span class="student-avatar student-avatar-small">
+                                @if($studentPhotoUrl)
+                                    <img
+                                        src="{{ $studentPhotoUrl }}"
+                                        alt=""
+                                        onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+                                    >
+                                    <span hidden>{{ $studentInitial }}</span>
+                                @else
+                                    <span>{{ $studentInitial }}</span>
+                                @endif
+                            </span>
+
+                            <span class="student-user-trigger-copy">
+                                <strong>{{ $student->name }}</strong>
+                                <small>Étudiant</small>
+                            </span>
+
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+
+                        <div
+                            class="student-user-dropdown"
+                            id="studentUserDropdown"
+                            hidden
+                        >
+                            <div class="student-dropdown-header">
+                                <span class="student-avatar student-avatar-medium">
+                                    @if($studentPhotoUrl)
+                                        <img
+                                            src="{{ $studentPhotoUrl }}"
+                                            alt=""
+                                            onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+                                        >
+                                        <span hidden>{{ $studentInitial }}</span>
+                                    @else
+                                        <span>{{ $studentInitial }}</span>
+                                    @endif
+                                </span>
+
+                                <div>
+                                    <strong>{{ $student->name }}</strong>
+                                    <small>{{ $student->email }}</small>
+                                </div>
                             </div>
-                            <span class="st-user-name">{{ auth()->user()->name }}</span>
-                            <i class="bi bi-chevron-down" style="font-size:0.7rem;color:rgba(255,255,255,0.3);margin-left:2px;"></i>
-                        </div>
-                        <div class="st-dropdown" id="userDropdown" style="display:none;">
-                            <a href="{{ route('student.profile') }}" class="st-dropdown-item">
-                                <i class="bi bi-person-circle"></i> Mon Profil
+
+                            <div class="student-dropdown-divider"></div>
+
+                            <a
+                                href="{{ route('student.profile') }}"
+                                class="student-dropdown-item"
+                            >
+                                <i class="bi bi-person"></i>
+                                Mon profil
                             </a>
-                            <a href="{{ route('student.settings') }}" class="st-dropdown-item">
-                                <i class="bi bi-gear"></i> Paramètres
+
+                            <a
+                                href="{{ route('student.settings') }}"
+                                class="student-dropdown-item"
+                            >
+                                <i class="bi bi-gear"></i>
+                                Paramètres
                             </a>
-                            <div class="st-dropdown-divider"></div>
+
+                            <a
+                                href="{{ route('home') }}"
+                                class="student-dropdown-item"
+                            >
+                                <i class="bi bi-house-door"></i>
+                                Accueil principal
+                            </a>
+
+                            <div class="student-dropdown-divider"></div>
+
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button class="st-dropdown-item danger" type="submit">
-                                    <i class="bi bi-box-arrow-right"></i> Déconnexion
+
+                                <button
+                                    type="submit"
+                                    class="student-dropdown-item danger"
+                                >
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    Déconnexion
                                 </button>
                             </form>
                         </div>
@@ -447,49 +438,58 @@
                 </div>
             </header>
 
-            <!-- CONTENT -->
-            <main class="st-content">
-                @if(session('success'))
-                <div class="st-alert st-alert-success" style="animation:stDropdownIn 0.3s ease;">
-                    <i class="bi bi-check-circle-fill" style="font-size:1.1rem;flex-shrink:0;margin-top:1px;"></i>
-                    <span>{{ session('success') }}</span>
-                </div>
-                @endif
-                @if(session('error'))
-                <div class="st-alert st-alert-danger" style="animation:stDropdownIn 0.3s ease;">
-                    <i class="bi bi-exclamation-circle-fill" style="font-size:1.1rem;flex-shrink:0;margin-top:1px;"></i>
-                    <span>{{ session('error') }}</span>
-                </div>
-                @endif
+            <main class="student-content">
+                <div class="student-content-inner">
 
-                @yield('content')
+                    @if(session('success'))
+                        <div class="student-alert success">
+                            <span class="student-alert-icon">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+
+                            <div>
+                                <strong>Opération réussie</strong>
+                                <p>{{ session('success') }}</p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="this.closest('.student-alert').remove()"
+                                aria-label="Fermer"
+                            >
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="student-alert danger">
+                            <span class="student-alert-icon">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </span>
+
+                            <div>
+                                <strong>Une erreur est survenue</strong>
+                                <p>{{ session('error') }}</p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onclick="this.closest('.student-alert').remove()"
+                                aria-label="Fermer"
+                            >
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    @endif
+
+                    @yield('content')
+                </div>
             </main>
-
         </div>
-
     </div>
-
-    <script>
-    function toggleSidebar() {
-        document.getElementById('mainSidebar').classList.toggle('open');
-        document.getElementById('sidebarOverlay').classList.toggle('show');
-    }
-
-    function toggleUserMenu() {
-        const menu = document.getElementById('userDropdown');
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-    }
-
-    document.addEventListener('click', function(e) {
-        const menu = document.getElementById('userDropdown');
-        const btn = document.getElementById('userMenuBtn');
-        if (menu && !e.target.closest('.st-user-trigger') && !e.target.closest('.st-dropdown')) {
-            menu.style.display = 'none';
-        }
-    });
-    </script>
+<script src="{{ asset('js/student-admin-prof-v4.js') }}"></script>
 
     @stack('scripts')
-
 </body>
 </html>

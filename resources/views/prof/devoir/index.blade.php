@@ -1,122 +1,143 @@
 @extends('layouts.prof')
 
-@section('title', 'Gestion des Devoirs')
+@section('title', 'Gestion des devoirs')
 @section('page_title', 'Devoirs')
-@section('breadcrumb', 'Gestion des devoirs')
+@section('breadcrumb', 'Devoirs publiés')
 
 @section('content')
+@php
+    $devoirCollection = method_exists($devoirs, 'getCollection') ? $devoirs->getCollection() : collect($devoirs);
+    $today = now()->startOfDay();
+    $upcomingCount = $devoirCollection->filter(fn ($item) => $item->due_date && \Carbon\Carbon::parse($item->due_date)->startOfDay()->gte($today))->count();
+    $expiredCount = $devoirCollection->filter(fn ($item) => $item->due_date && \Carbon\Carbon::parse($item->due_date)->startOfDay()->lt($today))->count();
+    $totalCount = method_exists($devoirs, 'total') ? $devoirs->total() : $devoirCollection->count();
+@endphp
 
-<div class="adm-page-header">
-    <div>
-        <h1><i class="bi bi-file-earmark-check me-2" style="color:var(--adm-success);"></i> Gestion des Devoirs</h1>
-        <div class="subtitle">Organisez et suivez les devoirs de vos classes</div>
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow"><i class="bi bi-file-earmark-check-fill"></i> Activités à rendre</span>
+        <h1 class="pp-page-title">Mes devoirs</h1>
+        <p class="pp-page-description">
+            Créez les devoirs de vos classes, suivez les échéances et mettez à jour les documents publiés.
+        </p>
     </div>
-    <div class="page-actions">
-        <a href="{{ route('prof.devoir.create') }}" class="adm-btn adm-btn-success">
-            <i class="bi bi-plus-lg me-1"></i> Nouveau devoir
+
+    <div class="pp-page-actions">
+        <a href="{{ route('prof.devoir.create', ['course_id' => $course_id ?? null]) }}" class="adm-btn adm-btn-success">
+            <i class="bi bi-plus-lg"></i>
+            Nouveau devoir
         </a>
     </div>
+</section>
+
+<div class="pp-summary-grid">
+    <article class="pp-summary-card is-green">
+        <span class="pp-summary-icon"><i class="bi bi-file-earmark-check-fill"></i></span>
+        <span class="pp-summary-copy"><strong class="pp-summary-value">{{ $totalCount }}</strong><span class="pp-summary-label">Total devoirs</span></span>
+    </article>
+    <article class="pp-summary-card is-cyan">
+        <span class="pp-summary-icon"><i class="bi bi-clock-history"></i></span>
+        <span class="pp-summary-copy"><strong class="pp-summary-value">{{ $upcomingCount }}</strong><span class="pp-summary-label">À venir sur cette page</span></span>
+    </article>
+    <article class="pp-summary-card is-yellow">
+        <span class="pp-summary-icon"><i class="bi bi-calendar-x-fill"></i></span>
+        <span class="pp-summary-copy"><strong class="pp-summary-value">{{ $expiredCount }}</strong><span class="pp-summary-label">Échéances passées</span></span>
+    </article>
 </div>
 
-{{-- Stats Cards --}}
-<div class="adm-stats-grid">
-    <div class="adm-stat green">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
-        </div>
-        <div class="stat-value">{{ $devoirs->count() }}</div>
-        <div class="stat-label">Total Devoirs</div>
-    </div>
-    <div class="adm-stat cyan">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
-        </div>
-        <div class="stat-value">{{ $devoirs->where('due_date', '>', now()->format('Y-m-d'))->count() }}</div>
-        <div class="stat-label">À venir</div>
-    </div>
-    <div class="adm-stat orange">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-file-earmark-x-fill"></i></div>
-        </div>
-        <div class="stat-value">{{ $devoirs->where('due_date', '<=', now()->format('Y-m-d'))->count() }}</div>
-        <div class="stat-label">Expirés</div>
-    </div>
-    <div class="adm-stat green" style="display:flex;align-items:center;justify-content:center;">
-        <a href="{{ route('prof.devoir.create') }}" class="adm-btn adm-btn-success" style="padding:12px 28px;font-size:0.95rem;">
-            <i class="bi bi-plus-circle me-2"></i> Nouveau devoir
-        </a>
-    </div>
+<div class="pp-toolbar">
+    <form method="GET" action="{{ route('prof.devoir.index') }}" class="pp-filter-select">
+        <label for="courseFilter" class="pp-label"><i class="bi bi-funnel"></i> Filtrer par cours</label>
+        <select id="courseFilter" name="course_id" class="adm-form-select" onchange="this.form.submit()">
+            <option value="">Tous les cours</option>
+            @foreach($courses as $courseOption)
+                <option value="{{ $courseOption->id }}" {{ (string) ($course_id ?? '') === (string) $courseOption->id ? 'selected' : '' }}>
+                    {{ $courseOption->title }}
+                </option>
+            @endforeach
+        </select>
+    </form>
+
+    @if($course)
+        <span class="pp-soft-chip"><i class="bi bi-book"></i> {{ $course->title }}</span>
+    @endif
 </div>
 
-<div class="adm-card">
-    <div class="adm-card-header">
-        <h4><i class="bi bi-grid-3x3-gap" style="color:rgba(255,255,255,0.35);"></i> Liste des devoirs</h4>
-        <div class="card-actions">
-            <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $devoirs->count() }} devoir(s)</span>
+<section class="pp-panel">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title"><i class="bi bi-grid-3x3-gap-fill"></i> Devoirs publiés</h2>
+            <p class="pp-panel-subtitle">Modifiez, téléchargez ou supprimez un devoir.</p>
         </div>
-    </div>
-    <div class="adm-card-body p-0">
-        @forelse($devoirs as $devoir)
-        <div class="adm-table-wrap">
-            <table class="adm-table">
-                <thead>
-                    <tr>
-                        <th>Titre</th>
-                        <th>Classe</th>
-                        <th>Date limite</th>
-                        <th>Fichier</th>
-                        <th style="text-align:right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><span style="font-weight:500;">{{ Str::limit($devoir->title, 40) }}</span></td>
-                        <td><span class="adm-badge adm-badge-info">{{ $devoir->classRoom->name ?? '-' }}</span></td>
-                        <td>
-                            @php $isPast = $devoir->due_date <= now()->format('Y-m-d'); @endphp
-                            <span class="adm-badge {{ $isPast ? 'adm-badge-danger' : 'adm-badge-success' }}">
-                                {{ \Carbon\Carbon::parse($devoir->due_date)->format('d/m/Y') }}
-                            </span>
-                        </td>
-                        <td>
+        <span class="pp-panel-meta">{{ $totalCount }} devoir(s)</span>
+    </header>
+
+    <div class="pp-panel-body">
+        <div class="pp-devoir-grid">
+            @forelse($devoirs as $devoir)
+                @php
+                    $dueDate = $devoir->due_date ? \Carbon\Carbon::parse($devoir->due_date) : null;
+                    $isPast = $dueDate ? $dueDate->copy()->startOfDay()->lt($today) : false;
+                @endphp
+
+                <article class="pp-devoir-card">
+                    <div class="pp-devoir-top">
+                        <span class="pp-devoir-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
+                        <span class="adm-badge {{ $isPast ? 'adm-badge-danger' : 'adm-badge-success' }}">
+                            <i class="bi {{ $isPast ? 'bi-calendar-x' : 'bi-calendar-check' }}"></i>
+                            {{ $isPast ? 'Échéance passée' : 'À rendre' }}
+                        </span>
+                    </div>
+
+                    <h3 class="pp-devoir-title">{{ $devoir->title }}</h3>
+
+                    <div class="pp-devoir-meta">
+                        <span class="subject-chip"><i class="bi bi-people"></i> {{ $devoir->classRoom?->name ?? 'Classe non définie' }}</span>
+                        <span class="subject-chip"><i class="bi bi-calendar3"></i> {{ $dueDate ? $dueDate->format('d/m/Y') : 'Sans date' }}</span>
+                    </div>
+
+                    <div class="pp-devoir-actions">
+                        <div>
                             @if($devoir->file)
-                            <a href="{{ asset('storage/'.$devoir->file) }}" target="_blank" class="adm-btn adm-btn-success adm-btn-sm">
-                                <i class="bi bi-download me-1"></i>
-                            </a>
-                            @else
-                            <span style="color:var(--adm-text-muted);font-size:0.8rem;">—</span>
-                            @endif
-                        </td>
-                        <td style="text-align:right;">
-                            <div style="display:flex;gap:6px;justify-content:flex-end;">
-                                <a href="{{ route('prof.devoir.edit', $devoir) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
-                                    <i class="bi bi-pencil"></i>
+                                <a href="{{ asset('storage/'.$devoir->file) }}" target="_blank" rel="noopener" class="adm-btn adm-btn-ghost adm-btn-sm">
+                                    <i class="bi bi-file-earmark-pdf"></i> Document
                                 </a>
-                                <form method="POST" action="{{ route('prof.devoir.destroy', $devoir) }}" style="display:inline;" onsubmit="return confirm('Confirmer la suppression ?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="adm-btn adm-btn-danger adm-btn-sm" title="Supprimer">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        @if(isset($devoir) && method_exists($devoirs, 'links'))
-        <div class="adm-card-footer">
-            {{ $devoirs->appends(request()->query())->links() }}
-        </div>
-        @endif
-        @empty
-        <div class="adm-empty" style="padding:3rem 2rem;">
-            <div class="adm-empty-icon"><i class="bi bi-file-earmark-x"></i></div>
-            <h5>Aucun devoir trouvé</h5>
-            <p>Commencez par <a href="{{ route('prof.devoir.create') }}" style="color:var(--adm-success);font-weight:600;">créer votre premier devoir</a></p>
-        </div>
-        @endforelse
-    </div>
-</div>
+                            @else
+                                <span class="adm-badge adm-badge-gray">Sans fichier</span>
+                            @endif
+                        </div>
 
+                        <div class="pp-devoir-action-group">
+                            <a href="{{ route('prof.devoir.edit', $devoir) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="{{ route('prof.devoir.destroy', $devoir) }}" onsubmit="return confirm('Confirmer la suppression de ce devoir ?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="adm-btn adm-btn-danger adm-btn-sm" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </article>
+            @empty
+                <div class="pp-empty" style="grid-column:1/-1;">
+                    <div>
+                        <span class="pp-empty-icon"><i class="bi bi-file-earmark-plus"></i></span>
+                        <h3>Aucun devoir publié</h3>
+                        <p>Créez votre premier devoir pour le rendre disponible à une classe.</p>
+                        <a href="{{ route('prof.devoir.create', ['course_id' => $course_id ?? null]) }}" class="adm-btn adm-btn-success mt-3">
+                            <i class="bi bi-plus-lg"></i> Créer un devoir
+                        </a>
+                    </div>
+                </div>
+            @endforelse
+        </div>
+    </div>
+
+    @if(method_exists($devoirs, 'links') && $devoirs->hasPages())
+        <div class="pp-pagination">{{ $devoirs->appends(request()->query())->links() }}</div>
+    @endif
+</section>
 @endsection

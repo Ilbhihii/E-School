@@ -23,6 +23,7 @@ class HighSchoolTestSubmission extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_token',
         'subject_id',
         'level_id',
         'class_id',
@@ -39,6 +40,10 @@ class HighSchoolTestSubmission extends Model
         'reviewed_at',
         'access_granted_at',
         'consumed_at',
+    ];
+
+    protected $hidden = [
+        'guest_token',
     ];
 
     protected $casts = [

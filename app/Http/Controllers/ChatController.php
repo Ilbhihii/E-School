@@ -7,6 +7,8 @@ use App\Models\Subject;
 use App\Models\Message;
 use App\Models\User;
 use App\Models\ProfAssignment;
+use App\Services\LearningPathService;
+use Illuminate\Support\Collection;
 
 class ChatController extends Controller
 {
@@ -20,8 +22,13 @@ class ChatController extends Controller
         $user = auth()->user();
         abort_unless($user->isStudent(), 403);
 
-        $subjectId = $this->assignedStudentSubjectId($user->id);
-        $subjects = $subjectId ? Subject::whereKey($subjectId)->get() : collect();
+        $subjectIds = $this->assignedStudentSubjectIds($user->id);
+
+        $subjects = Subject::query()
+            ->whereIn('id', $subjectIds)
+            ->orderBy('name')
+            ->get();
+
         $administration = Subject::where('name', 'Administration')->first();
         if ($administration) {
             $subjects = $subjects->push($administration)->unique('id')->values();
@@ -38,7 +45,14 @@ class ChatController extends Controller
 
         abort_unless($user->isStudent(), 403);
         $isAdministration = $this->isAdministrationSubject($subject);
-        abort_unless($isAdministration || (int) $this->assignedStudentSubjectId($user->id) === (int) $subject->id, 403, 'Cette matière ne fait pas partie de votre programme.');
+        $assignedSubjectIds = $this->assignedStudentSubjectIds($user->id);
+
+        abort_unless(
+            $isAdministration
+            || $assignedSubjectIds->contains((int) $subject->id),
+            403,
+            'Cette matière ne fait pas partie de votre programme.'
+        );
 
         $messages = Message::where('subject_id', $subject_id)
             ->when($isAdministration, fn($query) => $query->where('conversation_user_id', $user->id))
@@ -50,7 +64,7 @@ class ChatController extends Controller
     }
 
     // Envoyer message étudiant
-public function send(Request $request)
+    public function send(Request $request)
     {
         $validated = $request->validate([
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
@@ -61,7 +75,13 @@ public function send(Request $request)
         abort_unless($user->isStudent(), 403);
         $subject = Subject::findOrFail($validated['subject_id']);
         $isAdministration = $this->isAdministrationSubject($subject);
-        abort_unless($isAdministration || (int) $this->assignedStudentSubjectId($user->id) === (int) $subject->id, 403);
+        $assignedSubjectIds = $this->assignedStudentSubjectIds($user->id);
+
+        abort_unless(
+            $isAdministration
+            || $assignedSubjectIds->contains((int) $subject->id),
+            403
+        );
 
         Message::create([
             'user_id' => $user->id,
@@ -73,16 +93,24 @@ public function send(Request $request)
         return back();
     }
 
-    private function assignedStudentSubjectId(int $userId): ?int
-    {
-        $subjectId = \DB::table('class_user')
-            ->where('user_id', $userId)
-            ->whereNotNull('subject_id')
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->value('subject_id');
-
-        return $subjectId ? (int) $subjectId : null;
+    /**
+     * Retourne toutes les matières réellement assignées à l'étudiant.
+     *
+     * L'ancienne version récupérait uniquement la dernière matière
+     * enregistrée dans class_user, ce qui masquait les autres chats.
+     */
+    private function assignedStudentSubjectIds(
+        int $userId
+    ): Collection {
+        return app(LearningPathService::class)
+            ->studentAssignmentRows($userId)
+            ->pluck('subject_id')
+            ->filter()
+            ->map(
+                fn ($subjectId) => (int) $subjectId
+            )
+            ->unique()
+            ->values();
     }
 
     private function isAdministrationSubject(Subject $subject): bool

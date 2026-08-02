@@ -333,6 +333,7 @@
     </style>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
     <link rel="stylesheet" href="{{ asset('css/auth-refresh.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/auth-pages-v14.css?v=14.0') }}">
 </head>
 
 <body>

@@ -9,8 +9,10 @@ use App\Models\VocalTestPrompt;
 use App\Models\VocalTestSubmission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\Process\Process;
@@ -47,7 +49,12 @@ class VocalTestController extends Controller
         $observationDefinition =
             $isObservationTest
                 ? VocalTestPrompt::observationDefinition(
-                    $class
+                    $class,
+                    $this->resolveObservationImage(
+                        $subject,
+                        $level,
+                        $class
+                    )
                 )
                 : null;
 
@@ -111,7 +118,12 @@ class VocalTestController extends Controller
         $observationDefinition =
             $isObservationTest
                 ? VocalTestPrompt::observationDefinition(
-                    $class
+                    $class,
+                    $this->resolveObservationImage(
+                        $subject,
+                        $level,
+                        $class
+                    )
                 )
                 : null;
 
@@ -217,8 +229,13 @@ class VocalTestController extends Controller
                 PATHINFO_FILENAME
             );
 
+            $guestToken = auth()->check()
+                ? null
+                : (string) Str::uuid();
+
             $submission = VocalTestSubmission::create([
                 'user_id' => auth()->id(),
+                'guest_token' => $guestToken,
                 'vocal_test_prompt_id' => $prompt->id,
                 'subject_id' => $subject->id,
                 'level_id' => $level->id,
@@ -264,11 +281,19 @@ class VocalTestController extends Controller
             throw $exception;
         }
 
+        if ($isObservationTest) {
+            $this->releaseObservationImage(
+                $subject,
+                $level,
+                $class
+            );
+        }
+
         return redirect()
-            ->route('appointment.create', [
-                'type' => 'test',
-                'vocal_submission' => $submission->id,
-            ])
+            ->route(
+                'appointment.create',
+                $this->appointmentParameters($submission)
+            )
             ->with(
                 'success',
                 $isObservationTest
@@ -340,8 +365,13 @@ class VocalTestController extends Controller
             ($correctCount / max(1, $questionCount)) * 100
         );
 
+        $guestToken = auth()->check()
+            ? null
+            : (string) Str::uuid();
+
         $submission = VocalTestSubmission::create([
             'user_id' => auth()->id(),
+            'guest_token' => $guestToken,
             'vocal_test_prompt_id' => $prompt->id,
             'subject_id' => $subject->id,
             'level_id' => $level->id,
@@ -370,15 +400,160 @@ class VocalTestController extends Controller
         ]);
 
         return redirect()
-            ->route('appointment.create', [
-                'type' => 'test',
-                'vocal_submission' => $submission->id,
-            ])
+            ->route(
+                'appointment.create',
+                $this->appointmentParameters($submission)
+            )
             ->with(
                 'success',
                 '✅ Vos réponses ont été enregistrées. '
                 . 'Complétez maintenant votre rendez-vous.'
             );
+    }
+
+
+    /**
+     * Attribue une image d'observation à la session en cours.
+     *
+     * L'image reste la même lors d'un rafraîchissement ou d'une
+     * erreur de validation. Une nouvelle session reçoit l'image
+     * suivante de la liste.
+     */
+    private function resolveObservationImage(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ): string {
+        $images =
+            VocalTestPrompt::observationImages();
+
+        $fallback =
+            'images/vocal-tests/observation-ferme.jpeg';
+
+        if (empty($images)) {
+            return $fallback;
+        }
+
+        $sessionKey =
+            $this->observationSessionKey(
+                $subject,
+                $level,
+                $class
+            );
+
+        $currentImage =
+            session()->get($sessionKey);
+
+        if (
+            is_string($currentImage)
+            && in_array(
+                $currentImage,
+                $images,
+                true
+            )
+        ) {
+            return $currentImage;
+        }
+
+        $sequenceKey =
+            'vocal-test:observation-image-sequence:'
+            . $subject->id . ':'
+            . $level->id . ':'
+            . $class->id;
+
+        try {
+            $sequence =
+                (int) Cache::increment(
+                    $sequenceKey
+                );
+        } catch (Throwable $exception) {
+            /*
+             * Repli si le pilote de cache ne prend pas en charge
+             * l'incrément atomique.
+             */
+            $sequence =
+                VocalTestSubmission::query()
+                    ->where(
+                        'submission_type',
+                        VocalTestSubmission::TYPE_OBSERVATION
+                    )
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->where(
+                        'level_id',
+                        $level->id
+                    )
+                    ->where(
+                        'class_id',
+                        $class->id
+                    )
+                    ->count()
+                + 1;
+        }
+
+        if ($sequence < 1) {
+            $sequence = 1;
+        }
+
+        $image =
+            $images[
+                ($sequence - 1)
+                % count($images)
+            ];
+
+        session()->put(
+            $sessionKey,
+            $image
+        );
+
+        return $image;
+    }
+
+    /**
+     * Libère l'image après l'envoi réussi du test.
+     */
+    private function releaseObservationImage(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ): void {
+        session()->forget(
+            $this->observationSessionKey(
+                $subject,
+                $level,
+                $class
+            )
+        );
+    }
+
+    private function observationSessionKey(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ): string {
+        return
+            'vocal_test.observation_image.'
+            . $subject->id . '.'
+            . $level->id . '.'
+            . $class->id;
+    }
+
+    private function appointmentParameters(
+        VocalTestSubmission $submission
+    ): array {
+        $parameters = [
+            'type' => 'test',
+            'vocal_submission' => $submission->id,
+        ];
+
+        if ($submission->guest_token) {
+            $parameters['submission_token'] =
+                $submission->guest_token;
+        }
+
+        return $parameters;
     }
 
     private function redirectExcludedPath(): RedirectResponse

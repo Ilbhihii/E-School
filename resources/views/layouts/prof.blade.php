@@ -2,8 +2,11 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>@yield('title', 'Espace Professeur') — Smart School Academy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#090d18">
+
+    <title>@yield('title', 'Espace Professeur') — Smart School Academy</title>
 
     <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
     <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
@@ -12,410 +15,322 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    {{-- Les pages professeur utilisent beaucoup les classes Bootstrap (row, col-md-*, d-flex, gap-*...). --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <script>
+        /*
+         * L'espace Professeur fonctionne uniquement
+         * en mode sombre.
+         */
+        (function () {
+            document.documentElement.classList.remove(
+                'light-mode'
+            );
+
+            try {
+                localStorage.removeItem(
+                    'ssa-prof-theme'
+                );
+            } catch (error) {
+                // Le mode sombre reste actif sans stockage local.
+            }
+        })();
+    </script>
 
     @stack('head')
 
-    <!-- 3D Design System + Premium CSS -->
     <link rel="stylesheet" href="{{ asset('css/layouts-3d.css') }}">
     <link rel="stylesheet" href="{{ asset('css/content-3d.css') }}">
     <link rel="stylesheet" href="{{ asset('css/admin-premium.css') }}">
-
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: #0A101E;
-            color: rgba(255,255,255,0.85);
-            -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
-        }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-        /* Prof sidebar - use adm-sidebar pattern but with prof colors */
-        .prof-sidebar {
-            width: var(--adm-sidebar-w, 260px);
-            min-height: 100vh;
-            background: linear-gradient(180deg, rgba(10, 16, 30, 0.98), rgba(15, 23, 42, 0.98));
-            border-right: 1px solid rgba(255,255,255,0.04);
-            display: flex;
-            flex-direction: column;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            flex-shrink: 0;
-        }
-        .prof-sidebar-brand {
-            padding: 1.5rem 1.25rem;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-        }
-        .prof-sidebar-brand .brand-icon {
-            width: 46px; height: 46px; border-radius: 14px;
-            background: linear-gradient(135deg, #7C3AED, #A78BFA);
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 0.75rem; font-size: 1.35rem; color: white;
-            box-shadow: 0 8px 24px rgba(124,58,237,0.35);
-            transition: transform 0.3s ease;
-        }
-        .prof-sidebar-brand:hover .brand-icon { transform: scale(1.08) rotate(-6deg); }
-        .prof-sidebar-brand h3 {
-            font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.1rem;
-            background: linear-gradient(135deg, #7C3AED, #A78BFA);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            margin: 0;
-        }
-        .prof-sidebar-brand .brand-sub {
-            color: rgba(255,255,255,0.35);
-            font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
-        }
-
-        /* Navigation */
-        .prof-nav { flex: 1; padding: 1rem 0.65rem; overflow-y: auto; }
-        .prof-nav .nav-heading {
-            font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.14em;
-            color: rgba(255,255,255,0.15); padding: 1.2rem 1rem 0.4rem; font-weight: 700;
-        }
-        .prof-nav-link {
-            display: flex; align-items: center; gap: 12px;
-            padding: 9px 13px; border-radius: 11px;
-            color: rgba(255,255,255,0.5); text-decoration: none;
-            transition: all 0.25s ease; margin-bottom: 1px; font-weight: 500; font-size: 0.875rem;
-        }
-        .prof-nav-link .nav-icon {
-            width: 32px; height: 32px; border-radius: 9px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.95rem; flex-shrink: 0;
-            background: rgba(255,255,255,0.03); transition: all 0.25s ease;
-        }
-        .prof-nav-link:hover { color: white; background: rgba(255,255,255,0.04); transform: translateX(3px); }
-        .prof-nav-link:hover .nav-icon { background: rgba(255,255,255,0.07); }
-        .prof-nav-link.active {
-            color: white;
-            background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(167,139,250,0.12));
-            border: 1px solid rgba(124,58,237,0.1);
-        }
-        .prof-nav-link.active .nav-icon {
-            background: linear-gradient(135deg, #7C3AED, #A78BFA); color: white;
-            box-shadow: 0 3px 10px rgba(124,58,237,0.3);
-        }
-        .prof-sidebar-footer {
-            padding: 0.85rem 0.65rem;
-            border-top: 1px solid rgba(255,255,255,0.04);
-        }
-
-        /* ── TOGGLE ICONS ── */
-        .theme-toggle-btn .icon-sun { display: none; }
-        .theme-toggle-btn .icon-moon { display: inline; }
-        html.light-mode .theme-toggle-btn .icon-sun { display: inline; }
-        html.light-mode .theme-toggle-btn .icon-moon { display: none; }
-        html.light-mode .theme-toggle-btn {
-            border-color: rgba(0,0,0,0.1) !important;
-            background: rgba(0,0,0,0.03) !important;
-            color: #64748b !important;
-        }
-        html.light-mode .theme-toggle-btn:hover {
-            color: #003A8F !important;
-        }
-
-        /* ══════════════════════════════════════════════════════════════
-           MODE CLAIR — Prof Layout
-           ══════════════════════════════════════════════════════════════ */
-        html.light-mode body {
-            background: #f0f2f5;
-            color: #1e293b;
-        }
-        html.light-mode .prof-sidebar {
-            background: rgba(255,255,255,0.98) !important;
-            border-right: 1px solid rgba(0,0,0,0.06);
-        }
-        html.light-mode .prof-sidebar-brand h3 {
-            color: #1e293b !important;
-            -webkit-text-fill-color: #1e293b !important;
-        }
-        html.light-mode .prof-sidebar-brand .brand-sub {
-            color: #94a3b8 !important;
-        }
-        html.light-mode .prof-nav-link {
-            color: #475569 !important;
-        }
-        html.light-mode .prof-nav-link:hover {
-            color: #1e293b !important;
-            background: rgba(0,0,0,0.03) !important;
-        }
-        html.light-mode .prof-nav-link .nav-icon {
-            background: rgba(0,0,0,0.04) !important;
-            color: #64748b !important;
-        }
-        html.light-mode .prof-nav-link.active {
-            background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(167,139,250,0.04)) !important;
-            color: #7C3AED !important;
-            border-color: rgba(124,58,237,0.1) !important;
-        }
-        html.light-mode .prof-nav-link.active .nav-icon {
-            background: linear-gradient(135deg, #7C3AED, #A78BFA) !important;
-            color: white !important;
-            box-shadow: 0 3px 10px rgba(124,58,237,0.2) !important;
-        }
-        html.light-mode .prof-nav .nav-heading {
-            color: rgba(0,0,0,0.25) !important;
-        }
-        html.light-mode .prof-sidebar-footer {
-            border-color: rgba(0,0,0,0.06);
-        }
-        html.light-mode .prof-topbar {
-            background: rgba(255,255,255,0.85) !important;
-            border-bottom: 1px solid rgba(0,0,0,0.06);
-        }
-        html.light-mode .prof-topbar-title {
-            color: #1e293b !important;
-        }
-        html.light-mode .prof-topbar-breadcrumb,
-        html.light-mode .prof-topbar-breadcrumb a {
-            color: #94a3b8 !important;
-        }
-        html.light-mode .prof-topbar-breadcrumb a:hover {
-            color: #1e293b !important;
-        }
-        html.light-mode .prof-main {
-            background: #f0f2f5;
-        }
-        html.light-mode ::-webkit-scrollbar-track {
-            background: #f0f2f5 !important;
-        }
-
-        /* Prof content inherits from admin style alerts */
-        html.light-mode .adm-alert-success {
-            background: rgba(34,197,94,0.1) !important;
-            color: #15803d !important;
-            border-color: rgba(34,197,94,0.15) !important;
-        }
-        html.light-mode .adm-alert-danger {
-            background: rgba(239,68,68,0.1) !important;
-            color: #b91c1c !important;
-            border-color: rgba(239,68,68,0.15) !important;
-        }
-        html.light-mode .adm-dropdown {
-            background: rgba(255,255,255,0.98) !important;
-            border-color: rgba(0,0,0,0.08) !important;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1) !important;
-        }
-        html.light-mode .adm-dropdown-item {
-            color: #475569 !important;
-        }
-        html.light-mode .adm-dropdown-item:hover {
-            background: rgba(0,0,0,0.04) !important;
-            color: #1e293b !important;
-        }
-        html.light-mode .adm-dropdown-divider {
-            border-color: rgba(0,0,0,0.06) !important;
-        }
-
-        /* Prof topbar */
-        .prof-topbar {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0.65rem 2rem;
-            background: rgba(15,23,42,0.55);
-            backdrop-filter: blur(20px) saturate(1.5);
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            position: sticky; top: 0; z-index: 99; gap: 1rem;
-        }
-        .prof-topbar-title {
-            font-family: 'Poppins', sans-serif; font-weight: 600;
-            font-size: 1rem; color: rgba(255,255,255,0.9); margin: 0;
-        }
-        .prof-topbar-breadcrumb {
-            display: flex; align-items: center; gap: 6px;
-            font-size: 0.75rem; color: rgba(255,255,255,0.35);
-        }
-        .prof-topbar-breadcrumb a { color: rgba(255,255,255,0.4); text-decoration: none; transition: color 0.2s; }
-        .prof-topbar-breadcrumb a:hover { color: rgba(255,255,255,0.7); }
-
-        /* Prof main content area */
-        .prof-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .prof-content { padding: 1.5rem 2rem; flex: 1; overflow-y: auto; }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .prof-sidebar { width: 64px; }
-            .prof-sidebar-brand h3, .prof-sidebar-brand .brand-sub,
-            .prof-nav-link span, .prof-nav .nav-heading,
-            .prof-sidebar-footer span { display: none; }
-            .prof-nav-link { justify-content: center; padding: 10px; }
-            .prof-nav-link .nav-icon { width: 36px; height: 36px; }
-        }
-        @media (max-width: 768px) {
-            .prof-sidebar { width: 0; overflow: hidden; position: fixed; left: 0; top: 0; z-index: 1000; transition: width 0.3s; }
-            .prof-sidebar.open { width: var(--adm-sidebar-w, 260px); }
-            .prof-content { padding: 1rem; }
-            .prof-topbar { padding: 0.65rem 1rem; }
-        }
-
-        /* ── LOGO THEME SWITCH ── */
-        .logo-theme-dark { display: inline-block; }
-        .logo-theme-light { display: none; }
-        html.light-mode .logo-theme-dark { display: none; }
-        html.light-mode .logo-theme-light { display: inline-block; }
-    </style>
-    <link id="globalLightTheme" rel="stylesheet" href="{{ asset('css/light-global.css') }}" disabled>
-    <script src="{{ asset('js/global-theme-sync.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('css/design-refresh.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/prof-refresh.css') }}?v={{ filemtime(public_path('css/prof-refresh.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/prof-refresh.css') }}?v={{ file_exists(public_path('css/prof-refresh.css')) ? filemtime(public_path('css/prof-refresh.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('css/prof-pages.css') }}?v={{ file_exists(public_path('css/prof-pages.css')) ? filemtime(public_path('css/prof-pages.css')) : time() }}">
+
+    @stack('styles')
+
 </head>
-<body>
 
-<div style="display:flex; min-height:100vh;">
-    <!-- ═══ SIDEBAR ═══ -->
-    <aside class="prof-sidebar" id="profSidebar">
-        <div class="prof-sidebar-brand">
-            <a href="{{ route('home') }}" class="portal-brand-home" title="Retour à l’accueil principal" aria-label="Retour à l’accueil principal">
-                <div class="brand-icon" style="background:transparent;box-shadow:none;width:auto;height:auto;">
-                    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Smart School Academy" class="logo-theme-dark">
-                    <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Smart School Academy" class="logo-theme-light">
-                </div>
-                <h3>Smart School Academy</h3>
-                <div class="brand-sub">Espace enseignant</div>
-                <span class="brand-home-hint"><i class="bi bi-arrow-up-right"></i> Accueil principal</span>
-            </a>
-        </div>
+@php
+    $profRouteName = request()->route()?->getName() ?? 'prof.unknown';
+    $profRouteClass = str_replace(['.', '_'], '-', $profRouteName);
+@endphp
 
-        <nav class="prof-nav">
-            <div class="nav-heading">Principal</div>
-            <a href="{{ route('prof.dashboard') }}" class="prof-nav-link {{ request()->routeIs('prof.dashboard') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
-                <span>Tableau de bord</span>
-            </a>
+<body class="prof-portal route-{{ $profRouteClass }}">
+    <div class="prof-sidebar-overlay" id="profSidebarOverlay" aria-hidden="true"></div>
 
-            <div class="nav-heading">Gestion</div>
-            <a href="{{ route('prof.subjects.list') }}" class="prof-nav-link {{ request()->routeIs('prof.subjects*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-book"></i></span>
-                <span>Matières <span style="font-size:0.6rem;color:rgba(255,255,255,0.2);">→ Niveaux → Classes</span></span>
-            </a>
-            <a href="{{ route('prof.lives.index') }}" class="prof-nav-link {{ request()->routeIs('prof.lives*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-camera-video"></i></span>
-                <span>Lives</span>
-            </a>
-            <a href="{{ route('prof.devoir.index') }}" class="prof-nav-link {{ request()->routeIs('prof.devoir*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-file-earmark-check"></i></span>
-                <span>Pose Devoirs</span>
-            </a>
-            <a href="{{ route('prof.assignments') }}" class="prof-nav-link {{ request()->routeIs('prof.assignments') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-file-earmark-text"></i></span>
-                <span>Devoirs Étudiants</span>
-            </a>
+    <div class="prof-shell">
+        <aside class="prof-sidebar" id="profSidebar" aria-label="Navigation professeur">
+            <div class="prof-sidebar-head">
+                <a href="{{ route('home') }}" class="prof-brand" title="Retour à l'accueil principal">
+                    <span class="prof-brand-logo">
+                        <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Smart School Academy" class="logo-theme-dark">
+                        <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Smart School Academy" class="logo-theme-light">
+                    </span>
+                    <span class="prof-brand-copy">
+                        <strong>Smart School</strong>
+                        <small>Espace enseignant</small>
+                    </span>
+                </a>
 
-
-            <div class="nav-heading">Communication</div>
-            <a href="{{ route('prof.chat.subjects') }}" class="prof-nav-link {{ request()->routeIs('prof.chat*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-chat-dots"></i></span>
-                <span>Questions Étudiants</span>
-            </a>
-            <a href="{{ route('prof.absences') }}" class="prof-nav-link {{ request()->routeIs('prof.absences*') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-calendar-x"></i></span>
-                <span>Absences</span>
-            </a>
-            <a href="{{ route('prof.schedule') }}" class="prof-nav-link {{ request()->routeIs('prof.schedule') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-calendar-week"></i></span>
-                <span>Planning</span>
-            </a>
-
-            <div class="nav-heading">Compte</div>
-            <a href="{{ route('prof.profile') }}" class="prof-nav-link {{ request()->routeIs('prof.profile') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-person-circle"></i></span>
-                <span>Mon Profil</span>
-            </a>
-            <a href="{{ route('prof.settings') }}" class="prof-nav-link {{ request()->routeIs('prof.settings') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="bi bi-gear"></i></span>
-                <span>Paramètres</span>
-            </a>
-        </nav>
-
-        <div class="prof-sidebar-footer">
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="adm-logout-btn" type="submit">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span>Déconnexion</span>
+                <button
+                    type="button"
+                    class="prof-sidebar-close"
+                    id="profSidebarClose"
+                    aria-label="Fermer le menu"
+                >
+                    <i class="bi bi-x-lg"></i>
                 </button>
-            </form>
-        </div>
-    </aside>
-
-    <!-- ═══ MAIN ═══ -->
-    <div class="prof-main">
-
-        <!-- TOPBAR -->
-        <header class="prof-topbar">
-            <div>
-                <h2 class="prof-topbar-title">@yield('page_title', 'Espace Professeur')</h2>
-                <div class="prof-topbar-breadcrumb">
-                    <a href="{{ route('prof.dashboard') }}">Accueil</a>
-                    <span>/</span>
-                    <span>@yield('breadcrumb', 'Tableau de bord')</span>
-                </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3 position-relative">
+            <nav class="prof-nav">
+                <div class="prof-nav-section">
+                    <div class="prof-nav-heading">Vue générale</div>
 
-                <div style="display:flex;align-items:center;gap:10px;padding:5px 10px 5px 5px;border-radius:11px;cursor:pointer;transition:all 0.25s;border:1px solid transparent;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" onclick="toggleProfMenu()" id="profUserBtn">
-                    <div class="adm-user-avatar" style="background:linear-gradient(135deg,#7C3AED,#A78BFA);">
+                    <a
+                        href="{{ route('prof.dashboard') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.dashboard') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.dashboard')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-grid-1x2-fill"></i></span>
+                        <span class="nav-label">Tableau de bord</span>
+                    </a>
+                </div>
+
+                <div class="prof-nav-section">
+                    <div class="prof-nav-heading">Pédagogie</div>
+
+                    <a
+                        href="{{ route('prof.subjects.list') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.subjects*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.subjects*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-journals"></i></span>
+                        <span class="nav-label">
+                            Matières
+                            <small>Matière → niveau → classe</small>
+                        </span>
+                    </a>
+
+                    <a
+                        href="{{ route('prof.lives.index') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.lives*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.lives*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-camera-video-fill"></i></span>
+                        <span class="nav-label">Lives</span>
+                    </a>
+
+                    <a
+                        href="{{ route('prof.devoir.index') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.devoir*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.devoir*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-file-earmark-plus-fill"></i></span>
+                        <span class="nav-label">Créer des devoirs</span>
+                    </a>
+
+                    <a
+                        href="{{ route('prof.assignments') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.assignments') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.assignments')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-journal-check"></i></span>
+                        <span class="nav-label">Copies des étudiants</span>
+                    </a>
+
+                    <a
+                        href="{{ route('prof.schedule') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.schedule*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.schedule*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-calendar3-week-fill"></i></span>
+                        <span class="nav-label">Emploi du temps</span>
+                    </a>
+                </div>
+
+                <div class="prof-nav-section">
+                    <div class="prof-nav-heading">Suivi & échanges</div>
+
+                    <a
+                        href="{{ route('prof.chat.subjects') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.chat*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.chat*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-chat-square-dots-fill"></i></span>
+                        <span class="nav-label">Questions étudiants</span>
+                    </a>
+
+                    <a
+                        href="{{ route('prof.absences') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.absences*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.absences*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-person-x-fill"></i></span>
+                        <span class="nav-label">Présences & absences</span>
+                    </a>
+                </div>
+
+                <div class="prof-nav-section">
+                    <div class="prof-nav-heading">Mon compte</div>
+
+                    <a
+                        href="{{ route('prof.profile') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.profile') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.profile')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-person-badge-fill"></i></span>
+                        <span class="nav-label">Mon profil</span>
+                    </a>
+
+                    <a
+                        href="{{ route('prof.settings') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.settings*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.settings*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon"><i class="bi bi-sliders2"></i></span>
+                        <span class="nav-label">Paramètres</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="prof-sidebar-footer">
+                <div class="prof-mini-profile">
+                    <div class="prof-mini-avatar">
                         {{ strtoupper(substr(auth()->user()->name ?? 'P', 0, 1)) }}
                     </div>
-                    <span class="d-none d-md-inline" style="font-size:0.85rem;font-weight:600;color:rgba(255,255,255,0.85);">{{ auth()->user()->name ?? 'Professeur' }}</span>
-                    <i class="bi bi-chevron-down" style="font-size:0.7rem;color:rgba(255,255,255,0.3);"></i>
+                    <div class="prof-mini-copy">
+                        <strong>{{ auth()->user()->name ?? 'Professeur' }}</strong>
+                        <small>Enseignant</small>
+                    </div>
                 </div>
-                <div class="adm-dropdown" id="profUserMenu" style="display:none;">
-                    <a href="{{ route('prof.profile') }}" class="adm-dropdown-item"><i class="bi bi-person-circle"></i> Mon Profil</a>
-                    <a href="{{ route('prof.settings') }}" class="adm-dropdown-item"><i class="bi bi-gear"></i> Paramètres</a>
-                    <div class="adm-dropdown-divider"></div>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button class="adm-dropdown-item danger" type="submit"><i class="bi bi-box-arrow-right"></i> Déconnexion</button>
-                    </form>
+
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="prof-logout-btn" type="submit">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Déconnexion</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <div class="prof-main">
+            <header class="prof-topbar">
+                <div class="prof-topbar-left">
+                    <button
+                        type="button"
+                        class="prof-icon-button prof-menu-button"
+                        id="profMenuButton"
+                        aria-controls="profSidebar"
+                        aria-expanded="false"
+                        aria-label="Ouvrir le menu"
+                    >
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <div class="prof-page-identification">
+                        <h1 class="prof-topbar-title">@yield('page_title', 'Espace Professeur')</h1>
+                        <nav class="prof-topbar-breadcrumb" aria-label="Fil d'Ariane">
+                            <a href="{{ route('prof.dashboard') }}">Accueil</a>
+                            <i class="bi bi-chevron-right"></i>
+                            <span>@yield('breadcrumb', 'Tableau de bord')</span>
+                        </nav>
+                    </div>
                 </div>
-            </div>
-        </header>
 
-        <!-- CONTENT -->
-        <main class="prof-content">
-            @if(session('success'))
-            <div class="adm-alert adm-alert-success mb-4">
-                <span class="adm-alert-icon"><i class="bi bi-check-circle-fill"></i></span>
-                <span>{{ session('success') }}</span>
-            </div>
-            @endif
-            @if(session('error'))
-            <div class="adm-alert adm-alert-danger mb-4">
-                <span class="adm-alert-icon"><i class="bi bi-exclamation-circle-fill"></i></span>
-                <span>{{ session('error') }}</span>
-            </div>
-            @endif
+                <div class="prof-topbar-actions">
+                    <a href="{{ route('home') }}" class="prof-icon-button" title="Accueil principal" aria-label="Accueil principal">
+                        <i class="bi bi-house-door"></i>
+                    </a>
 
-            @yield('content')
-        </main>
+                    <div class="prof-user-area">
+                        <button
+                            type="button"
+                            class="prof-user-trigger"
+                            id="profUserBtn"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                        >
+                            <span class="prof-user-avatar">
+                                {{ strtoupper(substr(auth()->user()->name ?? 'P', 0, 1)) }}
+                            </span>
+                            <span class="prof-user-copy">
+                                <strong>{{ auth()->user()->name ?? 'Professeur' }}</strong>
+                                <small>Mon espace</small>
+                            </span>
+                            <i class="bi bi-chevron-down prof-user-chevron"></i>
+                        </button>
 
+                        <div class="prof-user-menu" id="profUserMenu" role="menu" hidden>
+                            <div class="prof-user-menu-head">
+                                <span class="prof-user-avatar large">
+                                    {{ strtoupper(substr(auth()->user()->name ?? 'P', 0, 1)) }}
+                                </span>
+                                <span>
+                                    <strong>{{ auth()->user()->name ?? 'Professeur' }}</strong>
+                                    <small>{{ auth()->user()->email ?? 'Compte professeur' }}</small>
+                                </span>
+                            </div>
+
+                            <a href="{{ route('prof.profile') }}" class="prof-dropdown-item" role="menuitem">
+                                <i class="bi bi-person-circle"></i>
+                                <span>Mon profil</span>
+                            </a>
+
+                            <a href="{{ route('prof.settings') }}" class="prof-dropdown-item" role="menuitem">
+                                <i class="bi bi-gear"></i>
+                                <span>Paramètres</span>
+                            </a>
+
+                            <div class="prof-dropdown-divider"></div>
+
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button class="prof-dropdown-item danger" type="submit" role="menuitem">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span>Déconnexion</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="prof-content">
+                <div class="prof-content-inner">
+                    @if(session('success'))
+                        <div class="adm-alert adm-alert-success prof-toast" role="status">
+                            <span class="adm-alert-icon"><i class="bi bi-check-circle-fill"></i></span>
+                            <span>{{ session('success') }}</span>
+                            <button class="prof-alert-close" type="button" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="adm-alert adm-alert-danger prof-toast" role="alert">
+                            <span class="adm-alert-icon"><i class="bi bi-exclamation-circle-fill"></i></span>
+                            <span>{{ session('error') }}</span>
+                            <button class="prof-alert-close" type="button" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
+
+                    @if(session('alert'))
+                        <div class="adm-alert adm-alert-warning prof-toast" role="alert">
+                            <span class="adm-alert-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                            <span>{{ session('alert') }}</span>
+                            <button class="prof-alert-close" type="button" aria-label="Fermer">&times;</button>
+                        </div>
+                    @endif
+
+                    @yield('content')
+                </div>
+            </main>
+        </div>
     </div>
-</div>
 
-<script>
-function toggleProfMenu() {
-    const menu = document.getElementById('profUserMenu');
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-document.addEventListener('click', function(e) {
-    const menu = document.getElementById('profUserMenu');
-    const btn = document.getElementById('profUserBtn');
-    if (menu && !e.target.closest('#profUserBtn') && !e.target.closest('.adm-dropdown')) {
-        menu.style.display = 'none';
-    }
-});
-</script>
-
-@stack('scripts')
-
+    <script src="{{ asset('js/prof-portal.js') }}?v={{ file_exists(public_path('js/prof-portal.js')) ? filemtime(public_path('js/prof-portal.js')) : time() }}"></script>
+    @stack('scripts')
 </body>
 </html>

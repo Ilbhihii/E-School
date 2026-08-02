@@ -71,24 +71,37 @@ Route::get(
     [HighSchoolTestController::class, 'show']
 )->name('high-school-test.show');
 
-Route::middleware('auth')->group(function () {
-    Route::post(
-        '/test-lycee/{subject}/{level}/{class}',
-        [HighSchoolTestController::class, 'store']
-    )
-        ->middleware('throttle:10,1')
-        ->name('high-school-test.store');
+/*
+ * Les tests d'admission sont publics.
+ * Le visiteur passe d'abord le test, envoie ensuite son rendez-vous,
+ * puis crée son compte étudiant.
+ */
+Route::post(
+    '/test-lycee/{subject}/{level}/{class}',
+    [HighSchoolTestController::class, 'store']
+)
+    ->middleware('throttle:10,1')
+    ->name('high-school-test.store');
 
+Route::get(
+    '/test-vocal/{subject}/{level}/{class}',
+    [VocalTestController::class, 'create']
+)->name('vocal-test.create');
+
+Route::post(
+    '/test-vocal/{subject}/{level}/{class}',
+    [VocalTestController::class, 'store']
+)
+    ->middleware('throttle:10,1')
+    ->name('vocal-test.store');
+
+Route::middleware('auth')->group(function () {
     Route::get(
         '/tests-lycee/soumissions/{submission}/images/{index}',
         [HighSchoolTestController::class, 'image']
     )
         ->where('index', '[0-9]+')
         ->name('high-school-test.image');
-    Route::get('/test-vocal/{subject}/{level}/{class}', [VocalTestController::class, 'create'])
-        ->name('vocal-test.create');
-    Route::post('/test-vocal/{subject}/{level}/{class}', [VocalTestController::class, 'store'])
-        ->name('vocal-test.store');
 });
 
 Route::get('/classes', [\App\Http\Controllers\Front\HomeController::class, 'classes'])->name('front.classes');
@@ -256,6 +269,7 @@ Route::middleware(['auth','isAdmin'])
 
     // Navigation hiérarchique : Matières → Niveaux → Classes → Cours
     Route::get('/subjects', [LevelController::class, 'subjectsIndex'])->name('subjects.index');
+    Route::post('/subjects/hierarchy', [LevelController::class, 'storeSubjectHierarchy'])->name('subjects.hierarchy.store');
     Route::get('/subjects/{subject}/levels', [LevelController::class, 'subjectLevels'])->name('subjects.levels');
     Route::get('/subjects/{subject}/levels/{level}/classes', [LevelController::class, 'subjectClasses'])->name('subjects.classes');
     Route::get('/subjects/{subject}/levels/{level}/classes/{class}/courses', [LevelController::class, 'subjectCourses'])->name('subjects.courses');

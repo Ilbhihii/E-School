@@ -92,6 +92,20 @@ class UserController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'day_of_week' => [
+                'required',
+                'integer',
+                'between:1,7',
+            ],
+            'start_time' => [
+                'required',
+                'date_format:H:i',
+            ],
+            'end_time' => [
+                'required',
+                'date_format:H:i',
+                'after:start_time',
+            ],
         ], [
             'prof_id.required' =>
                 'Veuillez sélectionner un professeur.',
@@ -101,6 +115,21 @@ class UserController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
+            'day_of_week.required' =>
+                'Veuillez sélectionner le jour du cours.',
+            'day_of_week.between' =>
+                'Le jour sélectionné est invalide.',
+            'start_time.required' =>
+                'Veuillez sélectionner l’heure de début.',
+            'start_time.date_format' =>
+                'L’heure de début est invalide.',
+            'end_time.required' =>
+                'Veuillez sélectionner l’heure de fin.',
+            'end_time.date_format' =>
+                'L’heure de fin est invalide.',
+            'end_time.after' =>
+                'L’heure de fin doit être après '
+                . 'l’heure de début.',
         ]);
 
         $professor = User::query()
@@ -160,7 +189,7 @@ class UserController extends Controller
                 ]);
         }
 
-        $exists = ProfAssignment::query()
+        $assignment = ProfAssignment::query()
             ->where([
                 'prof_id' =>
                     $professor->id,
@@ -171,16 +200,113 @@ class UserController extends Controller
                 'subject_id' =>
                     $validated['subject_id'],
             ])
-            ->exists();
+            ->first();
 
-        if ($exists) {
+        $ignoreAssignmentId =
+            $assignment?->id;
+
+        $professorConflict =
+            ProfAssignment::query()
+                ->where(
+                    'prof_id',
+                    $professor->id
+                )
+                ->where(
+                    'day_of_week',
+                    $validated['day_of_week']
+                )
+                ->when(
+                    $ignoreAssignmentId,
+                    fn ($query) =>
+                        $query->whereKeyNot(
+                            $ignoreAssignmentId
+                        )
+                )
+                ->whereNotNull('start_time')
+                ->whereNotNull('end_time')
+                ->where(
+                    'start_time',
+                    '<',
+                    $validated['end_time']
+                )
+                ->where(
+                    'end_time',
+                    '>',
+                    $validated['start_time']
+                )
+                ->exists();
+
+        if ($professorConflict) {
             return back()
                 ->withInput()
-                ->with(
-                    'error',
-                    'Cette assignation existe déjà '
-                    . 'pour ce professeur.'
-                );
+                ->withErrors([
+                    'start_time' =>
+                        'Ce professeur possède déjà '
+                        . 'un cours pendant cet horaire.',
+                ]);
+        }
+
+        $classConflict =
+            ProfAssignment::query()
+                ->where(
+                    'class_id',
+                    $classRoom->id
+                )
+                ->where(
+                    'day_of_week',
+                    $validated['day_of_week']
+                )
+                ->when(
+                    $ignoreAssignmentId,
+                    fn ($query) =>
+                        $query->whereKeyNot(
+                            $ignoreAssignmentId
+                        )
+                )
+                ->whereNotNull('start_time')
+                ->whereNotNull('end_time')
+                ->where(
+                    'start_time',
+                    '<',
+                    $validated['end_time']
+                )
+                ->where(
+                    'end_time',
+                    '>',
+                    $validated['start_time']
+                )
+                ->exists();
+
+        if ($classConflict) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'start_time' =>
+                        'Cette classe possède déjà '
+                        . 'un autre cours pendant '
+                        . 'cet horaire.',
+                ]);
+        }
+
+        $scheduleData = [
+            'day_of_week' =>
+                $validated['day_of_week'],
+            'start_time' =>
+                $validated['start_time'],
+            'end_time' =>
+                $validated['end_time'],
+        ];
+
+        if ($assignment) {
+            $assignment->update(
+                $scheduleData
+            );
+
+            return back()->with(
+                'success',
+                'L’horaire de cette assignation '
+                . 'a été mis à jour avec succès.'
+            );
         }
 
         ProfAssignment::create([
@@ -189,12 +315,13 @@ class UserController extends Controller
                 $validated['subject_id'],
             'level_id' => $level->id,
             'class_id' => $classRoom->id,
+            ...$scheduleData,
         ]);
 
         return back()->with(
             'success',
-            'Assignation du professeur '
-            . 'enregistrée avec succès.'
+            'Assignation et horaire du professeur '
+            . 'enregistrés avec succès.'
         );
     }
 

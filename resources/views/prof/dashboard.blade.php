@@ -1,173 +1,189 @@
 @extends('layouts.prof')
 
+@section('title', 'Tableau de bord')
 @section('page_title', 'Tableau de bord')
-@section('breadcrumb', 'Vue d\'ensemble')
+@section('breadcrumb', 'Vue d’ensemble')
 
 @section('content')
+@php
+    $dashboardStats = [
+        ['label' => 'Étudiants', 'value' => $studentsCount ?? 0, 'icon' => 'people-fill', 'tone' => 'is-blue'],
+        ['label' => 'Cours publiés', 'value' => $coursesCount ?? 0, 'icon' => 'journal-richtext', 'tone' => 'is-green'],
+        ['label' => 'Copies reçues', 'value' => $assignmentsCount ?? 0, 'icon' => 'file-earmark-text-fill', 'tone' => 'is-yellow'],
+        ['label' => 'À corriger', 'value' => $pendingCount ?? 0, 'icon' => 'hourglass-split', 'tone' => 'is-purple'],
+        ['label' => 'Lives', 'value' => $livesCount ?? 0, 'icon' => 'camera-video-fill', 'tone' => 'is-red'],
+        ['label' => 'Absences', 'value' => $absencesCount ?? 0, 'icon' => 'person-x-fill', 'tone' => 'is-cyan'],
+    ];
 
-<div class="adm-page-header">
-    <div>
-        <h1>Tableau de bord Professeur</h1>
-        <div class="subtitle">Bienvenue {{ auth()->user()->name }} — analyse de vos données pédagogiques</div>
+    $indicators = [
+        [
+            'label' => 'Copies corrigées',
+            'value' => ($correctedCount ?? 0).' / '.($assignmentsCount ?? 0),
+            'percentage' => min(max((int) ($correctionRate ?? 0), 0), 100),
+            'color' => '#4ade80',
+        ],
+        [
+            'label' => 'Taux de présence',
+            'value' => (int) ($presenceRate ?? 0).'%',
+            'percentage' => min(max((int) ($presenceRate ?? 0), 0), 100),
+            'color' => '#60a5fa',
+        ],
+        [
+            'label' => 'Moyenne des étudiants',
+            'value' => number_format((float) ($averageGrade ?? 0), 1).'/20',
+            'percentage' => min(max(((float) ($averageGrade ?? 0)) * 5, 0), 100),
+            'color' => '#fbbf24',
+        ],
+    ];
+@endphp
+
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow"><i class="bi bi-stars"></i> Espace enseignant</span>
+        <h1 class="pp-page-title">Bonjour, {{ auth()->user()->name }}</h1>
+        <p class="pp-page-description">
+            Retrouvez vos indicateurs pédagogiques, vos prochaines actions et l’activité récente de vos classes.
+        </p>
     </div>
-    <div class="page-actions">
-        <span style="color:var(--adm-text-muted);font-size:0.85rem;">
-            <i class="bi bi-calendar3 me-1"></i> {{ now()->format('d M Y') }}
+
+    <div class="pp-page-actions">
+        <span class="pp-date-chip">
+            <i class="bi bi-calendar3"></i>
+            {{ now()->translatedFormat('d F Y') }}
         </span>
+        <a href="{{ route('prof.schedule') }}" class="adm-btn adm-btn-primary">
+            <i class="bi bi-calendar3-week"></i>
+            Emploi du temps
+        </a>
     </div>
+</section>
+
+<div class="pp-summary-grid">
+    @foreach($dashboardStats as $stat)
+        <article class="pp-summary-card {{ $stat['tone'] }}">
+            <span class="pp-summary-icon"><i class="bi bi-{{ $stat['icon'] }}"></i></span>
+            <span class="pp-summary-copy">
+                <strong class="pp-summary-value">{{ $stat['value'] }}</strong>
+                <span class="pp-summary-label">{{ $stat['label'] }}</span>
+            </span>
+        </article>
+    @endforeach
 </div>
 
-<!-- Stats -->
-<div class="adm-stats-grid">
-    <div class="adm-stat blue">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
-        </div>
-        <div class="stat-value">{{ $studentsCount ?? 0 }}</div>
-        <div class="stat-label">Étudiants</div>
-    </div>
-    <div class="adm-stat green">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-file-earmark-plus-fill"></i></div>
-        </div>
-        <div class="stat-value">{{ $coursesCount ?? 0 }}</div>
-        <div class="stat-label">Mes cours</div>
-    </div>
-    <div class="adm-stat orange">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
-        </div>
-        <div class="stat-value">{{ $assignmentsCount ?? 0 }}</div>
-        <div class="stat-label">Copies reçues</div>
-    </div>
-    <div class="adm-stat red">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-calendar-x-fill"></i></div>
-        </div>
-        <div class="stat-value">{{ $absencesCount ?? 0 }}</div>
-        <div class="stat-label">Absences</div>
-    </div>
-
-    <div class="adm-stat cyan">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-camera-video"></i></div>
-        </div>
-        <div class="stat-value">{{ $livesCount ?? 0 }}</div>
-        <div class="stat-label">Lives</div>
-    </div>
-</div>
-
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="adm-card h-100">
-            <div class="adm-card-header">
-                <h4><i class="bi bi-bar-chart-fill" style="color:#60A5FA;"></i> Analyse pédagogique</h4>
-                <span style="font-size:.75rem;color:var(--adm-text-muted);">Données de vos classes assignées</span>
+<div class="pp-layout-two">
+    <section class="pp-panel">
+        <header class="pp-panel-head">
+            <div class="pp-panel-title-wrap">
+                <h2 class="pp-panel-title"><i class="bi bi-graph-up-arrow"></i> Suivi pédagogique</h2>
+                <p class="pp-panel-subtitle">Synthèse calculée à partir de vos classes assignées.</p>
             </div>
-            <div class="adm-card-body">
-                @foreach([
-                    ['label' => 'Copies corrigées', 'value' => $correctedCount ?? 0, 'total' => $assignmentsCount ?? 0, 'pct' => $correctionRate ?? 0, 'color' => '#4ADE80'],
-                    ['label' => 'Taux de présence', 'value' => ($presenceRate ?? 0).'%', 'total' => null, 'pct' => $presenceRate ?? 0, 'color' => '#38BDF8'],
-                    ['label' => 'Moyenne des étudiants', 'value' => number_format($averageGrade ?? 0, 1).'/20', 'total' => null, 'pct' => min(($averageGrade ?? 0) * 5, 100), 'color' => '#F59E0B'],
-                ] as $indicator)
-                    <div style="margin-bottom:1.15rem;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span style="color:var(--adm-text);font-size:.86rem;font-weight:600;">{{ $indicator['label'] }}</span>
-                            <span style="color:{{ $indicator['color'] }};font-weight:700;">
-                                {{ $indicator['value'] }}@if($indicator['total'] !== null) / {{ $indicator['total'] }}@endif
-                            </span>
+            <span class="pp-panel-meta">Mise à jour automatique</span>
+        </header>
+        <div class="pp-panel-body">
+            <div class="pp-progress-list">
+                @foreach($indicators as $indicator)
+                    <div class="pp-progress-row" style="--progress:{{ $indicator['percentage'] }}%;--progress-color:{{ $indicator['color'] }};">
+                        <div class="pp-progress-top">
+                            <span class="pp-progress-label">{{ $indicator['label'] }}</span>
+                            <strong class="pp-progress-value">{{ $indicator['value'] }}</strong>
                         </div>
-                        <div style="height:7px;background:rgba(148,163,184,.12);border-radius:99px;overflow:hidden;">
-                            <div style="width:{{ min($indicator['pct'], 100) }}%;height:100%;background:{{ $indicator['color'] }};border-radius:99px;"></div>
+                        <div class="pp-progress-track" aria-hidden="true">
+                            <div class="pp-progress-bar"></div>
                         </div>
                     </div>
                 @endforeach
             </div>
         </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="adm-card h-100">
-            <div class="adm-card-header"><h4><i class="bi bi-diagram-3" style="color:#A78BFA;"></i> Mes affectations</h4></div>
-            <div class="adm-card-body">
-                @forelse(($profAssignments ?? collect())->take(5) as $assignment)
-                    <div style="padding:.7rem 0;border-bottom:1px solid rgba(148,163,184,.1);">
-                        <div style="font-weight:700;color:var(--adm-text);">{{ $assignment->subject?->name ?? 'Matière' }}</div>
-                        <div style="font-size:.75rem;color:var(--adm-text-muted);margin-top:3px;">
-                            {{ $assignment->level?->name ?? 'Niveau' }} · {{ $assignment->classRoom?->name ?? 'Classe' }}
-                        </div>
-                    </div>
-                @empty
-                    <div class="text-center py-4" style="color:var(--adm-text-muted);">
-                        <i class="bi bi-inbox" style="font-size:1.7rem;"></i>
-                        <p class="mb-0 mt-2">Aucune affectation administrateur.</p>
-                    </div>
-                @endforelse
+    </section>
+
+    <section class="pp-panel">
+        <header class="pp-panel-head">
+            <div class="pp-panel-title-wrap">
+                <h2 class="pp-panel-title"><i class="bi bi-diagram-3-fill"></i> Mes affectations</h2>
+                <p class="pp-panel-subtitle">Matières, niveaux et classes attribués.</p>
             </div>
+            <span class="pp-panel-meta">{{ ($profAssignments ?? collect())->count() }}</span>
+        </header>
+        <div class="pp-panel-body">
+            @forelse(($profAssignments ?? collect())->take(6) as $assignment)
+                <div class="pp-path-row">
+                    <span class="pp-path-icon"><i class="bi bi-journal-bookmark-fill"></i></span>
+                    <span class="pp-path-copy">
+                        <strong>{{ $assignment->subject?->name ?? 'Matière' }}</strong>
+                        <span>{{ $assignment->level?->name ?? 'Niveau' }} · {{ $assignment->classRoom?->name ?? 'Classe' }}</span>
+                    </span>
+                </div>
+            @empty
+                <div class="pp-empty" style="min-height:160px;padding:18px 10px;">
+                    <div>
+                        <span class="pp-empty-icon"><i class="bi bi-inbox"></i></span>
+                        <h3>Aucune affectation</h3>
+                        <p>Les affectations ajoutées par l’administration apparaîtront ici.</p>
+                    </div>
+                </div>
+            @endforelse
+        </div>
+    </section>
+</div>
+
+<section class="pp-panel pp-section-gap">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title"><i class="bi bi-lightning-charge-fill"></i> Actions rapides</h2>
+            <p class="pp-panel-subtitle">Accédez directement aux tâches les plus fréquentes.</p>
+        </div>
+    </header>
+    <div class="pp-panel-body">
+        <div class="pp-quick-grid">
+            <a href="{{ route('prof.subjects.list') }}" class="pp-quick-link" style="--quick-color:#a78bfa;">
+                <span class="pp-quick-icon"><i class="bi bi-journals"></i></span>
+                <span class="pp-quick-copy"><strong>Mes matières</strong><span>Parcourir niveaux et classes</span></span>
+            </a>
+            <a href="{{ route('prof.devoir.create') }}" class="pp-quick-link" style="--quick-color:#4ade80;">
+                <span class="pp-quick-icon"><i class="bi bi-file-earmark-plus-fill"></i></span>
+                <span class="pp-quick-copy"><strong>Nouveau devoir</strong><span>Créer une activité à rendre</span></span>
+            </a>
+            <a href="{{ route('prof.assignments') }}" class="pp-quick-link" style="--quick-color:#fbbf24;">
+                <span class="pp-quick-icon"><i class="bi bi-journal-check"></i></span>
+                <span class="pp-quick-copy"><strong>Corriger les copies</strong><span>{{ $pendingCount ?? 0 }} copie(s) en attente</span></span>
+            </a>
+            <a href="{{ route('prof.absences') }}" class="pp-quick-link" style="--quick-color:#60a5fa;">
+                <span class="pp-quick-icon"><i class="bi bi-person-check-fill"></i></span>
+                <span class="pp-quick-copy"><strong>Faire l’appel</strong><span>Enregistrer les présences</span></span>
+            </a>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Quick Actions -->
-<h5 style="color:var(--adm-text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem;text-align:center;">
-    Actions Rapides
-</h5>
-
-<div class="row g-3 justify-content-center">
-    <div class="col-md-3 col-sm-6">
-        <a href="{{ route('prof.absences') }}" class="adm-action-card">
-            <div class="action-icon" style="background:rgba(217,4,41,0.15);color:#EF4444;">
-                <i class="bi bi-calendar-x"></i>
-            </div>
-            <span class="action-title">Absences</span>
-            <span class="action-count">Marquer les présences</span>
-        </a>
-    </div>
-    <div class="col-md-3 col-sm-6">
-        <a href="{{ route('prof.assignments') }}" class="adm-action-card">
-            <div class="action-icon" style="background:rgba(0,58,143,0.15);color:#60A5FA;">
-                <i class="bi bi-file-earmark-text"></i>
-            </div>
-            <span class="action-title">Devoirs</span>
-            <span class="action-count">Gérer les devoirs</span>
-        </a>
-    </div>
-    <div class="col-md-3 col-sm-6">
-        <a href="{{ route('prof.chat.subjects') }}" class="adm-action-card">
-            <div class="action-icon" style="background:rgba(22,163,74,0.15);color:#4ADE80;">
-                <i class="bi bi-chat-dots"></i>
-            </div>
-            <span class="action-title">Messages</span>
-            <span class="action-count">Répondre étudiants</span>
-        </a>
-    </div>
-
-</div>
-
-<!-- Recent Activity -->
-<div class="adm-card mt-5">
-    <div class="adm-card-header">
-        <h4><i class="bi bi-activity" style="color:#4ADE80;"></i> Activité récente</h4>
-    </div>
-    <div class="adm-card-body p-0">
-        <div style="padding:0 1.5rem;">
-            <div class="adm-activity">
-                @forelse($recentSubmissions ?? [] as $submission)
-                    <div class="adm-activity-item">
-                        <div class="adm-activity-dot" style="background:{{ $submission->grade === null ? '#F59E0B' : '#4ADE80' }};"></div>
-                        <div class="adm-activity-content">
-                            <p><strong>{{ $submission->user?->name ?? 'Étudiant' }}</strong> a envoyé « {{ $submission->title }} »</p>
-                            <div class="adm-activity-time">{{ $submission->subject?->name ?? 'Matière' }} · {{ $submission->created_at?->diffForHumans() }}</div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="adm-activity-item">
-                        <div class="adm-activity-dot" style="background:#64748B;"></div>
-                        <div class="adm-activity-content"><p>Aucune copie récente dans vos classes.</p></div>
-                    </div>
-                @endforelse
-            </div>
+<section class="pp-panel pp-section-gap">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title"><i class="bi bi-activity"></i> Activité récente</h2>
+            <p class="pp-panel-subtitle">Dernières copies envoyées par vos étudiants.</p>
         </div>
+        <a href="{{ route('prof.assignments') }}" class="adm-btn adm-btn-ghost adm-btn-sm">Tout afficher</a>
+    </header>
+    <div class="pp-panel-body">
+        @forelse($recentSubmissions ?? [] as $submission)
+            <div class="pp-activity-row">
+                <span class="pp-activity-state" style="--state-color:{{ $submission->grade === null ? '#fbbf24' : '#4ade80' }};"></span>
+                <span class="pp-activity-copy">
+                    <strong>{{ $submission->user?->name ?? 'Étudiant' }} — {{ $submission->title }}</strong>
+                    <span>{{ $submission->subject?->name ?? 'Matière' }} · {{ $submission->created_at?->diffForHumans() }}</span>
+                </span>
+                <span class="adm-badge {{ $submission->grade === null ? 'adm-badge-warning' : 'adm-badge-success' }}">
+                    {{ $submission->grade === null ? 'À corriger' : 'Corrigée' }}
+                </span>
+            </div>
+        @empty
+            <div class="pp-empty" style="min-height:170px;">
+                <div>
+                    <span class="pp-empty-icon"><i class="bi bi-clock-history"></i></span>
+                    <h3>Aucune activité récente</h3>
+                    <p>Les nouvelles soumissions apparaîtront automatiquement ici.</p>
+                </div>
+            </div>
+        @endforelse
     </div>
-</div>
-
+</section>
 @endsection

@@ -10,6 +10,26 @@
     <p>Quelques informations suffisent pour commencer votre parcours personnalisé.</p>
 </div>
 
+@if(!empty($pendingRegistration))
+    <div
+        class="alert text-center py-2 mb-4"
+        style="background:rgba(34,197,94,.11);border:1px solid rgba(34,197,94,.2);color:#86EFAC;border-radius:12px;font-size:.78rem;line-height:1.5;"
+    >
+        <i class="bi bi-check-circle-fill me-1"></i>
+        Test et rendez-vous envoyés. Créez votre compte
+        pour terminer votre inscription.
+    </div>
+@endif
+
+@if(session('success'))
+    <div
+        class="alert text-center py-2 mb-4"
+        style="background:rgba(37,99,235,.11);border:1px solid rgba(59,130,246,.2);color:#BFDBFE;border-radius:12px;font-size:.78rem;line-height:1.5;"
+    >
+        {{ session('success') }}
+    </div>
+@endif
+
 <!-- ERRORS -->
 @if ($errors->any())
     <div class="alert alert-danger text-center py-2 mb-4" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.2); color: #FCA5A5; border-radius: 12px; font-size: 0.875rem;">
@@ -27,7 +47,7 @@
         <input type="text" name="name"
                class="auth-input-3d"
                placeholder="Votre nom"
-               value="{{ old('name') }}"
+               value="{{ old('name', $registrationPrefill['name'] ?? '') }}"
                required autofocus>
     </div>
 
@@ -38,7 +58,7 @@
         <input type="email" name="email"
                class="auth-input-3d"
                placeholder="exemple@email.com"
-               value="{{ old('email') }}"
+               value="{{ old('email', $registrationPrefill['email'] ?? '') }}"
                required>
     </div>
 
@@ -70,7 +90,7 @@
             <input type="text" name="country"
                    class="auth-input-3d"
                    placeholder="Maroc"
-                   value="{{ old('country') }}">
+                   value="{{ old('country', $registrationPrefill['country'] ?? '') }}">
         </div>
         <div class="col-6 auth-field">
             <label class="auth-label-3d">Ville</label>
@@ -78,7 +98,7 @@
             <input type="text" name="city"
                    class="auth-input-3d"
                    placeholder="Rabat"
-                   value="{{ old('city') }}">
+                   value="{{ old('city', $registrationPrefill['city'] ?? '') }}">
         </div>
     </div>
 

@@ -10,6 +10,7 @@ class VocalTestSubmission extends Model
 {
     protected $fillable = [
         'user_id',
+        'guest_token',
         'vocal_test_prompt_id',
         'subject_id',
         'level_id',
@@ -36,6 +37,10 @@ class VocalTestSubmission extends Model
         'submitted_at',
         'reviewed_at',
         'consumed_at',
+    ];
+
+    protected $hidden = [
+        'guest_token',
     ];
 
     protected $casts = [

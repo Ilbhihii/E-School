@@ -923,7 +923,7 @@
                             src="{{ asset(
                                 $observationDefinition['image']
                             ) }}"
-                            alt="Image de ferme utilisée pour le test d’observation"
+                            alt="Scène illustrée utilisée pour le test d’observation"
                         >
                     </div>
 

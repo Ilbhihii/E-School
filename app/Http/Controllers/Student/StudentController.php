@@ -13,8 +13,10 @@ use App\Models\Level;
 use App\Models\Result;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Services\LearningPathService;
 use App\Models\HighSchoolTestSubmission;
 use App\Models\VocalTestPrompt;
@@ -485,68 +487,402 @@ class StudentController extends Controller
     // page devoirs étudiant
     public function assignments()
     {
-        $assignments = Assignment::where('user_id',auth()->id())
-                    ->orderBy('created_at','desc')
-                    ->get();
+        $user = auth()->user();
 
-        $classRoom = auth()->user()->classRoom;
-        $courses = $classRoom?->courses ?? collect([]);
+        /*
+         * Parcours exacts assignés à l'étudiant :
+         * Matière → Niveau → Classe.
+         */
+        $assignmentRows = $this->paths
+            ->studentAssignmentRows($user->id);
 
-        // Matières de la classe + matières assignées individuellement
-        $subjects = $classRoom?->subjects ?? collect([]);
-        $subjects = $subjects->merge(auth()->user()->individuallyAssignedSubjects())->unique('id');
+        $subjects = Subject::query()
+            ->whereIn(
+                'id',
+                $assignmentRows->pluck('subject_id')
+            )
+            ->orderBy('name')
+            ->get();
 
-        // Devoirs postés par les professeurs pour cette classe
-        $profAssignments = collect([]);
-        if ($classRoom) {
-            $profAssignments = Assignment::where('class_room_id', $classRoom->id)
-                ->whereHas('user', function($q) {
-                    $q->where('role', 'prof');
-                })
-                ->with('user')
-                ->orderBy('created_at', 'desc')
+        $levels = Level::query()
+            ->whereIn(
+                'id',
+                $assignmentRows->pluck('level_id')
+            )
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        $classes = ClassRoom::query()
+            ->whereIn(
+                'id',
+                $assignmentRows->pluck('class_id')
+            )
+            ->with('level')
+            ->orderBy('name')
+            ->get();
+
+        $subjectsById = $subjects->keyBy('id');
+        $levelsById = $levels->keyBy('id');
+        $classesById = $classes->keyBy('id');
+
+        $assignmentPaths = $assignmentRows
+            ->map(
+                function ($row) use (
+                    $subjectsById,
+                    $levelsById,
+                    $classesById
+                ) {
+                    $subject = $subjectsById->get(
+                        (int) $row->subject_id
+                    );
+
+                    $level = $levelsById->get(
+                        (int) $row->level_id
+                    );
+
+                    $classRoom = $classesById->get(
+                        (int) $row->class_id
+                    );
+
+                    if (
+                        !$subject
+                        || !$level
+                        || !$classRoom
+                    ) {
+                        return null;
+                    }
+
+                    return (object) [
+                        'subject_id' =>
+                            (int) $subject->id,
+                        'level_id' =>
+                            (int) $level->id,
+                        'class_id' =>
+                            (int) $classRoom->id,
+                        'subject' => $subject,
+                        'level' => $level,
+                        'classRoom' => $classRoom,
+                    ];
+                }
+            )
+            ->filter()
+            ->sortBy(
+                function ($path) {
+                    return sprintf(
+                        '%s|%06d|%s|%s',
+                        mb_strtolower(
+                            $path->subject->name
+                        ),
+                        (int) (
+                            $path->level->order
+                            ?? 999999
+                        ),
+                        mb_strtolower(
+                            $path->level->name
+                        ),
+                        mb_strtolower(
+                            $path->classRoom->name
+                        )
+                    );
+                }
+            )
+            ->values();
+
+        /*
+         * Données des listes dépendantes du formulaire :
+         * matière → niveaux → classes.
+         */
+        $levelsBySubject = $assignmentPaths
+            ->groupBy('subject_id')
+            ->mapWithKeys(
+                function (
+                    $subjectPaths,
+                    $subjectId
+                ) {
+                    $options = $subjectPaths
+                        ->unique('level_id')
+                        ->sortBy(
+                            function ($path) {
+                                return sprintf(
+                                    '%06d|%s',
+                                    (int) (
+                                        $path->level->order
+                                        ?? 999999
+                                    ),
+                                    mb_strtolower(
+                                        $path->level->name
+                                    )
+                                );
+                            }
+                        )
+                        ->values()
+                        ->map(
+                            function ($path) {
+                                return [
+                                    'id' =>
+                                        (int) $path->level_id,
+                                    'name' =>
+                                        $path->level->name,
+                                ];
+                            }
+                        )
+                        ->all();
+
+                    return [
+                        (string) $subjectId =>
+                            $options,
+                    ];
+                }
+            )
+            ->all();
+
+        $classesBySubjectLevel = $assignmentPaths
+            ->groupBy('subject_id')
+            ->mapWithKeys(
+                function (
+                    $subjectPaths,
+                    $subjectId
+                ) {
+                    $levels = $subjectPaths
+                        ->groupBy('level_id')
+                        ->mapWithKeys(
+                            function (
+                                $levelPaths,
+                                $levelId
+                            ) {
+                                $options = $levelPaths
+                                    ->unique('class_id')
+                                    ->sortBy(
+                                        fn ($path) =>
+                                            mb_strtolower(
+                                                $path
+                                                    ->classRoom
+                                                    ->name
+                                            )
+                                    )
+                                    ->values()
+                                    ->map(
+                                        function ($path) {
+                                            return [
+                                                'id' =>
+                                                    (int) $path
+                                                        ->class_id,
+                                                'name' =>
+                                                    $path
+                                                        ->classRoom
+                                                        ->name,
+                                            ];
+                                        }
+                                    )
+                                    ->all();
+
+                                return [
+                                    (string) $levelId =>
+                                        $options,
+                                ];
+                            }
+                        )
+                        ->all();
+
+                    return [
+                        (string) $subjectId =>
+                            $levels,
+                    ];
+                }
+            )
+            ->all();
+
+        $assignments = Assignment::query()
+            ->where('user_id', $user->id)
+            ->with([
+                'subject',
+                'course.subject',
+            ])
+            ->latest()
+            ->get();
+
+        /*
+         * Afficher les devoirs des professeurs pour tous les
+         * parcours assignés à l'étudiant, et non uniquement
+         * sa première classe.
+         */
+        $profAssignments = collect();
+
+        if ($assignmentRows->isNotEmpty()) {
+            $profAssignments = Assignment::query()
+                ->whereHas(
+                    'user',
+                    fn ($query) =>
+                        $query->where('role', 'prof')
+                )
+                ->where(
+                    function ($query) use (
+                        $assignmentRows
+                    ) {
+                        foreach (
+                            $assignmentRows
+                            as $row
+                        ) {
+                            $query->orWhere(
+                                function ($pathQuery) use (
+                                    $row
+                                ) {
+                                    $pathQuery
+                                        ->where(
+                                            'subject_id',
+                                            $row->subject_id
+                                        )
+                                        ->where(
+                                            'class_room_id',
+                                            $row->class_id
+                                        );
+                                }
+                            );
+                        }
+                    }
+                )
+                ->with([
+                    'user',
+                    'subject',
+                    'course',
+                ])
+                ->latest()
                 ->get();
 
             $now = now();
-            // Pour chaque devoir du prof, vérifier si l'étudiant a soumis
-            $profAssignments->each(function($pa) use ($now) {
-                $dueDate = $pa->due_date ? \Carbon\Carbon::parse($pa->due_date) : null;
-                $isOverdue = $dueDate && $now->gt($dueDate);
 
-                $studentSubmission = Assignment::where('user_id', auth()->id())
-                    ->where(function($q) use ($pa) {
-                        $q->where('course_id', $pa->course_id);
-                        if ($pa->title) {
-                            $q->orWhere('title', 'like', '%' . $pa->title . '%');
+            $profAssignments->each(
+                function ($profAssignment) use (
+                    $now,
+                    $assignments
+                ) {
+                    $dueDate =
+                        $profAssignment->due_date
+                            ? \Carbon\Carbon::parse(
+                                $profAssignment->due_date
+                            )
+                            : null;
+
+                    $isOverdue =
+                        $dueDate
+                        && $now->gt($dueDate);
+
+                    $studentSubmission =
+                        $assignments->first(
+                            function (
+                                $submission
+                            ) use (
+                                $profAssignment
+                            ) {
+                                if (
+                                    $submission->course_id
+                                    && $profAssignment->course_id
+                                    && (int) $submission
+                                        ->course_id
+                                        === (int) $profAssignment
+                                            ->course_id
+                                ) {
+                                    return true;
+                                }
+
+                                if (
+                                    (int) $submission
+                                        ->subject_id
+                                    !== (int) $profAssignment
+                                        ->subject_id
+                                ) {
+                                    return false;
+                                }
+
+                                if (
+                                    $submission->class_room_id
+                                    && $profAssignment
+                                        ->class_room_id
+                                    && (int) $submission
+                                        ->class_room_id
+                                        !== (int) $profAssignment
+                                            ->class_room_id
+                                ) {
+                                    return false;
+                                }
+
+                                $profTitle = trim(
+                                    (string) $profAssignment
+                                        ->title
+                                );
+
+                                if ($profTitle === '') {
+                                    return false;
+                                }
+
+                                return mb_stripos(
+                                    (string) $submission
+                                        ->title,
+                                    $profTitle
+                                ) !== false;
+                            }
+                        );
+
+                    $profAssignment->has_file =
+                        !empty(
+                            $profAssignment->file
+                        );
+
+                    $profAssignment->is_locked =
+                        $isOverdue
+                        || !$profAssignment->has_file;
+
+                    if ($studentSubmission) {
+                        $profAssignment
+                            ->student_submitted = true;
+
+                        $profAssignment
+                            ->student_grade =
+                                $studentSubmission
+                                    ->grade;
+
+                        if (
+                            $studentSubmission
+                                ->grade !== null
+                        ) {
+                            $profAssignment
+                                ->student_grade_status =
+                                    $studentSubmission
+                                        ->grade >= 10
+                                            ? 'acqui'
+                                            : 'non_acquis';
+                        } else {
+                            $profAssignment
+                                ->student_grade_status =
+                                    'en_cours';
                         }
-                    })
-                    ->first();
-
-                // Vérifier si le devoir a assez d'informations pour être soumis
-                $pa->has_file = !empty($pa->file);
-                $pa->is_locked = $isOverdue || !$pa->has_file;
-
-                if ($studentSubmission) {
-                    $pa->student_submitted = true;
-                    if ($studentSubmission->grade !== null) {
-                        $pa->student_grade = $studentSubmission->grade;
-                        $pa->student_grade_status = $studentSubmission->grade >= 10 ? 'acqui' : 'non_acquis';
                     } else {
-                        $pa->student_grade_status = 'en_cours';
+                        $profAssignment
+                            ->student_submitted = false;
+
+                        $profAssignment
+                            ->student_grade = null;
+
+                        $profAssignment
+                            ->student_grade_status =
+                                'non_acquis';
                     }
-                } else {
-                    $pa->student_submitted = false;
-                    $pa->student_grade_status = 'non_acquis';
                 }
-            });
+            );
         }
 
-        $hasSingleSubject = $subjects->count() === 1;
-
-        return view('student.assignments', compact(
-            'assignments', 'courses', 'classRoom', 'subjects',
-            'profAssignments', 'hasSingleSubject'
-        ));
+        return view(
+            'student.assignments',
+            compact(
+                'assignments',
+                'subjects',
+                'assignmentPaths',
+                'levelsBySubject',
+                'classesBySubjectLevel',
+                'profAssignments'
+            )
+        );
     }
 
 
@@ -554,72 +890,370 @@ class StudentController extends Controller
     public function sendAssignment(Request $request)
     {
         $user = auth()->user();
-        $userClassRoom = $user->classRoom;
 
-        // Matières assignées à l'étudiant
-        $validSubjects = collect();
-        if ($userClassRoom) {
-            $validSubjects = $userClassRoom->subjects;
-        }
-        $validSubjects = $validSubjects->merge($user->individuallyAssignedSubjects())->unique('id');
+        $assignmentRows = $this->paths
+            ->studentAssignmentRows($user->id);
 
-        if ($validSubjects->count() === 0) {
-            return back()->with('error', 'Aucune matière assignée à votre compte. Veuillez contacter l\'administration.');
-        }
-
-        // Déterminer la matière
-        $subjectId = $request->subject_id;
-
-        if (!$subjectId) {
-            // Auto-détection si une seule matière
-            if ($validSubjects->count() === 1) {
-                $subjectId = $validSubjects->first()->id;
-            } else {
-                return back()->with('error', 'Veuillez sélectionner une matière dans le formulaire.');
-            }
-        } else {
-            // Vérifier que la matière fournie appartient bien à l'étudiant
-            if (!$validSubjects->pluck('id')->contains((int)$subjectId)) {
-                return back()->with('error', 'Cette matière ne vous est pas assignée.');
-            }
+        if ($assignmentRows->isEmpty()) {
+            return back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'Aucun parcours pédagogique n’est assigné à votre compte.'
+                );
         }
 
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'file' => 'required|file|max:10240', // 10MB
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'subject_id' => [
+                'nullable',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'nullable',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'nullable',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'file' => [
+                'required',
+                'file',
+                'mimes:pdf,doc,docx',
+                'max:10240',
+            ],
         ]);
 
-        // Trouver un cours dans cette matière pour la classe de l'étudiant
-        $course = Course::where('subject_id', $subjectId)
-            ->where('class_id', $userClassRoom?->id)
+        /*
+         * Le serveur complète automatiquement une valeur
+         * lorsqu’un seul choix est possible.
+         */
+        $subjectId = isset(
+            $validated['subject_id']
+        )
+            ? (int) $validated['subject_id']
+            : null;
+
+        $availableSubjectIds = $assignmentRows
+            ->pluck('subject_id')
+            ->map(
+                fn ($id) => (int) $id
+            )
+            ->unique()
+            ->values();
+
+        if (!$subjectId) {
+            if ($availableSubjectIds->count() === 1) {
+                $subjectId =
+                    (int) $availableSubjectIds->first();
+            } else {
+                throw ValidationException::withMessages([
+                    'subject_id' =>
+                        'Veuillez choisir une matière.',
+                ]);
+            }
+        }
+
+        $subjectRows = $assignmentRows
+            ->filter(
+                fn ($row) =>
+                    (int) $row->subject_id
+                    === $subjectId
+            )
+            ->values();
+
+        if ($subjectRows->isEmpty()) {
+            throw ValidationException::withMessages([
+                'subject_id' =>
+                    'Cette matière ne vous est pas assignée.',
+            ]);
+        }
+
+        $levelId = isset(
+            $validated['level_id']
+        )
+            ? (int) $validated['level_id']
+            : null;
+
+        $availableLevelIds = $subjectRows
+            ->pluck('level_id')
+            ->map(
+                fn ($id) => (int) $id
+            )
+            ->unique()
+            ->values();
+
+        if (!$levelId) {
+            if ($availableLevelIds->count() === 1) {
+                $levelId =
+                    (int) $availableLevelIds->first();
+            } else {
+                throw ValidationException::withMessages([
+                    'level_id' =>
+                        'Veuillez choisir un niveau.',
+                ]);
+            }
+        }
+
+        $levelRows = $subjectRows
+            ->filter(
+                fn ($row) =>
+                    (int) $row->level_id
+                    === $levelId
+            )
+            ->values();
+
+        if ($levelRows->isEmpty()) {
+            throw ValidationException::withMessages([
+                'level_id' =>
+                    'Ce niveau ne correspond pas à la matière sélectionnée.',
+            ]);
+        }
+
+        $classId = isset(
+            $validated['class_id']
+        )
+            ? (int) $validated['class_id']
+            : null;
+
+        $availableClassIds = $levelRows
+            ->pluck('class_id')
+            ->map(
+                fn ($id) => (int) $id
+            )
+            ->unique()
+            ->values();
+
+        if (!$classId) {
+            if ($availableClassIds->count() === 1) {
+                $classId =
+                    (int) $availableClassIds->first();
+            } else {
+                throw ValidationException::withMessages([
+                    'class_id' =>
+                        'Veuillez choisir une classe.',
+                ]);
+            }
+        }
+
+        $selectedPath = $levelRows->first(
+            fn ($row) =>
+                (int) $row->class_id
+                === $classId
+        );
+
+        if (!$selectedPath) {
+            throw ValidationException::withMessages([
+                'class_id' =>
+                    'Cette classe ne fait pas partie du parcours sélectionné.',
+            ]);
+        }
+
+        /*
+         * La classe détermine déjà son niveau. On accepte
+         * également les anciens cours dont level_id est NULL.
+         */
+        $course = Course::query()
+            ->where('subject_id', $subjectId)
+            ->where('class_id', $classId)
+            ->where(
+                function ($query) use ($levelId) {
+                    $query
+                        ->where(
+                            'level_id',
+                            $levelId
+                        )
+                        ->orWhereNull('level_id');
+                }
+            )
+            ->orderByRaw(
+                'CASE WHEN level_id = ? THEN 0 ELSE 1 END',
+                [$levelId]
+            )
+            ->orderBy('order')
+            ->orderBy('id')
             ->first();
 
         if (!$course) {
-            return back()->with('error', 'Aucun cours disponible pour cette matière dans votre classe.');
+            return back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'Aucun cours n’est disponible pour la matière, le niveau et la classe sélectionnés.'
+                );
         }
 
-        $file = $request->file('file')->store('assignments','public');
+        $file = $request
+            ->file('file')
+            ->store(
+                'assignments',
+                'public'
+            );
 
         Assignment::create([
             'user_id' => $user->id,
-            'title' => $request->title,
+            'title' => $validated['title'],
             'file' => $file,
             'course_id' => $course->id,
             'subject_id' => $subjectId,
+            'class_room_id' => $classId,
         ]);
 
-        return back()->with('success','Devoir envoyé avec succès !');
+        return back()->with(
+            'success',
+            'Devoir envoyé avec succès !'
+        );
     }
 
 
 
 
-public function profile()
+    public function profile()
     {
-        return view('student.profile');
+        $user = auth()->user();
+
+        $assignmentRows = $this->paths
+            ->studentAssignmentRows($user->id);
+
+        $subjectIds = $assignmentRows
+            ->pluck('subject_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $levelIds = $assignmentRows
+            ->pluck('level_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $classIds = $assignmentRows
+            ->pluck('class_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $subjectsById = Subject::query()
+            ->whereIn('id', $subjectIds)
+            ->get()
+            ->keyBy('id');
+
+        $levelsById = Level::query()
+            ->whereIn('id', $levelIds)
+            ->get()
+            ->keyBy('id');
+
+        $classesById = ClassRoom::query()
+            ->whereIn('id', $classIds)
+            ->get()
+            ->keyBy('id');
+
+        $learningPaths = $assignmentRows
+            ->map(
+                function ($row) use (
+                    $subjectsById,
+                    $levelsById,
+                    $classesById
+                ) {
+                    $subject = $subjectsById->get(
+                        (int) $row->subject_id
+                    );
+
+                    $level = $levelsById->get(
+                        (int) $row->level_id
+                    );
+
+                    $classRoom = $classesById->get(
+                        (int) $row->class_id
+                    );
+
+                    if (!$subject || !$level || !$classRoom) {
+                        return null;
+                    }
+
+                    return [
+                        'subject' => $subject->name,
+                        'level' => $level->name,
+                        'class' => $classRoom->name,
+                    ];
+                }
+            )
+            ->filter()
+            ->unique(
+                fn ($path) =>
+                    $path['subject']
+                    . '|'
+                    . $path['level']
+                    . '|'
+                    . $path['class']
+            )
+            ->values();
+
+        $courseQuery = Course::query();
+
+        if ($assignmentRows->isEmpty()) {
+            $courseQuery->whereRaw('1 = 0');
+        } else {
+            $courseQuery->where(
+                function ($query) use ($assignmentRows) {
+                    foreach ($assignmentRows as $row) {
+                        $query->orWhere(
+                            function ($pair) use ($row) {
+                                $pair
+                                    ->where(
+                                        'subject_id',
+                                        $row->subject_id
+                                    )
+                                    ->where(
+                                        'level_id',
+                                        $row->level_id
+                                    )
+                                    ->where(
+                                        'class_id',
+                                        $row->class_id
+                                    );
+                            }
+                        );
+                    }
+                }
+            );
+        }
+
+        $studentAssignments = Assignment::query()
+            ->where('user_id', $user->id)
+            ->get();
+
+        $gradedAssignments = $studentAssignments
+            ->whereNotNull('grade');
+
+        $coursesCount = $courseQuery->count();
+        $subjectsCount = $subjectIds->count();
+        $assignmentsSent = $studentAssignments->count();
+        $average = $gradedAssignments->isNotEmpty()
+            ? round((float) $gradedAssignments->avg('grade'), 1)
+            : 0;
+
+        return view(
+            'student.profile',
+            compact(
+                'learningPaths',
+                'coursesCount',
+                'subjectsCount',
+                'assignmentsSent',
+                'average'
+            )
+        );
     }
 
-public function settings()
+    public function settings()
     {
         return view('student.settings');
     }
@@ -662,12 +1296,61 @@ public function settings()
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users')->ignore($user->id),
+            ],
+            'profile_photo' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096',
+            ],
+            'remove_profile_photo' => [
+                'nullable',
+                'boolean',
+            ],
         ]);
-        $user->update($request->only('name', 'email'));
-        return back()->with('success', 'Profil mis à jour avec succès !');
+
+        if (
+            $request->boolean('remove_profile_photo')
+            && $user->profile_photo
+        ) {
+            Storage::disk('public')->delete(
+                $user->profile_photo
+            );
+
+            $user->profile_photo = null;
+        }
+
+        if ($request->hasFile('profile_photo')) {
+            if ($user->profile_photo) {
+                Storage::disk('public')->delete(
+                    $user->profile_photo
+                );
+            }
+
+            $user->profile_photo = $request
+                ->file('profile_photo')
+                ->store('profiles', 'public');
+        }
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->save();
+
+        return back()->with(
+            'success',
+            'Profil et photo mis à jour avec succès !'
+        );
     }
 
     public function updatePassword(Request $request)

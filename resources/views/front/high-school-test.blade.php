@@ -167,126 +167,133 @@
                     nettes de toutes vos feuilles.
                 </p>
 
-                @auth
-                    <form
-                        method="POST"
-                        action="{{
-                            route(
-                                'high-school-test.store',
-                                [
-                                    $subject,
-                                    $level,
-                                    $class,
-                                ]
-                            )
-                        }}"
-                        enctype="multipart/form-data"
-                        id="writtenTestForm"
-                    >
-                        @csrf
+                @guest
+                    <div class="written-flow-notice">
+                        <i class="bi bi-info-circle-fill"></i>
 
-                        <label
-                            class="written-upload-zone"
-                            for="answer_images"
-                        >
-                            <i class="bi bi-cloud-arrow-up-fill"></i>
-
-                            <strong>
-                                Choisir les images
-                            </strong>
-
-                            <span>
-                                JPG, PNG ou WEBP · 5 Mo par image
-                            </span>
-
-                            <input
-                                id="answer_images"
-                                name="answer_images[]"
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                multiple
-                                required
-                            >
-                        </label>
-
-                        @error('answer_images')
-                            <div class="written-test-error">
-                                {{ $message }}
-                            </div>
-                        @enderror
-
-                        @error('answer_images.*')
-                            <div class="written-test-error">
-                                {{ $message }}
-                            </div>
-                        @enderror
-
-                        <div
-                            id="writtenImagePreview"
-                            class="written-image-preview"
-                        ></div>
-
-                        <label class="written-confirmation">
-                            <input
-                                type="checkbox"
-                                name="confirmation"
-                                value="1"
-                                required
-                            >
-
-                            <span>
-                                Je confirme que les images sont lisibles
-                                et contiennent toutes mes réponses.
-                            </span>
-                        </label>
-
-                        @error('confirmation')
-                            <div class="written-test-error">
-                                {{ $message }}
-                            </div>
-                        @enderror
-
-                        <button
-                            type="submit"
-                            class="written-test-submit-button"
-                        >
-                            <i class="bi bi-calendar-check-fill"></i>
-
-                            Importer et prendre rendez-vous
-                        </button>
-                    </form>
-                @else
-                    <div class="written-login-notice">
-                        <i class="bi bi-person-lock"></i>
-
-                        <p>
-                            Le test est visible, mais un compte est
-                            nécessaire pour envoyer les images et
-                            prendre rendez-vous.
-                        </p>
-
-                        <a
-                            href="{{ route('register') }}"
-                            class="written-test-submit-button"
-                        >
-                            <i class="bi bi-person-plus-fill"></i>
-                            Créer un compte
-                        </a>
-
-                        <a
-                            href="{{ route('login') }}"
-                            class="written-login-link"
-                        >
-                            J’ai déjà un compte
-                        </a>
+                        <span>
+                            Passez le test maintenant. Après le
+                            rendez-vous, la page d’inscription au
+                            compte sera affichée automatiquement.
+                        </span>
                     </div>
-                @endauth
+                @endguest
+
+                <form
+                    method="POST"
+                    action="{{
+                        route(
+                            'high-school-test.store',
+                            [
+                                $subject,
+                                $level,
+                                $class,
+                            ]
+                        )
+                    }}"
+                    enctype="multipart/form-data"
+                    id="writtenTestForm"
+                >
+                    @csrf
+
+                    <label
+                        class="written-upload-zone"
+                        for="answer_images"
+                    >
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+
+                        <strong>
+                            Choisir les images
+                        </strong>
+
+                        <span>
+                            JPG, PNG ou WEBP · 5 Mo par image
+                        </span>
+
+                        <input
+                            id="answer_images"
+                            name="answer_images[]"
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                            multiple
+                            required
+                        >
+                    </label>
+
+                    @error('answer_images')
+                        <div class="written-test-error">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    @error('answer_images.*')
+                        <div class="written-test-error">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    <div
+                        id="writtenImagePreview"
+                        class="written-image-preview"
+                    ></div>
+
+                    <label class="written-confirmation">
+                        <input
+                            type="checkbox"
+                            name="confirmation"
+                            value="1"
+                            required
+                        >
+
+                        <span>
+                            Je confirme que les images sont lisibles
+                            et contiennent toutes mes réponses.
+                        </span>
+                    </label>
+
+                    @error('confirmation')
+                        <div class="written-test-error">
+                            {{ $message }}
+                        </div>
+                    @enderror
+
+                    <button
+                        type="submit"
+                        class="written-test-submit-button"
+                    >
+                        <i class="bi bi-calendar-check-fill"></i>
+
+                        Importer et prendre rendez-vous
+                    </button>
+                </form>
+
             </aside>
         </div>
     </div>
 </section>
 
 <style>
+
+.written-flow-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 11px;
+    margin-bottom: 13px;
+    color: #BFDBFE;
+    border: 1px solid rgba(59,130,246,.17);
+    border-radius: 11px;
+    background: rgba(37,99,235,.07);
+    font-size: .66rem;
+    line-height: 1.5;
+}
+
+.written-flow-notice i {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: #93C5FD;
+}
+
 .written-test-hero {
     position: relative;
     padding: 2.4rem 0 2.7rem;

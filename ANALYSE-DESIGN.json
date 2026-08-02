@@ -1,0 +1,162 @@
+{
+  "views_analyzed": 23,
+  "folders": [
+    ".",
+    "schedule"
+  ],
+  "approach": "A single CSS override is loaded after each page’s original inline styles. Original Blade/PHP/JS content is preserved.",
+  "modified_content": [
+    "Design stylesheet link appended to each Blade view",
+    "New public/css/front-design-v12.css"
+  ],
+  "not_modified": [
+    "Texts",
+    "Routes",
+    "Blade loops",
+    "PHP conditions",
+    "JavaScript logic",
+    "Forms",
+    "Images",
+    "Database"
+  ],
+  "files": [
+    {
+      "file": "all-classes-courses.blade.php",
+      "original_sha256": "8dca9b6a950e364aac3d827ab8d31b79e2d43e5caa50a34146424a6691f24923",
+      "modified_sha256": "22edc0bc401fc9c57cf275df6f0561784538a9b682a10064bf413667978bbb86",
+      "only_design_link_added": true
+    },
+    {
+      "file": "appointment-confirmation.blade.php",
+      "original_sha256": "f06cdac726a39396234b8c31cc0877f84d28887f96da360a029ceced4f28af1f",
+      "modified_sha256": "01bf11d54037e8e517ef6099c24efe94976d0c1f9783617d5676761341f2e1ae",
+      "only_design_link_added": true
+    },
+    {
+      "file": "appointment.blade.php",
+      "original_sha256": "ddf67654f5adfd1fe39fed576617e0ad097990888d1f8ed04db6db17d87805d1",
+      "modified_sha256": "d49b3eb1d0d906ee216804a9c727382d88385a27f5fea3a2651c7c271f34c5cb",
+      "only_design_link_added": true
+    },
+    {
+      "file": "class-courses.blade.php",
+      "original_sha256": "71938567cf47e52fe2463eb54f6c7873c900f6cdf9789f70cfbc88226cb2152f",
+      "modified_sha256": "14d36cb7a6a68665e84393474363d1bcadcbea37bd6510ef8098398506928ab9",
+      "only_design_link_added": true
+    },
+    {
+      "file": "classes.blade.php",
+      "original_sha256": "3ebd6f73b1ab0c6b9e5e7d76ad9e6fb52811da2b691c00bf9eda389580697be5",
+      "modified_sha256": "4a8f62e81a7f25a1f2c802a339eb983a683662eb0314a78bbb235ab023bc1f18",
+      "only_design_link_added": true
+    },
+    {
+      "file": "course-show.blade.php",
+      "original_sha256": "763877de6b95685d3571d81932924b891b764a5f13a1168da25ce370c07827fa",
+      "modified_sha256": "ec898db390b3427684bb85ad9dd978dac268f5dfb07f924a050796548e5bf46a",
+      "only_design_link_added": true
+    },
+    {
+      "file": "courses.blade.php",
+      "original_sha256": "2bd521a9b2c780c06eec7b5587fa3fbfc2048885a02abec97798863fa549930c",
+      "modified_sha256": "88de6c3471cb8fe14d84bd5b6924a2c3bb4ca8cb36f0f55c6733c4e9e079ca64",
+      "only_design_link_added": true
+    },
+    {
+      "file": "high-school-test.blade.php",
+      "original_sha256": "630d51a8b8d1b4365db0581b3a81cda58c7d199120fd6d2531ace2b09747d748",
+      "modified_sha256": "cb3e4519733b86ab32aea7a04108ef2a82480b1bea50a1e243b947d54e63904f",
+      "only_design_link_added": true
+    },
+    {
+      "file": "home.blade.php",
+      "original_sha256": "36217b4b0d3cf7cb1a3cef01d3707e1a16883c4cf47f55cc74ee95f048f67ad5",
+      "modified_sha256": "5dfc95265b2c5034b8e4bb05539d639a1f54da6c19be3994311e5412c92c28cb",
+      "only_design_link_added": true
+    },
+    {
+      "file": "level-classes.blade.php",
+      "original_sha256": "50ee880f33b19d1cafe609fb1f4de27413bab68a599a28044d69f48d71dad98b",
+      "modified_sha256": "16417fdb49994d04f4eb942ff2625b0ffaf153f700e89c982f47bd7aa902b716",
+      "only_design_link_added": true
+    },
+    {
+      "file": "level-courses.blade.php",
+      "original_sha256": "cf20d963f6612bc78aa3bad22abe88d5d27420eb803ff7a1782b9a2938845085",
+      "modified_sha256": "cb604a2a0fe06947f6c4025f15112474525d0124348fd20b672b2455457dd265",
+      "only_design_link_added": true
+    },
+    {
+      "file": "levels.blade.php",
+      "original_sha256": "b1d8f838da8df51b2e9ee12c8609fef07c800b34670c7f3cf5413248f1fa17bc",
+      "modified_sha256": "d55fbfb8161bb14cd9053d00849ff2969319fdb32ff6a90569838e5ffb7931de",
+      "only_design_link_added": true
+    },
+    {
+      "file": "lives.blade.php",
+      "original_sha256": "851f04b88291cf4bc0fe2a3e84d07d96fd4852e58f7b96f9c1879fbe5bb20092",
+      "modified_sha256": "331a1078593276db43deaf7dbb52569ccdf677427ddd7d21c33e88d7b616f6b5",
+      "only_design_link_added": true
+    },
+    {
+      "file": "public-classes.blade.php",
+      "original_sha256": "df2f3209545bffd1b8b05e08d7aa607cc3c2636c02424f1182b28f35db24c2d9",
+      "modified_sha256": "570a60bd367edf25805c991eb3c84e4f432a7cdea46f6dfb1a92ee0f02101447",
+      "only_design_link_added": true
+    },
+    {
+      "file": "public-courses.blade.php",
+      "original_sha256": "56f50c3aed1774b6a7aca5ba64c872aaf17476688fbf0e2797bce7e48cabb5dd",
+      "modified_sha256": "6569e7ddb80b031d7e05645be1b7b944892e836e03f5151302d3ec35ef15c071",
+      "only_design_link_added": true
+    },
+    {
+      "file": "public-levels.blade.php",
+      "original_sha256": "647cd5c77521a495fc4404d26f00b4ef34d11e786088b8091b18b0a89a011711",
+      "modified_sha256": "49899ebebf977523e1b081a30760a955627c3515b991a0cb104ab4374a0854f2",
+      "only_design_link_added": true
+    },
+    {
+      "file": "public-subjects.blade.php",
+      "original_sha256": "4173722cc27f09147d0ccd287978fb391faca8f483d92a83456c8ca4360d74f7",
+      "modified_sha256": "c7e33d7c23136b814b45c0d23bdf1a658ffa5397df518ab0fed9f5fe349b28ee",
+      "only_design_link_added": true
+    },
+    {
+      "file": "religieux.blade.php",
+      "original_sha256": "4fae438b89770f7281a02112b9db59649dd3d4c2f30bdc0a18ee59898ba7f678",
+      "modified_sha256": "25d7ff25103b848de460ed1e7740e968ad4caca1ab5e25d49be7b77804a29d3a",
+      "only_design_link_added": true
+    },
+    {
+      "file": "schedule/index.blade.php",
+      "original_sha256": "4700b34dc0448206ab67807cf2c26005cae19181bddca146e4c3e5ff504b4491",
+      "modified_sha256": "a31e184fb8e095ec8812ba20efc7ce1f019f82383075e0a025c6072018237942",
+      "only_design_link_added": true
+    },
+    {
+      "file": "scolaires.blade.php",
+      "original_sha256": "a92ed993a33a7aa1852b1b476a11afbe52d53a8a827699b87ba12c3f64f5d5bd",
+      "modified_sha256": "50ffd286453828c7278d26417250690a7a29df43f9802e3188b3fc8abb053ea7",
+      "only_design_link_added": true
+    },
+    {
+      "file": "subject-classes.blade.php",
+      "original_sha256": "6a4c516e33863e93a8d112c7703b12c8f0aa8a524ab9c48e4d7bec636c085f21",
+      "modified_sha256": "14b0fef2e31fa2635bb8779006f25b5b8d3b8c76527631f90998fffcefc9d3a1",
+      "only_design_link_added": true
+    },
+    {
+      "file": "subject-levels.blade.php",
+      "original_sha256": "b68d5a9f3d308165a0f99c0fdf23fc3bc66fd5986c9974be6a6305b438a0eec9",
+      "modified_sha256": "21fc310ecfc7374eecd0dc7baef1a113c55bb4419bde33b77e0e869eef106832",
+      "only_design_link_added": true
+    },
+    {
+      "file": "vocal-test.blade.php",
+      "original_sha256": "7ee8597842021696bd1354c617e7eb8f5a21c198bf36a4a141592d091d93a303",
+      "modified_sha256": "66dc8de6c31c7a98eb957513c8d9e11721d447de3ced70150c108044ea30ae69",
+      "only_design_link_added": true
+    }
+  ]
+}

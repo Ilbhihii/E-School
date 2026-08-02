@@ -27,6 +27,12 @@ class AppointmentController extends Controller
     {
         $type = $request->query('type', '');
         $user = auth()->user();
+        $submissionToken = trim(
+            (string) $request->query(
+                'submission_token',
+                ''
+            )
+        );
 
         $vocalSubmission = null;
         $highSchoolSubmission = null;
@@ -64,21 +70,14 @@ class AppointmentController extends Controller
         }
 
         if ($request->filled('vocal_submission')) {
-            abort_unless($user, 403);
-
             $vocalSubmission =
-                VocalTestSubmission::with([
-                    'subject',
-                    'level',
-                    'classRoom',
-                ])
-                ->whereKey(
+                $this->resolveVocalSubmission(
                     (int) $request->query(
                         'vocal_submission'
-                    )
-                )
-                ->where('user_id', $user->id)
-                ->firstOrFail();
+                    ),
+                    $submissionToken,
+                    false
+                );
 
             if ($vocalSubmission->consumed_at) {
                 $appointment =
@@ -100,21 +99,14 @@ class AppointmentController extends Controller
         }
 
         if ($request->filled('written_submission')) {
-            abort_unless($user, 403);
-
             $highSchoolSubmission =
-                HighSchoolTestSubmission::with([
-                    'subject',
-                    'level',
-                    'classRoom',
-                ])
-                ->whereKey(
+                $this->resolveHighSchoolSubmission(
                     (int) $request->query(
                         'written_submission'
-                    )
-                )
-                ->where('user_id', $user->id)
-                ->firstOrFail();
+                    ),
+                    $submissionToken,
+                    false
+                );
 
             if (
                 $highSchoolSubmission->consumed_at
@@ -150,7 +142,8 @@ class AppointmentController extends Controller
                 'interviewSubject',
                 'interviewLevel',
                 'interviewClass',
-                'interviewMethods'
+                'interviewMethods',
+                'submissionToken'
             )
         );
     }
@@ -190,6 +183,8 @@ class AppointmentController extends Controller
                 . 'high_school_test_submissions,id',
             'interview_path' =>
                 'nullable|boolean',
+            'submission_token' =>
+                'nullable|string|max:80',
         ]);
 
         $isDirectInterview =
@@ -283,21 +278,17 @@ class AppointmentController extends Controller
                 ]
             )
         ) {
-            abort_unless(auth()->check(), 403);
-
             $vocalSubmission =
-                VocalTestSubmission::query()
-                    ->whereKey(
-                        $validated[
-                            'vocal_test_submission_id'
-                        ]
-                    )
-                    ->where(
-                        'user_id',
-                        auth()->id()
-                    )
-                    ->whereNull('consumed_at')
-                    ->firstOrFail();
+                $this->resolveVocalSubmission(
+                    (int) $validated[
+                        'vocal_test_submission_id'
+                    ],
+                    (string) (
+                        $validated['submission_token']
+                        ?? ''
+                    ),
+                    true
+                );
 
             abort_unless(
                 $validated['type']
@@ -313,21 +304,17 @@ class AppointmentController extends Controller
                 ]
             )
         ) {
-            abort_unless(auth()->check(), 403);
-
             $highSchoolSubmission =
-                HighSchoolTestSubmission::query()
-                    ->whereKey(
-                        $validated[
-                            'high_school_test_submission_id'
-                        ]
-                    )
-                    ->where(
-                        'user_id',
-                        auth()->id()
-                    )
-                    ->whereNull('consumed_at')
-                    ->firstOrFail();
+                $this->resolveHighSchoolSubmission(
+                    (int) $validated[
+                        'high_school_test_submission_id'
+                    ],
+                    (string) (
+                        $validated['submission_token']
+                        ?? ''
+                    ),
+                    true
+                );
 
             abort_unless(
                 $validated['type']
@@ -366,15 +353,24 @@ class AppointmentController extends Controller
                         'subject_id' =>
                             $isDirectInterview
                                 ? $validated['subject_id']
-                                : null,
+                                : (
+                                    $vocalSubmission?->subject_id
+                                    ?? $highSchoolSubmission?->subject_id
+                                ),
                         'level_id' =>
                             $isDirectInterview
                                 ? $validated['level_id']
-                                : null,
+                                : (
+                                    $vocalSubmission?->level_id
+                                    ?? $highSchoolSubmission?->level_id
+                                ),
                         'class_id' =>
                             $isDirectInterview
                                 ? $validated['class_id']
-                                : null,
+                                : (
+                                    $vocalSubmission?->class_id
+                                    ?? $highSchoolSubmission?->class_id
+                                ),
                         'interview_method' =>
                             $isDirectInterview
                                 ? $validated[
@@ -426,6 +422,36 @@ class AppointmentController extends Controller
                 return $appointment;
             }
         );
+
+        if (
+            auth()->guest()
+            && $validated['type']
+                === TestAppointment::TYPE_TEST
+        ) {
+            session()->put(
+                'pending_test_registration',
+                [
+                    'appointment_id' => $appointment->id,
+                    'first_name' => $appointment->first_name,
+                    'last_name' => $appointment->last_name,
+                    'email' => $appointment->email,
+                    'city' => $appointment->city,
+                    'country' => $appointment->country,
+                ]
+            );
+
+            session()->forget('url.intended');
+
+            return redirect()
+                ->route(
+                    'register',
+                    ['from' => 'test-appointment']
+                )
+                ->with(
+                    'success',
+                    'Votre test et votre rendez-vous ont été envoyés. Créez maintenant votre compte pour terminer l’inscription.'
+                );
+        }
 
         if (
             $isDirectInterview
@@ -715,6 +741,77 @@ class AppointmentController extends Controller
                     'private, no-store',
             ]
         );
+    }
+
+
+    private function resolveVocalSubmission(
+        int $submissionId,
+        string $submissionToken,
+        bool $mustBeUnconsumed
+    ): VocalTestSubmission {
+        $query = VocalTestSubmission::with([
+            'subject',
+            'level',
+            'classRoom',
+        ])->whereKey($submissionId);
+
+        if (auth()->check()) {
+            $query->where('user_id', auth()->id());
+        } else {
+            abort_if(
+                $submissionToken === '',
+                403,
+                'Le lien du test est invalide.'
+            );
+
+            $query
+                ->whereNull('user_id')
+                ->where(
+                    'guest_token',
+                    $submissionToken
+                );
+        }
+
+        if ($mustBeUnconsumed) {
+            $query->whereNull('consumed_at');
+        }
+
+        return $query->firstOrFail();
+    }
+
+    private function resolveHighSchoolSubmission(
+        int $submissionId,
+        string $submissionToken,
+        bool $mustBeUnconsumed
+    ): HighSchoolTestSubmission {
+        $query = HighSchoolTestSubmission::with([
+            'subject',
+            'level',
+            'classRoom',
+        ])->whereKey($submissionId);
+
+        if (auth()->check()) {
+            $query->where('user_id', auth()->id());
+        } else {
+            abort_if(
+                $submissionToken === '',
+                403,
+                'Le lien du test est invalide.'
+            );
+
+            $query
+                ->whereNull('user_id')
+                ->where(
+                    'guest_token',
+                    $submissionToken
+                );
+        }
+
+        if ($mustBeUnconsumed) {
+            $query->whereNull('consumed_at');
+        }
+
+        return $query->firstOrFail();
     }
 
     private function resolveHighSchoolPath(

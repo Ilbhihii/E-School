@@ -9,9 +9,31 @@ use App\Models\Subject;
 use App\Models\Course;
 use App\Models\VocalTestPrompt;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class LevelController extends Controller
 {
+    /**
+     * Les seules matières autorisées dans la structure pédagogique.
+     * Les autres matières déjà présentes en base restent intactes,
+     * mais ne sont ni affichées ni configurables depuis cette page.
+     */
+    private const ALLOWED_SUBJECTS = [
+        'arabe' => [
+            'name' => 'Arabe',
+            'type' => 'scolaire',
+        ],
+        'coran' => [
+            'name' => 'Coran',
+            'type' => 'religieux',
+        ],
+        'soutien lycee' => [
+            'name' => 'Soutien Lycée',
+            'type' => 'scolaire',
+        ],
+    ];
+
     /**
      * Redirige vers la page des matières (les niveaux sont gérés via Matières → Niveaux → Classes)
      */
@@ -92,20 +114,21 @@ class LevelController extends Controller
      */
     public function subjectsIndex()
     {
+        $subjectOrder = array_flip(array_keys(self::ALLOWED_SUBJECTS));
+
         $subjects = Subject::query()
-            ->whereIn(
-                'name',
-                ['Arabe', 'Coran', 'Soutien Lycée']
+            ->get()
+            ->filter(
+                fn (Subject $subject) =>
+                    $this->isAllowedSubject($subject)
             )
-            ->orderByRaw(
-                "CASE
-                    WHEN LOWER(name) = 'arabe' THEN 1
-                    WHEN LOWER(name) = 'coran' THEN 2
-                    WHEN LOWER(name) = 'soutien lycée' THEN 3
-                    ELSE 4
-                END"
+            ->sortBy(
+                fn (Subject $subject) =>
+                    $subjectOrder[
+                        VocalTestPrompt::normalizePathName($subject->name)
+                    ] ?? PHP_INT_MAX
             )
-            ->get();
+            ->values();
 
         $subjects->each(function (Subject $subject) {
             $allowedLevelNames =
@@ -160,13 +183,7 @@ class LevelController extends Controller
                                 fn (Level $level) =>
                                     $level->classes
                             )
-                            ->unique(
-                                fn (ClassRoom $classRoom) =>
-                                    VocalTestPrompt
-                                        ::normalizePathName(
-                                            $classRoom->name
-                                        )
-                            )
+                            ->unique('id')
                             ->count()
                 )
             );
@@ -181,6 +198,225 @@ class LevelController extends Controller
             'admin.subjects.index',
             compact('subjects')
         );
+    }
+
+    /**
+     * Crée une structure pédagogique complète :
+     * Matière → Niveaux → Classes.
+     */
+    public function storeSubjectHierarchy(Request $request)
+    {
+        $allowedSubjectNames = array_column(
+            self::ALLOWED_SUBJECTS,
+            'name'
+        );
+
+        $validated = $request->validate(
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    Rule::in($allowedSubjectNames),
+                ],
+                'description' => [
+                    'nullable',
+                    'string',
+                    'max:1000',
+                ],
+                'levels' => [
+                    'required',
+                    'array',
+                    'min:1',
+                    'max:20',
+                ],
+                'levels.*.name' => [
+                    'required',
+                    'string',
+                    'max:120',
+                ],
+                'levels.*.description' => [
+                    'nullable',
+                    'string',
+                    'max:500',
+                ],
+                'levels.*.classes' => [
+                    'required',
+                    'array',
+                    'min:1',
+                    'max:30',
+                ],
+                'levels.*.classes.*.name' => [
+                    'required',
+                    'string',
+                    'max:120',
+                ],
+            ],
+            [
+                'name.required' => 'Sélectionnez une matière.',
+                'name.in' => 'Seules les matières Arabe, Coran et Soutien Lycée sont autorisées.',
+                'levels.required' => 'Ajoutez au moins un niveau.',
+                'levels.min' => 'Ajoutez au moins un niveau.',
+                'levels.*.name.required' => 'Chaque niveau doit avoir un nom.',
+                'levels.*.classes.required' => 'Ajoutez au moins une classe à chaque niveau.',
+                'levels.*.classes.min' => 'Ajoutez au moins une classe à chaque niveau.',
+                'levels.*.classes.*.name.required' => 'Chaque classe doit avoir un nom.',
+            ]
+        );
+
+        $subjectConfig = $this->allowedSubjectConfig(
+            $validated['name']
+        );
+
+        if ($subjectConfig === null) {
+            return back()
+                ->withErrors([
+                    'name' => 'Cette matière n’est pas autorisée.',
+                ])
+                ->withInput();
+        }
+
+        $levelNames = [];
+
+        foreach ($validated['levels'] as $levelIndex => $levelData) {
+            $normalizedLevelName =
+                VocalTestPrompt::normalizePathName($levelData['name']);
+
+            if (in_array($normalizedLevelName, $levelNames, true)) {
+                return back()
+                    ->withErrors([
+                        "levels.{$levelIndex}.name" =>
+                            'Ce niveau est déjà présent dans cette matière.',
+                    ])
+                    ->withInput();
+            }
+
+            $levelNames[] = $normalizedLevelName;
+            $classNames = [];
+
+            foreach ($levelData['classes'] as $classIndex => $classData) {
+                $normalizedClassName =
+                    VocalTestPrompt::normalizePathName($classData['name']);
+
+                if (in_array($normalizedClassName, $classNames, true)) {
+                    return back()
+                        ->withErrors([
+                            "levels.{$levelIndex}.classes.{$classIndex}.name" =>
+                                'Cette classe est déjà présente dans ce niveau.',
+                        ])
+                        ->withInput();
+                }
+
+                $classNames[] = $normalizedClassName;
+            }
+        }
+
+        $subject = DB::transaction(
+            function () use ($validated, $subjectConfig) {
+                $normalizedSubjectName =
+                    VocalTestPrompt::normalizePathName(
+                        $subjectConfig['name']
+                    );
+
+                $subject = Subject::query()
+                    ->get()
+                    ->first(
+                        fn (Subject $candidate) =>
+                            VocalTestPrompt::normalizePathName(
+                                $candidate->name
+                            ) === $normalizedSubjectName
+                    );
+
+                $subjectData = [
+                    'name' => $subjectConfig['name'],
+                    'type' => $subjectConfig['type'],
+                ];
+
+                $description = trim(
+                    (string) ($validated['description'] ?? '')
+                );
+
+                if ($description !== '') {
+                    $subjectData['description'] = $description;
+                }
+
+                if ($subject) {
+                    $subject->fill($subjectData);
+                    $subject->save();
+                } else {
+                    $subject = Subject::create($subjectData);
+                }
+
+                foreach ($validated['levels'] as $levelIndex => $levelData) {
+                    $normalizedLevelName =
+                        VocalTestPrompt::normalizePathName(
+                            $levelData['name']
+                        );
+
+                    $level = Level::query()
+                        ->where('subject_id', $subject->id)
+                        ->get()
+                        ->first(
+                            fn (Level $candidate) =>
+                                VocalTestPrompt::normalizePathName(
+                                    $candidate->name
+                                ) === $normalizedLevelName
+                        );
+
+                    $levelDataToSave = [
+                        'subject_id' => $subject->id,
+                        'name' => trim($levelData['name']),
+                        'description' => isset($levelData['description'])
+                            ? trim((string) $levelData['description'])
+                            : null,
+                        'order' => $levelIndex + 1,
+                    ];
+
+                    if ($level) {
+                        $level->fill($levelDataToSave);
+                        $level->save();
+                    } else {
+                        $level = Level::create($levelDataToSave);
+                    }
+
+                    foreach ($levelData['classes'] as $classData) {
+                        $normalizedClassName =
+                            VocalTestPrompt::normalizePathName(
+                                $classData['name']
+                            );
+
+                        $classRoom = ClassRoom::query()
+                            ->where('level_id', $level->id)
+                            ->get()
+                            ->first(
+                                fn (ClassRoom $candidate) =>
+                                    VocalTestPrompt::normalizePathName(
+                                        $candidate->name
+                                    ) === $normalizedClassName
+                            );
+
+                        if (!$classRoom) {
+                            $classRoom = ClassRoom::create([
+                                'name' => trim($classData['name']),
+                                'level_id' => $level->id,
+                            ]);
+                        }
+
+                        $classRoom->subjects()->syncWithoutDetaching([
+                            $subject->id,
+                        ]);
+                    }
+                }
+
+                return $subject;
+            }
+        );
+
+        return redirect()
+            ->route('admin.subjects.levels', $subject)
+            ->with(
+                'success',
+                'La structure de la matière a été enregistrée avec succès.'
+            );
     }
 
     /**
@@ -200,26 +436,34 @@ class LevelController extends Controller
      */
     public function subjectLevels(Subject $subject)
     {
+        abort_unless(
+            $this->isAllowedSubject($subject),
+            404
+        );
+
         /*
          * La vue utilise :
          * - $subject  : matière actuellement sélectionnée ;
          * - $subjects : liste des matières actives ;
          * - $levels   : parcours/niveaux de la matière.
          */
+        $subjectOrder = array_flip(array_keys(self::ALLOWED_SUBJECTS));
+
         $subjects = Subject::query()
-            ->whereIn(
-                'name',
-                ['Arabe', 'Coran', 'Soutien Lycée']
+            ->get()
+            ->filter(
+                fn (Subject $candidate) =>
+                    $this->isAllowedSubject($candidate)
             )
-            ->orderByRaw(
-                "CASE
-                    WHEN LOWER(name) = 'arabe' THEN 1
-                    WHEN LOWER(name) = 'coran' THEN 2
-                    WHEN LOWER(name) = 'soutien lycée' THEN 3
-                    ELSE 4
-                END"
+            ->sortBy(
+                fn (Subject $candidate) =>
+                    $subjectOrder[
+                        VocalTestPrompt::normalizePathName(
+                            $candidate->name
+                        )
+                    ] ?? PHP_INT_MAX
             )
-            ->get();
+            ->values();
 
         $allowedLevelNames =
             $this->levelNamesForSubject($subject);
@@ -324,6 +568,11 @@ class LevelController extends Controller
         Level $level
     ) {
         abort_unless(
+            $this->isAllowedSubject($subject),
+            404
+        );
+
+        abort_unless(
             (int) $level->subject_id ===
                 (int) $subject->id,
             404
@@ -400,6 +649,11 @@ class LevelController extends Controller
      */
     public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
     {
+        abort_unless(
+            $this->isAllowedSubject($subject),
+            404
+        );
+
         $allowedLevelNames =
             $this->levelNamesForSubject($subject);
 
@@ -455,6 +709,21 @@ class LevelController extends Controller
         return view('admin.subjects.courses', compact('level', 'class', 'subject', 'courses'));
     }
 
+    private function allowedSubjectConfig(
+        string $subjectName
+    ): ?array {
+        $normalizedName =
+            VocalTestPrompt::normalizePathName($subjectName);
+
+        return self::ALLOWED_SUBJECTS[$normalizedName] ?? null;
+    }
+
+    private function isAllowedSubject(
+        Subject $subject
+    ): bool {
+        return $this->allowedSubjectConfig($subject->name) !== null;
+    }
+
     private function levelNamesForSubject(
         Subject $subject
     ): array {
@@ -462,9 +731,25 @@ class LevelController extends Controller
             return ['BAC'];
         }
 
-        return VocalTestPrompt::pathNamesForSubject(
-            $subject
-        );
+        $configuredNames =
+            VocalTestPrompt::pathNamesForSubject($subject);
+
+        if ($configuredNames !== []) {
+            return $configuredNames;
+        }
+
+        return Level::query()
+            ->where('subject_id', $subject->id)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->pluck('name')
+            ->filter()
+            ->unique(
+                fn ($name) =>
+                    VocalTestPrompt::normalizePathName($name)
+            )
+            ->values()
+            ->all();
     }
 
     private function itemNamesForSubject(
@@ -477,7 +762,30 @@ class LevelController extends Controller
             ];
         }
 
-        return VocalTestPrompt::allowedClassNames();
+        if (VocalTestPrompt::pathNamesForSubject($subject) !== []) {
+            return VocalTestPrompt::allowedClassNames();
+        }
+
+        return ClassRoom::query()
+            ->whereHas(
+                'level',
+                fn ($query) =>
+                    $query->where('subject_id', $subject->id)
+            )
+            ->whereHas(
+                'subjects',
+                fn ($query) =>
+                    $query->where('subjects.id', $subject->id)
+            )
+            ->orderBy('name')
+            ->pluck('name')
+            ->filter()
+            ->unique(
+                fn ($name) =>
+                    VocalTestPrompt::normalizePathName($name)
+            )
+            ->values()
+            ->all();
     }
 
     private function isHighSchoolSupport(

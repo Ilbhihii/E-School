@@ -1028,7 +1028,6 @@
                     <a class="nav-link nav-link-planning {{ request()->routeIs('public.schedule.index') ? 'active' : '' }}"
                        href="{{ route('public.schedule.index') }}"
                        @if(request()->routeIs('public.schedule.index')) aria-current="page" @endif>
-                        <i class="bi bi-calendar3-week me-1"></i>
                         Planning
                     </a>
                 </li>
