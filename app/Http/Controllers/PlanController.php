@@ -29,6 +29,13 @@ class PlanController extends Controller
                 'soutien_lycee' =>
                     $plans['soutien_lycee'],
             ];
+        } else {
+            /*
+             * L’offre Soutien Lycée à 1000 DH reste configurée
+             * pour les parcours qui utilisent son lien direct,
+             * mais elle n’apparaît plus sur la page publique /plans.
+             */
+            unset($plans['soutien_lycee']);
         }
 
         return view(

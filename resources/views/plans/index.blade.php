@@ -30,8 +30,8 @@
                 <h1>Choisissez votre formule</h1>
 
                 <p>
-                    Une formule complète pour toute la plateforme
-                    ou une offre réservée au Soutien Lycée.
+                    Une formule complète pour accéder
+                    à toute la plateforme Smart School Academy.
                 </p>
             </header>
         @endunless
@@ -45,7 +45,7 @@
 
         <div
             class="plans-grid
-                {{ $showOnlySoutien
+                {{ count($plans) === 1
                     ? 'plans-grid-single'
                     : ''
                 }}"
