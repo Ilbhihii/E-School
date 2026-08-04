@@ -64,6 +64,30 @@
                 </div>
             @endif
 
+            <div class="payment-whatsapp-notice">
+                <div class="payment-whatsapp-icon">
+                    <i class="bi bi-whatsapp"></i>
+                </div>
+
+                <div class="payment-whatsapp-content">
+                    <strong>Envoyez votre reçu de paiement sur WhatsApp</strong>
+                    <span>
+                        Après le paiement, envoyez une capture ou le reçu
+                        accompagné de votre référence au numéro :
+                    </span>
+
+                    <a
+                        href="https://wa.me/33760961274"
+                        target="_blank"
+                        rel="noopener"
+                        class="payment-whatsapp-number"
+                    >
+                        <i class="bi bi-whatsapp"></i>
+                        0033760961274
+                    </a>
+                </div>
+            </div>
+
             <div class="payment-reference">
                 <span>Référence</span>
                 <strong>SSA-{{ strtoupper(str_replace('_', '-', $planCode)) }}-{{ auth()->check() ? auth()->id() : 'COMPTE' }}</strong>
@@ -139,12 +163,12 @@
 .payment-price{display:flex;align-items:baseline;justify-content:center;gap:5px;margin:1.25rem 0}.payment-price strong{color:#fff;font-size:3.2rem;font-weight:900;letter-spacing:-.05em;line-height:1}.payment-price span{color:rgba(255,255,255,.72);font-size:1.05rem;font-weight:800}.payment-price small{color:rgba(255,255,255,.33);font-size:.73rem}
 .payment-features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:1rem;text-align:left}.payment-features>div{display:flex;align-items:flex-start;gap:8px;color:rgba(255,255,255,.7);font-size:.68rem;line-height:1.45}.payment-features span{width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;border-radius:50%;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2);font-size:.52rem}
 .payment-restriction{display:flex;align-items:flex-start;gap:8px;margin-bottom:.9rem;padding:10px;border:1px solid rgba(245,158,11,.17);border-radius:11px;color:#fcd34d;background:rgba(245,158,11,.08);font-size:.65rem;line-height:1.45;text-align:left}
-.payment-reference{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.9rem;padding:10px 12px;border:1px dashed rgba(96,165,250,.24);border-radius:11px;background:rgba(37,99,235,.06);text-align:left}.payment-reference span{color:rgba(255,255,255,.38);font-size:.61rem}.payment-reference strong{color:#bfdbfe;font-size:.67rem;word-break:break-word}
+.payment-whatsapp-notice{display:flex;align-items:flex-start;gap:12px;margin-bottom:.85rem;padding:13px 14px;border:1px solid rgba(34,197,94,.3);border-radius:14px;background:linear-gradient(135deg,rgba(34,197,94,.13),rgba(16,185,129,.06));box-shadow:0 12px 30px rgba(0,0,0,.12);text-align:left}.payment-whatsapp-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:1.05rem;box-shadow:0 8px 20px rgba(34,197,94,.25)}.payment-whatsapp-content{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}.payment-whatsapp-content>strong{color:#f0fdf4;font-size:.74rem}.payment-whatsapp-content>span{color:rgba(255,255,255,.58);font-size:.61rem;line-height:1.55}.payment-whatsapp-number{display:inline-flex;align-items:center;align-self:flex-start;gap:7px;margin-top:3px;padding:7px 11px;border:1px solid rgba(134,239,172,.25);border-radius:9px;background:rgba(22,163,74,.18);color:#bbf7d0;font-size:.7rem;font-weight:800;text-decoration:none;transition:.2s ease}.payment-whatsapp-number:hover{transform:translateY(-1px);background:rgba(22,163,74,.3);color:#fff}.payment-reference{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.9rem;padding:10px 12px;border:1px dashed rgba(96,165,250,.24);border-radius:11px;background:rgba(37,99,235,.06);text-align:left}.payment-reference span{color:rgba(255,255,255,.38);font-size:.61rem}.payment-reference strong{color:#bfdbfe;font-size:.67rem;word-break:break-word}
 .payment-methods{display:flex;flex-direction:column;gap:9px}.payment-button{min-height:47px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;color:#fff;font-size:.77rem;font-weight:800;text-decoration:none;transition:.25s ease}.payment-button:hover{color:#fff;transform:translateY(-2px);filter:brightness(1.08)}.payment-button.paypal{background:linear-gradient(135deg,#0070ba,#1546a0)}.payment-button.bank{border:1px solid rgba(255,255,255,.17);background:rgba(255,255,255,.07)}
 .method-box{padding:1rem;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(0,0,0,.15);text-align:left}.method-box h3{display:flex;align-items:center;gap:8px;margin:0 0 .75rem;color:#fff;font-size:.8rem}.method-box p{margin:.75rem 0;color:rgba(255,255,255,.45);font-size:.66rem;line-height:1.5}.bank-block{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;padding:10px;border-radius:10px;background:rgba(255,255,255,.045)}.bank-block strong{color:rgba(255,255,255,.74);font-size:.64rem}.bank-block span{color:rgba(255,255,255,.48);font-size:.62rem;word-break:break-word}.change-method{display:inline-flex;align-items:center;justify-content:center;gap:7px;color:rgba(255,255,255,.42);font-size:.66rem;text-decoration:none}.change-method:hover{color:#fff}
 .payment-security{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:1rem;color:rgba(255,255,255,.32);font-size:.61rem;line-height:1.45}
 html.light-mode .payment-page{background:linear-gradient(135deg,#f0f4ff,#e8edf5,#f5f7fa)}html.light-mode .payment-card{border-color:rgba(15,23,42,.09);background:rgba(255,255,255,.95);box-shadow:0 25px 60px rgba(15,23,42,.1)}html.light-mode .payment-card h1,html.light-mode .payment-price strong{color:#172033}html.light-mode .payment-card>p,html.light-mode .payment-price small,html.light-mode .payment-security,html.light-mode .payment-back{color:#64748b}html.light-mode .payment-price span,html.light-mode .payment-features>div{color:#334155}html.light-mode .method-box{border-color:rgba(15,23,42,.08);background:rgba(15,23,42,.03)}html.light-mode .method-box h3,html.light-mode .bank-block strong{color:#334155}html.light-mode .method-box p,html.light-mode .bank-block span{color:#64748b}html.light-mode .bank-block{background:rgba(15,23,42,.04)}html.light-mode .payment-button.bank{border-color:rgba(15,23,42,.12);color:#334155;background:rgba(15,23,42,.04)}
-@media(max-width:620px){.payment-page{padding-top:5.5rem}.payment-card{padding:1.15rem;border-radius:21px}.payment-features{grid-template-columns:1fr}.payment-reference{align-items:flex-start;flex-direction:column}}
+@media(max-width:620px){.payment-page{padding-top:5.5rem}.payment-card{padding:1.15rem;border-radius:21px}.payment-features{grid-template-columns:1fr}.payment-whatsapp-notice{padding:12px}.payment-whatsapp-content>strong{font-size:.7rem}.payment-whatsapp-number{width:100%;justify-content:center}.payment-reference{align-items:flex-start;flex-direction:column}}
 </style>
 
 @endsection
