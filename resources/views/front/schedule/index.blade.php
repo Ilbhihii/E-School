@@ -160,19 +160,19 @@
 <style>
     .public-schedule-page {
         position: relative;
-        min-height: 72vh;
+        min-height: 55vh;
         color: #ffffff;
         overflow: hidden;
     }
 
     .public-schedule-container {
-        width: min(1180px, calc(100% - 36px));
+        width: min(1120px, calc(100% - 32px));
         margin: 0 auto;
     }
 
     .public-schedule-hero {
         position: relative;
-        padding: 52px 0 24px;
+        padding: 28px 0 14px;
     }
 
     .public-schedule-hero-card {
@@ -180,11 +180,11 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        min-height: 330px;
-        padding: 46px 50px;
+        min-height: 205px;
+        padding: 28px 32px;
         overflow: hidden;
         border: 1px solid rgba(148, 163, 184, 0.15);
-        border-radius: 30px;
+        border-radius: 22px;
         background:
             radial-gradient(circle at 90% 12%, rgba(124, 58, 237, 0.28), transparent 34%),
             radial-gradient(circle at 65% 95%, rgba(37, 99, 235, 0.18), transparent 36%),
@@ -207,17 +207,17 @@
     .public-schedule-hero-content {
         position: relative;
         z-index: 2;
-        max-width: 760px;
+        max-width: 690px;
     }
 
     .public-schedule-kicker {
         display: inline-flex;
         align-items: center;
-        gap: 9px;
-        padding: 8px 13px;
-        margin-bottom: 18px;
+        gap: 7px;
+        padding: 6px 11px;
+        margin-bottom: 11px;
         color: #FFD166;
-        font-size: 0.72rem;
+        font-size: 0.66rem;
         font-weight: 900;
         letter-spacing: 0.13em;
         text-transform: uppercase;
@@ -228,12 +228,12 @@
 
     .public-schedule-hero h1 {
         max-width: 780px;
-        margin: 0 0 16px;
+        margin: 0 0 10px;
         color: #ffffff;
         font-family: 'Poppins', sans-serif;
-        font-size: clamp(2.2rem, 5vw, 4.35rem);
+        font-size: clamp(1.8rem, 3.6vw, 3rem);
         font-weight: 850;
-        line-height: 1.07;
+        line-height: 1.08;
         letter-spacing: -0.045em;
     }
 
@@ -241,14 +241,14 @@
         max-width: 720px;
         margin: 0;
         color: rgba(255, 255, 255, 0.62);
-        font-size: 1rem;
-        line-height: 1.8;
+        font-size: 0.9rem;
+        line-height: 1.6;
     }
 
     .public-schedule-next {
         display: inline-flex;
         align-items: center;
-        gap: 12px;
+        gap: 9px;
         max-width: 100%;
         padding: 12px 16px;
         margin-top: 24px;
@@ -264,7 +264,7 @@
         height: 40px;
         place-items: center;
         color: #93C5FD;
-        border-radius: 12px;
+        border-radius: 10px;
         background: rgba(37, 99, 235, 0.18);
     }
 
@@ -277,7 +277,7 @@
 
     .public-schedule-next small {
         color: rgba(255, 255, 255, 0.42);
-        font-size: 0.69rem;
+        font-size: 0.64rem;
     }
 
     .public-schedule-next strong {
@@ -290,9 +290,9 @@
         position: relative;
         z-index: 1;
         display: grid;
-        flex: 0 0 190px;
-        width: 190px;
-        height: 190px;
+        flex: 0 0 125px;
+        width: 125px;
+        height: 125px;
         place-items: center;
     }
 
@@ -300,13 +300,13 @@
         position: relative;
         z-index: 3;
         display: grid;
-        width: 124px;
-        height: 124px;
+        width: 62px;
+        height: 62px;
         place-items: center;
         color: #FFD166;
-        font-size: 3.6rem;
+        font-size: 2.35rem;
         border: 1px solid rgba(255, 209, 102, 0.24);
-        border-radius: 34px;
+        border-radius: 17px;
         background: linear-gradient(145deg, rgba(255, 209, 102, 0.14), rgba(124, 58, 237, 0.12));
         box-shadow: 0 25px 60px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
         transform: rotate(4deg);
@@ -314,8 +314,8 @@
 
     .public-schedule-hero-ring {
         position: absolute;
-        width: 180px;
-        height: 180px;
+        width: 118px;
+        height: 118px;
         border: 1px solid rgba(167, 139, 250, 0.18);
         border-radius: 50%;
         animation: publicScheduleSpin 18s linear infinite;
@@ -345,8 +345,8 @@
     }
 
     .public-schedule-hero-ring-small {
-        width: 150px;
-        height: 150px;
+        width: 96px;
+        height: 96px;
         animation-direction: reverse;
         animation-duration: 13s;
     }
@@ -356,7 +356,7 @@
     }
 
     .public-schedule-content {
-        padding: 10px 0 82px;
+        padding: 8px 0 46px;
     }
 
     .public-schedule-stats {
@@ -387,12 +387,12 @@
 
     .public-schedule-stat-icon {
         display: grid;
-        flex: 0 0 54px;
-        width: 54px;
-        height: 54px;
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
         place-items: center;
         font-size: 1.25rem;
-        border-radius: 16px;
+        border-radius: 10px;
     }
 
     .public-schedule-stat-icon-blue {
@@ -428,10 +428,10 @@
     }
 
     .public-schedule-day {
-        padding: 28px;
-        margin-bottom: 28px;
+        padding: 18px;
+        margin-bottom: 18px;
         border: 1px solid rgba(148, 163, 184, 0.13);
-        border-radius: 25px;
+        border-radius: 19px;
         background: rgba(8, 17, 31, 0.86);
         box-shadow: 0 22px 55px rgba(0, 0, 0, 0.19);
         backdrop-filter: blur(12px);
@@ -441,36 +441,36 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 20px;
-        padding-bottom: 20px;
-        margin-bottom: 22px;
+        gap: 10px;
+        padding-bottom: 12px;
+        margin-bottom: 9px;
         border-bottom: 1px solid rgba(148, 163, 184, 0.11);
     }
 
     .public-schedule-day-heading {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 10px;
     }
 
     .public-schedule-day-icon {
         display: grid;
-        flex: 0 0 54px;
-        width: 54px;
-        height: 54px;
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
         place-items: center;
         color: #93C5FD;
-        font-size: 1.2rem;
+        font-size: 1rem;
         border: 1px solid rgba(96, 165, 250, 0.16);
-        border-radius: 16px;
+        border-radius: 10px;
         background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(124, 58, 237, 0.16));
     }
 
     .public-schedule-day-kicker {
         display: block;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         color: #818CF8;
-        font-size: 0.68rem;
+        font-size: 0.62rem;
         font-weight: 850;
         letter-spacing: 0.11em;
         text-transform: uppercase;
@@ -486,10 +486,10 @@
     .public-schedule-count {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 9px 13px;
+        gap: 6px;
+        padding: 7px 10px;
         color: rgba(255, 255, 255, 0.68);
-        font-size: 0.75rem;
+        font-size: 0.68rem;
         font-weight: 750;
         border: 1px solid rgba(148, 163, 184, 0.13);
         border-radius: 999px;
@@ -499,7 +499,7 @@
     .public-schedule-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px;
+        gap: 9px;
     }
 
     .public-schedule-card {
@@ -507,10 +507,10 @@
         display: flex;
         min-height: 100%;
         flex-direction: column;
-        padding: 22px;
+        padding: 15px;
         overflow: hidden;
         border: 1px solid rgba(148, 163, 184, 0.13);
-        border-radius: 21px;
+        border-radius: 16px;
         background: linear-gradient(145deg, rgba(21, 33, 54, 0.94), rgba(10, 19, 34, 0.97));
         box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
         transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
@@ -535,24 +535,24 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 21px;
+        gap: 9px;
+        margin-bottom: 13px;
     }
 
     .public-schedule-time-block {
         display: flex;
         align-items: center;
-        gap: 11px;
+        gap: 6px;
     }
 
     .public-schedule-time-icon {
         display: grid;
-        flex: 0 0 42px;
-        width: 42px;
-        height: 42px;
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
         place-items: center;
         color: #FCD34D;
-        border-radius: 12px;
+        border-radius: 10px;
         background: rgba(245, 158, 11, 0.10);
     }
 
@@ -564,22 +564,22 @@
 
     .public-schedule-time-block strong {
         color: #ffffff;
-        font-size: 1rem;
+        font-size: 0.9rem;
         font-weight: 850;
     }
 
     .public-schedule-time-block small {
         color: rgba(255, 255, 255, 0.42);
-        font-size: 0.68rem;
+        font-size: 0.62rem;
     }
 
     .public-schedule-status {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 9px;
+        padding: 5px 8px;
         color: #86EFAC;
-        font-size: 0.64rem;
+        font-size: 0.6rem;
         font-weight: 850;
         border: 1px solid rgba(74, 222, 128, 0.20);
         border-radius: 999px;
@@ -596,29 +596,29 @@
 
     .public-schedule-subject-icon {
         display: grid;
-        width: 56px;
-        height: 56px;
-        margin-bottom: 17px;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 11px;
         place-items: center;
         color: #C4B5FD;
-        font-size: 1.35rem;
-        border-radius: 16px;
+        font-size: 1.08rem;
+        border-radius: 10px;
         background: rgba(124, 58, 237, 0.14);
     }
 
     .public-schedule-card-label {
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         color: #818CF8;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         font-weight: 850;
         letter-spacing: 0.10em;
         text-transform: uppercase;
     }
 
     .public-schedule-card h3 {
-        margin: 0 0 14px;
+        margin: 0 0 9px;
         color: #ffffff;
-        font-size: 1.35rem;
+        font-size: 1.08rem;
         font-weight: 850;
     }
 
@@ -626,17 +626,17 @@
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 14px;
+        gap: 6px;
+        margin-bottom: 9px;
     }
 
     .public-schedule-path > span {
         display: inline-flex;
         align-items: center;
         gap: 7px;
-        padding: 7px 9px;
+        padding: 5px 7px;
         color: rgba(255, 255, 255, 0.66);
-        font-size: 0.73rem;
+        font-size: 0.67rem;
         border-radius: 9px;
         background: rgba(148, 163, 184, 0.07);
     }
@@ -647,14 +647,14 @@
 
     .public-schedule-path-arrow {
         color: rgba(255, 255, 255, 0.26);
-        font-size: 0.65rem;
+        font-size: 0.6rem;
     }
 
     .public-schedule-teacher {
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 18px;
+        gap: 6px;
+        margin-bottom: 11px;
         color: rgba(255, 255, 255, 0.48);
         font-size: 0.76rem;
     }
@@ -667,11 +667,11 @@
         display: flex;
         align-items: flex-start;
         flex-direction: column;
-        gap: 8px;
-        padding-top: 15px;
+        gap: 6px;
+        padding-top: 10px;
         margin-top: auto;
         color: rgba(255, 255, 255, 0.42);
-        font-size: 0.69rem;
+        font-size: 0.64rem;
         border-top: 1px solid rgba(148, 163, 184, 0.10);
     }
 
@@ -686,7 +686,7 @@
     }
 
     .public-schedule-empty {
-        padding: 64px 24px;
+        padding: 42px 20px;
         text-align: center;
         border: 1px dashed rgba(148, 163, 184, 0.22);
         border-radius: 26px;
@@ -695,20 +695,20 @@
 
     .public-schedule-empty-icon {
         display: grid;
-        width: 82px;
-        height: 82px;
-        margin: 0 auto 20px;
+        width: 62px;
+        height: 62px;
+        margin: 0 auto 14px;
         place-items: center;
         color: #A78BFA;
-        font-size: 2rem;
-        border-radius: 23px;
+        font-size: 1.3rem;
+        border-radius: 17px;
         background: rgba(124, 58, 237, 0.14);
     }
 
     .public-schedule-empty h2 {
         margin: 0 0 8px;
         color: #ffffff;
-        font-size: 1.55rem;
+        font-size: 1.3rem;
         font-weight: 850;
     }
 
@@ -722,7 +722,7 @@
     .public-schedule-empty a {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         padding: 11px 16px;
         margin-top: 22px;
         color: #ffffff;
@@ -790,30 +790,30 @@
 
     @media (max-width: 980px) {
         .public-schedule-hero-card {
-            min-height: 300px;
-            padding: 38px;
+            min-height: 185px;
+            padding: 24px 26px;
         }
 
         .public-schedule-hero-visual {
             flex-basis: 150px;
-            width: 150px;
-            height: 150px;
+            width: 96px;
+            height: 96px;
         }
 
         .public-schedule-calendar-icon {
-            width: 105px;
-            height: 105px;
-            font-size: 3rem;
+            width: 76px;
+            height: 76px;
+            font-size: 2.15rem;
         }
 
         .public-schedule-hero-ring {
-            width: 145px;
-            height: 145px;
+            width: 104px;
+            height: 104px;
         }
 
         .public-schedule-hero-ring-small {
-            width: 120px;
-            height: 120px;
+            width: 86px;
+            height: 86px;
         }
 
         .public-schedule-grid {
@@ -823,12 +823,12 @@
 
     @media (max-width: 760px) {
         .public-schedule-hero {
-            padding-top: 30px;
+            padding-top: 20px;
         }
 
         .public-schedule-hero-card {
             min-height: 0;
-            padding: 32px 26px;
+            padding: 22px 20px;
         }
 
         .public-schedule-hero-visual {
@@ -840,11 +840,11 @@
         }
 
         .public-schedule-stat-card {
-            min-height: 82px;
+            min-height: 62px;
         }
 
         .public-schedule-day {
-            padding: 22px 18px;
+            padding: 15px 13px;
         }
 
         .public-schedule-day-header {
@@ -868,7 +868,7 @@
         }
 
         .public-schedule-hero h1 {
-            font-size: 2rem;
+            font-size: 1.3rem;
         }
 
         .public-schedule-hero p {
@@ -907,6 +907,49 @@
         }
     }
 </style>
+
+<style>
+    /* Renfort compact pour la page publique du planning */
+    .public-schedule-day-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .public-schedule-card {
+        min-height: 0;
+    }
+
+    .public-schedule-card-footer {
+        line-height: 1.35;
+    }
+
+    @media (min-width: 1100px) {
+        .public-schedule-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 1099.98px) {
+        .public-schedule-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 620px) {
+        .public-schedule-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .public-schedule-card-top {
+            align-items: center;
+            flex-direction: row;
+        }
+
+        .public-schedule-count {
+            padding: 6px 9px;
+        }
+    }
+</style>
+
 @endpush
 
 {{-- Design global V12 : présentation uniquement, aucun contenu modifié. --}}
@@ -916,4 +959,3 @@
     href="{{ asset('css/front-design-v12.css?v=12.0') }}"
 >
 @endpush
-

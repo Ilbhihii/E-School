@@ -809,6 +809,261 @@ html.light-mode .plans-security {
         transition: none !important;
     }
 }
+
+/* =========================================================
+   PAGE /PLANS — VERSION PLUS COMPACTE
+   ========================================================= */
+
+.plans-page {
+    min-height: calc(100vh - 70px);
+    padding: 5.6rem 0 2.8rem;
+}
+
+.plans-page::after {
+    top: 4.5rem;
+    height: 230px;
+}
+
+.plans-glow-one {
+    width: 280px;
+    height: 280px;
+}
+
+.plans-glow-two {
+    width: 260px;
+    height: 260px;
+}
+
+.plans-heading {
+    max-width: 650px;
+    margin-bottom: 1.65rem;
+}
+
+.plans-label {
+    min-height: 28px;
+    gap: 6px;
+    padding: 0 10px;
+    margin-bottom: 0.65rem;
+    font-size: 0.59rem;
+}
+
+.plans-heading h1 {
+    margin-bottom: 0.5rem;
+    font-size: clamp(1.8rem, 3.6vw, 2.85rem);
+    line-height: 1.06;
+}
+
+.plans-heading p {
+    max-width: 570px;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+.plans-alert {
+    padding: 9px 11px;
+    margin-bottom: 0.8rem;
+    font-size: 0.68rem;
+}
+
+.plans-grid {
+    max-width: 950px;
+    gap: 14px;
+}
+
+.offer-card {
+    padding: 1.1rem;
+    border-radius: 18px;
+}
+
+.offer-card::after {
+    top: -72px;
+    right: -68px;
+    width: 155px;
+    height: 155px;
+    border-width: 22px;
+}
+
+.offer-card:hover {
+    transform: translateY(-4px);
+}
+
+.offer-card-top {
+    gap: 9px;
+}
+
+.offer-badge {
+    min-height: 25px;
+    padding: 0 8px;
+    font-size: 0.56rem;
+}
+
+.offer-icon {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    border-radius: 11px;
+    font-size: 0.95rem;
+}
+
+.offer-title {
+    padding-bottom: 0.7rem;
+    margin-top: 0.8rem;
+}
+
+.offer-title small {
+    margin-bottom: 0.2rem;
+    font-size: 0.55rem;
+}
+
+.offer-title h2 {
+    margin-bottom: 0.2rem;
+    font-size: 1.15rem;
+}
+
+.offer-title p {
+    min-height: 2.2em;
+    font-size: 0.66rem;
+    line-height: 1.45;
+}
+
+.offer-price {
+    min-height: 70px;
+    gap: 4px;
+    padding: 0.8rem 0 0.7rem;
+}
+
+.offer-price strong {
+    font-size: clamp(2.15rem, 4vw, 2.7rem);
+}
+
+.offer-price span {
+    font-size: 0.88rem;
+}
+
+.offer-price small {
+    font-size: 0.61rem;
+}
+
+.offer-features {
+    min-height: 198px;
+    gap: 7px;
+    margin-bottom: 0.75rem;
+}
+
+.offer-features li {
+    gap: 7px;
+    font-size: 0.65rem;
+    line-height: 1.4;
+}
+
+.offer-features li span {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+    border-radius: 6px;
+    font-size: 0.46rem;
+}
+
+.offer-restriction {
+    gap: 6px;
+    padding: 8px 9px;
+    margin-bottom: 0.75rem;
+    font-size: 0.57rem;
+    line-height: 1.4;
+}
+
+.offer-actions {
+    gap: 7px;
+    padding-top: 0.75rem;
+}
+
+.offer-button {
+    min-height: 40px;
+    gap: 6px;
+    padding: 0 9px;
+    border-radius: 9px;
+    font-size: 0.62rem;
+}
+
+.plans-security {
+    max-width: 760px;
+    min-height: 44px;
+    gap: 6px;
+    padding: 8px 12px;
+    margin-top: 0.9rem;
+    font-size: 0.59rem;
+}
+
+.plans-page-single {
+    padding-top: 5.4rem;
+    padding-bottom: 2rem;
+}
+
+.plans-page-single .plans-content {
+    min-height: calc(100vh - 8rem);
+}
+
+.plans-grid-single {
+    max-width: 460px;
+}
+
+@media (max-width: 900px) {
+    .plans-grid {
+        max-width: 540px;
+    }
+
+    .offer-features {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 575px) {
+    .plans-page {
+        padding: 5.2rem 0 2rem;
+    }
+
+    .plans-heading {
+        margin-bottom: 1.25rem;
+    }
+
+    .plans-heading h1 {
+        font-size: 1.9rem;
+    }
+
+    .plans-heading p {
+        font-size: 0.74rem;
+    }
+
+    .offer-card {
+        padding: 0.95rem;
+        border-radius: 16px;
+    }
+
+    .offer-title h2 {
+        font-size: 1.05rem;
+    }
+
+    .offer-price {
+        min-height: 64px;
+    }
+
+    .offer-price strong {
+        font-size: 2.15rem;
+    }
+
+    .offer-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .offer-button {
+        min-height: 39px;
+    }
+
+    .plans-security {
+        font-size: 0.56rem;
+    }
+}
+
 </style>
 
 @endsection

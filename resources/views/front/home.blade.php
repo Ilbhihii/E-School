@@ -201,7 +201,7 @@
         color: var(--home-design-text);
         font-size: clamp(2.75rem, 6vw, 5.2rem);
         font-weight: 800;
-        line-height: 1.04;
+        line-height: 1.08;
         letter-spacing: -0.055em;
         text-wrap: balance;
         text-shadow: 0 15px 42px rgba(0, 0, 0, 0.28);
@@ -946,10 +946,218 @@
     </style>
 </section>
 
+
+<style>
+    /* =========================================================
+       SECTIONS PRINCIPALES — VERSION PLUS COMPACTE
+       ========================================================= */
+
+    #howItWorksSection,
+    #whyChooseUsSection,
+    #aboutSection,
+    #objectivesSection {
+        padding-top: 3.4rem !important;
+        padding-bottom: 3.4rem !important;
+    }
+
+    #howItWorksSection .text-center.mb-5,
+    #whyChooseUsSection .text-center.mb-5,
+    #objectivesSection .text-center.mb-5 {
+        margin-bottom: 2rem !important;
+    }
+
+    #howItWorksSection .section-title-3d,
+    #whyChooseUsSection .section-title-3d,
+    #aboutSection .section-title-3d,
+    #objectivesSection .section-title-3d {
+        font-size: clamp(1.65rem, 2.7vw, 2.4rem);
+        line-height: 1.15;
+    }
+
+    #howItWorksSection .badge,
+    #whyChooseUsSection .badge,
+    #aboutSection .badge,
+    #objectivesSection .badge {
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.72rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* Comment ça marche */
+    #howItWorksSection .step-3d {
+        min-height: 205px;
+        padding: 1.35rem 1.15rem !important;
+    }
+
+    #howItWorksSection .step-3d-number {
+        width: 48px;
+        height: 48px;
+        font-size: 0.95rem;
+    }
+
+    #howItWorksSection .step-3d h5 {
+        margin-top: 0.85rem !important;
+        font-size: 1rem;
+    }
+
+    #howItWorksSection .step-3d p {
+        font-size: 0.82rem;
+        line-height: 1.55 !important;
+    }
+
+    #howItWorksSection .text-center.mt-5 {
+        margin-top: 2rem !important;
+    }
+
+    #howItWorksSection .btn-3d {
+        min-height: 44px;
+        padding: 0.7rem 1.5rem !important;
+        font-size: 0.92rem !important;
+    }
+
+    /* Pourquoi nous choisir */
+    #whyChooseUsSection .row.g-4.justify-content-center > .col .card-3d {
+        min-height: 225px;
+        padding: 1.3rem 1rem !important;
+    }
+
+    #whyChooseUsSection .card-3d-icon {
+        width: 52px !important;
+        height: 52px !important;
+        border-radius: 15px !important;
+        margin-bottom: 0.85rem !important;
+    }
+
+    #whyChooseUsSection .card-3d h5 {
+        font-size: 0.96rem;
+    }
+
+    #whyChooseUsSection .card-3d p {
+        font-size: 0.78rem;
+        line-height: 1.55 !important;
+    }
+
+    /* Qui sommes-nous */
+    #aboutSection .row {
+        row-gap: 2rem !important;
+    }
+
+    #aboutSection .card-3d.overflow-hidden.p-0 img {
+        height: 325px !important;
+    }
+
+    #aboutSection .section-title-3d {
+        margin-bottom: 1rem !important;
+    }
+
+    #aboutSection p {
+        font-size: 0.92rem !important;
+        line-height: 1.65 !important;
+    }
+
+    #aboutSection .d-flex.flex-column.gap-3 {
+        gap: 0.75rem !important;
+    }
+
+    #aboutSection .d-flex.align-items-start.gap-3 {
+        gap: 0.75rem !important;
+    }
+
+    #aboutSection .d-flex.align-items-start.gap-3 > span {
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 9px !important;
+    }
+
+    #aboutSection strong {
+        font-size: 0.92rem;
+    }
+
+    #aboutSection .btn-3d {
+        min-height: 44px;
+        margin-top: 1rem !important;
+        padding: 0.7rem 1.1rem !important;
+        font-size: 0.88rem;
+    }
+
+    /* Nos objectifs */
+    #objectivesSection {
+        padding-bottom: 2.4rem !important;
+    }
+
+    #objectivesSection .card-3d > div:first-child {
+        height: 160px !important;
+    }
+
+    #objectivesSection .card-3d .p-4 {
+        min-height: 150px !important;
+        padding: 1.2rem !important;
+    }
+
+    #objectivesSection .card-3d .p-4 > div:first-child {
+        width: 34px !important;
+        height: 34px !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    #objectivesSection .card-3d h5 {
+        font-size: 0.96rem;
+    }
+
+    #objectivesSection .card-3d p {
+        font-size: 0.78rem;
+        line-height: 1.55;
+    }
+
+    @media (max-width: 991.98px) {
+        #howItWorksSection,
+        #whyChooseUsSection,
+        #aboutSection,
+        #objectivesSection {
+            padding-top: 3rem !important;
+            padding-bottom: 3rem !important;
+        }
+
+        #aboutSection .card-3d.overflow-hidden.p-0 img {
+            height: 290px !important;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        #howItWorksSection,
+        #whyChooseUsSection,
+        #aboutSection,
+        #objectivesSection {
+            padding-top: 2.4rem !important;
+            padding-bottom: 2.4rem !important;
+        }
+
+        #howItWorksSection .section-title-3d,
+        #whyChooseUsSection .section-title-3d,
+        #aboutSection .section-title-3d,
+        #objectivesSection .section-title-3d {
+            font-size: 1.65rem;
+        }
+
+        #howItWorksSection .step-3d,
+        #whyChooseUsSection .row.g-4.justify-content-center > .col .card-3d {
+            min-height: auto;
+        }
+
+        #aboutSection .card-3d.overflow-hidden.p-0 img {
+            height: 235px !important;
+        }
+
+        #objectivesSection .card-3d > div:first-child {
+            height: 145px !important;
+        }
+    }
+</style>
+
 <!-- ══════════════════════════════════════════════════════
      HOW IT WORKS
      ══════════════════════════════════════════════════════ -->
-<section class="py-5">
+<section class="py-5" id="howItWorksSection">
     <div class="container">
         <div class="text-center mb-5">
             <span class="badge px-3 py-2 mb-3" style="background: rgba(22, 163, 74, 0.12); color: #4ADE80; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
@@ -957,7 +1165,7 @@
             </span>
             <h2 class="section-title-3d">Commencez en 3 étapes simples</h2>
             <p class="text-white-50 mt-3" style="max-width: 500px; margin: 0 auto;">
-                Pas de complicité. Créez votre compte, choisissez votre niveau et commencez à apprendre.
+                Pas de complexité. Créez votre compte, choisissez votre niveau et commencez à apprendre.
             </p>
         </div>
 
@@ -1007,7 +1215,7 @@
 <!-- ══════════════════════════════════════════════════════
      WHY CHOOSE US
      ══════════════════════════════════════════════════════ -->
-<section class="py-5">
+<section class="py-5" id="whyChooseUsSection">
     <div class="container">
         <div class="text-center mb-5">
             <span class="badge px-3 py-2 mb-3" style="background: rgba(124, 58, 237, 0.15); color: #A78BFA; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
@@ -1063,7 +1271,7 @@
                     </div>
                     <h5 class="fw-bold text-white mb-2" style="font-family: 'Poppins', sans-serif;">Suivi personnalisé</h5>
                     <p class="text-white-50 small mb-0" style="line-height: 1.7;">
-                        Un accompagnement sur mesure avec des enseignants diplomer pour vous aider à atteindre vos objectifs.
+                        Un accompagnement sur mesure avec des enseignants diplômés pour vous aider à atteindre vos objectifs.
                     </p>
                 </div>
             </div>
@@ -1088,7 +1296,7 @@
 <!-- ══════════════════════════════════════════════════════
      ABOUT / QUI SOMMES-NOUS
      ══════════════════════════════════════════════════════ -->
-<section class="py-5">
+<section class="py-5" id="aboutSection">
     <div class="container">
         <div class="row align-items-center g-5">
             <div class="col-lg-6">
@@ -1131,7 +1339,7 @@
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex align-items-start gap-3">
                             <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(0, 58, 143, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-broadcast" style="color: #2563EB; font-size: 1rem;"></i>
+                                <i class="bi bi-broadcast" style="color: #2563EB; font-size: 0.9rem;"></i>
                             </span>
                             <div>
                                 <strong class="text-white">Cours interactifs en direct (lives)</strong>
@@ -1140,7 +1348,7 @@
                         </div>
                         <div class="d-flex align-items-start gap-3">
                             <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(124, 58, 237, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-graph-up-arrow" style="color: #7C3AED; font-size: 1rem;"></i>
+                                <i class="bi bi-graph-up-arrow" style="color: #7C3AED; font-size: 0.9rem;"></i>
                             </span>
                             <div>
                                 <strong class="text-white">Suivi personnalisé & précis</strong>
@@ -1149,7 +1357,7 @@
                         </div>
                         <div class="d-flex align-items-start gap-3">
                             <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 209, 102, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <i class="bi bi-arrow-up-circle-fill" style="color: #FFD166; font-size: 1rem;"></i>
+                                <i class="bi bi-arrow-up-circle-fill" style="color: #FFD166; font-size: 0.9rem;"></i>
                             </span>
                             <div>
                                 <strong class="text-white">Progrès visibles & amélioration continue</strong>
@@ -1172,7 +1380,7 @@
 <!-- ══════════════════════════════════════════════════════
      OBJECTIFS
      ══════════════════════════════════════════════════════ -->
-<section class="py-5 text-center">
+<section class="py-5 text-center" id="objectivesSection">
     <div class="container">
         <div class="text-center mb-5">
             <span class="badge px-3 py-2 mb-3" style="background: rgba(255, 209, 102, 0.12); color: #FFD166; border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
@@ -1233,88 +1441,281 @@
     </div>
 </section>
 
-<div class="section-divider"></div>
 
-<!-- ══════════════════════════════════════════════════════
-     STATS SECTION — avec compteurs animés
-     ══════════════════════════════════════════════════════ -->
-<section class="py-5" id="statsSection">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="1200" data-prefix="+" data-suffix="">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Étudiants actifs</span>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="50" data-prefix="+" data-suffix="">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Cours disponibles</span>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="120" data-prefix="+" data-suffix="">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Lives organisés</span>
-                </div>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div class="reveal-3d stat-3d">
-                    <span class="stat-3d-number counter-value" data-target="95" data-prefix="" data-suffix="%">
-                        <span class="counter-inner">0</span>
-                    </span>
-                    <span class="stat-3d-label">Satisfaction</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<style>
+    /* =========================================================
+       CTA FINAL — ESPACEMENT ET ALIGNEMENT CORRIGÉS
+       ========================================================= */
 
-<div class="section-divider"></div>
+    #objectivesSection {
+        padding-bottom: 1rem !important;
+    }
+
+    .final-cta {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        width: 100%;
+        margin: 0 !important;
+        padding: 2rem 1.25rem 1.85rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.10);
+        background:
+            radial-gradient(
+                circle at 12% 18%,
+                rgba(79, 111, 245, 0.23),
+                transparent 30%
+            ),
+            radial-gradient(
+                circle at 88% 82%,
+                rgba(118, 83, 234, 0.20),
+                transparent 30%
+            ),
+            linear-gradient(
+                135deg,
+                #10203d 0%,
+                #101a38 48%,
+                #18163f 100%
+            );
+    }
+
+    .final-cta::before {
+        position: absolute;
+        top: -145px;
+        left: -105px;
+        z-index: -1;
+        width: 250px;
+        height: 250px;
+        content: "";
+        pointer-events: none;
+        border: 58px solid rgba(111, 99, 255, 0.07);
+        border-radius: 50%;
+    }
+
+    .final-cta::after {
+        position: absolute;
+        right: -95px;
+        bottom: -145px;
+        z-index: -1;
+        width: 245px;
+        height: 245px;
+        content: "";
+        pointer-events: none;
+        border-radius: 50%;
+        background: rgba(106, 76, 255, 0.08);
+        filter: blur(2px);
+    }
+
+    .final-cta__content {
+        position: relative;
+        z-index: 2;
+        width: min(100%, 1080px);
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .final-cta__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0.4rem 0.8rem;
+        margin: 0 0 0.65rem;
+        color: #dbe3f2;
+        font-size: 0.78rem;
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+    }
+
+    .final-cta__title {
+        max-width: 900px;
+        margin: 0 auto 0.6rem;
+        color: #ffffff;
+        font-size: clamp(1.75rem, 3vw, 2.65rem);
+        font-weight: 900;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+        text-wrap: balance;
+    }
+
+    .final-cta__title span {
+        display: block;
+        margin-top: 0.15rem;
+        color: transparent;
+        background: linear-gradient(
+            100deg,
+            #91aaff 0%,
+            #b798ff 48%,
+            #f0ba53 100%
+        );
+        background-clip: text;
+        -webkit-background-clip: text;
+    }
+
+    .final-cta__description {
+        max-width: 720px;
+        margin: 0 auto 1rem;
+        color: #aeb9ce;
+        font-size: 0.9rem;
+        line-height: 1.75;
+        text-wrap: balance;
+    }
+
+    .final-cta__actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .final-cta__button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        padding: 0.62rem 1rem;
+        color: #e8edf7;
+        font-size: 0.9rem;
+        font-weight: 800;
+        text-decoration: none !important;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        transition:
+            transform 180ms ease,
+            box-shadow 180ms ease,
+            border-color 180ms ease,
+            background 180ms ease;
+    }
+
+    .final-cta__button:hover {
+        color: #ffffff;
+        border-color: rgba(139, 119, 255, 0.58);
+        background: rgba(109, 84, 255, 0.12);
+        transform: translateY(-3px);
+    }
+
+    .final-cta__button--primary {
+        color: #17213b;
+        border-color: #ffc354;
+        background: linear-gradient(135deg, #ffd269, #ffb73d);
+        box-shadow: 0 14px 30px rgba(255, 184, 61, 0.23);
+    }
+
+    .final-cta__button--primary:hover {
+        color: #17213b;
+        border-color: #ffd16a;
+        background: linear-gradient(135deg, #ffda82, #ffc04d);
+        box-shadow: 0 18px 38px rgba(255, 184, 61, 0.32);
+    }
+
+    .final-cta__security {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        margin-top: 0.7rem;
+        color: #8e9ab0;
+        font-size: 0.78rem;
+    }
+
+    @media (max-width: 767.98px) {
+        #objectivesSection {
+            padding-bottom: 1.5rem !important;
+        }
+
+        .final-cta {
+            padding: 1.9rem 0.9rem 1.75rem;
+        }
+
+        .final-cta__title {
+            font-size: clamp(1.7rem, 8.5vw, 2.45rem);
+            letter-spacing: -0.035em;
+        }
+
+        .final-cta__description {
+            font-size: 0.9rem;
+        }
+
+        .final-cta__actions {
+            flex-direction: column;
+        }
+
+        .final-cta__button {
+            width: min(100%, 380px);
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .final-cta {
+            padding-top: 1.7rem;
+            padding-bottom: 1.55rem;
+        }
+
+        .final-cta__badge {
+            margin-bottom: 1rem;
+        }
+
+        .final-cta__title {
+            margin-bottom: 1rem;
+        }
+
+        .final-cta__description {
+            margin-bottom: 1.5rem;
+        }
+    }
+</style>
 
 <!-- ══════════════════════════════════════════════════════
      FINAL CTA
      ══════════════════════════════════════════════════════ -->
-<section class="cta-3d text-center py-5">
-    <div class="container cta-3d-content">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <span class="badge px-3 py-2 mb-3" style="background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.8); border-radius: 20px; font-weight: 500; font-size: 0.8rem; letter-spacing: 0.05em;">
-                    🚀 Prêt à commencer ?
-                </span>
-                <h2 class="section-title-3d-light fw-bold mb-3" style="font-family: 'Poppins', sans-serif; font-size: 2.5rem;">
-                    Rejoignez des milliers d'étudiants <br>qui réussissent avec Smart School Academy
-                </h2>
-                <p class="text-white-50 mb-4" style="font-size: 1.1rem; max-width: 550px; margin: 0 auto 1.5rem;">
-                    Inscription gratuite. Annulation à tout moment. <br>Rejoignez l'aventure éducative dès aujourd'hui !
-                </p>
-                <div class="d-flex flex-wrap justify-content-center gap-3">
-                    <a href="{{ route('register') }}" class="btn-3d btn-3d-gold" style="padding: 16px 44px; font-size: 1.1rem;">
-                        <i class="bi bi-rocket-takeoff"></i>
-                        S'inscrire maintenant
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
-                    <a href="{{ route('appointment.create') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
-                        <i class="bi bi-calendar-check"></i>
-                        prise de contact
-                    </a>
-                    <a href="{{ route('plans') }}" class="btn-3d btn-3d-outline" style="padding: 16px 36px; font-size: 1.1rem;">
-                        <i class="bi bi-credit-card"></i>
-                        Voir les offres
-                    </a>
-                </div>
-                <p class="mt-3" style="color: rgba(255,255,255,0.3); font-size: 0.8rem;">
-                    <i class="bi bi-shield-check"></i> Sans engagement · Paiement sécurisé
-                </p>
-            </div>
+<section class="final-cta" id="finalCta">
+    <div class="final-cta__content">
+
+        <span class="final-cta__badge">
+            🚀 Prêt à commencer ?
+        </span>
+
+        <h2 class="final-cta__title">
+            Rejoignez Smart School Academy
+            <span>et progressez à votre rythme</span>
+        </h2>
+
+        <p class="final-cta__description">
+            Accédez à vos matières, vos cours, vos lives, vos devoirs
+            et vos outils de suivi depuis un seul espace.
+        </p>
+
+        <div class="final-cta__actions">
+            <a href="{{ route('register') }}"
+               class="final-cta__button final-cta__button--primary">
+                <i class="bi bi-rocket-takeoff"></i>
+                S’inscrire maintenant
+                <i class="bi bi-arrow-right"></i>
+            </a>
+
+            <a href="{{ route('appointment.create') }}"
+               class="final-cta__button final-cta__button--secondary">
+                <i class="bi bi-calendar-check"></i>
+                Prendre contact
+            </a>
+
+            <a href="{{ route('plans') }}"
+               class="final-cta__button final-cta__button--secondary">
+                <i class="bi bi-credit-card"></i>
+                Voir les offres
+            </a>
         </div>
+
+        <div class="final-cta__security">
+            <i class="bi bi-shield-check"></i>
+            Sans engagement · Paiement sécurisé
+        </div>
+
     </div>
 </section>
 
@@ -1404,4 +1805,3 @@
     href="{{ asset('css/front-design-v12.css?v=12.0') }}"
 >
 @endpush
-

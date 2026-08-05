@@ -5,7 +5,37 @@
 @section('content')
 
 <style>
-    /* Grille et icônes harmonisées des matières */
+    /* =========================================================
+       PAGE /CLASSES — VERSION PLUS COMPACTE
+       ========================================================= */
+
+    #classesPage {
+        padding-top: 3.2rem !important;
+        padding-bottom: 3.2rem !important;
+    }
+
+    .classes-page-header {
+        margin-bottom: 1.8rem !important;
+    }
+
+    #classesPage .section-title-3d {
+        margin-bottom: 0.55rem;
+        font-size: clamp(1.75rem, 2.8vw, 2.45rem);
+        line-height: 1.14;
+    }
+
+    #classesPage .classes-page-header > .badge {
+        padding: 0.42rem 0.8rem !important;
+        margin-bottom: 0.75rem !important;
+        font-size: 0.72rem !important;
+    }
+
+    #classesPage .classes-page-header > p {
+        max-width: 460px !important;
+        font-size: 0.9rem;
+        line-height: 1.55;
+    }
+
     #subjectsGrid {
         justify-content: center;
     }
@@ -16,46 +46,104 @@
 
     .subject-card-panel {
         width: 100%;
-        min-height: 390px;
+        min-height: 305px;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
-        padding: 1.65rem 1.35rem !important;
+        padding: 1.2rem 1rem !important;
+        border-radius: 18px !important;
     }
 
     .subject-icon-box {
-        width: 82px !important;
-        height: 82px !important;
-        flex: 0 0 82px;
+        width: 62px !important;
+        height: 62px !important;
+        flex: 0 0 62px;
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 0.9rem;
-        border-radius: 21px !important;
-        color: #ffffff;
-        font-size: 2.05rem;
+        margin: 0 auto 0.7rem;
         border: 1px solid rgba(255, 255, 255, 0.14);
-        box-shadow: 0 13px 28px rgba(0, 0, 0, 0.22);
-        transform: translateZ(28px);
+        border-radius: 17px !important;
+        color: #ffffff;
+        font-size: 1.55rem;
+        box-shadow: 0 10px 23px rgba(0, 0, 0, 0.22);
+        transform: translateZ(20px);
         transition:
-            transform 0.3s ease,
-            box-shadow 0.3s ease;
+            transform 0.25s ease,
+            box-shadow 0.25s ease;
     }
 
     .subject-card-panel:hover .subject-icon-box {
-        transform: translateZ(44px) translateY(-4px) scale(1.06);
-        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3);
+        transform: translateZ(30px) translateY(-3px) scale(1.04);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.28);
     }
 
     .subject-card-heading {
-        min-height: 32px;
+        min-height: 27px;
         display: flex;
         align-items: center;
         justify-content: center;
+        margin-bottom: 0.5rem !important;
+        font-size: 1rem;
+    }
+
+    .subject-card-panel > .badge {
+        padding: 0.3rem 0.65rem !important;
+        margin-bottom: 0.5rem !important;
+        font-size: 0.68rem !important;
+    }
+
+    .subject-card-panel > p {
+        margin-bottom: 0.65rem !important;
+    }
+
+    .subject-card-panel > p .badge {
+        padding: 0.3rem 0.65rem !important;
+        font-size: 0.64rem !important;
     }
 
     .subject-levels-block {
         margin-top: auto;
+        padding-top: 0.75rem !important;
+    }
+
+    .subject-levels-block > .small {
+        margin-bottom: 0.55rem !important;
+        font-size: 0.74rem;
+    }
+
+    .subject-levels-block .gap-2 {
+        gap: 0.45rem !important;
+    }
+
+    .subject-levels-block a.badge {
+        padding: 0.45rem 0.75rem !important;
+        font-size: 0.67rem;
+    }
+
+    /* Filtre */
+    #classesPage .row.mb-4 {
+        margin-bottom: 1.25rem !important;
+    }
+
+    #classesPage .d-inline-flex.align-items-center {
+        gap: 0.65rem !important;
+        padding: 0.42rem 0.8rem !important;
+    }
+
+    #classesPage label[for="subjectFilter"] {
+        font-size: 0.76rem !important;
+    }
+
+    #subjectFilter {
+        min-width: 160px !important;
+        padding: 0.4rem 1.85rem 0.4rem 0.8rem !important;
+        font-size: 0.76rem !important;
+    }
+
+    #noResults {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
 
     @media (min-width: 1200px) {
@@ -67,27 +155,68 @@
 
     @media (max-width: 1199.98px) {
         .subject-card-panel {
-            min-height: 370px;
+            min-height: 290px;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        #classesPage {
+            padding-top: 2.6rem !important;
+            padding-bottom: 2.6rem !important;
+        }
+
+        .classes-page-header {
+            margin-bottom: 1.5rem !important;
+        }
+
+        .subject-card-panel {
+            min-height: 280px;
         }
     }
 
     @media (max-width: 575.98px) {
+        #classesPage {
+            padding-top: 2.2rem !important;
+            padding-bottom: 2.2rem !important;
+        }
+
         .subject-card-panel {
             min-height: auto;
+            padding: 1rem 0.9rem !important;
         }
 
         .subject-icon-box {
-            width: 70px !important;
-            height: 70px !important;
-            flex-basis: 70px;
-            border-radius: 18px !important;
-            font-size: 1.8rem;
+            width: 56px !important;
+            height: 56px !important;
+            flex-basis: 56px;
+            border-radius: 15px !important;
+            font-size: 1.4rem;
+        }
+
+        #classesPage .d-inline-flex.align-items-center {
+            width: min(100%, 340px);
+            align-items: stretch !important;
+            flex-direction: column;
+            border-radius: 16px !important;
+        }
+
+        #subjectFilter {
+            width: 100%;
+            min-width: 0 !important;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .subject-card-panel,
+        .subject-icon-box {
+            transition: none !important;
+            animation: none !important;
         }
     }
 </style>
 
-<section class="py-5">
-    <div class="container text-center mb-5">
+<section class="py-5" id="classesPage">
+    <div class="container text-center mb-4 classes-page-header">
         <span class="badge px-3 py-2 mb-3" style="background: rgba(255,209,102,0.12); color: #FFD166; border-radius: 20px; font-weight: 500; font-size: 0.8rem;">
             Matières
         </span>
@@ -115,7 +244,7 @@
             </div>
         </div>
 
-        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="subjectsGrid">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" id="subjectsGrid">
             @forelse($subjects as $subject)
             @php
                 $normalizedSubjectName = mb_strtolower(
@@ -264,4 +393,3 @@
     href="{{ asset('css/front-design-v12.css?v=12.0') }}"
 >
 @endpush
-

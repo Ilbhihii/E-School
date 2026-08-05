@@ -150,11 +150,22 @@
                 >
                     @csrf
 
-                    @if(!empty($submissionToken))
+                    @if(
+                        auth()->guest()
+                        && (
+                            $vocalSubmission
+                            || $highSchoolSubmission
+                        )
+                    )
                         <input
                             type="hidden"
                             name="submission_token"
-                            value="{{ $submissionToken }}"
+                            value="{{
+                                old(
+                                    'submission_token',
+                                    $submissionToken
+                                )
+                            }}"
                         >
                     @endif
 
@@ -617,9 +628,9 @@
 <style>
 .interview-page {
     position: relative;
-    min-height: 100vh;
+    min-height: calc(100vh - 72px);
     overflow: hidden;
-    padding: 6.5rem 0 4rem;
+    padding: 5.2rem 0 2.5rem;
     background:
         radial-gradient(
             circle at 12% 15%,
@@ -649,8 +660,8 @@
 .interview-glow-one {
     top: 5%;
     right: 5%;
-    width: 280px;
-    height: 280px;
+    width: 210px;
+    height: 210px;
     background:
         radial-gradient(
             circle,
@@ -662,8 +673,8 @@
 .interview-glow-two {
     bottom: 2%;
     left: 3%;
-    width: 320px;
-    height: 320px;
+    width: 230px;
+    height: 230px;
     background:
         radial-gradient(
             circle,
@@ -675,10 +686,10 @@
 .interview-layout {
     display: grid;
     grid-template-columns:
-        minmax(0,.82fr)
-        minmax(0,1.35fr);
-    gap: 22px;
-    max-width: 1120px;
+        minmax(250px,.72fr)
+        minmax(0,1.38fr);
+    gap: 16px;
+    max-width: 1040px;
     margin: 0 auto;
     align-items: start;
 }
@@ -686,7 +697,7 @@
 .interview-summary,
 .interview-form-card {
     border: 1px solid rgba(255,255,255,.085);
-    border-radius: 25px;
+    border-radius: 20px;
     background:
         linear-gradient(
             145deg,
@@ -700,55 +711,55 @@
 
 .interview-summary {
     position: sticky;
-    top: 6.5rem;
-    padding: 1.55rem;
+    top: 5.4rem;
+    padding: 1.15rem;
 }
 
 .interview-badge {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    padding: 7px 11px;
+    gap: 5px;
+    padding: 5px 9px;
     border-radius: 999px;
     color: #BFDBFE;
     background: rgba(37,99,235,.12);
-    font-size: .65rem;
+    font-size: .55rem;
     font-weight: 850;
     letter-spacing: .06em;
 }
 
 .interview-summary h1 {
-    margin: 1rem 0 .65rem;
+    margin: .75rem 0 .45rem;
     color: #fff;
-    font-size: clamp(1.75rem,4vw,2.55rem);
+    font-size: clamp(1.45rem,3vw,2.05rem);
     font-weight: 900;
-    line-height: 1.08;
+    line-height: 1.1;
 }
 
 .interview-summary > p {
     margin: 0;
     color: rgba(255,255,255,.5);
-    font-size: .78rem;
-    line-height: 1.65;
+    font-size: .72rem;
+    line-height: 1.5;
 }
 
 .selected-path {
     display: flex;
-    gap: 11px;
-    margin-top: 1.3rem;
-    padding: 13px;
+    gap: 7px;
+    margin-top: 1rem;
+    padding: 10px;
     border: 1px solid rgba(245,158,11,.18);
-    border-radius: 14px;
+    border-radius: 10px;
     background: rgba(245,158,11,.075);
 }
 
 .selected-path-icon {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+    width: 31px;
+    height: 31px;
+    flex: 0 0 36px;
     display: grid;
     place-items: center;
-    border-radius: 12px;
+    border-radius: 10px;
     color: #FCD34D;
     background: rgba(245,158,11,.13);
 }
@@ -760,40 +771,40 @@
 
 .selected-path small {
     color: rgba(255,255,255,.36);
-    font-size: .58rem;
+    font-size: .54rem;
     text-transform: uppercase;
 }
 
 .selected-path strong {
     margin: 2px 0;
     color: #fff;
-    font-size: .8rem;
+    font-size: .68rem;
 }
 
 .selected-path span {
     color: #FCD34D;
-    font-size: .68rem;
+    font-size: .53rem;
 }
 
 .interview-steps {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 1.3rem;
+    gap: 7px;
+    margin-top: 1rem;
 }
 
 .interview-steps div {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 7px;
     color: rgba(255,255,255,.57);
-    font-size: .7rem;
+    font-size: .65rem;
 }
 
 .interview-steps span {
-    width: 25px;
-    height: 25px;
-    flex: 0 0 25px;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
     display: grid;
     place-items: center;
     border-radius: 50%;
@@ -804,28 +815,28 @@
             #2563EB,
             #7C3AED
         );
-    font-size: .61rem;
+    font-size: .5rem;
     font-weight: 800;
 }
 
 .interview-form-card {
-    padding: 1.55rem;
+    padding: 1.15rem;
 }
 
 .interview-form-head {
     display: flex;
     align-items: center;
-    gap: 11px;
-    margin-bottom: 1.3rem;
+    gap: 7px;
+    margin-bottom: .9rem;
 }
 
 .interview-form-head > span {
-    width: 47px;
-    height: 47px;
-    flex: 0 0 47px;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
     display: grid;
     place-items: center;
-    border-radius: 14px;
+    border-radius: 10px;
     color: #fff;
     background:
         linear-gradient(
@@ -833,31 +844,31 @@
             #2563EB,
             #7C3AED
         );
-    font-size: 1.08rem;
+    font-size: .95rem;
 }
 
 .interview-form-head h2 {
     margin: 0;
     color: #fff;
-    font-size: 1.12rem;
+    font-size: 1rem;
     font-weight: 850;
 }
 
 .interview-form-head p {
-    margin: 3px 0 0;
+    margin: 2px 0 0;
     color: rgba(255,255,255,.38);
-    font-size: .64rem;
+    font-size: .55rem;
 }
 
 .interview-alert,
 .submission-summary {
     display: flex;
     align-items: flex-start;
-    gap: 9px;
-    margin-bottom: 1rem;
-    padding: 11px 12px;
-    border-radius: 12px;
-    font-size: .68rem;
+    gap: 7px;
+    margin-bottom: .75rem;
+    padding: 9px 10px;
+    border-radius: 10px;
+    font-size: .53rem;
 }
 
 .interview-alert {
@@ -891,20 +902,20 @@
 .submission-summary span {
     margin-top: 2px;
     color: rgba(255,255,255,.48);
-    font-size: .62rem;
+    font-size: .53rem;
 }
 
 .form-grid {
     display: grid;
     grid-template-columns:
         repeat(2,minmax(0,1fr));
-    gap: 12px;
+    gap: 9px;
 }
 
 .form-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
 .form-field.full {
@@ -913,7 +924,7 @@
 
 .form-field label {
     color: rgba(255,255,255,.58);
-    font-size: .67rem;
+    font-size: .62rem;
     font-weight: 700;
 }
 
@@ -921,14 +932,14 @@
 .form-field select,
 .form-field textarea {
     width: 100%;
-    min-height: 45px;
-    padding: 10px 12px;
+    min-height: 40px;
+    padding: 8px 10px;
     border: 1px solid rgba(255,255,255,.09);
-    border-radius: 11px;
+    border-radius: 9px;
     outline: none;
     color: rgba(255,255,255,.88);
     background: rgba(255,255,255,.045);
-    font-size: .73rem;
+    font-size: .68rem;
     transition:
         border-color .2s ease,
         box-shadow .2s ease,
@@ -949,24 +960,54 @@
 }
 
 .form-field input[type="date"],
-.form-field input[type="time"],
-.form-field select {
+.form-field input[type="time"] {
     color-scheme: dark;
+}
+
+/*
+ * Les listes natives de Chrome/Brave utilisent parfois un fond blanc.
+ * Le select fermé reste sombre, tandis que les options ouvertes
+ * utilisent un contraste clair parfaitement lisible.
+ */
+.form-field select {
+    color-scheme: light;
+    cursor: pointer;
+}
+
+.form-field select option {
+    color: #172033 !important;
+    background: #FFFFFF !important;
+    font-size: .72rem;
+    font-weight: 650;
+}
+
+.form-field select option:checked {
+    color: #0F172A !important;
+    background: #DBEAFE !important;
+}
+
+.form-field select option:disabled,
+.form-field select option[value=""] {
+    color: #64748B !important;
+}
+
+.form-field select:invalid {
+    color: rgba(255,255,255,.48);
 }
 
 .form-section-title {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin: 1.4rem 0 .85rem;
-    padding-top: 1rem;
+    gap: 7px;
+    margin: 1rem 0 .65rem;
+    padding-top: .75rem;
     border-top: 1px solid rgba(255,255,255,.065);
 }
 
 .form-section-title > span {
-    width: 29px;
-    height: 29px;
-    flex: 0 0 29px;
+    width: 25px;
+    height: 25px;
+    flex: 0 0 25px;
     display: grid;
     place-items: center;
     border-radius: 9px;
@@ -977,7 +1018,7 @@
             #2563EB,
             #7C3AED
         );
-    font-size: .65rem;
+    font-size: .55rem;
     font-weight: 850;
 }
 
@@ -988,20 +1029,20 @@
 
 .form-section-title strong {
     color: rgba(255,255,255,.82);
-    font-size: .75rem;
+    font-size: .69rem;
 }
 
 .form-section-title small {
     margin-top: 2px;
     color: rgba(255,255,255,.34);
-    font-size: .59rem;
+    font-size: .55rem;
 }
 
 .method-grid {
     display: grid;
     grid-template-columns:
         repeat(3,minmax(0,1fr));
-    gap: 9px;
+    gap: 7px;
 }
 
 .method-option {
@@ -1017,12 +1058,12 @@
 
 .method-card {
     position: relative;
-    min-height: 142px;
+    min-height: 112px;
     display: flex;
     flex-direction: column;
-    padding: 13px;
+    padding: 10px;
     border: 1px solid rgba(255,255,255,.08);
-    border-radius: 14px;
+    border-radius: 10px;
     background: rgba(255,255,255,.035);
     transition:
         transform .2s ease,
@@ -1031,41 +1072,41 @@
 }
 
 .method-card > i {
-    width: 36px;
-    height: 36px;
+    width: 31px;
+    height: 31px;
     display: grid;
     place-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 7px;
     border-radius: 10px;
     color: #93C5FD;
     background: rgba(37,99,235,.12);
-    font-size: .9rem;
+    font-size: .78rem;
 }
 
 .method-card strong {
     color: rgba(255,255,255,.82);
-    font-size: .7rem;
+    font-size: .65rem;
 }
 
 .method-card small {
-    margin-top: 5px;
+    margin-top: 3px;
     color: rgba(255,255,255,.35);
-    font-size: .57rem;
+    font-size: .53rem;
     line-height: 1.45;
 }
 
 .method-card b {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 21px;
-    height: 21px;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
     display: none;
     place-items: center;
     border-radius: 50%;
     color: #fff;
     background: #2563EB;
-    font-size: .56rem;
+    font-size: .5rem;
 }
 
 .method-option:hover .method-card {
@@ -1086,14 +1127,14 @@
 
 .interview-submit {
     width: 100%;
-    min-height: 49px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 9px;
-    margin-top: 1.3rem;
+    gap: 7px;
+    margin-top: 1rem;
     border: 0;
-    border-radius: 13px;
+    border-radius: 11px;
     color: #fff;
     background:
         linear-gradient(
@@ -1103,7 +1144,7 @@
         );
     box-shadow:
         0 14px 30px rgba(37,99,235,.2);
-    font-size: .76rem;
+    font-size: .7rem;
     font-weight: 850;
     cursor: pointer;
     transition:
@@ -1120,10 +1161,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
-    margin: .9rem 0 0;
+    gap: 5px;
+    margin: .65rem 0 0;
     color: rgba(255,255,255,.28);
-    font-size: .58rem;
+    font-size: .54rem;
 }
 
 html.light-mode .interview-page {
@@ -1183,6 +1224,10 @@ html.light-mode .form-field select {
     color-scheme: light;
 }
 
+html.light-mode .form-field select:invalid {
+    color: #64748B;
+}
+
 @media (max-width:900px) {
     .interview-layout {
         grid-template-columns: 1fr;
@@ -1195,13 +1240,14 @@ html.light-mode .form-field select {
 
 @media (max-width:680px) {
     .interview-page {
-        padding-top: 5.3rem;
+        padding-top: 4.6rem;
+        padding-bottom: 1.5rem;
     }
 
     .interview-summary,
     .interview-form-card {
-        padding: 1.1rem;
-        border-radius: 19px;
+        padding: .9rem;
+        border-radius: 16px;
     }
 
     .form-grid,
@@ -1210,9 +1256,45 @@ html.light-mode .form-field select {
     }
 
     .method-card {
-        min-height: 112px;
+        min-height: 90px;
     }
 }
+</style>
+
+
+<style>
+    /* Renfort compact — page rendez-vous uniquement */
+    .interview-page .container {
+        max-width: 1100px;
+    }
+
+    .interview-form-card form {
+        margin: 0;
+    }
+
+    .interview-form-card .form-grid + .form-section-title {
+        margin-top: 1rem;
+    }
+
+    .interview-form-card textarea {
+        min-height: 78px;
+    }
+
+    @media (min-width: 901px) {
+        .interview-summary {
+            max-width: 320px;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .interview-layout {
+            max-width: 720px;
+        }
+
+        .interview-summary {
+            padding: 1rem 1.1rem;
+        }
+    }
 </style>
 
 @endsection
