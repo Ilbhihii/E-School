@@ -341,7 +341,7 @@
                                     </label>
 
                                     <span>
-                                        MP4, MOV ou AVI — 200 Mo maximum
+                                        MP4, MOV ou AVI — 1 Go maximum
                                     </span>
 
                                     <input
@@ -377,7 +377,7 @@
                                     </label>
 
                                     <span>
-                                        PDF — 20 Mo maximum
+                                        PDF — 1 Go maximum
                                     </span>
 
                                     <input

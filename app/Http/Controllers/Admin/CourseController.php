@@ -156,13 +156,13 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:mp4,mov,avi',
-                'max:204800',
+                'max:1048576',
             ],
             'pdf' => [
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:20480',
+                'max:1048576',
             ],
         ], [
             'subject_id.required' =>
@@ -171,6 +171,10 @@ class CourseController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
+            'video.max' =>
+                'La vidéo ne doit pas dépasser 1 Go.',
+            'pdf.max' =>
+                'Le document PDF ne doit pas dépasser 1 Go.',
         ]);
 
         $subject = Subject::findOrFail(
@@ -363,8 +367,8 @@ class CourseController extends Controller
             'level_id' => 'required|integer|exists:levels,id',
             'subject_id' => 'required|integer|exists:subjects,id',
             'course_link' => 'nullable|url',
-            'video' => 'nullable|file|mimes:mp4,mov,avi|max:204800',
-            'pdf' => 'nullable|file|mimes:pdf|max:20480'
+            'video' => 'nullable|file|mimes:mp4,mov,avi|max:1048576',
+            'pdf' => 'nullable|file|mimes:pdf|max:1048576'
         ]);
 
         [$subject, $level, $classRoom] = $this->paths->validatePath(
