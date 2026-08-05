@@ -16,7 +16,7 @@ const PRECACHE_URLS = [
   '/css/light-global.css',
   '/js/global-theme-sync.js',
   '/manifest.json',
-  '/images/logoSSA.jpeg',
+  '/images/icon-192x192.png',
   '/images/logoSSA-removebg-preview.png',
   '/images/icons/icon-192x192.png',
   '/images/icons/icon-512x512.png',

@@ -79,6 +79,24 @@ class AppointmentController extends Controller
                     false
                 );
 
+            if (auth()->guest()) {
+                /*
+                 * La soumission vient d'être validée avec le jeton de l'URL.
+                 * On reprend ensuite la valeur canonique enregistrée dans
+                 * la base pour garantir qu'elle est rendue dans le formulaire.
+                 */
+                $submissionToken = trim(
+                    (string) $vocalSubmission
+                        ->getRawOriginal('guest_token')
+                );
+
+                session()->put(
+                    'guest_test_tokens.vocal.'
+                    . $vocalSubmission->id,
+                    $submissionToken
+                );
+            }
+
             if ($vocalSubmission->consumed_at) {
                 $appointment =
                     $vocalSubmission->appointment;
@@ -107,6 +125,19 @@ class AppointmentController extends Controller
                     $submissionToken,
                     false
                 );
+
+            if (auth()->guest()) {
+                $submissionToken = trim(
+                    (string) $highSchoolSubmission
+                        ->getRawOriginal('guest_token')
+                );
+
+                session()->put(
+                    'guest_test_tokens.written.'
+                    . $highSchoolSubmission->id,
+                    $submissionToken
+                );
+            }
 
             if (
                 $highSchoolSubmission->consumed_at
@@ -186,6 +217,56 @@ class AppointmentController extends Controller
             'submission_token' =>
                 'nullable|string|max:80',
         ]);
+
+        /*
+         * Le jeton est normalement envoyé par le champ caché du formulaire.
+         * Une copie est également conservée dans la session après le GET
+         * sécurisé du rendez-vous. Cela évite le 403 si le navigateur,
+         * le cache PWA ou une ancienne vue ne renvoie pas le champ caché.
+         */
+        $submissionToken = trim(
+            (string) (
+                $validated['submission_token']
+                ?? ''
+            )
+        );
+
+        if (
+            auth()->guest()
+            && $submissionToken === ''
+        ) {
+            $vocalSubmissionId = (int) (
+                $validated[
+                    'vocal_test_submission_id'
+                ]
+                ?? 0
+            );
+
+            $writtenSubmissionId = (int) (
+                $validated[
+                    'high_school_test_submission_id'
+                ]
+                ?? 0
+            );
+
+            if ($vocalSubmissionId > 0) {
+                $submissionToken = trim(
+                    (string) session(
+                        'guest_test_tokens.vocal.'
+                        . $vocalSubmissionId,
+                        ''
+                    )
+                );
+            } elseif ($writtenSubmissionId > 0) {
+                $submissionToken = trim(
+                    (string) session(
+                        'guest_test_tokens.written.'
+                        . $writtenSubmissionId,
+                        ''
+                    )
+                );
+            }
+        }
 
         $isDirectInterview =
             $request->boolean('interview_path');
@@ -283,10 +364,7 @@ class AppointmentController extends Controller
                     (int) $validated[
                         'vocal_test_submission_id'
                     ],
-                    (string) (
-                        $validated['submission_token']
-                        ?? ''
-                    ),
+                    $submissionToken,
                     true
                 );
 
@@ -309,10 +387,7 @@ class AppointmentController extends Controller
                     (int) $validated[
                         'high_school_test_submission_id'
                     ],
-                    (string) (
-                        $validated['submission_token']
-                        ?? ''
-                    ),
+                    $submissionToken,
                     true
                 );
 
@@ -422,6 +497,20 @@ class AppointmentController extends Controller
                 return $appointment;
             }
         );
+
+        if ($vocalSubmission) {
+            session()->forget(
+                'guest_test_tokens.vocal.'
+                . $vocalSubmission->id
+            );
+        }
+
+        if ($highSchoolSubmission) {
+            session()->forget(
+                'guest_test_tokens.written.'
+                . $highSchoolSubmission->id
+            );
+        }
 
         if (
             auth()->guest()
