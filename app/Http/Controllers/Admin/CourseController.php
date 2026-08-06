@@ -162,7 +162,7 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:1048576',
+                'max:51200',
             ],
         ], [
             'subject_id.required' =>
@@ -171,10 +171,6 @@ class CourseController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
-            'video.max' =>
-                'La vidéo ne doit pas dépasser 1 Go.',
-            'pdf.max' =>
-                'Le document PDF ne doit pas dépasser 1 Go.',
         ]);
 
         $subject = Subject::findOrFail(
@@ -360,20 +356,78 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
         $this->authorizeCourseOwner($course);
 
+        /*
+         * Le niveau affiché dans le formulaire est automatiquement déduit
+         * de la classe. On accepte level_id pour réafficher correctement les
+         * erreurs, mais la valeur fiable est reprise depuis la classe en base.
+         */
         $data = $request->validate([
-            'title' => 'required',
-            'description' => 'nullable',
-            'class_id' => 'required|integer|exists:class_rooms,id',
-            'level_id' => 'required|integer|exists:levels,id',
-            'subject_id' => 'required|integer|exists:subjects,id',
-            'course_link' => 'nullable|url',
-            'video' => 'nullable|file|mimes:mp4,mov,avi|max:1048576',
-            'pdf' => 'nullable|file|mimes:pdf|max:1048576'
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'level_id' => [
+                'nullable',
+                'integer',
+                'exists:levels,id',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'course_link' => [
+                'nullable',
+                'url',
+                'max:2048',
+            ],
+            'video' => [
+                'nullable',
+                'file',
+                'mimes:mp4,mov,avi,webm,m4v',
+                'max:1048576',
+            ],
+            'pdf' => [
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:51200',
+            ],
+        ], [
+            'title.required' =>
+                'Le titre du cours est obligatoire.',
+            'class_id.required' =>
+                'Veuillez sélectionner une classe.',
+            'subject_id.required' =>
+                'Veuillez sélectionner une matière.',
+            'video.max' =>
+                'La vidéo ne doit pas dépasser 1 Go.',
+            'video.mimes' =>
+                'La vidéo doit être au format MP4, MOV, AVI, WEBM ou M4V.',
+            'pdf.max' =>
+                'Le document PDF ne doit pas dépasser 50 Mo.',
+            'pdf.mimes' =>
+                'Le document sélectionné doit être un fichier PDF.',
         ]);
+
+        $classForLevel = ClassRoom::query()
+            ->findOrFail((int) $data['class_id']);
+
+        $resolvedLevelId = (int) $classForLevel->level_id;
 
         [$subject, $level, $classRoom] = $this->paths->validatePath(
             (int) $data['subject_id'],
-            (int) $data['level_id'],
+            $resolvedLevelId,
             (int) $data['class_id']
         );
 
@@ -385,36 +439,110 @@ class CourseController extends Controller
                     $level->id,
                     $classRoom->id
                 ),
-                403
+                403,
+                'Cette structure ne fait pas partie '
+                . 'de vos affectations.'
             );
         }
+
+        $oldVideoPath = $course->video;
+        $oldPdfPath = $course->pdf;
+        $newVideoPath = null;
+        $newPdfPath = null;
+
+        /*
+         * Les objets UploadedFile ne doivent pas être envoyés directement à
+         * Course::update(). Ils sont remplacés par les chemins enregistrés.
+         */
+        unset($data['video'], $data['pdf']);
 
         $data['subject_id'] = $subject->id;
         $data['level_id'] = $level->id;
         $data['class_id'] = $classRoom->id;
 
-        if ($request->hasFile('video')) {
-            if ($course->video) {
-                Storage::disk('local')->delete($course->video);
-                Storage::disk('public')->delete($course->video);
+        try {
+            if ($request->hasFile('video')) {
+                $newVideoPath = $request
+                    ->file('video')
+                    ->store(
+                        'course-resources/video',
+                        'local'
+                    );
+
+                if (!$newVideoPath) {
+                    throw ValidationException::withMessages([
+                        'video' =>
+                            'La nouvelle vidéo n’a pas pu être enregistrée.',
+                    ]);
+                }
+
+                $data['video'] = $newVideoPath;
             }
-            $data['video'] = $request->file('video')->store('course-resources/video', 'local');
+
+            if ($request->hasFile('pdf')) {
+                $newPdfPath = $request
+                    ->file('pdf')
+                    ->store(
+                        'course-resources/pdf',
+                        'local'
+                    );
+
+                if (!$newPdfPath) {
+                    throw ValidationException::withMessages([
+                        'pdf' =>
+                            'Le nouveau PDF n’a pas pu être enregistré.',
+                    ]);
+                }
+
+                $data['pdf'] = $newPdfPath;
+            }
+
+            $course->update($data);
+        } catch (\Throwable $exception) {
+            /*
+             * En cas d’échec de la base de données, les nouveaux fichiers
+             * incomplets sont supprimés et les anciens restent intacts.
+             */
+            if ($newVideoPath) {
+                Storage::disk('local')->delete($newVideoPath);
+            }
+
+            if ($newPdfPath) {
+                Storage::disk('local')->delete($newPdfPath);
+            }
+
+            throw $exception;
         }
 
-        if ($request->hasFile('pdf')) {
-            if ($course->pdf) {
-                Storage::disk('local')->delete($course->pdf);
-                Storage::disk('public')->delete($course->pdf);
-            }
-            $data['pdf'] = $request->file('pdf')->store('course-resources/pdf', 'local');
+        /*
+         * Les anciens fichiers ne sont supprimés qu’après la réussite de la
+         * mise à jour. Cela évite de perdre le cours en cas d’erreur d’envoi.
+         */
+        if (
+            $newVideoPath
+            && $oldVideoPath
+            && $oldVideoPath !== $newVideoPath
+        ) {
+            Storage::disk('local')->delete($oldVideoPath);
+            Storage::disk('public')->delete($oldVideoPath);
         }
 
-        $course->update($data);
+        if (
+            $newPdfPath
+            && $oldPdfPath
+            && $oldPdfPath !== $newPdfPath
+        ) {
+            Storage::disk('local')->delete($oldPdfPath);
+            Storage::disk('public')->delete($oldPdfPath);
+        }
 
-        return redirect()->route('admin.courses.index')
-            ->with('success','Cours mis à jour avec succès');
+        return redirect()
+            ->route('admin.courses.index')
+            ->with(
+                'success',
+                'Le cours a été mis à jour avec succès.'
+            );
     }
-
 
     // ================= AJAX : matières par classe =================
     public function getClassSubjects($classId)
