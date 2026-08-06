@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\ProfAssignment;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use App\Services\LearningPathService;
 
 class CourseController extends Controller
@@ -596,24 +597,54 @@ class CourseController extends Controller
 
             return $subjects
                 ->map(
-                    function (
-                        Subject $subject
-                    ) use ($levels) {
+                    function (Subject $subject) use ($levels) {
                         $subjectLevels = $levels
                             ->where(
                                 'subject_id',
                                 $subject->id
+                            );
+
+                        /*
+                         * La base contient encore d'anciens parcours Arabe.
+                         * Ils ne doivent plus apparaître dans le formulaire.
+                         */
+                        $allowedLevelNames =
+                            $this->allowedLevelNamesForSubject(
+                                $subject
+                            );
+
+                        if ($allowedLevelNames !== null) {
+                            $subjectLevels = $subjectLevels
+                                ->filter(
+                                    fn (Level $level) =>
+                                        in_array(
+                                            $this->normalizePathName(
+                                                $level->name
+                                            ),
+                                            $allowedLevelNames,
+                                            true
+                                        )
+                                );
+                        }
+
+                        /*
+                         * Évite d'afficher deux fois un parcours portant
+                         * le même nom lorsqu'un ancien doublon existe.
+                         */
+                        $subjectLevels = $subjectLevels
+                            ->unique(
+                                fn (Level $level) =>
+                                    $this->normalizePathName(
+                                        $level->name
+                                    )
                             )
+                            ->values()
                             ->map(
-                                function (
-                                    Level $level
-                                ) use ($subject) {
+                                function (Level $level) use ($subject) {
                                     $classes = $level
                                         ->classes
                                         ->filter(
-                                            fn (
-                                                ClassRoom $classRoom
-                                            ) =>
+                                            fn (ClassRoom $classRoom) =>
                                                 $classRoom
                                                     ->subjects
                                                     ->contains(
@@ -624,13 +655,9 @@ class CourseController extends Controller
                                         ->sortBy('name')
                                         ->values()
                                         ->map(
-                                            fn (
-                                                ClassRoom $classRoom
-                                            ) => [
-                                                'id' =>
-                                                    $classRoom->id,
-                                                'name' =>
-                                                    $classRoom->name,
+                                            fn (ClassRoom $classRoom) => [
+                                                'id' => $classRoom->id,
+                                                'name' => $classRoom->name,
                                             ]
                                         )
                                         ->all();
@@ -699,9 +726,7 @@ class CourseController extends Controller
 
         return $subjects
             ->map(
-                function (
-                    Subject $subject
-                ) use (
+                function (Subject $subject) use (
                     $levels,
                     $assignments
                 ) {
@@ -710,27 +735,49 @@ class CourseController extends Controller
                             fn (Level $level) =>
                                 $assignments->contains(
                                     fn ($assignment) =>
-                                        (int) $assignment
-                                            ->subject_id
+                                        (int) $assignment->subject_id
                                             === (int) $subject->id
-                                        && (int) $assignment
-                                            ->level_id
+                                        && (int) $assignment->level_id
                                             === (int) $level->id
                                 )
+                        );
+
+                    $allowedLevelNames =
+                        $this->allowedLevelNamesForSubject(
+                            $subject
+                        );
+
+                    if ($allowedLevelNames !== null) {
+                        $subjectLevels = $subjectLevels
+                            ->filter(
+                                fn (Level $level) =>
+                                    in_array(
+                                        $this->normalizePathName(
+                                            $level->name
+                                        ),
+                                        $allowedLevelNames,
+                                        true
+                                    )
+                            );
+                    }
+
+                    $subjectLevels = $subjectLevels
+                        ->unique(
+                            fn (Level $level) =>
+                                $this->normalizePathName(
+                                    $level->name
+                                )
                         )
+                        ->values()
                         ->map(
-                            function (
-                                Level $level
-                            ) use (
+                            function (Level $level) use (
                                 $subject,
                                 $assignments
                             ) {
                                 $classes = $level
                                     ->classes
                                     ->filter(
-                                        fn (
-                                            ClassRoom $classRoom
-                                        ) =>
+                                        fn (ClassRoom $classRoom) =>
                                             $assignments->contains(
                                                 fn ($assignment) =>
                                                     (int) $assignment
@@ -750,13 +797,9 @@ class CourseController extends Controller
                                     ->sortBy('name')
                                     ->values()
                                     ->map(
-                                        fn (
-                                            ClassRoom $classRoom
-                                        ) => [
-                                            'id' =>
-                                                $classRoom->id,
-                                            'name' =>
-                                                $classRoom->name,
+                                        fn (ClassRoom $classRoom) => [
+                                            'id' => $classRoom->id,
+                                            'name' => $classRoom->name,
                                         ]
                                     )
                                     ->all();
@@ -790,6 +833,47 @@ class CourseController extends Controller
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * Liste officielle des parcours actuellement utilisés.
+     * null signifie : ne pas appliquer de filtre spécial à la matière.
+     */
+    private function allowedLevelNamesForSubject(
+        Subject $subject
+    ): ?array {
+        return match (
+            $this->normalizePathName($subject->name)
+        ) {
+            'arabe' => [
+                'lecture & ecriture',
+                'communication',
+            ],
+            'coran' => [
+                'apprentissage & tajwid',
+            ],
+            'soutien lycee' => [
+                'bac',
+            ],
+            default => null,
+        };
+    }
+
+    /**
+     * Uniformise accents, majuscules et espaces pour comparer les noms.
+     */
+    private function normalizePathName(
+        string $value
+    ): string {
+        $value = preg_replace(
+            '/\\s+/u',
+            ' ',
+            trim($value)
+        );
+
+        return Str::lower(
+            Str::ascii((string) $value)
+        );
     }
 
     private function authorizeCourseOwner(Course $course): void
