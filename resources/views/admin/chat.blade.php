@@ -2,14 +2,14 @@
 
 @section(
     'title',
-    'Chat - ' . $subject->name
+    'Chat - ' . ($conversationSpaceLabel ?? $subject->name)
 )
 
 @section('page_title', 'Chat')
 
 @section(
     'breadcrumb',
-    'Communication → ' . $subject->name
+    'Communication → ' . ($conversationSpaceLabel ?? $subject->name)
 )
 
 @section('content')
@@ -49,6 +49,23 @@
         ],
     };
 
+    if ($isAdministration) {
+        $subjectTheme =
+            ($conversationRole ?? 'student') === 'prof'
+                ? [
+                    'icon' => 'bi-person-workspace',
+                    'gradient' =>
+                        'linear-gradient(135deg,#EA580C,#F59E0B)',
+                    'accent' => '#FBBF24',
+                ]
+                : [
+                    'icon' => 'bi-mortarboard-fill',
+                    'gradient' =>
+                        'linear-gradient(135deg,#059669,#10B981)',
+                    'accent' => '#34D399',
+                ];
+    }
+
     $messageGroups = $messages->groupBy(
         fn ($message) =>
             $message->created_at->format('Y-m-d')
@@ -82,12 +99,15 @@
             </span>
 
             <div>
-                <h1>{{ $subject->name }}</h1>
+                <h1>{{ $conversationSpaceLabel ?? $subject->name }}</h1>
 
                 <p>
                     @if($isAdministration)
-                        Messages privés avec les étudiants
-                        et les professeurs
+                        @if(($conversationRole ?? 'student') === 'prof')
+                            Messages privés avec les professeurs
+                        @else
+                            Messages privés avec les étudiants
+                        @endif
                     @else
                         Discussion pédagogique de groupe
                     @endif
@@ -137,7 +157,7 @@
             <aside class="conversation-contacts">
                 <div class="contacts-header">
                     <div>
-                        <strong>Conversations</strong>
+                        <strong>{{ $conversationSpaceLabel ?? 'Conversations' }}</strong>
 
                         <span>
                             {{ $conversationUsers->count() }}
@@ -189,8 +209,10 @@
                                 route(
                                     'admin.chat',
                                     [
-                                        $subject->id,
-                                        'student' =>
+                                        'subject' => $subject->id,
+                                        'role' =>
+                                            $conversationRole,
+                                        'contact' =>
                                             $conversationUser->id,
                                     ]
                                 )
@@ -519,8 +541,12 @@
                                     $isAdministration
                                     && !$selectedConversationUser
                                 )
-                                    Choisissez un étudiant ou un
-                                    professeur dans la liste.
+                                    Choisissez {{
+                                        ($conversationRole ?? 'student')
+                                            === 'prof'
+                                            ? 'un professeur'
+                                            : 'un étudiant'
+                                    }} dans la liste.
                                 @else
                                     Envoyez le premier message dans
                                     cet espace de discussion.

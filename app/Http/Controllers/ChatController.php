@@ -142,27 +142,115 @@ class ChatController extends Controller
         ADMIN
     ========================= */
 
-    // Liste des matières pour admin (adminIndex route)
+    // Liste des espaces de discussion pour admin
     public function adminIndex()
     {
-        $allowedSubjects = ['Arabe', 'Coran', 'Administration'];
+        /*
+         * Les discussions privées utilisent toujours la matière
+         * technique « Administration », mais elles sont présentées
+         * dans deux espaces distincts : Étudiants et Professeurs.
+         */
+        $chatSpaces = collect();
 
-        $subjects = Subject::whereIn('name', $allowedSubjects)
-            ->withCount(['messages' => function($query) {
-            $query->whereNull('deleted_at');
-        }])
-            ->with(['messages' => function($query) {
-                $query->whereNull('deleted_at')->latest()->limit(1);
-            }])
+        $groupSubjects = Subject::query()
+            ->whereIn('name', ['Arabe', 'Coran'])
             ->get()
             ->unique('name')
-            ->sortBy(fn($subject) => array_search($subject->name, $allowedSubjects, true))
+            ->sortBy(
+                fn (Subject $subject) =>
+                    array_search(
+                        $subject->name,
+                        ['Arabe', 'Coran'],
+                        true
+                    )
+            )
             ->values();
 
-        return view('admin.chat-list', compact('subjects'));
+        foreach ($groupSubjects as $subject) {
+            $messageQuery = Message::query()
+                ->where('subject_id', $subject->id);
+
+            $lastMessage = (clone $messageQuery)
+                ->latest('created_at')
+                ->first();
+
+            $subject->setAttribute(
+                'messages_count',
+                (clone $messageQuery)->count()
+            );
+            $subject->setAttribute(
+                'conversation_role',
+                null
+            );
+            $subject->setAttribute(
+                'space_name',
+                $subject->name
+            );
+            $subject->setRelation(
+                'messages',
+                collect($lastMessage ? [$lastMessage] : [])
+            );
+
+            $chatSpaces->push($subject);
+        }
+
+        $administration = Subject::query()
+            ->where('name', 'Administration')
+            ->first();
+
+        if ($administration) {
+            foreach (
+                [
+                    'student' => 'Étudiants',
+                    'prof' => 'Professeurs',
+                ] as $role => $label
+            ) {
+                $messageQuery = Message::query()
+                    ->where(
+                        'subject_id',
+                        $administration->id
+                    )
+                    ->whereHas(
+                        'conversationUser',
+                        fn ($query) =>
+                            $query->where('role', $role)
+                    );
+
+                $lastMessage = (clone $messageQuery)
+                    ->latest('created_at')
+                    ->first();
+
+                $space = clone $administration;
+                $space->setAttribute(
+                    'messages_count',
+                    (clone $messageQuery)->count()
+                );
+                $space->setAttribute(
+                    'conversation_role',
+                    $role
+                );
+                $space->setAttribute(
+                    'space_name',
+                    $label
+                );
+                $space->setRelation(
+                    'messages',
+                    collect($lastMessage ? [$lastMessage] : [])
+                );
+
+                $chatSpaces->push($space);
+            }
+        }
+
+        $subjects = $chatSpaces->values();
+
+        return view(
+            'admin.chat-list',
+            compact('subjects')
+        );
     }
 
-    // Chat admin pour une matière
+    // Chat admin pour une matière ou un espace privé
     public function adminChat($subject)
     {
         $subject = Subject::findOrFail($subject);
@@ -185,24 +273,53 @@ class ChatController extends Controller
 
         $conversationUsers = collect();
         $selectedConversationUser = null;
+        $conversationRole = null;
+        $conversationSpaceLabel = $subject->name;
 
         if ($isAdministration) {
+            $selectedConversationUserId = (int) request(
+                'contact',
+                request('student', 0)
+            );
+
+            $requestedRole = (string) request('role', '');
+
             /*
-             * Construire la liste des conversations privées
-             * Administration ↔ étudiant/professeur.
+             * Compatibilité avec les anciens liens qui ne contenaient
+             * pas encore le paramètre role.
              */
+            if (
+                !in_array(
+                    $requestedRole,
+                    ['student', 'prof'],
+                    true
+                )
+                && $selectedConversationUserId > 0
+            ) {
+                $requestedRole = (string) User::query()
+                    ->whereKey($selectedConversationUserId)
+                    ->whereIn('role', ['student', 'prof'])
+                    ->value('role');
+            }
+
+            if (
+                !in_array(
+                    $requestedRole,
+                    ['student', 'prof'],
+                    true
+                )
+            ) {
+                $requestedRole = 'student';
+            }
+
+            $conversationRole = $requestedRole;
+            $conversationSpaceLabel =
+                $conversationRole === 'prof'
+                    ? 'Professeurs'
+                    : 'Étudiants';
+
             $conversationUsers = User::query()
-                ->whereIn(
-                    'role',
-                    ['student', 'prof']
-                )
-                ->orderByRaw(
-                    "CASE
-                        WHEN role = 'student' THEN 1
-                        WHEN role = 'prof' THEN 2
-                        ELSE 3
-                    END"
-                )
+                ->where('role', $conversationRole)
                 ->orderBy('name')
                 ->get()
                 ->map(function (User $user) use ($subject) {
@@ -238,9 +355,6 @@ class ChatController extends Controller
                 )
                 ->values();
 
-            $selectedConversationUserId =
-                (int) request('student');
-
             if ($selectedConversationUserId > 0) {
                 $selectedConversationUser =
                     $conversationUsers->firstWhere(
@@ -249,10 +363,6 @@ class ChatController extends Controller
                     );
             }
 
-            /*
-             * En l'absence de paramètre, ouvrir d'abord une
-             * conversation existante, sinon le premier utilisateur.
-             */
             if (!$selectedConversationUser) {
                 $selectedConversationUser =
                     $conversationUsers->first(
@@ -299,7 +409,9 @@ class ChatController extends Controller
                 'subject',
                 'conversationUsers',
                 'selectedConversationUser',
-                'isAdministration'
+                'isAdministration',
+                'conversationRole',
+                'conversationSpaceLabel'
             )
         );
     }

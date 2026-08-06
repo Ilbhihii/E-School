@@ -30,7 +30,7 @@
 
         <div class="subtitle">
             Gérez les discussions pédagogiques et les
-            conversations privées avec l’administration.
+            conversations privées avec les étudiants et les professeurs.
         </div>
     </div>
 
@@ -54,10 +54,18 @@
 
 @if(isset($subjects) && $subjects->isNotEmpty())
     <div class="admin-chat-grid">
-        @foreach($subjects->unique('name') as $subject)
+        @foreach($subjects as $subject)
             @php
+                $spaceName =
+                    $subject->space_name
+                    ?? $subject->name;
+
+                $conversationRole =
+                    $subject->conversation_role
+                    ?? null;
+
                 $normalizedName = mb_strtolower(
-                    trim($subject->name)
+                    trim($spaceName)
                 );
 
                 $theme = match ($normalizedName) {
@@ -85,16 +93,28 @@
                             . 'l’apprentissage et le Tajwid.',
                     ],
 
-                    'administration' => [
-                        'icon' => 'bi-shield-lock-fill',
+                    'étudiants' => [
+                        'icon' => 'bi-mortarboard-fill',
                         'eyebrow' => 'Conversations privées',
                         'gradient' =>
                             'linear-gradient(135deg,#059669,#10B981)',
                         'soft' => 'rgba(16,185,129,0.12)',
                         'accent' => '#34D399',
                         'description' =>
-                            'Communiquez individuellement avec les '
-                            . 'étudiants et les professeurs.',
+                            'Communiquez individuellement et en privé '
+                            . 'avec chaque étudiant.',
+                    ],
+
+                    'professeurs' => [
+                        'icon' => 'bi-person-workspace',
+                        'eyebrow' => 'Conversations privées',
+                        'gradient' =>
+                            'linear-gradient(135deg,#EA580C,#F59E0B)',
+                        'soft' => 'rgba(245,158,11,0.12)',
+                        'accent' => '#FBBF24',
+                        'description' =>
+                            'Discutez individuellement et en privé '
+                            . 'avec chaque professeur.',
                     ],
 
                     default => [
@@ -148,7 +168,7 @@
                         {{ $theme['eyebrow'] }}
                     </div>
 
-                    <h2>{{ $subject->name }}</h2>
+                    <h2>{{ $spaceName }}</h2>
 
                     <p class="admin-chat-description">
                         {{ $theme['description'] }}
@@ -188,7 +208,15 @@
                         href="{{
                             route(
                                 'admin.chat',
-                                $subject->id
+                                array_filter(
+                                    [
+                                        'subject' => $subject->id,
+                                        'role' => $conversationRole,
+                                    ],
+                                    fn ($value) =>
+                                        $value !== null
+                                        && $value !== ''
+                                )
                             )
                         }}"
                         class="admin-chat-action"
@@ -290,10 +318,10 @@
 }
 
 .admin-chat-grid {
-    width: min(100%, 1080px);
+    width: min(100%, 1380px);
     display: grid;
     grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+        repeat(4, minmax(0, 1fr));
     align-items: stretch;
     gap: 20px;
     margin: 1.2rem auto 0;
@@ -535,6 +563,14 @@
 
 .admin-chat-empty {
     padding: 4rem 2rem;
+}
+
+@media (max-width: 1250px) {
+    .admin-chat-grid {
+        width: min(100%, 1040px);
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 980px) {
