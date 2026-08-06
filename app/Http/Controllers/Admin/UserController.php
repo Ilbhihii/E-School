@@ -14,6 +14,7 @@ use App\Mail\AccountActivatedMailable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -787,7 +788,43 @@ class UserController extends Controller
                         ->where(
                             'subject_id',
                             $subject->id
+                        );
+
+                    /*
+                     * La base contient encore d'anciens parcours.
+                     * Les formulaires d'assignation doivent afficher
+                     * uniquement les parcours officiels.
+                     */
+                    $allowedLevelNames =
+                        $this->allowedLevelNamesForSubject(
+                            $subject
+                        );
+
+                    if ($allowedLevelNames !== null) {
+                        $subjectLevels = $subjectLevels
+                            ->filter(
+                                fn (Level $level) =>
+                                    in_array(
+                                        $this->normalizePathName(
+                                            $level->name
+                                        ),
+                                        $allowedLevelNames,
+                                        true
+                                    )
+                            );
+                    }
+
+                    /*
+                     * Évite les doublons de niveaux portant le même nom.
+                     */
+                    $subjectLevels = $subjectLevels
+                        ->unique(
+                            fn (Level $level) =>
+                                $this->normalizePathName(
+                                    $level->name
+                                )
                         )
+                        ->values()
                         ->map(
                             function (
                                 Level $level
@@ -832,7 +869,6 @@ class UserController extends Controller
                             }
                         )
                         ->filter()
-                        ->unique('id')
                         ->values()
                         ->all();
 
@@ -850,6 +886,47 @@ class UserController extends Controller
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * Liste officielle des parcours actuellement utilisés.
+     * null signifie : aucun filtre spécial pour cette matière.
+     */
+    private function allowedLevelNamesForSubject(
+        Subject $subject
+    ): ?array {
+        return match (
+            $this->normalizePathName($subject->name)
+        ) {
+            'arabe' => [
+                'lecture & ecriture',
+                'communication',
+            ],
+            'coran' => [
+                'apprentissage & tajwid',
+            ],
+            'soutien lycee' => [
+                'bac',
+            ],
+            default => null,
+        };
+    }
+
+    /**
+     * Uniformise accents, majuscules et espaces pour comparer les noms.
+     */
+    private function normalizePathName(
+        string $value
+    ): string {
+        $value = preg_replace(
+            '/\\s+/u',
+            ' ',
+            trim($value)
+        );
+
+        return Str::lower(
+            Str::ascii((string) $value)
+        );
     }
 
     private function syncStudentClass(int $userId): void

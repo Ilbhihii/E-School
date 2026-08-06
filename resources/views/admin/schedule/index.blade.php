@@ -102,7 +102,11 @@
             <form method="GET" action="{{ route('admin.schedule.index') }}" class="schedule-filter-grid">
                 <div class="adm-form-group mb-0">
                     <label class="adm-form-label">Matière</label>
-                    <select name="subject_id" class="adm-form-select">
+                    <select
+                        name="subject_id"
+                        id="scheduleFilterSubject"
+                        class="adm-form-select"
+                    >
                         <option value="">Toutes</option>
                         @foreach($subjects as $subject)
                             <option value="{{ $subject->id }}" {{ (string) request('subject_id') === (string) $subject->id ? 'selected' : '' }}>{{ $subject->name }}</option>
@@ -112,21 +116,27 @@
 
                 <div class="adm-form-group mb-0">
                     <label class="adm-form-label">Niveau</label>
-                    <select name="level_id" class="adm-form-select">
+                    <select
+                        name="level_id"
+                        id="scheduleFilterLevel"
+                        class="adm-form-select"
+                        data-selected="{{ request('level_id') }}"
+                        {{ request('subject_id') ? '' : 'disabled' }}
+                    >
                         <option value="">Tous</option>
-                        @foreach($levels as $level)
-                            <option value="{{ $level->id }}" {{ (string) request('level_id') === (string) $level->id ? 'selected' : '' }}>{{ $level->name }}</option>
-                        @endforeach
                     </select>
                 </div>
 
                 <div class="adm-form-group mb-0">
                     <label class="adm-form-label">Classe pédagogique</label>
-                    <select name="class_id" class="adm-form-select">
+                    <select
+                        name="class_id"
+                        id="scheduleFilterClass"
+                        class="adm-form-select"
+                        data-selected="{{ request('class_id') }}"
+                        {{ request('level_id') ? '' : 'disabled' }}
+                    >
                         <option value="">Toutes</option>
-                        @foreach($classes as $classRoom)
-                            <option value="{{ $classRoom->id }}" {{ (string) request('class_id') === (string) $classRoom->id ? 'selected' : '' }}>{{ $classRoom->name }}</option>
-                        @endforeach
                     </select>
                 </div>
 
@@ -408,6 +418,9 @@
     const subjectSelect = document.getElementById('planningSubject');
     const levelSelect = document.getElementById('planningLevel');
     const classSelect = document.getElementById('planningClass');
+    const filterSubjectSelect = document.getElementById('scheduleFilterSubject');
+    const filterLevelSelect = document.getElementById('scheduleFilterLevel');
+    const filterClassSelect = document.getElementById('scheduleFilterClass');
     const startTimeInput = document.getElementById('planningStartTime');
     const endTimeInput = document.getElementById('planningEndTime');
     const durationInfo = document.getElementById('planningDurationInfo');
@@ -540,6 +553,66 @@
         updatePath();
     }
 
+    function fillFilterClasses(subjectId, levelId, selectedClassId) {
+        const subject = findSubject(subjectId);
+        const level = subject
+            ? subject.levels.find(function (item) {
+                return String(item.id) === String(levelId);
+            })
+            : null;
+
+        filterClassSelect.innerHTML = '<option value="">Toutes</option>';
+        filterClassSelect.disabled = !level;
+
+        if (!level) {
+            return;
+        }
+
+        level.classes.forEach(function (classRoom) {
+            const option = new Option(classRoom.name, classRoom.id);
+            option.selected = String(classRoom.id) === String(selectedClassId || '');
+            filterClassSelect.add(option);
+        });
+    }
+
+    function fillFilterLevels(subjectId, selectedLevelId, selectedClassId) {
+        const subject = findSubject(subjectId);
+
+        filterLevelSelect.innerHTML = '<option value="">Tous</option>';
+        filterClassSelect.innerHTML = '<option value="">Toutes</option>';
+        filterLevelSelect.disabled = !subject;
+        filterClassSelect.disabled = true;
+
+        if (!subject) {
+            return;
+        }
+
+        subject.levels.forEach(function (level) {
+            const option = new Option(level.name, level.id);
+            option.selected = String(level.id) === String(selectedLevelId || '');
+            filterLevelSelect.add(option);
+        });
+
+        if (selectedLevelId) {
+            fillFilterClasses(
+                subjectId,
+                selectedLevelId,
+                selectedClassId
+            );
+        }
+    }
+
+    filterSubjectSelect.addEventListener('change', function () {
+        fillFilterLevels(filterSubjectSelect.value);
+    });
+
+    filterLevelSelect.addEventListener('change', function () {
+        fillFilterClasses(
+            filterSubjectSelect.value,
+            filterLevelSelect.value
+        );
+    });
+
     subjectSelect.addEventListener('change', function () {
         fillLevels(subjectSelect.value);
     });
@@ -599,6 +672,21 @@
             document.getElementById('planningFormCard').scrollIntoView({behavior: 'smooth', block: 'start'});
         }
     };
+
+    const selectedFilterSubject = String(filters.subject_id || '');
+    const selectedFilterLevel = String(filters.level_id || '');
+    const selectedFilterClass = String(filters.class_id || '');
+
+    if (selectedFilterSubject) {
+        filterSubjectSelect.value = selectedFilterSubject;
+        fillFilterLevels(
+            selectedFilterSubject,
+            selectedFilterLevel,
+            selectedFilterClass
+        );
+    } else {
+        fillFilterLevels('');
+    }
 
     const oldSubject = @json(old('subject_id'));
     const oldLevel = @json(old('level_id'));

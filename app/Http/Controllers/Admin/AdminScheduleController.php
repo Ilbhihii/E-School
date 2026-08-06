@@ -11,6 +11,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -501,7 +502,35 @@ class AdminScheduleController extends Controller
         return $subjects
             ->map(function (Subject $subject) use ($levels) {
                 $subjectLevels = $levels
-                    ->where('subject_id', $subject->id)
+                    ->where('subject_id', $subject->id);
+
+                $allowedLevelNames =
+                    $this->allowedLevelNamesForSubject(
+                        $subject
+                    );
+
+                if ($allowedLevelNames !== null) {
+                    $subjectLevels = $subjectLevels
+                        ->filter(
+                            fn (Level $level) =>
+                                in_array(
+                                    $this->normalizePathName(
+                                        $level->name
+                                    ),
+                                    $allowedLevelNames,
+                                    true
+                                )
+                        );
+                }
+
+                $subjectLevels = $subjectLevels
+                    ->unique(
+                        fn (Level $level) =>
+                            $this->normalizePathName(
+                                $level->name
+                            )
+                    )
+                    ->values()
                     ->map(function (Level $level) use ($subject) {
                         $classes = $level->classes
                             ->filter(function (ClassRoom $classRoom) use ($subject) {
@@ -529,7 +558,6 @@ class AdminScheduleController extends Controller
                         ];
                     })
                     ->filter()
-                    ->unique('id')
                     ->values()
                     ->all();
 
@@ -547,4 +575,43 @@ class AdminScheduleController extends Controller
             ->values()
             ->all();
     }
+
+    /**
+     * Liste officielle des parcours actuellement utilisés.
+     * null signifie : aucun filtre spécial pour cette matière.
+     */
+    private function allowedLevelNamesForSubject(
+        Subject $subject
+    ): ?array {
+        return match (
+            $this->normalizePathName($subject->name)
+        ) {
+            'arabe' => [
+                'lecture & ecriture',
+                'communication',
+            ],
+            'coran' => [
+                'apprentissage & tajwid',
+            ],
+            'soutien lycee' => [
+                'bac',
+            ],
+            default => null,
+        };
+    }
+
+    private function normalizePathName(
+        string $value
+    ): string {
+        $value = preg_replace(
+            '/\\s+/u',
+            ' ',
+            trim($value)
+        );
+
+        return Str::lower(
+            Str::ascii((string) $value)
+        );
+    }
+
 }

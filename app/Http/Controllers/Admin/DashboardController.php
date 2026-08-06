@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -370,7 +371,7 @@ public function index()
 
     private function absenceHierarchy()
     {
-        return Subject::query()
+        $subjects = Subject::query()
             ->whereHas('levels.classes')
             ->with([
                 'levels' => function ($levelQuery) {
@@ -378,14 +379,91 @@ public function index()
                         ->orderBy('order')
                         ->orderBy('name')
                         ->with([
-                            'classes' => function ($classQuery) {
-                                $classQuery->orderBy('name');
-                            },
+                            'classes.subjects',
                         ]);
                 },
             ])
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    WHEN LOWER(name) = 'soutien lycée' THEN 3
+                    ELSE 4
+                END"
+            )
             ->orderBy('name')
             ->get();
+
+        return $subjects
+            ->map(function (Subject $subject) {
+                $levels = $subject->levels;
+
+                $allowedLevelNames =
+                    $this->allowedLevelNamesForSubject(
+                        $subject
+                    );
+
+                if ($allowedLevelNames !== null) {
+                    $levels = $levels->filter(
+                        fn (Level $level) =>
+                            in_array(
+                                $this->normalizePathName(
+                                    $level->name
+                                ),
+                                $allowedLevelNames,
+                                true
+                            )
+                    );
+                }
+
+                $levels = $levels
+                    ->unique(
+                        fn (Level $level) =>
+                            $this->normalizePathName(
+                                $level->name
+                            )
+                    )
+                    ->values()
+                    ->map(function (Level $level) use ($subject) {
+                        $classes = $level->classes
+                            ->filter(
+                                fn (ClassRoom $classRoom) =>
+                                    $classRoom->subjects->contains(
+                                        'id',
+                                        $subject->id
+                                    )
+                            )
+                            ->sortBy('name')
+                            ->unique('id')
+                            ->values();
+
+                        if ($classes->isEmpty()) {
+                            return null;
+                        }
+
+                        $level->setRelation(
+                            'classes',
+                            $classes
+                        );
+
+                        return $level;
+                    })
+                    ->filter()
+                    ->values();
+
+                if ($levels->isEmpty()) {
+                    return null;
+                }
+
+                $subject->setRelation(
+                    'levels',
+                    $levels
+                );
+
+                return $subject;
+            })
+            ->filter()
+            ->values();
     }
 
     private function absenceHierarchyArray($subjects): array
@@ -408,6 +486,40 @@ public function index()
                 })->values()->all(),
             ];
         })->values()->all();
+    }
+
+    private function allowedLevelNamesForSubject(
+        Subject $subject
+    ): ?array {
+        return match (
+            $this->normalizePathName($subject->name)
+        ) {
+            'arabe' => [
+                'lecture & ecriture',
+                'communication',
+            ],
+            'coran' => [
+                'apprentissage & tajwid',
+            ],
+            'soutien lycee' => [
+                'bac',
+            ],
+            default => null,
+        };
+    }
+
+    private function normalizePathName(
+        string $value
+    ): string {
+        $value = preg_replace(
+            '/\\s+/u',
+            ' ',
+            trim($value)
+        );
+
+        return Str::lower(
+            Str::ascii((string) $value)
+        );
     }
 
     private function absenceStudentsByPath(): array
