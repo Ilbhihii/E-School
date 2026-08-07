@@ -1377,7 +1377,7 @@
 
 .pp-attendance-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(210px, 0.5fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
 }
 

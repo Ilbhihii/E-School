@@ -157,45 +157,119 @@ class ProfController extends Controller
             ->orderBy('class_id')
             ->get();
 
-        return view('prof.absences', compact('profAssignments'));
+        $teachingPaths = $this->teachingPaths($profAssignments);
+
+        return view('prof.absences', compact('profAssignments', 'teachingPaths'));
     }
 
     public function absencesList(Request $request)
     {
-        $studentIds = $this->assignedStudentIds();
-        $query = Absence::with(['user', 'subject', 'level', 'classRoom'])->whereIn('user_id', $studentIds)->latest('created_at');
+        $profAssignments = ProfAssignment::query()
+            ->with(['subject', 'level', 'classRoom'])
+            ->where('prof_id', auth()->id())
+            ->orderBy('subject_id')
+            ->orderBy('level_id')
+            ->orderBy('class_id')
+            ->get();
 
-        // Filter by class
-        if ($request->class_id) {
+        $teachingPaths = $this->teachingPaths($profAssignments);
+        $studentIds = $this->assignedStudentIds();
+
+        abort_if($request->filled('level_id') && !$request->filled('subject_id'), 422);
+        abort_if($request->filled('class_id') && (!$request->filled('subject_id') || !$request->filled('level_id')), 422);
+
+        $query = Absence::query()
+            ->with(['user', 'subject', 'level', 'classRoom'])
+            ->whereIn('user_id', $studentIds);
+
+        if ($profAssignments->isEmpty()) {
+            $query->whereRaw('1 = 0');
+        } else {
+            $query->where(function ($pathQuery) use ($profAssignments) {
+                foreach ($profAssignments as $assignment) {
+                    $pathQuery->orWhere(function ($pair) use ($assignment) {
+                        $pair->where('subject_id', $assignment->subject_id)
+                            ->where('level_id', $assignment->level_id)
+                            ->where('class_id', $assignment->class_id);
+                    });
+                }
+            });
+        }
+
+        if ($request->filled('subject_id')) {
+            $request->validate(['subject_id' => ['integer', 'exists:subjects,id']]);
+            $query->where('subject_id', (int) $request->subject_id);
+        }
+
+        if ($request->filled('level_id')) {
+            $request->validate(['level_id' => ['integer', 'exists:levels,id']]);
+            $query->where('level_id', (int) $request->level_id);
+        }
+
+        if ($request->filled('class_id')) {
+            $request->validate(['class_id' => ['integer', 'exists:class_rooms,id']]);
             $query->where('class_id', (int) $request->class_id);
         }
 
-        // Sorting
-        if ($request->has('sort')) {
-            $dir = $request->dir ?? 'desc';
-            $query->orderBy($request->sort === 'user.name' ? 'user_id' : $request->sort, $dir);
+        if ($request->filled('subject_id') || $request->filled('level_id') || $request->filled('class_id')) {
+            $filterAllowed = $profAssignments->contains(function ($assignment) use ($request) {
+                return (!$request->filled('subject_id') || (int) $assignment->subject_id === (int) $request->subject_id)
+                    && (!$request->filled('level_id') || (int) $assignment->level_id === (int) $request->level_id)
+                    && (!$request->filled('class_id') || (int) $assignment->class_id === (int) $request->class_id);
+            });
+
+            abort_unless($filterAllowed, 403);
         }
 
+        $sortColumns = [
+            'date' => 'date',
+            'student' => 'user_id',
+            'created_at' => 'created_at',
+        ];
+        $sortKey = $request->get('sort', 'date');
+        $direction = $request->get('dir') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortColumns[$sortKey] ?? 'date', $direction)
+            ->orderByDesc('created_at');
+
         $absences = $query->paginate(15);
-        $classes = $this->assignedClasses();
 
-        return view('prof.absences-list', compact('absences', 'classes'));
+        return view('prof.absences-list', compact('absences', 'teachingPaths'));
     }
-
 
     public function updateAbsence(Request $request, $id)
     {
         $request->validate([
-            'present' => 'required|boolean'
+            'present' => 'required|boolean',
         ]);
 
-        $absence = Absence::whereIn('user_id', $this->assignedStudentIds())->findOrFail($id);
+        $absence = Absence::with(['subject', 'level', 'classRoom'])->findOrFail($id);
+
+        $scope = ProfAssignment::query()
+            ->where('prof_id', auth()->id())
+            ->where('subject_id', $absence->subject_id)
+            ->where('level_id', $absence->level_id)
+            ->where('class_id', $absence->class_id)
+            ->exists();
+
+        abort_unless(
+            $scope
+            && $this->paths->professorCanAccessStudent(
+                auth()->user(),
+                (int) $absence->user_id,
+                (int) $absence->subject_id,
+                (int) $absence->level_id,
+                (int) $absence->class_id
+            ),
+            403
+        );
+
         $absence->present = (int) $request->present;
         $absence->save();
 
         $status = $absence->present ? 'Présent' : 'Absent';
-        return back()->with('success', "Absence mise à jour: {$status}");
+        return back()->with('success', "Absence mise à jour : {$status}");
     }
+
 
     public function getStudents(Request $request, $id)
     {
@@ -437,6 +511,21 @@ class ProfController extends Controller
             ->get();
 
         return view('prof.subjects.devoirs', compact('subject', 'level', 'class', 'courses'));
+    }
+
+    private function teachingPaths($assignments)
+    {
+        return $assignments
+            ->filter(fn ($assignment) => $assignment->subject && $assignment->level && $assignment->classRoom)
+            ->map(fn ($assignment) => [
+                'subject_id' => (int) $assignment->subject_id,
+                'subject_name' => $assignment->subject->name,
+                'level_id' => (int) $assignment->level_id,
+                'level_name' => $assignment->level->name,
+                'class_id' => (int) $assignment->class_id,
+                'class_name' => $assignment->classRoom->name,
+            ])
+            ->values();
     }
 
     private function assignedClasses()

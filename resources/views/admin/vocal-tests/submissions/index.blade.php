@@ -82,6 +82,71 @@
     outline: 3px solid rgba(248, 113, 113, 0.28);
     outline-offset: 2px;
 }
+
+.prof-share-cell {
+    min-width: 220px;
+}
+.prof-share-badges {
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+    margin-bottom:7px;
+}
+.prof-share-badge {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 8px;
+    border-radius:999px;
+    background:rgba(14,165,233,.12);
+    border:1px solid rgba(56,189,248,.2);
+    color:#BAE6FD;
+    font-size:.7rem;
+    font-weight:700;
+}
+.prof-share-empty {
+    color:var(--adm-text-muted);
+    font-size:.74rem;
+}
+.prof-share-details summary {
+    list-style:none;
+    cursor:pointer;
+    color:#C4B5FD;
+    font-size:.75rem;
+    font-weight:700;
+}
+.prof-share-details summary::-webkit-details-marker { display:none; }
+.prof-share-panel {
+    margin-top:8px;
+    padding:10px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:12px;
+    background:#0d1424;
+    text-align:left;
+}
+.prof-share-checklist {
+    display:grid;
+    gap:6px;
+    max-height:180px;
+    overflow:auto;
+    margin-bottom:8px;
+    padding-right:4px;
+}
+.prof-share-check {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 8px;
+    border-radius:9px;
+    background:rgba(255,255,255,.035);
+    color:#E2E8F0;
+    font-size:.74rem;
+    cursor:pointer;
+}
+.prof-share-check input {
+    accent-color:#38BDF8;
+}
+
 </style>
 
 <div class="adm-page-header">
@@ -122,6 +187,15 @@
                     <option value="{{ $val }}" {{ request('test_mode') === $val ? 'selected' : '' }}>{{ $label }}</option>
                 @endforeach
             </select>
+            <select name="prof_id" class="adm-form-control" style="width:auto;min-width:180px;" onchange="this.form.submit()">
+                <option value="all" {{ request('prof_id') === 'all' || !request('prof_id') ? 'selected' : '' }}>Tous les professeurs</option>
+                <option value="unassigned" {{ request('prof_id') === 'unassigned' ? 'selected' : '' }}>Non affectés</option>
+                @foreach($professors as $professor)
+                    <option value="{{ $professor->id }}" {{ (string) request('prof_id') === (string) $professor->id ? 'selected' : '' }}>
+                        {{ $professor->name }}
+                    </option>
+                @endforeach
+            </select>
             <a href="{{ route('admin.vocal-tests.submissions.index') }}" class="adm-btn adm-btn-ghost adm-btn-sm">Réinitialiser</a>
         </form>
 
@@ -136,6 +210,7 @@
                         <th>Durée</th>
                         <th>Statut</th>
                         <th>Note</th>
+                        <th>Professeurs</th>
                         <th>Soumis le</th>
                         <th style="text-align:right;">Actions</th>
                     </tr>
@@ -216,6 +291,59 @@
                                 <span style="color:var(--adm-text-muted);">—</span>
                             @endif
                         </td>
+                        <td class="prof-share-cell">
+                            <div class="prof-share-badges">
+                                @forelse($submission->professors as $assignedProfessor)
+                                    <span class="prof-share-badge">
+                                        <i class="bi bi-person-check-fill"></i>
+                                        {{ $assignedProfessor->name }}
+                                    </span>
+                                @empty
+                                    <span class="prof-share-empty">Aucun professeur</span>
+                                @endforelse
+                            </div>
+
+                            <details class="prof-share-details">
+                                <summary>
+                                    <i class="bi bi-person-plus-fill me-1"></i>
+                                    Affecter / modifier
+                                </summary>
+
+                                <form
+                                    method="POST"
+                                    action="{{ route('admin.vocal-tests.submissions.professors', $submission) }}"
+                                    class="prof-share-panel"
+                                >
+                                    @csrf
+                                    <label class="adm-form-label" style="font-size:.72rem;">
+                                        Choisissez un ou plusieurs professeurs
+                                    </label>
+                                    <div class="prof-share-checklist">
+                                        @foreach($professors as $professor)
+                                            <label class="prof-share-check">
+                                                <input
+                                                    type="checkbox"
+                                                    name="prof_ids[]"
+                                                    value="{{ $professor->id }}"
+                                                    {{ $submission->professors->contains('id', $professor->id) ? 'checked' : '' }}
+                                                >
+                                                <span>
+                                                    <strong>{{ $professor->name }}</strong><br>
+                                                    <small>{{ $professor->email }}</small>
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    <small style="display:block;color:var(--adm-text-muted);margin-bottom:8px;">
+                                        Laissez tout désélectionné pour retirer l’accès.
+                                    </small>
+                                    <button type="submit" class="adm-btn adm-btn-primary adm-btn-sm w-100">
+                                        <i class="bi bi-check2 me-1"></i>
+                                        Enregistrer l’accès
+                                    </button>
+                                </form>
+                            </details>
+                        </td>
                         <td style="font-size:0.8rem;color:var(--adm-text-muted);">
                             {{ $submission->submitted_at?->format('d/m/Y H:i') ?? $submission->created_at->format('d/m/Y') }}
                         </td>
@@ -253,7 +381,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9">
+                        <td colspan="10">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-mic-mute"></i></div>
                                 <h5>Aucune soumission</h5>

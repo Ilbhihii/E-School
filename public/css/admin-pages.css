@@ -473,22 +473,51 @@ body.admin-portal *::-webkit-scrollbar-thumb {
 
 .admin-site-link {
     display: inline-flex;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     min-height: 44px;
+    flex: 0 0 44px;
     align-items: center;
-    gap: 8px;
-    padding: 0 14px;
+    justify-content: center;
+    padding: 0;
     color: #cbd5e1;
     border: 1px solid var(--ap-border);
     border-radius: 13px;
     background: rgba(255, 255, 255, 0.04);
-    font-size: 0.78rem;
-    font-weight: 700;
-    transition: 0.2s ease;
+    font-size: 1.08rem;
+    line-height: 1;
+    text-decoration: none;
+    transition:
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.admin-site-link i {
+    display: block;
+    line-height: 1;
 }
 
 .admin-site-link:hover {
     color: #fff;
-    border-color: rgba(96, 165, 250, 0.3);
+    border-color: rgba(96, 165, 250, 0.42);
+    background: rgba(96, 165, 250, 0.12);
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.16);
+    transform: translateY(-1px);
+}
+
+.admin-site-link:focus-visible {
+    color: #fff;
+    border-color: rgba(96, 165, 250, 0.65);
+    outline: 3px solid rgba(96, 165, 250, 0.22);
+    outline-offset: 2px;
+}
+
+.admin-site-link:active {
+    transform: translateY(0);
 }
 
 .admin-user-menu-wrap {
@@ -2055,7 +2084,6 @@ html.light-mode body.admin-portal .adm-btn-ghost {
 
     .admin-page-kicker,
     .admin-breadcrumb,
-    .admin-site-link span,
     .admin-user-copy {
         display: none;
     }

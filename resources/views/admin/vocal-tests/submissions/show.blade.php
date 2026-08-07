@@ -222,6 +222,91 @@
 <div class="adm-alert adm-alert-success mb-4">{{ session('success') }}</div>
 @endif
 
+
+<div class="adm-card mb-4">
+    <div class="adm-card-header">
+        <h4>
+            <i class="bi bi-people-fill" style="color:rgba(255,255,255,0.35);"></i>
+            Accès des professeurs
+        </h4>
+    </div>
+    <div class="adm-card-body">
+        <form
+            method="POST"
+            action="{{ route('admin.vocal-tests.submissions.professors', $submission) }}"
+        >
+            @csrf
+
+            <div class="adm-form-group">
+                <label class="adm-form-label">
+                    Professeur(s) autorisé(s) à consulter ce test
+                </label>
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+                        gap:8px;
+                        max-height:260px;
+                        overflow:auto;
+                    "
+                >
+                    @foreach($professors as $professor)
+                        <label
+                            style="
+                                display:flex;
+                                align-items:flex-start;
+                                gap:9px;
+                                padding:10px;
+                                border:1px solid rgba(255,255,255,.08);
+                                border-radius:11px;
+                                background:rgba(255,255,255,.025);
+                                cursor:pointer;
+                            "
+                        >
+                            <input
+                                type="checkbox"
+                                name="prof_ids[]"
+                                value="{{ $professor->id }}"
+                                {{ $submission->professors->contains('id', $professor->id) ? 'checked' : '' }}
+                                style="margin-top:3px;accent-color:#38BDF8;"
+                            >
+                            <span>
+                                <strong>{{ $professor->name }}</strong>
+                                <small style="display:block;color:var(--adm-text-muted);">
+                                    {{ $professor->email }}
+                                </small>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <small style="display:block;color:var(--adm-text-muted);margin-top:8px;">
+                    Sélection optionnelle : cochez un seul professeur, plusieurs, ou aucun.
+                </small>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;">
+                @forelse($submission->professors as $assignedProfessor)
+                    <span class="adm-badge adm-badge-info">
+                        <i class="bi bi-person-check-fill me-1"></i>
+                        {{ $assignedProfessor->name }}
+                    </span>
+                @empty
+                    <span style="color:var(--adm-text-muted);font-size:.8rem;">
+                        Aucun professeur n’a encore accès à ce test.
+                    </span>
+                @endforelse
+            </div>
+
+            <button type="submit" class="adm-btn adm-btn-primary">
+                <i class="bi bi-person-plus-fill me-1"></i>
+                Enregistrer les accès
+            </button>
+        </form>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Info Élève & Texte -->
     <div class="col-lg-7">
