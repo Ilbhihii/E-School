@@ -15,9 +15,16 @@
         <p>Créez les comptes enseignants et suivez l’activation de leurs accès sécurisés.</p>
     </div>
 
-    <a href="{{ route('admin.professors.create') }}" class="professor-create-button">
-        <i class="bi bi-person-plus-fill"></i>
-        Nouveau professeur
+    <a href="{{ route('admin.professors.create') }}"
+       class="professor-create-button"
+       aria-label="Créer un nouveau professeur">
+        <span class="professor-create-button__icon" aria-hidden="true">
+            <i class="bi bi-person-plus-fill"></i>
+        </span>
+
+        <span class="professor-create-button__label">Nouveau professeur</span>
+
+        <i class="bi bi-arrow-right professor-create-button__arrow" aria-hidden="true"></i>
     </a>
 </section>
 
