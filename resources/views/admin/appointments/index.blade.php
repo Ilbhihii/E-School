@@ -2,7 +2,7 @@
 
 @section('title', 'Rendez-vous — Administration')
 @section('page_title', 'Rendez-vous')
-@section('breadcrumb', 'Tests reçus')
+@section('breadcrumb', 'Demandes reçues')
 
 @section('content')
 
@@ -18,8 +18,8 @@
         </h1>
 
         <div class="subtitle">
-            Entretiens BAC, récitations vocales et
-            tests écrits demandés par les étudiants.
+            Toutes les demandes reçues : rendez-vous généraux,
+            entretiens BAC, récitations vocales et tests écrits.
         </div>
     </div>
 
@@ -98,6 +98,24 @@
                                 $appointment->subject_id
                             );
 
+                        $isGeneralAppointment =
+                            !$submission
+                            && !$isDirectInterview;
+
+                        $isAdmissionAppointment =
+                            $appointment->type
+                            === \App\Models\TestAppointment::TYPE_TEST;
+
+                        $generalTypeIcons = [
+                            'information' => 'bi-info-circle-fill',
+                            'communication' => 'bi-chat-dots-fill',
+                            'other' => 'bi-calendar2-check-fill',
+                        ];
+
+                        $generalTypeIcon =
+                            $generalTypeIcons[$appointment->type]
+                            ?? 'bi-calendar2-check-fill';
+
                         $pathSubject =
                             $submission?->subject
                             ?? $appointment->subject;
@@ -117,10 +135,13 @@
                         );
 
                         $paymentPlan =
-                            $appointment->payment_plan_details;
+                            $isAdmissionAppointment
+                                ? $appointment->payment_plan_details
+                                : null;
 
                         $canSendPayment =
-                            $appointment->canReceivePaymentInvitation();
+                            $isAdmissionAppointment
+                            && $appointment->canReceivePaymentInvitation();
 
                         $paymentUrl =
                             $canSendPayment
@@ -219,26 +240,37 @@
                         </td>
 
                         <td style="min-width:180px;">
-                            <strong>
-                                {{
-                                    $pathSubject?->name
-                                    ?? '—'
-                                }}
-                            </strong>
+                            @if($isGeneralAppointment)
+                                <span class="general-path-label">
+                                    <i class="bi bi-globe2"></i>
+                                    Rendez-vous général
+                                </span>
 
-                            <span class="path-pill">
-                                <i class="bi bi-diagram-3"></i>
+                                <small class="d-block mt-1">
+                                    Sans parcours pédagogique
+                                </small>
+                            @else
+                                <strong>
+                                    {{
+                                        $pathSubject?->name
+                                        ?? '—'
+                                    }}
+                                </strong>
 
-                                {{
-                                    $pathLevel?->name
-                                    ?? '—'
-                                }}
-                                ·
-                                {{
-                                    $pathClass?->name
-                                    ?? '—'
-                                }}
-                            </span>
+                                <span class="path-pill">
+                                    <i class="bi bi-diagram-3"></i>
+
+                                    {{
+                                        $pathLevel?->name
+                                        ?? '—'
+                                    }}
+                                    ·
+                                    {{
+                                        $pathClass?->name
+                                        ?? '—'
+                                    }}
+                                </span>
+                            @endif
                         </td>
 
                         <td style="min-width:230px;">
@@ -402,7 +434,7 @@
                                         @endforeach
                                     </div>
                                 </div>
-                            @else
+                            @elseif($vocal)
                                 <a
                                     href="{{
                                         route(
@@ -415,6 +447,40 @@
                                     Voir la récitation
                                     <i class="bi bi-arrow-right"></i>
                                 </a>
+                            @else
+                                <div class="general-appointment-block">
+                                    <span
+                                        class="answer-type-badge general"
+                                    >
+                                        <i class="bi {{ $generalTypeIcon }}"></i>
+                                        Demande visiteur
+                                    </span>
+
+                                    <strong>
+                                        {{ $appointment->type_label }}
+                                    </strong>
+
+                                    <small>
+                                        Demande envoyée depuis le formulaire
+                                        public de rendez-vous.
+                                    </small>
+
+                                    <div class="general-appointment-actions">
+                                        <a
+                                            href="mailto:{{ $appointment->email }}"
+                                        >
+                                            <i class="bi bi-envelope"></i>
+                                            E-mail
+                                        </a>
+
+                                        <a
+                                            href="tel:{{ $appointment->phone }}"
+                                        >
+                                            <i class="bi bi-telephone"></i>
+                                            Appeler
+                                        </a>
+                                    </div>
+                                </div>
                             @endif
                         </td>
 
@@ -479,57 +545,64 @@
                                     </form>
                                 </div>
 
-                                <div class="payment-actions">
-                                    <div class="payment-plan-label">
-                                        <i class="bi bi-credit-card-2-front"></i>
-                                        {{ $paymentPlan['name'] }}
-                                        <strong>{{ $paymentPlan['amount_display'] }} {{ $paymentPlan['currency_symbol'] }}</strong>
-                                    </div>
+                                @if($isAdmissionAppointment)
+                                    <div class="payment-actions">
+                                        <div class="payment-plan-label">
+                                            <i class="bi bi-credit-card-2-front"></i>
+                                            {{ $paymentPlan['name'] }}
+                                            <strong>{{ $paymentPlan['amount_display'] }} {{ $paymentPlan['currency_symbol'] }}</strong>
+                                        </div>
 
-                                    <button
-                                        type="button"
-                                        class="payment-action-button payment-copy-button"
-                                        data-payment-url="{{ $paymentUrl }}"
-                                        {{ !$canSendPayment ? 'disabled' : '' }}
-                                        title="{{ $canSendPayment ? 'Copier le lien de paiement' : 'Confirmez d’abord le rendez-vous' }}"
-                                    >
-                                        <i class="bi bi-link-45deg"></i>
-                                        Copier le lien
-                                    </button>
-
-                                    <form
-                                        method="POST"
-                                        action="{{ route('admin.appointments.payment-email', $appointment) }}"
-                                        class="payment-email-form"
-                                        onsubmit="return confirm('Envoyer le lien de paiement à {{ addslashes($appointment->email) }} ?')"
-                                    >
-                                        @csrf
                                         <button
-                                            type="submit"
-                                            class="payment-action-button payment-email-button"
+                                            type="button"
+                                            class="payment-action-button payment-copy-button"
+                                            data-payment-url="{{ $paymentUrl }}"
                                             {{ !$canSendPayment ? 'disabled' : '' }}
-                                            title="{{ $canSendPayment ? 'Envoyer l’e-mail de paiement' : 'Confirmez d’abord le rendez-vous' }}"
+                                            title="{{ $canSendPayment ? 'Copier le lien de paiement' : 'Confirmez d’abord le rendez-vous' }}"
                                         >
-                                            <i class="bi bi-envelope-arrow-up-fill"></i>
-                                            Envoyer l’e-mail
+                                            <i class="bi bi-link-45deg"></i>
+                                            Copier le lien
                                         </button>
-                                    </form>
 
-                                    @if($appointment->payment_invited_at)
-                                        <small class="payment-sent-status">
-                                            <i class="bi bi-check-circle-fill"></i>
-                                            Envoyé le {{ $appointment->payment_invited_at->format('d/m/Y H:i') }}
-                                            @if($appointment->payment_invitation_count > 1)
-                                                · {{ $appointment->payment_invitation_count }} envois
-                                            @endif
-                                        </small>
-                                    @elseif(!$canSendPayment)
-                                        <small class="payment-disabled-status">
-                                            <i class="bi bi-lock-fill"></i>
-                                            Confirmez le rendez-vous avant l’envoi.
-                                        </small>
-                                    @endif
-                                </div>
+                                        <form
+                                            method="POST"
+                                            action="{{ route('admin.appointments.payment-email', $appointment) }}"
+                                            class="payment-email-form"
+                                            onsubmit="return confirm('Envoyer le lien de paiement à {{ addslashes($appointment->email) }} ?')"
+                                        >
+                                            @csrf
+                                            <button
+                                                type="submit"
+                                                class="payment-action-button payment-email-button"
+                                                {{ !$canSendPayment ? 'disabled' : '' }}
+                                                title="{{ $canSendPayment ? 'Envoyer l’e-mail de paiement' : 'Confirmez d’abord le rendez-vous' }}"
+                                            >
+                                                <i class="bi bi-envelope-arrow-up-fill"></i>
+                                                Envoyer l’e-mail
+                                            </button>
+                                        </form>
+
+                                        @if($appointment->payment_invited_at)
+                                            <small class="payment-sent-status">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                                Envoyé le {{ $appointment->payment_invited_at->format('d/m/Y H:i') }}
+                                                @if($appointment->payment_invitation_count > 1)
+                                                    · {{ $appointment->payment_invitation_count }} envois
+                                                @endif
+                                            </small>
+                                        @elseif(!$canSendPayment)
+                                            <small class="payment-disabled-status">
+                                                <i class="bi bi-lock-fill"></i>
+                                                Confirmez le rendez-vous avant l’envoi.
+                                            </small>
+                                        @endif
+                                    </div>
+                                @else
+                                    <div class="general-request-note">
+                                        <i class="bi bi-info-circle"></i>
+                                        Demande générale — aucun paiement associé.
+                                    </div>
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -737,6 +810,88 @@ td small {
     font-size: 0.68rem;
     font-weight: 750;
     text-decoration: none;
+}
+
+/* Rendez-vous généraux envoyés par les visiteurs */
+.general-path-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border: 1px solid rgba(96,165,250,.16);
+    border-radius: 8px;
+    color: #93C5FD;
+    background: rgba(37,99,235,.08);
+    font-size: .62rem;
+    font-weight: 750;
+}
+
+.answer-type-badge.general {
+    width: fit-content;
+    color: #93C5FD;
+    background: rgba(37,99,235,.11);
+}
+
+.general-appointment-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.general-appointment-block > strong {
+    color: rgba(255,255,255,.88);
+    font-size: .72rem;
+}
+
+.general-appointment-block > small {
+    max-width: 215px;
+    color: rgba(255,255,255,.42);
+    font-size: .61rem;
+    line-height: 1.45;
+}
+
+.general-appointment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 3px;
+}
+
+.general-appointment-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px;
+    color: #CBD5E1;
+    background: rgba(255,255,255,.04);
+    font-size: .6rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.general-appointment-actions a:hover {
+    color: #fff;
+    border-color: rgba(96,165,250,.26);
+    background: rgba(59,130,246,.09);
+}
+
+.general-request-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.06);
+    color: rgba(255,255,255,.38);
+    font-size: .59rem;
+    line-height: 1.4;
+}
+
+.general-request-note i {
+    margin-top: 1px;
+    color: #60A5FA;
 }
 
 .status-badge {

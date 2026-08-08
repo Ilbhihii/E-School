@@ -116,6 +116,21 @@
                     </div>
                 </div>
 
+                @if(session('success'))
+                    <div
+                        class="interview-alert interview-alert-success"
+                        role="alert"
+                    >
+                        <i class="bi bi-check-circle-fill"></i>
+
+                        <div>
+                            <strong>Rendez-vous envoyé !</strong>
+
+                            <span>{{ session('success') }}</span>
+                        </div>
+                    </div>
+                @endif
+
                 @if($errors->any())
                     <div class="interview-alert">
                         <i class="bi bi-exclamation-circle-fill"></i>
@@ -875,6 +890,33 @@
     border: 1px solid rgba(239,68,68,.16);
     color: #FCA5A5;
     background: rgba(239,68,68,.08);
+}
+
+.interview-alert-success {
+    border-color: rgba(34,197,94,.28);
+    color: #BBF7D0;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(34,197,94,.14),
+            rgba(16,185,129,.07)
+        );
+    box-shadow: 0 10px 28px rgba(16,185,129,.08);
+}
+
+.interview-alert-success > i {
+    margin-top: 1px;
+    color: #4ADE80;
+    font-size: .72rem;
+}
+
+.interview-alert-success strong {
+    color: #DCFCE7;
+}
+
+.interview-alert-success span {
+    margin-top: 2px;
+    color: rgba(220,252,231,.72);
 }
 
 .interview-alert div {
