@@ -35,7 +35,7 @@
 
     <section class="public-schedule-content">
         <div class="public-schedule-container">
-            @forelse($days as $dayNumber => $daySchedules)
+            @if($schedules->isNotEmpty())
                 <section class="public-schedule-day">
                     <header class="public-schedule-day-header">
                         <div class="public-schedule-day-heading">
@@ -44,33 +44,74 @@
                             </div>
 
                             <div>
-                                <span class="public-schedule-day-kicker">Programme du jour</span>
+                                <span class="public-schedule-day-kicker">
+                                    Programme du jour
+                                </span>
                             </div>
                         </div>
 
                         <span class="public-schedule-count">
                             <i class="bi bi-book"></i>
-                            {{ $daySchedules->count() }}
-                            {{ $daySchedules->count() > 1 ? 'cours planifiés' : 'cours planifié' }}
+                            {{ $schedules->count() }}
+                            {{
+                                $schedules->count() > 1
+                                    ? 'cours planifiés'
+                                    : 'cours planifié'
+                            }}
                         </span>
                     </header>
 
-                    <div class="public-schedule-grid">
-                        @foreach($daySchedules as $schedule)
+                    <div class="public-schedule-grid public-schedule-single-row">
+                        @foreach($schedules as $schedule)
                             @php
-                                $subjectName = mb_strtolower($schedule['subject'] ?? '');
-                                $subjectIcon = 'bi-book-half';
+                                $subjectName =
+                                    mb_strtolower(
+                                        $schedule['subject'] ?? ''
+                                    );
 
-                                if (mb_stripos($subjectName, 'arabe') !== false) {
-                                    $subjectIcon = 'bi-translate';
-                                } elseif (mb_stripos($subjectName, 'coran') !== false) {
-                                    $subjectIcon = 'bi-book';
-                                } elseif (mb_stripos($subjectName, 'math') !== false) {
-                                    $subjectIcon = 'bi-calculator';
-                                } elseif (mb_stripos($subjectName, 'informatique') !== false) {
-                                    $subjectIcon = 'bi-laptop';
-                                } elseif (mb_stripos($subjectName, 'français') !== false) {
-                                    $subjectIcon = 'bi-chat-square-text';
+                                $subjectIcon =
+                                    'bi-book-half';
+
+                                if (
+                                    mb_stripos(
+                                        $subjectName,
+                                        'arabe'
+                                    ) !== false
+                                ) {
+                                    $subjectIcon =
+                                        'bi-translate';
+                                } elseif (
+                                    mb_stripos(
+                                        $subjectName,
+                                        'coran'
+                                    ) !== false
+                                ) {
+                                    $subjectIcon =
+                                        'bi-book';
+                                } elseif (
+                                    mb_stripos(
+                                        $subjectName,
+                                        'math'
+                                    ) !== false
+                                ) {
+                                    $subjectIcon =
+                                        'bi-calculator';
+                                } elseif (
+                                    mb_stripos(
+                                        $subjectName,
+                                        'informatique'
+                                    ) !== false
+                                ) {
+                                    $subjectIcon =
+                                        'bi-laptop';
+                                } elseif (
+                                    mb_stripos(
+                                        $subjectName,
+                                        'français'
+                                    ) !== false
+                                ) {
+                                    $subjectIcon =
+                                        'bi-chat-square-text';
                                 }
                             @endphp
 
@@ -82,9 +123,15 @@
                                         <span class="public-schedule-time-icon">
                                             <i class="bi bi-clock-fill"></i>
                                         </span>
+
                                         <div>
-                                            <strong>{{ $schedule['start_label'] }}</strong>
-                                            <small>{{ $schedule['duration_label'] }}</small>
+                                            <strong>
+                                                {{ $schedule['start_label'] }}
+                                            </strong>
+
+                                            <small>
+                                                {{ $schedule['duration_label'] }}
+                                            </small>
                                         </div>
                                     </div>
 
@@ -98,7 +145,10 @@
                                     <i class="bi {{ $subjectIcon }}"></i>
                                 </div>
 
-                                <span class="public-schedule-card-label">Matière</span>
+                                <span class="public-schedule-card-label">
+                                    Matière
+                                </span>
+
                                 <h3>{{ $schedule['subject'] }}</h3>
 
                                 <div class="public-schedule-path">
@@ -106,17 +156,42 @@
                                         <i class="bi bi-bar-chart-fill"></i>
                                         {{ $schedule['level'] }}
                                     </span>
-                                    <i class="bi bi-chevron-right public-schedule-path-arrow"></i>
+
+                                    <i
+                                        class="
+                                            bi bi-chevron-right
+                                            public-schedule-path-arrow
+                                        "
+                                    ></i>
+
                                     <span>
                                         <i class="bi bi-people-fill"></i>
                                         {{ $schedule['class_name'] }}
                                     </span>
+
+                                    @if(!empty($schedule['slot_code']))
+                                        <i
+                                            class="
+                                                bi bi-chevron-right
+                                                public-schedule-path-arrow
+                                            "
+                                        ></i>
+
+                                        <span>
+                                            <i class="bi bi-clock-fill"></i>
+                                            {{ $schedule['slot_code'] }}
+                                        </span>
+                                    @endif
                                 </div>
 
                                 <footer class="public-schedule-card-footer">
                                     <span>
                                         <i class="bi bi-arrow-repeat"></i>
-                                        {{ $schedule['recurrence_label'] }}
+                                        {{
+                                            $schedule[
+                                                'recurrence_label'
+                                            ]
+                                        }}
                                     </span>
 
                                     <span>
@@ -125,7 +200,7 @@
                                     </span>
 
                                     @if(!empty($schedule['date_label']))
-                                        <span>
+                                        <span class="public-schedule-full-date">
                                             <i class="bi bi-calendar-check"></i>
                                             {{ $schedule['date_label'] }}
                                         </span>
@@ -135,22 +210,25 @@
                         @endforeach
                     </div>
                 </section>
-            @empty
+            @else
                 <div class="public-schedule-empty">
                     <div class="public-schedule-empty-icon">
                         <i class="bi bi-calendar2-x"></i>
                     </div>
+
                     <h2>Planning bientôt disponible</h2>
+
                     <p>
                         Les horaires seront affichés ici dès leur publication
                         par l’administration.
                     </p>
+
                     <a href="{{ route('home') }}">
                         <i class="bi bi-arrow-left"></i>
                         Retour à l’accueil
                     </a>
                 </div>
-            @endforelse
+            @endif
         </div>
     </section>
 </div>
@@ -500,6 +578,51 @@
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 9px;
+    }
+
+    /*
+     * Programme public sur UNE SEULE LIGNE.
+     * Si plusieurs cours dépassent la largeur disponible,
+     * la ligne reste unique et devient défilable horizontalement.
+     */
+    .public-schedule-single-row {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 12px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 2px 2px 10px;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        scrollbar-color:
+            rgba(129, 140, 248, 0.45)
+            rgba(148, 163, 184, 0.06);
+    }
+
+    .public-schedule-single-row::-webkit-scrollbar {
+        height: 7px;
+    }
+
+    .public-schedule-single-row::-webkit-scrollbar-track {
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.06);
+    }
+
+    .public-schedule-single-row::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(129, 140, 248, 0.45);
+    }
+
+    .public-schedule-single-row .public-schedule-card {
+        flex: 0 0 310px;
+        width: 310px;
+        min-width: 310px;
+        scroll-snap-align: start;
+    }
+
+    .public-schedule-full-date {
+        color: rgba(255, 255, 255, 0.58);
+        font-weight: 750;
     }
 
     .public-schedule-card {
@@ -948,6 +1071,20 @@
             padding: 6px 9px;
         }
     }
+
+    @media (max-width: 640px) {
+        .public-schedule-single-row .public-schedule-card {
+            flex-basis: min(290px, calc(100vw - 64px));
+            width: min(290px, calc(100vw - 64px));
+            min-width: min(290px, calc(100vw - 64px));
+        }
+
+        .public-schedule-day-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+
 </style>
 
 @endpush

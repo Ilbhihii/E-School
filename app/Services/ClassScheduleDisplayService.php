@@ -493,7 +493,11 @@ class ClassScheduleDisplayService
                 ? 'Chaque semaine'
                 : 'Séance unique',
             'date_label' => $recurrence === Schedule::RECURRENCE_ONCE && $dateValue
-                ? Carbon::parse($dateValue)->locale('fr')->isoFormat('D MMMM YYYY')
+                ? ucfirst(
+                    Carbon::parse($dateValue)
+                        ->locale('fr')
+                        ->isoFormat('dddd D MMMM YYYY')
+                )
                 : null,
         ];
     }
