@@ -31,13 +31,16 @@ return new class extends Migration
         }
 
         /*
-         * L'ancienne contrainte empêchait un professeur d'avoir
-         * D1 ET D2 sur le même parcours.
-         * Avec les créneaux structurels, l'unicité doit inclure
-         * class_slot_id.
+         * IMPORTANT MySQL :
+         * prof_assignment_unique peut être utilisé par la clé étrangère
+         * prof_id. Si on le supprime avant de créer un autre index qui
+         * commence par prof_id, MySQL retourne l'erreur 1553 :
+         * "Cannot drop index ... needed in a foreign key constraint".
+         *
+         * On crée donc D'ABORD le nouvel index unique, puis on supprime
+         * l'ancien. Le nouvel index commence par prof_id et continue ainsi
+         * à supporter correctement la clé étrangère.
          */
-        $this->dropOldUniqueIfExists();
-
         if (!$this->indexExists(
             'prof_assignment_slot_unique'
         )) {
@@ -57,6 +60,12 @@ return new class extends Migration
                 }
             );
         }
+
+        /*
+         * L'ancienne contrainte empêchait un professeur d'avoir
+         * D1 ET D2 sur le même parcours.
+         */
+        $this->dropOldUniqueIfExists();
     }
 
     public function down(): void
