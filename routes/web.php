@@ -580,9 +580,7 @@ Route::middleware(['auth', 'active'])
     Route::get(
         '/lives',
         [StudentController::class, 'lives']
-    )
-        ->middleware('paid')
-        ->name('lives');
+    )->name('lives');
 
     // Cours
     Route::get('/courses/{subject}/{class}', [StudentController::class, 'courses'])->name('courses');
