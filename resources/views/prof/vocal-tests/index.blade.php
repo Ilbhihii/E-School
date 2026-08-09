@@ -1,213 +1,357 @@
 @extends('layouts.prof')
 
-@section('title', 'Tests de nouveaux étudiants')
+@section('title', 'Tests reçus')
+@section('page_title', 'Tests reçus')
+@section('breadcrumb', 'Évaluations → Tests reçus')
 
 @section('content')
-<style>
-.vt-status {
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    padding:4px 9px;
-    border-radius:999px;
-    font-size:.72rem;
-    font-weight:700;
-    background:rgba(59,130,246,.12);
-    color:#BFDBFE;
-}
-.vt-student {
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-.vt-student-avatar {
-    width:38px;
-    height:38px;
-    border-radius:12px;
-    display:grid;
-    place-items:center;
-    background:linear-gradient(135deg,#0ea5e9,#2563eb);
-    color:#fff;
-    font-weight:800;
-}
-</style>
+@php
+    $total = $submissions->total();
 
-<div class="adm-page-header">
-    <div>
-        <h1>
-            <i class="bi bi-mic-fill me-2" style="color:var(--adm-primary);"></i>
-            Tests des nouveaux étudiants
+    $visibleSubmitted =
+        collect($submissions->items())
+            ->where('status', 'submitted')
+            ->count();
+
+    $visibleReviewed =
+        collect($submissions->items())
+            ->whereNotNull('final_score')
+            ->count();
+@endphp
+
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow">
+            <i class="bi bi-mic-fill"></i>
+            Évaluations affectées
+        </span>
+
+        <h1 class="pp-page-title">
+            Tests reçus
         </h1>
-        <div class="subtitle">
-            Consultez uniquement les tests que l’administrateur vous a affectés.
-        </div>
+
+        <p class="pp-page-description">
+            Consultez uniquement les tests que
+            l’administration vous a explicitement affectés.
+        </p>
     </div>
+
+    <div class="pp-page-actions">
+        <a
+            href="{{ route('prof.dashboard') }}"
+            class="adm-btn adm-btn-ghost"
+        >
+            <i class="bi bi-grid-1x2-fill"></i>
+            Tableau de bord
+        </a>
+    </div>
+</section>
+
+<div class="pp-summary-grid">
+    <article class="pp-summary-card is-blue">
+        <span class="pp-summary-icon">
+            <i class="bi bi-inbox-fill"></i>
+        </span>
+
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $total }}
+            </strong>
+
+            <span class="pp-summary-label">
+                Tests affectés
+            </span>
+        </span>
+    </article>
+
+    <article class="pp-summary-card is-yellow">
+        <span class="pp-summary-icon">
+            <i class="bi bi-hourglass-split"></i>
+        </span>
+
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $visibleSubmitted }}
+            </strong>
+
+            <span class="pp-summary-label">
+                Soumis
+            </span>
+        </span>
+    </article>
+
+    <article class="pp-summary-card is-green">
+        <span class="pp-summary-icon">
+            <i class="bi bi-check2-circle"></i>
+        </span>
+
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $visibleReviewed }}
+            </strong>
+
+            <span class="pp-summary-label">
+                Déjà évalués
+            </span>
+        </span>
+    </article>
 </div>
 
-@if(session('success'))
-    <div class="adm-alert adm-alert-success mb-4">{{ session('success') }}</div>
-@endif
+<section class="pp-panel">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title">
+                <i class="bi bi-funnel-fill"></i>
+                Filtres
+            </h2>
 
-<div class="adm-card">
-    <div class="adm-card-header">
-        <h4>
-            <i class="bi bi-person-check-fill" style="color:rgba(255,255,255,.35);"></i>
-            Tests partagés avec moi
-        </h4>
-        <span style="color:var(--adm-text-muted);font-size:.8rem;">
-            {{ $submissions->total() }} test(s)
-        </span>
-    </div>
+            <p class="pp-panel-subtitle">
+                Filtrez les tests partagés avec votre compte.
+            </p>
+        </div>
+    </header>
 
-    <div class="adm-card-body">
+    <div class="pp-panel-body">
         <form
             method="GET"
             action="{{ route('prof.vocal-tests.index') }}"
-            style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;"
+            class="row g-3 align-items-end"
         >
-            <select
-                name="status"
-                class="adm-form-control"
-                style="width:auto;min-width:160px;"
-                onchange="this.form.submit()"
-            >
-                <option value="all">Tous les statuts</option>
-                @foreach(\App\Models\VocalTestSubmission::getStatuses() as $value => $label)
-                    <option
-                        value="{{ $value }}"
-                        @selected(request('status') === $value)
-                    >
-                        {{ $label }}
-                    </option>
-                @endforeach
-            </select>
+            <div class="col-lg-4 col-md-6">
+                <label class="pp-label">
+                    Statut
+                </label>
 
-            <select
-                name="test_mode"
-                class="adm-form-control"
-                style="width:auto;min-width:160px;"
-                onchange="this.form.submit()"
-            >
-                <option value="all">Tous les modes</option>
-                @foreach(\App\Models\VocalTestSubmission::getModes() as $value => $label)
-                    <option
-                        value="{{ $value }}"
-                        @selected(request('test_mode') === $value)
-                    >
-                        {{ $label }}
+                <select
+                    name="status"
+                    class="adm-form-select"
+                    onchange="this.form.submit()"
+                >
+                    <option value="all">
+                        Tous les statuts
                     </option>
-                @endforeach
-            </select>
 
-            <a
-                href="{{ route('prof.vocal-tests.index') }}"
-                class="adm-btn adm-btn-ghost adm-btn-sm"
-            >
-                Réinitialiser
-            </a>
+                    @foreach(
+                        \App\Models\VocalTestSubmission::getStatuses()
+                        as $value => $label
+                    )
+                        <option
+                            value="{{ $value }}"
+                            @selected(
+                                request('status') === $value
+                            )
+                        >
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <label class="pp-label">
+                    Mode
+                </label>
+
+                <select
+                    name="test_mode"
+                    class="adm-form-select"
+                    onchange="this.form.submit()"
+                >
+                    <option value="all">
+                        Tous les modes
+                    </option>
+
+                    @foreach(
+                        \App\Models\VocalTestSubmission::getModes()
+                        as $value => $label
+                    )
+                        <option
+                            value="{{ $value }}"
+                            @selected(
+                                request('test_mode') === $value
+                            )
+                        >
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-lg-4">
+                <a
+                    href="{{ route('prof.vocal-tests.index') }}"
+                    class="adm-btn adm-btn-ghost w-100"
+                >
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    Réinitialiser
+                </a>
+            </div>
         </form>
-
-        <div class="adm-table-wrap">
-            <table class="adm-table">
-                <thead>
-                    <tr>
-                        <th>Étudiant</th>
-                        <th>Parcours</th>
-                        <th>Type</th>
-                        <th>Statut</th>
-                        <th>Note</th>
-                        <th>Date</th>
-                        <th style="text-align:right;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($submissions as $submission)
-                        <tr>
-                            <td>
-                                <div class="vt-student">
-                                    <span class="vt-student-avatar">
-                                        {{ mb_strtoupper(mb_substr($submission->user?->name ?? 'N', 0, 1)) }}
-                                    </span>
-                                    <div>
-                                        <strong>
-                                            {{ $submission->user?->name ?? 'Nouveau candidat' }}
-                                        </strong>
-                                        <small style="display:block;color:var(--adm-text-muted);">
-                                            {{ $submission->user?->email ?? 'Compte non créé' }}
-                                        </small>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td>
-                                <strong>{{ $submission->subject?->name ?? '-' }}</strong>
-                                <small style="display:block;color:var(--adm-text-muted);">
-                                    {{ $submission->level?->name ?? '-' }}
-                                    →
-                                    {{ $submission->classRoom?->name ?? '-' }}
-                                </small>
-                            </td>
-
-                            <td>
-                                @if($submission->isObservationSubmission())
-                                    Observation
-                                @elseif($submission->isCompletionSubmission())
-                                    Complétion
-                                @else
-                                    {{ \App\Models\VocalTestSubmission::getModes()[$submission->test_mode] ?? 'Test vocal' }}
-                                @endif
-                            </td>
-
-                            <td>
-                                <span class="vt-status">
-                                    {{ \App\Models\VocalTestSubmission::getStatuses()[$submission->status] ?? $submission->status }}
-                                </span>
-                            </td>
-
-                            <td>
-                                @php($score = $submission->final_score ?? $submission->score)
-                                {{ $score !== null ? $score . '/100' : '—' }}
-                            </td>
-
-                            <td style="color:var(--adm-text-muted);font-size:.8rem;">
-                                {{ $submission->submitted_at?->format('d/m/Y H:i') ?? $submission->created_at?->format('d/m/Y H:i') }}
-                            </td>
-
-                            <td style="text-align:right;">
-                                <a
-                                    href="{{ route('prof.vocal-tests.show', $submission) }}"
-                                    class="adm-btn adm-btn-primary adm-btn-sm"
-                                >
-                                    <i class="bi bi-eye me-1"></i>
-                                    Voir le test
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7">
-                                <div class="adm-empty">
-                                    <div class="adm-empty-icon">
-                                        <i class="bi bi-inbox"></i>
-                                    </div>
-                                    <h5>Aucun test affecté</h5>
-                                    <p>
-                                        Lorsqu’un administrateur vous affectera un test,
-                                        il apparaîtra automatiquement ici.
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
     </div>
+</section>
 
-    @if($submissions->hasPages())
-        <div class="adm-card-footer">
-            {{ $submissions->links() }}
+<section class="pp-panel pp-section-gap">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title">
+                <i class="bi bi-person-check-fill"></i>
+                Tests partagés avec moi
+            </h2>
+
+            <p class="pp-panel-subtitle">
+                Vous n’avez accès à aucun autre test.
+            </p>
         </div>
-    @endif
-</div>
+
+        <span class="pp-panel-meta">
+            {{ $submissions->total() }} test(s)
+        </span>
+    </header>
+
+    <div class="pp-panel-body">
+        @forelse($submissions as $submission)
+            @php
+                $score =
+                    $submission->final_score
+                    ?? $submission->score;
+
+                $studentName =
+                    $submission->user?->name
+                    ?? 'Nouveau candidat';
+
+                $initial =
+                    mb_strtoupper(
+                        mb_substr(
+                            $studentName,
+                            0,
+                            1
+                        )
+                    );
+
+                $typeLabel =
+                    $submission->isObservationSubmission()
+                        ? 'Observation'
+                        : (
+                            $submission->isCompletionSubmission()
+                                ? 'Complétion'
+                                : (
+                                    \App\Models\VocalTestSubmission::getModes()[
+                                        $submission->test_mode
+                                    ]
+                                    ?? 'Test vocal'
+                                )
+                        );
+
+                $statusLabel =
+                    \App\Models\VocalTestSubmission::getStatuses()[
+                        $submission->status
+                    ]
+                    ?? $submission->status;
+            @endphp
+
+            <article class="pp-submission-card mb-3">
+                <div class="pp-submission-summary">
+                    <div class="pp-student-main">
+                        <span class="pp-student-avatar">
+                            {{ $initial }}
+                        </span>
+
+                        <div class="pp-student-copy">
+                            <strong class="pp-student-name">
+                                {{ $studentName }}
+                            </strong>
+
+                            <span class="pp-student-assignment">
+                                {{ $typeLabel }}
+                            </span>
+
+                            <div class="pps-path-line mt-2">
+                                <span class="pps-path-chip">
+                                    {{
+                                        $submission
+                                            ->subject
+                                            ?->name
+                                        ?? 'Matière'
+                                    }}
+                                </span>
+
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-path-chip">
+                                    {{
+                                        $submission
+                                            ->level
+                                            ?->name
+                                        ?? 'Niveau'
+                                    }}
+                                </span>
+
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-path-chip">
+                                    {{
+                                        $submission
+                                            ->classRoom
+                                            ?->name
+                                        ?? 'Classe'
+                                    }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pp-submission-actions">
+                        <span class="adm-badge adm-badge-primary">
+                            {{ $statusLabel }}
+                        </span>
+
+                        @if($score !== null)
+                            <span class="adm-badge adm-badge-success">
+                                {{ $score }}/100
+                            </span>
+                        @endif
+
+                        <span class="adm-badge">
+                            {{
+                                $submission
+                                    ->submitted_at
+                                    ?->format('d/m/Y H:i')
+                                ?? $submission
+                                    ->created_at
+                                    ?->format('d/m/Y H:i')
+                            }}
+                        </span>
+
+                        <a
+                            href="{{
+                                route(
+                                    'prof.vocal-tests.show',
+                                    $submission
+                                )
+                            }}"
+                            class="adm-btn adm-btn-primary adm-btn-sm"
+                        >
+                            <i class="bi bi-eye-fill"></i>
+                            Voir le test
+                        </a>
+                    </div>
+                </div>
+            </article>
+        @empty
+            <div class="pps-empty">
+                <i class="bi bi-inbox me-2"></i>
+
+                Aucun test ne vous a encore été affecté.
+                Lorsqu’un administrateur vous partagera un test,
+                il apparaîtra automatiquement ici.
+            </div>
+        @endforelse
+
+        @if($submissions->hasPages())
+            <div class="mt-4">
+                {{ $submissions->links() }}
+            </div>
+        @endif
+    </div>
+</section>
 @endsection

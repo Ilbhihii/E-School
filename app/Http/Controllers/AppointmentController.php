@@ -595,24 +595,13 @@ class AppointmentController extends Controller
      */
     public function index()
     {
+        /*
+         * Afficher toutes les demandes reçues, y compris les rendez-vous
+         * généraux envoyés depuis /rendez-vous (information,
+         * communication et autre).
+         */
         $appointments =
             TestAppointment::query()
-                ->where(
-                    'type',
-                    TestAppointment::TYPE_TEST
-                )
-                ->where(function ($query) {
-                    $query
-                        ->whereNotNull(
-                            'vocal_test_submission_id'
-                        )
-                        ->orWhereNotNull(
-                            'high_school_test_submission_id'
-                        )
-                        ->orWhereNotNull(
-                            'subject_id'
-                        );
-                })
                 ->with([
                     'user',
                     'subject',

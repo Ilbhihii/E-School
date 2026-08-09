@@ -166,6 +166,25 @@
                 </div>
 
                 <div class="prof-nav-section">
+                    <div class="prof-nav-heading">Évaluations</div>
+
+                    <a
+                        href="{{ route('prof.vocal-tests.index') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.vocal-tests*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.vocal-tests*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon">
+                            <i class="bi bi-mic-fill"></i>
+                        </span>
+
+                        <span class="nav-label">
+                            Tests reçus
+                            <small>Affectés par l’administration</small>
+                        </span>
+                    </a>
+                </div>
+
+                <div class="prof-nav-section">
                     <div class="prof-nav-heading">Suivi & échanges</div>
 
                     <a

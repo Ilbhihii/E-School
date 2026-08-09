@@ -29,7 +29,10 @@ class UserController extends Controller
      * Structure :
      * Professeur + Matière → Niveau → Classe → Créneau.
      *
-     * Les créneaux proviennent exclusivement de /admin/schedule.
+     * IMPORTANT :
+     * les créneaux D1/D2/D3/D4, I1... A1...
+     * viennent de class_slots, donc de la structure pédagogique.
+     * Ils ne dépendent PAS de /admin/schedule.
      */
     public function profAssignments()
     {
@@ -38,8 +41,13 @@ class UserController extends Controller
             ->orderBy('name')
             ->get();
 
+        /*
+         * Même structure que /admin/assign-class.
+         * Elle génère automatiquement les 4 créneaux
+         * structurels de chaque classe.
+         */
         $assignmentHierarchy =
-            $this->buildProfAssignmentHierarchy();
+            $this->buildAssignmentHierarchy();
 
         $subjects = collect($assignmentHierarchy)
             ->map(
@@ -57,10 +65,34 @@ class UserController extends Controller
                 'level',
                 'classRoom',
                 'subject',
-                'schedule',
+                'classSlot',
             ])
             ->latest()
             ->get();
+
+        /*
+         * L'horaire est informatif seulement.
+         * S'il existe déjà une séance D1/D2/... dans /admin/schedule,
+         * on l'affiche, mais il n'est jamais requis pour l'assignation.
+         */
+        $scheduleMap = Schedule::query()
+            ->active()
+            ->whereNotNull('slot_code')
+            ->get()
+            ->keyBy(
+                fn (Schedule $schedule) =>
+                    (int) $schedule->subject_id
+                    . ':'
+                    . (int) $schedule->level_id
+                    . ':'
+                    . (int) $schedule->class_id
+                    . ':'
+                    . strtoupper(
+                        trim(
+                            (string) $schedule->slot_code
+                        )
+                    )
+            );
 
         return view(
             'admin.prof-assignments',
@@ -68,13 +100,16 @@ class UserController extends Controller
                 'professors',
                 'subjects',
                 'assignmentHierarchy',
-                'assignments'
+                'assignments',
+                'scheduleMap'
             )
         );
     }
 
     /**
-     * Affecter un professeur à un créneau officiel de l'emploi du temps.
+     * Affecter un professeur à un créneau structurel.
+     *
+     * Aucun emploi du temps n'est requis.
      */
     public function storeProfAssignment(
         Request $request
@@ -100,10 +135,10 @@ class UserController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'schedule_id' => [
+            'class_slot_id' => [
                 'required',
                 'integer',
-                'exists:schedules,id',
+                'exists:class_slots,id',
             ],
         ], [
             'prof_id.required' =>
@@ -114,7 +149,7 @@ class UserController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
-            'schedule_id.required' =>
+            'class_slot_id.required' =>
                 'Veuillez sélectionner un créneau.',
         ]);
 
@@ -133,128 +168,159 @@ class UserController extends Controller
                 ]);
         }
 
-        $schedule = Schedule::query()
-            ->active()
-            ->with([
-                'subjectModel',
-                'level',
-                'classRoom',
-                'prof',
-            ])
-            ->whereKey($validated['schedule_id'])
-            ->where('subject_id', $validated['subject_id'])
-            ->where('level_id', $validated['level_id'])
-            ->where('class_id', $validated['class_id'])
-            ->first();
+        $slotService =
+            app(ClassSlotService::class);
 
-        if (!$schedule) {
+        $slot = $slotService->slotForPath(
+            (int) $validated['class_slot_id'],
+            (int) $validated['subject_id'],
+            (int) $validated['level_id'],
+            (int) $validated['class_id']
+        );
+
+        if (!$slot) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'schedule_id' =>
+                    'class_slot_id' =>
                         'Ce créneau n’appartient pas au parcours '
                         . 'Matière → Niveau → Classe sélectionné.',
                 ]);
         }
 
         /*
-         * Un professeur ne peut pas être présent dans deux créneaux
-         * qui se chevauchent le même jour.
-         */
-        $professorConflict = Schedule::query()
-            ->active()
-            ->where('prof_id', $professor->id)
-            ->where('id', '<>', $schedule->id)
-            ->where('day_of_week', $schedule->day_of_week)
-            ->whereNotNull('start_time')
-            ->whereNotNull('end_time')
-            ->where('start_time', '<', $schedule->end_time)
-            ->where('end_time', '>', $schedule->start_time)
-            ->exists();
-
-        if ($professorConflict) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'schedule_id' =>
-                        'Ce professeur possède déjà un cours '
-                        . 'pendant cet horaire.',
-                ]);
-        }
-
-
-        /*
-         * schedules est la source officielle du planning.
-         */
-        $schedule->update([
-            'prof_id' => $professor->id,
-        ]);
-
-        /*
-         * Si ce créneau était déjà synchronisé dans prof_assignments,
-         * on remplace simplement son professeur.
+         * Un seul professeur principal par créneau structurel.
+         * Si D1 était déjà attribué à un autre professeur,
+         * on remplace cette affectation au lieu de créer deux responsables.
          */
         $assignment = ProfAssignment::query()
-            ->where('schedule_id', $schedule->id)
+            ->where(
+                'class_slot_id',
+                $slot->id
+            )
             ->first();
 
-        /*
-         * Compatibilité avec les anciennes assignations :
-         * si une ligne de même parcours/prof existe sans schedule_id,
-         * on la rattache au créneau au lieu de créer un doublon.
-         */
-        if (!$assignment) {
-            $assignment = ProfAssignment::query()
-                ->whereNull('schedule_id')
-                ->where('prof_id', $professor->id)
-                ->where('subject_id', $schedule->subject_id)
-                ->where('level_id', $schedule->level_id)
-                ->where('class_id', $schedule->class_id)
-                ->first();
-        }
+        $schedule = Schedule::query()
+            ->active()
+            ->where(
+                'subject_id',
+                $slot->subject_id
+            )
+            ->where(
+                'level_id',
+                $slot->level_id
+            )
+            ->where(
+                'class_id',
+                $slot->class_id
+            )
+            ->whereRaw(
+                'UPPER(TRIM(slot_code)) = ?',
+                [
+                    strtoupper(
+                        trim((string) $slot->code)
+                    ),
+                ]
+            )
+            ->first();
 
         $assignmentData = [
             'prof_id' => $professor->id,
-            'subject_id' => $schedule->subject_id,
-            'level_id' => $schedule->level_id,
-            'class_id' => $schedule->class_id,
-            'schedule_id' => $schedule->id,
-            'day_of_week' => $schedule->day_of_week,
-            'start_time' => $schedule->start_time,
-            'end_time' => $schedule->end_time,
+            'subject_id' => $slot->subject_id,
+            'level_id' => $slot->level_id,
+            'class_id' => $slot->class_id,
+            'class_slot_id' => $slot->id,
+
+            /*
+             * Compatibilité avec l'ancien modèle :
+             * si l'horaire existe déjà, on le recopie.
+             * Sinon il reste NULL et pourra être défini plus tard.
+             */
+            'day_of_week' =>
+                $schedule?->day_of_week,
+            'start_time' =>
+                $schedule?->start_time,
+            'end_time' =>
+                $schedule?->end_time,
         ];
 
         if ($assignment) {
-            $assignment->update($assignmentData);
+            $assignment->update(
+                $assignmentData
+            );
         } else {
-            ProfAssignment::create($assignmentData);
+            ProfAssignment::create(
+                $assignmentData
+            );
+        }
+
+        /*
+         * Si la séance existe déjà, on synchronise aussi son professeur.
+         * Mais l'absence de séance n'empêche jamais l'assignation.
+         */
+        if ($schedule) {
+            $schedule->update([
+                'prof_id' => $professor->id,
+            ]);
         }
 
         return back()->with(
             'success',
-            'Le professeur a été affecté au créneau '
-            . $schedule->slot_label
+            'Le professeur '
+            . $professor->name
+            . ' a été affecté au créneau '
+            . $slot->code
             . ' avec succès.'
         );
     }
 
     /**
-     * Supprimer l'affectation du professeur au créneau.
+     * Supprimer l'affectation d'un professeur à un créneau structurel.
      */
     public function destroyProfAssignment($id)
     {
         $assignment = ProfAssignment::query()
-            ->with('schedule')
+            ->with('classSlot')
             ->findOrFail($id);
 
-        if (
-            $assignment->schedule
-            && (int) $assignment->schedule->prof_id
-                === (int) $assignment->prof_id
-        ) {
-            $assignment->schedule->update([
-                'prof_id' => null,
-            ]);
+        if ($assignment->classSlot) {
+            $schedule = Schedule::query()
+                ->active()
+                ->where(
+                    'subject_id',
+                    $assignment->subject_id
+                )
+                ->where(
+                    'level_id',
+                    $assignment->level_id
+                )
+                ->where(
+                    'class_id',
+                    $assignment->class_id
+                )
+                ->whereRaw(
+                    'UPPER(TRIM(slot_code)) = ?',
+                    [
+                        strtoupper(
+                            trim(
+                                (string) $assignment
+                                    ->classSlot
+                                    ->code
+                            )
+                        ),
+                    ]
+                )
+                ->where(
+                    'prof_id',
+                    $assignment->prof_id
+                )
+                ->first();
+
+            if ($schedule) {
+                $schedule->update([
+                    'prof_id' => null,
+                ]);
+            }
         }
 
         $assignment->delete();
@@ -1111,160 +1177,15 @@ class UserController extends Controller
     }
 
     /**
-     * Hiérarchie de la page /admin/prof-assignments.
+     * Même source structurelle que /admin/assign-class :
+     * Matière → Niveau → Classe → Créneau.
      *
-     * Source unique des créneaux : schedules.
-     * Une classe n'affiche donc que les créneaux réellement créés dans
-     * /admin/schedule, avec leur code (D1, I2...), jour et horaire.
+     * Les créneaux viennent de class_slots et ne dépendent
+     * pas de l'existence d'une ligne dans schedules.
      */
     private function buildProfAssignmentHierarchy(): array
     {
-        $schedules = Schedule::query()
-            ->active()
-            ->with([
-                'subjectModel',
-                'level',
-                'classRoom',
-                'prof',
-            ])
-            ->whereNotNull('subject_id')
-            ->whereNotNull('level_id')
-            ->whereNotNull('class_id')
-            ->orderByRaw('COALESCE(day_of_week, 8) asc')
-            ->orderByRaw('TIME(start_time) asc')
-            ->get();
-
-        return $schedules
-            ->groupBy('subject_id')
-            ->map(function ($subjectSchedules) {
-                $firstSubject = $subjectSchedules->first();
-                $subject = $firstSubject?->subjectModel;
-
-                if (!$subject) {
-                    return null;
-                }
-
-                /*
-                 * Même périmètre que /admin/schedule :
-                 * Arabe, Coran et Soutien Lycée uniquement.
-                 */
-                if (!in_array(
-                    $this->normalizePathName($subject->name),
-                    [
-                        'arabe',
-                        'coran',
-                        'soutien lycee',
-                        'soutient lycee',
-                    ],
-                    true
-                )) {
-                    return null;
-                }
-
-                $allowedLevelNames =
-                    $this->allowedLevelNamesForSubject(
-                        $subject
-                    );
-
-                $levels = $subjectSchedules
-                    ->groupBy('level_id')
-                    ->map(function ($levelSchedules) use (
-                        $allowedLevelNames
-                    ) {
-                        $firstLevel = $levelSchedules->first();
-                        $level = $firstLevel?->level;
-
-                        if (!$level) {
-                            return null;
-                        }
-
-                        if (
-                            $allowedLevelNames !== null
-                            && !in_array(
-                                $this->normalizePathName(
-                                    $level->name
-                                ),
-                                $allowedLevelNames,
-                                true
-                            )
-                        ) {
-                            return null;
-                        }
-
-                        $classes = $levelSchedules
-                            ->groupBy('class_id')
-                            ->map(function ($classSchedules) {
-                                $firstClass = $classSchedules->first();
-                                $classRoom = $firstClass?->classRoom;
-
-                                if (!$classRoom) {
-                                    return null;
-                                }
-
-                                $slots = $classSchedules
-                                    ->map(function (Schedule $schedule) {
-                                        return [
-                                            'id' => (int) $schedule->id,
-                                            'code' =>
-                                                trim((string) $schedule->slot_code)
-                                                ?: 'Créneau',
-                                            'day' => $schedule->day_label,
-                                            'time' => $schedule->time_range_label,
-                                            'label' => $schedule->slot_label,
-                                            'professor' =>
-                                                optional($schedule->prof)->name,
-                                            'has_professor' =>
-                                                !empty($schedule->prof_id),
-                                        ];
-                                    })
-                                    ->values()
-                                    ->all();
-
-                                return [
-                                    'id' => (int) $classRoom->id,
-                                    'name' => $classRoom->name,
-                                    'slots' => $slots,
-                                ];
-                            })
-                            ->filter()
-                            ->values()
-                            ->all();
-
-                        if (empty($classes)) {
-                            return null;
-                        }
-
-                        return [
-                            'id' => (int) $level->id,
-                            'name' => $level->name,
-                            'classes' => $classes,
-                        ];
-                    })
-                    ->filter()
-                    ->values()
-                    ->all();
-
-                if (empty($levels)) {
-                    return null;
-                }
-
-                return [
-                    'id' => (int) $subject->id,
-                    'name' => $subject->name,
-                    'levels' => $levels,
-                ];
-            })
-            ->filter()
-            ->sortBy(function (array $subject) {
-                return match ($this->normalizePathName($subject['name'])) {
-                    'arabe' => 1,
-                    'coran' => 2,
-                    'soutien lycee', 'soutient lycee' => 3,
-                    default => 99,
-                };
-            })
-            ->values()
-            ->all();
+        return $this->buildAssignmentHierarchy();
     }
 
     /**

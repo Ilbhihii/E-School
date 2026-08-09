@@ -380,6 +380,15 @@ Route::middleware(['auth','isAdmin'])
         Route::post('/submissions/{submission}/review', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'review'])->name('submissions.review');
         Route::get('/submissions/{submission}/audio', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'audio'])->name('submissions.audio');
         Route::delete('/submissions/{submission}', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'destroy'])->name('submissions.destroy');
+
+        // Affecter un ou plusieurs professeurs à une soumission
+        Route::post(
+            '/submissions/{submission}/professors',
+            [
+                \App\Http\Controllers\Admin\VocalTestSubmissionController::class,
+                'assignProfessors'
+            ]
+        )->name('submissions.professors');
     });
 
     // Centre de correction des tests écrits
@@ -541,6 +550,34 @@ Route::middleware([
     Route::post('/schedule/update', [ScheduleController::class, 'update'])->name('schedule.update');
     Route::post('/schedule/store', [ScheduleController::class, 'store'])->name('schedule.store');
     Route::delete('/schedule/{id}', [ScheduleController::class, 'destroy'])->name('schedule.destroy');
+
+    /*
+     * Tests vocaux affectés au professeur par l'administration.
+     * Le professeur voit uniquement les tests qui lui sont assignés.
+     */
+    Route::get(
+        '/vocal-tests',
+        [
+            \App\Http\Controllers\Prof\VocalTestSubmissionController::class,
+            'index'
+        ]
+    )->name('vocal-tests.index');
+
+    Route::get(
+        '/vocal-tests/{submission}',
+        [
+            \App\Http\Controllers\Prof\VocalTestSubmissionController::class,
+            'show'
+        ]
+    )->name('vocal-tests.show');
+
+    Route::get(
+        '/vocal-tests/{submission}/audio',
+        [
+            \App\Http\Controllers\Prof\VocalTestSubmissionController::class,
+            'audio'
+        ]
+    )->name('vocal-tests.audio');
 });
 
 /*
