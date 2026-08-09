@@ -2,110 +2,182 @@
 
 @section('title', 'Discussions')
 @section('page_title', 'Discussions')
-@section('breadcrumb', 'Échanges par matière')
+@section('breadcrumb', 'Communication → Discussions')
+
+@push('styles')
+<link
+    rel="stylesheet"
+    href="{{ asset('css/role-group-chat-v1.css') }}?v={{
+        file_exists(public_path('css/role-group-chat-v1.css'))
+            ? filemtime(public_path('css/role-group-chat-v1.css'))
+            : 1
+    }}"
+>
+@endpush
 
 @section('content')
-<section class="pp-page-head">
-    <div class="pp-page-copy">
-        <span class="pp-eyebrow"><i class="bi bi-chat-square-dots-fill"></i> Communication</span>
-        <h1 class="pp-page-title">Questions et discussions</h1>
-        <p class="pp-page-description">
-            Ouvrez une matière pour répondre aux étudiants ou utilisez la conversation privée avec l’administration.
-        </p>
-    </div>
+@php
+    $subjects =
+        ($subjects ?? collect())
+            ->unique('id')
+            ->values();
+@endphp
 
-    <div class="pp-page-actions">
-        <span class="pp-soft-chip"><i class="bi bi-chat-left-text"></i> {{ isset($subjects) ? $subjects->count() : 0 }} discussion(s)</span>
-    </div>
-</section>
+<div class="rgc-page">
+    <section class="rgc-hero rgc-list-hero">
+        <div class="rgc-hero-main">
+            <span class="rgc-hero-icon">
+                <i class="bi bi-chat-square-text-fill"></i>
+            </span>
 
-@if(isset($subjects) && $subjects->isNotEmpty())
-    <div class="pp-toolbar">
-        <div class="pp-search">
-            <i class="bi bi-search"></i>
-            <input type="search" id="chatSubjectSearch" class="adm-form-control" placeholder="Rechercher une matière..." autocomplete="off">
-        </div>
-    </div>
-@endif
+            <div>
+                <span class="rgc-kicker">
+                    Espace enseignant
+                </span>
 
-<div class="pp-chat-grid" id="chatSubjectGrid">
-    @forelse($subjects ?? collect() as $subject)
-        @php
-            $isAdministration = mb_strtolower($subject->name) === 'administration';
-            $themes = [
-                'linear-gradient(135deg,#6d28d9,#8b5cf6)',
-                'linear-gradient(135deg,#0369a1,#38bdf8)',
-                'linear-gradient(135deg,#047857,#34d399)',
-                'linear-gradient(135deg,#b45309,#fbbf24)',
-                'linear-gradient(135deg,#be123c,#fb7185)',
-            ];
-            $gradient = $isAdministration
-                ? 'linear-gradient(135deg,#1d4ed8,#7c3aed)'
-                : $themes[$loop->index % count($themes)];
-        @endphp
+                <h1>Discussions pédagogiques</h1>
 
-        <div class="pp-chat-item" data-name="{{ Str::lower($subject->name) }}">
-            <a
-                href="{{ route('prof.chat', $subject->id) }}"
-                class="pp-chat-card {{ $isAdministration ? 'is-admin' : '' }}"
-                style="--chat-gradient:{{ $gradient }};"
-            >
-                <div class="pp-chat-cover">
-                    <i class="bi {{ $isAdministration ? 'bi-shield-lock-fill' : 'bi-journal-text' }}"></i>
-                </div>
-                <div class="pp-chat-body">
-                    <h2>{{ $subject->name }}</h2>
-                    <p>
-                        {{ $isAdministration
-                            ? 'Conversation privée avec l’équipe administrative.'
-                            : 'Consultez les questions des étudiants pour cette matière.'
-                        }}
-                    </p>
-                    <span class="pp-chat-open">
-                        <span>Ouvrir la discussion</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </span>
-                </div>
-            </a>
-        </div>
-    @empty
-        <div class="pp-panel" style="grid-column:1/-1;">
-            <div class="pp-empty">
-                <div>
-                    <span class="pp-empty-icon"><i class="bi bi-chat-dots"></i></span>
-                    <h3>Aucune discussion disponible</h3>
-                    <p>Les matières de discussion apparaîtront après votre affectation.</p>
-                </div>
+                <p>
+                    Répondez aux étudiants dans Arabe ou Coran
+                    et échangez avec l’administration.
+                </p>
             </div>
         </div>
-    @endforelse
+
+        <span class="rgc-status">
+            <i class="bi bi-circle-fill"></i>
+            {{ $subjects->count() }} espace(s)
+        </span>
+    </section>
+
+    @if($subjects->count() > 2)
+        <label class="rgc-search">
+            <i class="bi bi-search"></i>
+
+            <input
+                type="search"
+                placeholder="Rechercher une discussion..."
+                data-rgc-search="profDiscussionGrid"
+            >
+        </label>
+    @endif
+
+    <div
+        class="rgc-list-grid"
+        id="profDiscussionGrid"
+    >
+        @forelse($subjects as $subject)
+            @php
+                $name =
+                    mb_strtolower(
+                        trim($subject->name)
+                    );
+
+                $isAdmin =
+                    $name === 'administration';
+
+                $isQuran =
+                    $name === 'coran';
+
+                $icon =
+                    $isAdmin
+                        ? 'bi-shield-lock-fill'
+                        : (
+                            $isQuran
+                                ? 'bi-book-half'
+                                : 'bi-translate'
+                        );
+
+                $class =
+                    $isAdmin
+                        ? 'is-admin'
+                        : (
+                            $isQuran
+                                ? 'is-quran'
+                                : ''
+                        );
+
+                $description =
+                    $isAdmin
+                        ? 'Conversation privée avec l’administration.'
+                        : (
+                            $isQuran
+                                ? 'Questions sur le Coran, Tajwid et mémorisation.'
+                                : 'Questions et exercices liés aux cours d’Arabe.'
+                        );
+            @endphp
+
+            <a
+                href="{{
+                    route(
+                        'prof.chat',
+                        $subject->id
+                    )
+                }}"
+                class="rgc-list-card {{ $class }}"
+                data-rgc-item="{{ $name }}"
+            >
+                <div class="rgc-list-card-top">
+                    <span class="rgc-list-icon">
+                        <i class="bi {{ $icon }}"></i>
+                    </span>
+
+                    <i
+                        class="
+                            bi bi-arrow-up-right
+                            rgc-list-arrow
+                        "
+                    ></i>
+                </div>
+
+                <h3>
+                    {{
+                        $isAdmin
+                            ? 'Administration'
+                            : (
+                                $isQuran
+                                    ? 'Groupe Coran'
+                                    : 'Groupe Arabe'
+                            )
+                    }}
+                </h3>
+
+                <p>{{ $description }}</p>
+
+                <footer>
+                    <span>
+                        <i class="bi bi-chat-dots-fill"></i>
+                        Ouvrir la discussion
+                    </span>
+
+                    <span>
+                        <i
+                            class="
+                                bi
+                                {{
+                                    $isAdmin
+                                        ? 'bi-lock-fill'
+                                        : 'bi-people-fill'
+                                }}
+                            "
+                        ></i>
+                        {{
+                            $isAdmin
+                                ? 'Privée'
+                                : 'Groupe'
+                        }}
+                    </span>
+                </footer>
+            </a>
+        @empty
+            <div class="rgc-list-empty">
+                Aucune discussion disponible.
+            </div>
+        @endforelse
+    </div>
 </div>
 
-<div class="pp-no-results" id="chatSubjectEmpty">
-    <i class="bi bi-search fs-2 d-block mb-2"></i>
-    Aucune discussion ne correspond à votre recherche.
-</div>
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const search = document.getElementById('chatSubjectSearch');
-    const empty = document.getElementById('chatSubjectEmpty');
-    if (!search || !empty) return;
-
-    search.addEventListener('input', function () {
-        const query = this.value.trim().toLocaleLowerCase('fr');
-        let visible = 0;
-
-        document.querySelectorAll('.pp-chat-item').forEach(function (item) {
-            const show = (item.dataset.name || '').includes(query);
-            item.style.display = show ? '' : 'none';
-            if (show) visible += 1;
-        });
-
-        empty.style.display = visible ? 'none' : 'block';
-    });
-});
-</script>
-@endpush
+<script
+    src="{{ asset('js/role-group-chat-v1.js') }}?v=1"
+></script>
 @endsection

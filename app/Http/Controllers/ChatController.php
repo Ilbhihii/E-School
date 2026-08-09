@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\ProfAssignment;
 use App\Services\LearningPathService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
@@ -60,7 +61,22 @@ class ChatController extends Controller
             ->latest()
             ->get();
 
-        return view('student.chat', compact('subject', 'messages'));
+        $groupChatContext = $isAdministration
+            ? $this->emptyGroupChatContext()
+            : $this->groupChatContext(
+                $subject,
+                $messages
+            );
+
+        return view(
+            'student.chat',
+            compact(
+                'subject',
+                'messages',
+                'isAdministration',
+                'groupChatContext'
+            )
+        );
     }
 
     // Envoyer message étudiant
@@ -402,6 +418,67 @@ class ChatController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        /*
+         * Informations réelles utilisées par le nouveau design
+         * des groupes Arabe et Coran.
+         *
+         * Pas de faux statut « en ligne » : on affiche uniquement
+         * les comptes réellement actifs (is_active).
+         */
+        $groupParticipants = collect();
+        $groupParticipantsCount = 0;
+        $groupActiveParticipantsCount = 0;
+        $groupLastActivity = null;
+
+        if (!$isAdministration) {
+            $studentIds = DB::table('class_user')
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->pluck('user_id');
+
+            $professorIds = ProfAssignment::query()
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->pluck('prof_id');
+
+            $participantIds = $studentIds
+                ->merge($professorIds)
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $groupParticipants = User::query()
+                ->whereIn('id', $participantIds)
+                ->whereIn('role', ['student', 'prof'])
+                ->orderByRaw(
+                    "CASE WHEN role = 'prof' THEN 0 ELSE 1 END"
+                )
+                ->orderBy('name')
+                ->get();
+
+            $groupParticipantsCount =
+                $groupParticipants->count();
+
+            $groupActiveParticipantsCount =
+                $groupParticipants
+                    ->filter(
+                        fn (User $participant) =>
+                            (bool) $participant->is_active
+                    )
+                    ->count();
+
+            $groupLastActivity =
+                $messages
+                    ->sortByDesc('created_at')
+                    ->first()
+                    ?->created_at;
+        }
+
         return view(
             'admin.chat',
             compact(
@@ -411,7 +488,11 @@ class ChatController extends Controller
                 'selectedConversationUser',
                 'isAdministration',
                 'conversationRole',
-                'conversationSpaceLabel'
+                'conversationSpaceLabel',
+                'groupParticipants',
+                'groupParticipantsCount',
+                'groupActiveParticipantsCount',
+                'groupLastActivity'
             )
         );
     }
@@ -512,11 +593,43 @@ class ChatController extends Controller
     public function profChat(Subject $subject)
     {
         $this->authorizeProfSubject($subject);
-        $isAdministration = $this->isAdministrationSubject($subject);
-        $messages = $subject->messages()->with('user')
-            ->when($isAdministration, fn ($query) => $query->where('conversation_user_id', auth()->id()))
-            ->whereNull('deleted_at')->orderBy('created_at', 'asc')->get();
-        return view('prof.chat', compact('subject', 'messages', 'isAdministration'));
+
+        $isAdministration =
+            $this->isAdministrationSubject(
+                $subject
+            );
+
+        $messages = $subject
+            ->messages()
+            ->with('user')
+            ->when(
+                $isAdministration,
+                fn ($query) =>
+                    $query->where(
+                        'conversation_user_id',
+                        auth()->id()
+                    )
+            )
+            ->whereNull('deleted_at')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $groupChatContext = $isAdministration
+            ? $this->emptyGroupChatContext()
+            : $this->groupChatContext(
+                $subject,
+                $messages
+            );
+
+        return view(
+            'prof.chat',
+            compact(
+                'subject',
+                'messages',
+                'isAdministration',
+                'groupChatContext'
+            )
+        );
     }
 
     // Envoyer message professeur
@@ -556,6 +669,106 @@ class ChatController extends Controller
             ->delete();
 
         return back();
+    }
+
+    /**
+     * Contexte commun des chats de groupe Arabe / Coran.
+     *
+     * Le chat existant reste au niveau de la matière.
+     * On n'élargit pas les droits d'accès : ces données sont
+     * uniquement utilisées après les contrôles d'autorisation.
+     */
+    private function groupChatContext(
+        Subject $subject,
+        Collection $messages
+    ): array {
+        $studentIds = DB::table('class_user')
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->pluck('user_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $professorIds = ProfAssignment::query()
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->pluck('prof_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $participantIds = $studentIds
+            ->merge($professorIds)
+            ->unique()
+            ->values();
+
+        $participants = User::query()
+            ->whereIn('id', $participantIds)
+            ->whereIn(
+                'role',
+                ['student', 'prof']
+            )
+            ->orderByRaw(
+                "CASE WHEN role = 'prof' THEN 0 ELSE 1 END"
+            )
+            ->orderBy('name')
+            ->get();
+
+        $professors = $participants
+            ->where('role', 'prof')
+            ->values();
+
+        $recentAuthors = $messages
+            ->sortByDesc('created_at')
+            ->pluck('user')
+            ->filter()
+            ->unique('id')
+            ->take(6)
+            ->values();
+
+        return [
+            'participants_count' =>
+                $participants->count(),
+            'active_accounts_count' =>
+                $participants
+                    ->where('is_active', true)
+                    ->count(),
+            'students_count' =>
+                $participants
+                    ->where('role', 'student')
+                    ->count(),
+            'professors_count' =>
+                $professors->count(),
+            'professors' =>
+                $professors,
+            'recent_authors' =>
+                $recentAuthors,
+            'last_activity' =>
+                $messages
+                    ->sortByDesc('created_at')
+                    ->first()
+                    ?->created_at,
+        ];
+    }
+
+    private function emptyGroupChatContext(): array
+    {
+        return [
+            'participants_count' => 0,
+            'active_accounts_count' => 0,
+            'students_count' => 0,
+            'professors_count' => 0,
+            'professors' => collect(),
+            'recent_authors' => collect(),
+            'last_activity' => null,
+        ];
     }
 
     private function authorizeProfSubject(Subject $subject): void
