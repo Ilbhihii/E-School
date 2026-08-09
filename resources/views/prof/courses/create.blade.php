@@ -217,4 +217,6 @@
         </div>
     </section>
 </form>
+<script src="{{ asset('js/course-upload-1gb-v1.js') }}?v=1"></script>
+
 @endsection
