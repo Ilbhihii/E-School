@@ -618,7 +618,7 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:51200',
+                'max:1048576',
             ],
         ], [
             'subject_id.required' =>
@@ -629,6 +629,14 @@ class CourseController extends Controller
                 'Veuillez sélectionner une classe.',
             'class_slot_id.required' =>
                 'Veuillez sélectionner un créneau.',
+            'video.max' =>
+                'La vidéo ne doit pas dépasser 1 Go.',
+            'video.mimes' =>
+                'La vidéo doit être au format MP4, MOV, AVI, WEBM ou M4V.',
+            'pdf.max' =>
+                'Le document PDF ne doit pas dépasser 1 Go.',
+            'pdf.mimes' =>
+                'Le document sélectionné doit être un fichier PDF.',
         ]);
     }
 

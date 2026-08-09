@@ -228,7 +228,7 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:51200',
+                'max:1048576',
             ],
         ], [
             'subject_id.required' =>
@@ -605,7 +605,7 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:51200',
+                'max:1048576',
             ],
         ], [
             'title.required' =>
@@ -621,7 +621,7 @@ class CourseController extends Controller
             'video.mimes' =>
                 'La vidéo doit être au format MP4, MOV, AVI, WEBM ou M4V.',
             'pdf.max' =>
-                'Le document PDF ne doit pas dépasser 50 Mo.',
+                'Le document PDF ne doit pas dépasser 1 Go.',
             'pdf.mimes' =>
                 'Le document sélectionné doit être un fichier PDF.',
         ]);
