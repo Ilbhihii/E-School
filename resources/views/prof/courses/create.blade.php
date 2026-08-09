@@ -164,7 +164,7 @@
                         >
 
                         <small class="pp-help">
-                            PDF · 50 Mo maximum
+                            PDF · 1 Go maximum
                         </small>
                     </div>
                 </div>
