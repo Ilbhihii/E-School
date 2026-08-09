@@ -22,7 +22,7 @@ class HomeController extends Controller
     public function index()
     {
         $classes = ClassRoom::count();
-        $courses = Course::count();
+        $courses = Course::approved()->count();
         $lives = Live::latest()->take(3)->get();
 
         $subjectsReligieux = Subject::query()
@@ -72,7 +72,7 @@ class HomeController extends Controller
             ->get();
 
         $totalClasses = $levels->sum('class_count');
-        $totalCourses = Course::count();
+        $totalCourses = Course::approved()->count();
 
         return view(
             'front.public-levels',
@@ -241,7 +241,7 @@ class HomeController extends Controller
 
     public function courseShow($id)
     {
-        $course = Course::findOrFail($id);
+        $course = Course::approved()->findOrFail($id);
 
         return view(
             'front.course-show',

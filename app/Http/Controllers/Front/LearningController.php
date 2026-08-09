@@ -22,7 +22,7 @@ class LearningController extends Controller
     // 2. Cours par niveau
     public function courses($levelId)
     {
-        $courses = Course::where('level_id', $levelId)
+        $courses = Course::approved()->where('level_id', $levelId)
                         ->orderBy('order')
                         ->get();
 
@@ -32,7 +32,7 @@ class LearningController extends Controller
     // 3. Voir cours
     public function showCourse($id)
     {
-        $course = Course::with('learningTests')->findOrFail($id);
+        $course = Course::approved()->with('learningTests')->findOrFail($id);
 
         return view('front.course-show', compact('course'));
     }
@@ -40,7 +40,7 @@ class LearningController extends Controller
     // 4. Soumettre test
     public function submitTest(Request $request, $id)
     {
-        $course = Course::with('learningTests')->findOrFail($id);
+        $course = Course::approved()->with('learningTests')->findOrFail($id);
 
         $score = 0;
         $total = count($course->learningTests);
@@ -75,7 +75,7 @@ class LearningController extends Controller
     // 5. Générateur test IA (simple)
     public function generateTest($courseId)
     {
-        $course = Course::find($courseId);
+        $course = Course::approved()->find($courseId);
 
         CourseTest::create([
             'course_id' => $course->id,

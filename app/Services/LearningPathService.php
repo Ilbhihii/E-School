@@ -624,6 +624,28 @@ class LearningPathService
         ?User $user,
         Course $course
     ): bool {
+        /*
+         * Un cours proposé par un professeur ne doit jamais être
+         * accessible aux étudiants / visiteurs avant validation.
+         *
+         * L'administration peut toujours l'ouvrir.
+         * Le professeur créateur peut également consulter sa proposition.
+         */
+        if (!$course->isApproved()) {
+            if (!$user) {
+                return false;
+            }
+
+            if ($user->isAdmin()) {
+                return true;
+            }
+
+            return
+                $user->isProf()
+                && (int) $course->user_id
+                    === (int) $user->id;
+        }
+
         if ((bool) $course->is_free) {
             return true;
         }

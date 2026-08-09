@@ -39,7 +39,7 @@ class ClassRoomController extends Controller
      */
     public function courses(ClassRoom $classRoom, Request $request)
     {
-        $query = Course::where('class_id', $classRoom->id)
+        $query = Course::approved()->where('class_id', $classRoom->id)
             ->with(['subject', 'level', 'module']);
 
         if ($request->filled('subject_id')) {

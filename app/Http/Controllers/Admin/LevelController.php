@@ -75,7 +75,7 @@ class LevelController extends Controller
      */
     public function courses(Level $level, ClassRoom $class, Subject $subject)
     {
-        $courses = Course::where('subject_id', $subject->id)
+        $courses = Course::approved()->where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->with(['classRoom', 'subject'])
             ->get();
@@ -741,7 +741,7 @@ class LevelController extends Controller
             'Ce parcours ne fait pas partie de la structure pédagogique active.'
         );
 
-        $courses = Course::where('subject_id', $subject->id)
+        $courses = Course::approved()->where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->with(['classRoom', 'subject'])
             ->get();

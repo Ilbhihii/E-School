@@ -1,122 +1,379 @@
 @extends('layouts.prof')
 
-@section('title', 'Mes Cours')
+@section('title', 'Mes propositions de cours')
 @section('page_title', 'Cours')
-@section('breadcrumb', 'Gestion des cours')
+@section('breadcrumb', 'Proposer → Validation admin → Publication')
 
 @section('content')
+@php
+    $statusMeta = [
+        'pending' => [
+            'label' => 'En attente',
+            'class' => 'adm-badge-warning',
+            'icon' => 'bi-hourglass-split',
+        ],
+        'approved' => [
+            'label' => 'Publié',
+            'class' => 'adm-badge-success',
+            'icon' => 'bi-check-circle-fill',
+        ],
+        'rejected' => [
+            'label' => 'Refusé',
+            'class' => 'adm-badge-danger',
+            'icon' => 'bi-x-circle-fill',
+        ],
+    ];
+@endphp
 
-<div class="adm-page-header">
-    <div>
-        <h1><i class="bi bi-book-half me-2" style="color:var(--adm-primary);"></i> Mes Cours</h1>
-        <div class="subtitle">Gérez vos ressources pédagogiques</div>
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow">
+            <i class="bi bi-cloud-arrow-up-fill"></i>
+            Validation pédagogique
+        </span>
+
+        <h1 class="pp-page-title">
+            Mes propositions de cours
+        </h1>
+
+        <p class="pp-page-description">
+            Créez votre cours puis envoyez-le à l’administration.
+            Il sera visible aux étudiants uniquement après validation.
+        </p>
     </div>
-    <div class="page-actions">
-        <a href="{{ route('prof.courses.create') }}" class="adm-btn adm-btn-primary">
-            <i class="bi bi-plus-lg"></i> Nouveau cours
+
+    <div class="pp-page-actions">
+        <a
+            href="{{ route('prof.courses.create') }}"
+            class="adm-btn adm-btn-primary"
+        >
+            <i class="bi bi-plus-lg"></i>
+            Proposer un cours
         </a>
     </div>
+</section>
+
+@if(session('success'))
+    <div class="adm-alert adm-alert-success mb-4">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="adm-alert adm-alert-danger mb-4">
+        @foreach($errors->all() as $error)
+            <div>{{ $error }}</div>
+        @endforeach
+    </div>
+@endif
+
+<div class="pp-summary-grid">
+    <article class="pp-summary-card is-blue">
+        <span class="pp-summary-icon">
+            <i class="bi bi-collection-fill"></i>
+        </span>
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $stats['all'] }}
+            </strong>
+            <span class="pp-summary-label">
+                Total
+            </span>
+        </span>
+    </article>
+
+    <article class="pp-summary-card is-yellow">
+        <span class="pp-summary-icon">
+            <i class="bi bi-hourglass-split"></i>
+        </span>
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $stats['pending'] }}
+            </strong>
+            <span class="pp-summary-label">
+                En attente
+            </span>
+        </span>
+    </article>
+
+    <article class="pp-summary-card is-green">
+        <span class="pp-summary-icon">
+            <i class="bi bi-check-circle-fill"></i>
+        </span>
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $stats['approved'] }}
+            </strong>
+            <span class="pp-summary-label">
+                Publiés
+            </span>
+        </span>
+    </article>
+
+    <article class="pp-summary-card is-red">
+        <span class="pp-summary-icon">
+            <i class="bi bi-x-circle-fill"></i>
+        </span>
+        <span class="pp-summary-copy">
+            <strong class="pp-summary-value">
+                {{ $stats['rejected'] }}
+            </strong>
+            <span class="pp-summary-label">
+                Refusés
+            </span>
+        </span>
+    </article>
 </div>
 
-<div class="adm-stats-grid">
-    <div class="adm-stat green">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
+<section class="pp-panel">
+    <header class="pp-panel-head">
+        <div class="pp-panel-title-wrap">
+            <h2 class="pp-panel-title">
+                <i class="bi bi-filter-circle-fill"></i>
+                Mes cours
+            </h2>
         </div>
-        <div class="stat-value">{{ $courses->count() }}</div>
-        <div class="stat-label">Total cours</div>
-    </div>
-    <div class="adm-stat cyan">
-        <div class="stat-top">
-            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
-        </div>
-        <div class="stat-value">{{ $courses->where('created_at','>', now()->subDays(7))->count() }}</div>
-        <div class="stat-label">Cours récents (7j)</div>
-    </div>
-    <div class="adm-stat blue" style="display:flex;align-items:center;justify-content:center;">
-        <a href="{{ route('prof.courses.create') }}" class="adm-btn adm-btn-primary" style="padding:12px 28px;font-size:0.95rem;">
-            <i class="bi bi-plus-circle me-2"></i> Nouveau cours
-        </a>
-    </div>
-</div>
 
-<div class="adm-card">
-    <div class="adm-card-header">
-        <h4><i class="bi bi-collection" style="color:rgba(255,255,255,0.35);"></i> Tous les cours</h4>
-        <div class="card-actions">
-            <span style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $courses->count() }} cours</span>
+        <div class="pps-inline-actions">
+            <a
+                href="{{ route('prof.courses.index') }}"
+                class="adm-btn adm-btn-sm {{
+                    !$status ? 'adm-btn-primary' : 'adm-btn-ghost'
+                }}"
+            >
+                Tous
+            </a>
+
+            <a
+                href="{{
+                    route(
+                        'prof.courses.index',
+                        ['status' => 'pending']
+                    )
+                }}"
+                class="adm-btn adm-btn-sm {{
+                    $status === 'pending'
+                        ? 'adm-btn-warning'
+                        : 'adm-btn-ghost'
+                }}"
+            >
+                En attente
+            </a>
+
+            <a
+                href="{{
+                    route(
+                        'prof.courses.index',
+                        ['status' => 'approved']
+                    )
+                }}"
+                class="adm-btn adm-btn-sm {{
+                    $status === 'approved'
+                        ? 'adm-btn-success'
+                        : 'adm-btn-ghost'
+                }}"
+            >
+                Publiés
+            </a>
+
+            <a
+                href="{{
+                    route(
+                        'prof.courses.index',
+                        ['status' => 'rejected']
+                    )
+                }}"
+                class="adm-btn adm-btn-sm {{
+                    $status === 'rejected'
+                        ? 'adm-btn-danger'
+                        : 'adm-btn-ghost'
+                }}"
+            >
+                Refusés
+            </a>
         </div>
-    </div>
-    <div class="adm-card-body p-0">
-        <div class="adm-table-wrap">
-            <table class="adm-table">
-                <thead>
-                    <tr>
-                        <th>Titre</th>
-                        <th>Niveau</th>
-                        <th>matière</th>
-                        <th>Date</th>
-                        <th>Devoirs</th>
-                        <th style="text-align:right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($courses as $course)
-                    <tr>
-                        <td><span style="font-weight:500;">{{ Str::limit($course->title, 45) }}</span></td>
-                        <td><span class="adm-badge adm-badge-info">{{ $course->level->name ?? '---' }}</span></td>
-                        <td><span class="adm-badge adm-badge-primary">{{ $course->subject->name ?? '---' }}</span></td>
-                        <td style="color:var(--adm-text-muted);font-size:0.8rem;">{{ $course->created_at->format('d/m/Y') }}</td>
-                        <td>
-                            @forelse($course->assignments as $devoir)
-                                <span class="adm-badge adm-badge-accent mb-1" style="font-size:0.7rem;">{{ Str::limit($devoir->title, 18) }}</span>
-                            @empty
-                                <span style="color:var(--adm-text-muted);font-size:0.8rem;">Aucun</span>
-                            @endforelse
-                        </td>
-                        <td style="text-align:right;">
-                            <div style="display:flex;gap:6px;justify-content:flex-end;">
-                                <a href="{{ route('prof.courses.show', $course->id) }}" class="adm-btn adm-btn-sm" style="background:rgba(6,182,212,0.15);color:#67E8F9;border:1px solid rgba(6,182,212,0.15);" title="Voir">
+    </header>
+
+    <div class="pp-panel-body">
+        <div class="row g-3">
+            @forelse($courses as $course)
+                @php
+                    $meta =
+                        $statusMeta[
+                            $course->approval_status
+                        ]
+                        ?? $statusMeta['pending'];
+                @endphp
+
+                <div class="col-xl-6">
+                    <article class="prof-path-card h-100">
+                        <div class="prof-path-body">
+                            <div
+                                class="d-flex justify-content-between
+                                    align-items-start gap-3 mb-3"
+                            >
+                                <div>
+                                    <span class="prof-path-kicker">
+                                        <i class="bi bi-book-half"></i>
+                                        Proposition de cours
+                                    </span>
+
+                                    <h2 class="mt-2 mb-0">
+                                        {{ $course->title }}
+                                    </h2>
+                                </div>
+
+                                <span
+                                    class="adm-badge {{
+                                        $meta['class']
+                                    }}"
+                                >
+                                    <i
+                                        class="bi {{
+                                            $meta['icon']
+                                        }}"
+                                    ></i>
+                                    {{ $meta['label'] }}
+                                </span>
+                            </div>
+
+                            <div class="pps-path-line mb-3">
+                                <span class="pps-path-chip">
+                                    {{
+                                        $course->subject?->name
+                                        ?? 'Matière'
+                                    }}
+                                </span>
+
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-path-chip">
+                                    {{
+                                        $course->level?->name
+                                        ?? 'Niveau'
+                                    }}
+                                </span>
+
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-path-chip">
+                                    {{
+                                        $course->classRoom?->name
+                                        ?? 'Classe'
+                                    }}
+                                </span>
+
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-slot-badge">
+                                    {{ $course->slot_code ?? '—' }}
+                                </span>
+                            </div>
+
+                            @if(
+                                $course->isRejected()
+                                && $course->rejection_reason
+                            )
+                                <div
+                                    class="adm-alert adm-alert-danger mb-3"
+                                    style="font-size:.75rem;"
+                                >
+                                    <strong>Motif du refus :</strong>
+                                    {{ $course->rejection_reason }}
+                                </div>
+                            @elseif($course->isPending())
+                                <div
+                                    class="adm-alert adm-alert-warning mb-3"
+                                    style="font-size:.75rem;"
+                                >
+                                    L’administration doit valider ce cours
+                                    avant sa publication.
+                                </div>
+                            @else
+                                <div
+                                    class="adm-alert adm-alert-success mb-3"
+                                    style="font-size:.75rem;"
+                                >
+                                    Ce cours est publié et visible
+                                    aux étudiants concernés.
+                                </div>
+                            @endif
+
+                            <div class="pps-inline-actions">
+                                <a
+                                    href="{{
+                                        route(
+                                            'prof.courses.show',
+                                            $course
+                                        )
+                                    }}"
+                                    class="adm-btn adm-btn-ghost adm-btn-sm"
+                                >
                                     <i class="bi bi-eye"></i>
+                                    Voir
                                 </a>
-                                <a href="{{ route('prof.devoir.create', ['course_id'=>$course->id]) }}" class="adm-btn adm-btn-success adm-btn-sm" title="Ajouter un devoir">
-                                    <i class="bi bi-plus"></i>
-                                </a>
-                                <a href="{{ route('prof.courses.edit', $course->id) }}" class="adm-btn adm-btn-warning adm-btn-sm" title="Modifier">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form method="POST" action="{{ route('prof.courses.destroy', $course->id) }}" style="display:inline;" onsubmit="return confirm('Confirmer la suppression ?')">
-                                    @csrf @method('DELETE')
-                                    <button class="adm-btn adm-btn-danger adm-btn-sm" type="submit" title="Supprimer">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6">
-                            <div class="adm-empty">
-                                <div class="adm-empty-icon"><i class="bi bi-inbox"></i></div>
-                                <h5>Aucun cours</h5>
-                                <p>Créez votre premier cours pour commencer.</p>
-                                <a href="{{ route('prof.courses.create') }}" class="adm-btn adm-btn-primary adm-btn-sm">
-                                    <i class="bi bi-plus-lg"></i> Créer un cours
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-    @if(method_exists($courses, 'links'))
-    <div class="adm-card-footer">
-        {{ $courses->links() }}
-    </div>
-    @endif
-</div>
 
+                                <a
+                                    href="{{
+                                        route(
+                                            'prof.courses.edit',
+                                            $course
+                                        )
+                                    }}"
+                                    class="adm-btn adm-btn-warning adm-btn-sm"
+                                >
+                                    <i class="bi bi-pencil"></i>
+                                    {{
+                                        $course->isRejected()
+                                            ? 'Corriger et renvoyer'
+                                            : 'Modifier'
+                                    }}
+                                </a>
+
+                                @if(!$course->isApproved())
+                                    <form
+                                        method="POST"
+                                        action="{{
+                                            route(
+                                                'prof.courses.destroy',
+                                                $course
+                                            )
+                                        }}"
+                                        onsubmit="
+                                            return confirm(
+                                                'Supprimer cette proposition ?'
+                                            )
+                                        "
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <button
+                                            type="submit"
+                                            class="adm-btn adm-btn-danger adm-btn-sm"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            @empty
+                <div class="col-12">
+                    <div class="pps-empty">
+                        Aucun cours dans cette catégorie.
+                    </div>
+                </div>
+            @endforelse
+        </div>
+
+        @if($courses->hasPages())
+            <div class="pp-pagination mt-3">
+                {{ $courses->links() }}
+            </div>
+        @endif
+    </div>
+</section>
 @endsection

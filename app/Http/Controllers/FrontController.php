@@ -477,7 +477,7 @@ class FrontController extends Controller
     public function levelCourses($id)
     {
         $level = Level::with(['subject'])->findOrFail($id);
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where('level_id', $level->id)
             ->with(['subject', 'level', 'classRoom'])
             ->orderBy('order')
@@ -494,7 +494,7 @@ class FrontController extends Controller
      */
     public function showCourse($id)
     {
-        $course = Course::with([
+        $course = Course::approved()->with([
             'subject',
             'level',
             'classRoom',
@@ -619,7 +619,7 @@ class FrontController extends Controller
     public function publicCourses(Level $level, \App\Models\ClassRoom $class_room, Subject $subject)
     {
         $class = $class_room;
-        $courses = Course::where('subject_id', $subject->id)
+        $courses = Course::approved()->where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->where('level_id', $level->id)
             ->withCount('learningTests')

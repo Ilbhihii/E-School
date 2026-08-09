@@ -50,16 +50,64 @@ class CourseController extends Controller
     }
 
     // ================= LISTE =================
-    public function index()
+    public function index(Request $request)
     {
-        if (auth()->user()->isAdmin()) {
-            $courses = Course::with(['classRoom', 'subject', 'level', 'assignments'])->paginate(10);
-        } else {
-            $courses = Course::where('user_id', auth()->id())
-                ->with(['classRoom', 'subject', 'level', 'assignments'])
-                ->paginate(10);
+        $status = $request->query('status');
+
+        if (
+            $status
+            && !in_array(
+                $status,
+                [
+                    Course::STATUS_PENDING,
+                    Course::STATUS_APPROVED,
+                    Course::STATUS_REJECTED,
+                ],
+                true
+            )
+        ) {
+            $status = null;
         }
-        return view('admin.courses.index', compact('courses'));
+
+        $query = Course::query()
+            ->with([
+                'classRoom',
+                'subject',
+                'level',
+                'assignments',
+                'creator',
+                'reviewer',
+            ])
+            ->latest();
+
+        if ($status) {
+            $query->where(
+                'approval_status',
+                $status
+            );
+        }
+
+        $courses = $query
+            ->paginate(12)
+            ->appends(
+                $request->query()
+            );
+
+        $courseStats = [
+            'all' => Course::query()->count(),
+            'pending' => Course::pending()->count(),
+            'approved' => Course::approved()->count(),
+            'rejected' => Course::rejected()->count(),
+        ];
+
+        return view(
+            'admin.courses.index',
+            compact(
+                'courses',
+                'courseStats',
+                'status'
+            )
+        );
     }
 
     // ================= CREATE =================
@@ -271,8 +319,18 @@ class CourseController extends Controller
             ]);
         }
 
+        $classSlot =
+            $this->structure
+                ->slotByCodeForPath(
+                    $slotCode,
+                    (int) $subject->id,
+                    (int) $level->id,
+                    (int) $classRoom->id
+                );
+
         /*
-         * Un professeur ne peut utiliser que ses affectations.
+         * Ce contrôleur reste compatible avec un éventuel appel professeur,
+         * mais les routes /admin/courses sont désormais réservées à l'admin.
          */
         if (!auth()->user()->isAdmin()) {
             $isAssigned = ProfAssignment::query()
@@ -292,12 +350,16 @@ class CourseController extends Controller
                     'class_id',
                     $classRoom->id
                 )
+                ->where(
+                    'class_slot_id',
+                    $classSlot->id
+                )
                 ->exists();
 
             abort_unless(
                 $isAssigned,
                 403,
-                'Cette structure ne fait pas partie '
+                'Ce créneau ne fait pas partie '
                 . 'de vos affectations.'
             );
         }
@@ -337,13 +399,24 @@ class CourseController extends Controller
                 $validated['course_link'] ?? null,
             'admin_id' => auth()->id(),
             'user_id' => auth()->id(),
+
+            /*
+             * Un cours créé directement par l'administration est
+             * publié immédiatement : l'admin n'a pas à se valider.
+             */
+            'approval_status' =>
+                Course::STATUS_APPROVED,
+            'submitted_at' => now(),
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'rejection_reason' => null,
         ]);
 
         return redirect()
             ->route('admin.courses.index')
             ->with(
                 'success',
-                'Cours créé avec succès.'
+                'Cours créé et publié avec succès.'
             );
     }
 
@@ -723,6 +796,76 @@ class CourseController extends Controller
             );
     }
 
+    // ================= VALIDATION ADMIN =================
+    public function approve(Course $course)
+    {
+        $course->loadMissing('creator');
+
+        abort_unless(
+            $course->creator
+            && $course->creator->isProf(),
+            422,
+            'Ce cours a été créé directement par l’administration.'
+        );
+
+        $course->update([
+            'approval_status' =>
+                Course::STATUS_APPROVED,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        return back()->with(
+            'success',
+            'Le cours « '
+            . $course->title
+            . ' » est maintenant publié.'
+        );
+    }
+
+    public function reject(
+        Request $request,
+        Course $course
+    ) {
+        $course->loadMissing('creator');
+
+        abort_unless(
+            $course->creator
+            && $course->creator->isProf(),
+            422,
+            'Ce cours a été créé directement par l’administration.'
+        );
+
+        $validated = $request->validate([
+            'rejection_reason' => [
+                'required',
+                'string',
+                'min:3',
+                'max:2000',
+            ],
+        ], [
+            'rejection_reason.required' =>
+                'Veuillez indiquer le motif du refus.',
+        ]);
+
+        $course->update([
+            'approval_status' =>
+                Course::STATUS_REJECTED,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'rejection_reason' =>
+                $validated['rejection_reason'],
+        ]);
+
+        return back()->with(
+            'success',
+            'Le cours « '
+            . $course->title
+            . ' » a été refusé.'
+        );
+    }
+
     // ================= AJAX : matières par classe =================
     public function getClassSubjects($classId)
     {
@@ -739,13 +882,21 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
         $this->authorizeCourseOwner($course);
 
-        // Supprimer fichiers
-        if ($course->video) {
-            Storage::disk('public')->delete($course->video);
-        }
+        // Supprimer les ressources, qu'elles soient anciennes (public)
+        // ou nouvelles (stockage privé local).
+        foreach (
+            [$course->video, $course->pdf]
+            as $path
+        ) {
+            if (!$path) {
+                continue;
+            }
 
-        if ($course->pdf) {
-            Storage::disk('public')->delete($course->pdf);
+            Storage::disk('local')
+                ->delete($path);
+
+            Storage::disk('public')
+                ->delete($path);
         }
 
         $course->delete();

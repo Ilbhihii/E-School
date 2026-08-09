@@ -19,7 +19,7 @@ protected $fillable = ['name', 'level_id'];
     // 📘 Une classe a plusieurs cours
     public function courses()
     {
-        return $this->hasMany(Course::class, 'class_id');
+        return $this->hasMany(Course::class, 'class_id')->approved();
     }
 
 

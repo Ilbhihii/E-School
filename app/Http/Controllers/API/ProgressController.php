@@ -18,7 +18,7 @@ class ProgressController extends Controller
     {
         $user = $request->user();
 
-        $totalCourses = Course::count();
+        $totalCourses = Course::approved()->count();
         $completedCourses = UserProgress::where('user_id', $user->id)
             ->where('completed', true)
             ->count();

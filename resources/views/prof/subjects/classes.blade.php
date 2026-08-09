@@ -118,6 +118,28 @@
                                         <a
                                             href="{{
                                                 route(
+                                                    'prof.courses.create',
+                                                    [
+                                                        'subject_id'
+                                                            => $subject->id,
+                                                        'level_id'
+                                                            => $level->id,
+                                                        'class_id'
+                                                            => $class->id,
+                                                        'class_slot_id'
+                                                            => $slot->id,
+                                                    ]
+                                                )
+                                            }}"
+                                            class="adm-btn adm-btn-success adm-btn-sm"
+                                        >
+                                            <i class="bi bi-plus-lg"></i>
+                                            Proposer
+                                        </a>
+
+                                        <a
+                                            href="{{
+                                                route(
                                                     'prof.subjects.lives',
                                                     [
                                                         $subject,

@@ -74,7 +74,7 @@ class DevoirController extends Controller
             );
 
         if ($courseId) {
-            $course = Course::query()
+            $course = Course::query()->approved()
                 ->where(
                     'user_id',
                     auth()->id()
@@ -94,7 +94,7 @@ class DevoirController extends Controller
                 $request->query()
             );
 
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where(
                 'user_id',
                 auth()->id()
@@ -140,7 +140,7 @@ class DevoirController extends Controller
             );
 
         $course = $courseId
-            ? Course::query()
+            ? Course::query()->approved()
                 ->where(
                     'user_id',
                     auth()->id()
@@ -181,7 +181,7 @@ class DevoirController extends Controller
                 );
         }
 
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where(
                 'user_id',
                 auth()->id()
@@ -319,7 +319,7 @@ class DevoirController extends Controller
         $course = null;
 
         if (!empty($validated['course_id'])) {
-            $course = Course::query()
+            $course = Course::query()->approved()
                 ->where(
                     'user_id',
                     auth()->id()
@@ -441,7 +441,7 @@ class DevoirController extends Controller
                 auth()->id()
             );
 
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where(
                 'user_id',
                 auth()->id()
@@ -573,7 +573,7 @@ class DevoirController extends Controller
         $course = null;
 
         if (!empty($validated['course_id'])) {
-            $course = Course::query()
+            $course = Course::query()->approved()
                 ->where(
                     'user_id',
                     auth()->id()

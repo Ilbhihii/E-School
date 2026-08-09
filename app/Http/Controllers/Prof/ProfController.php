@@ -50,7 +50,7 @@ class ProfController extends Controller
                 auth()->id()
             );
 
-        $coursesQuery = Course::query()
+        $coursesQuery = Course::query()->approved()
             ->where('user_id', auth()->id());
 
         $devoirsQuery = Assignment::query()
@@ -791,7 +791,7 @@ class ProfController extends Controller
             ->filter()
             ->values();
 
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where(
                 'subject_id',
                 $subject->id
@@ -1138,7 +1138,7 @@ class ProfController extends Controller
                 ->unique()
                 ->values();
 
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where(
                 'subject_id',
                 $subject->id

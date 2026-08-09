@@ -20,7 +20,7 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
-        $query = Course::with(['subject', 'level', 'classRoom']);
+        $query = Course::approved()->with(['subject', 'level', 'classRoom']);
 
         foreach (['subject_id', 'level_id', 'class_id'] as $field) {
             if ($request->filled($field)) {

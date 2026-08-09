@@ -55,7 +55,7 @@ class StudentController extends Controller
             : null;
         $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
 
-        $courseQuery = Course::query();
+        $courseQuery = Course::query()->approved();
         if ($assignmentRows->isEmpty()) {
             $courseQuery->whereRaw('1 = 0');
         } else {
@@ -461,7 +461,7 @@ class StudentController extends Controller
         abort_if($rows->isEmpty(), 403);
 
         $class = ClassRoom::with('level')->findOrFail($id);
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->where('class_id', $class->id)
             ->whereIn('subject_id', $rows->pluck('subject_id'))
             ->get();
@@ -484,7 +484,7 @@ class StudentController extends Controller
             403
         );
 
-        $courses = Course::where('class_id', $class->id)
+        $courses = Course::approved()->where('class_id', $class->id)
             ->where('subject_id', $subjectId)
             ->where('level_id', $class->level_id)
             ->get();
@@ -495,7 +495,7 @@ class StudentController extends Controller
 
     public function showCourse($id)
     {
-        $course = Course::with([
+        $course = Course::approved()->with([
                 'subject',
                 'level',
                 'classRoom.level',
@@ -955,7 +955,7 @@ class StudentController extends Controller
 
         $slotCode = strtoupper(trim((string) $selectedPath->slot_code));
 
-        $course = Course::query()
+        $course = Course::query()->approved()
             ->where('subject_id', (int) $validated['subject_id'])
             ->where('class_id', (int) $validated['class_id'])
             ->where(function ($query) use ($validated) {
@@ -1089,7 +1089,7 @@ class StudentController extends Controller
             )
             ->values();
 
-        $courseQuery = Course::query();
+        $courseQuery = Course::query()->approved();
 
         if ($assignmentRows->isEmpty()) {
             $courseQuery->whereRaw('1 = 0');
@@ -1551,7 +1551,7 @@ public function subjectCourses(
         $class
     );
 
-    $courses = Course::query()
+    $courses = Course::query()->approved()
         ->where('subject_id', $subject->id)
         ->where('level_id', $level->id)
         ->where('class_id', $class->id)

@@ -16,7 +16,7 @@ class ProfLevelController extends Controller
      */
     public function courses(Level $level, ClassRoom $class, Subject $subject)
     {
-        $courses = Course::where('subject_id', $subject->id)
+        $courses = Course::approved()->where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->where('user_id', auth()->id())
             ->with(['classRoom', 'subject'])

@@ -26,6 +26,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Prof\ScheduleController;
 
 use App\Http\Controllers\Prof\DevoirController as ProfDevoirController;
+use App\Http\Controllers\Prof\CourseController as ProfCourseController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\FrontController;
 use App\Http\Controllers\Admin\DevoirController;
@@ -212,18 +213,39 @@ Route::middleware('auth')->group(function () {
 */
 /*
 |---------------------------
-| COURSES (ADMIN + PROF)
+| COURSES (ADMIN + VALIDATION PROF)
 |---------------------------
 */
-Route::middleware(['auth','adminOrProf'])
+Route::middleware(['auth','isAdmin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function(){
 
-    Route::resource('courses', CourseController::class);
+    /*
+     * L'administration conserve la création directe des cours.
+     * Les propositions professeur arrivent dans la même liste,
+     * avec validation / refus.
+     */
+    Route::post(
+        '/courses/{course}/approve',
+        [CourseController::class, 'approve']
+    )->name('courses.approve');
+
+    Route::post(
+        '/courses/{course}/reject',
+        [CourseController::class, 'reject']
+    )->name('courses.reject');
+
+    Route::resource(
+        'courses',
+        CourseController::class
+    );
 
     // AJAX : récupérer les matières d'une classe
-    Route::get('/get-class-subjects/{classId}', [CourseController::class, 'getClassSubjects'])->name('get-class-subjects');
+    Route::get(
+        '/get-class-subjects/{classId}',
+        [CourseController::class, 'getClassSubjects']
+    )->name('get-class-subjects');
 
 });
 
@@ -445,6 +467,15 @@ Route::middleware([
 
     Route::put('/settings/profile', [ProfController::class, 'updateProfile'])->name('settings.profile.update');
     Route::put('/settings/password', [ProfController::class, 'updatePassword'])->name('settings.password.update');
+
+    /*
+     * Propositions de cours du professeur.
+     * Le cours est créé en attente et publié seulement après validation admin.
+     */
+    Route::resource(
+        'courses',
+        ProfCourseController::class
+    );
 
     Route::get('/chat/subjects', [ChatController::class, 'profSubjects'])
         ->name('chat.subjects');

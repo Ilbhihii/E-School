@@ -115,6 +115,20 @@
                     </a>
 
                     <a
+                        href="{{ route('prof.courses.index') }}"
+                        class="prof-nav-link {{ request()->routeIs('prof.courses.*') ? 'active' : '' }}"
+                        @if(request()->routeIs('prof.courses.*')) aria-current="page" @endif
+                    >
+                        <span class="nav-icon">
+                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                        </span>
+                        <span class="nav-label">
+                            Mes cours
+                            <small>Proposer → validation admin</small>
+                        </span>
+                    </a>
+
+                    <a
                         href="{{ route('prof.lives.index') }}"
                         class="prof-nav-link {{ request()->routeIs('prof.lives*') ? 'active' : '' }}"
                         @if(request()->routeIs('prof.lives*')) aria-current="page" @endif

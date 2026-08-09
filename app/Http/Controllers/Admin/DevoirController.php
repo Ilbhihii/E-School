@@ -28,11 +28,11 @@ class DevoirController extends Controller
         $query = Assignment::with(['user', 'course']);
         if ($course_id) {
             $query->where('course_id', $course_id);
-            $course = Course::findOrFail($course_id);
+            $course = Course::approved()->findOrFail($course_id);
         }
         $devoirs = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        $courses = Course::all(); // for filter
+        $courses = Course::approved()->get(); // for filter
 
         return view('admin.devoirs.index', compact('devoirs', 'course_id', 'course', 'courses'));
     }
@@ -43,9 +43,9 @@ class DevoirController extends Controller
             abort(403, 'Accès interdit');
         }
         $course_id = $request->course_id;
-        $course = $course_id ? Course::findOrFail($course_id) : null;
+        $course = $course_id ? Course::approved()->findOrFail($course_id) : null;
         $classes = ClassRoom::all();
-        $courses = Course::all();
+        $courses = Course::approved()->get();
         return view('admin.devoirs.create', compact('course', 'classes', 'courses', 'course_id'));
     }
 
@@ -96,7 +96,7 @@ class DevoirController extends Controller
             $this->structure
                 ->hierarchyForAdmin();
 
-        $courses = Course::query()
+        $courses = Course::query()->approved()
             ->whereNotNull('slot_code')
             ->where('slot_code', '!=', '')
             ->orderBy('title')
@@ -214,7 +214,7 @@ class DevoirController extends Controller
         $course = null;
 
         if (!empty($validated['course_id'])) {
-            $course = Course::query()
+            $course = Course::query()->approved()
                 ->findOrFail(
                     (int) $validated['course_id']
                 );
