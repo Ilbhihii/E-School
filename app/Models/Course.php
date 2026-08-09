@@ -22,6 +22,7 @@ class Course extends Model
         'level_id',
         'module_id',
         'class_id',
+        'slot_code',
         'video',
         'pdf',
         'video_url',

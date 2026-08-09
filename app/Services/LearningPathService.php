@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -197,7 +198,7 @@ class LearningPathService
     public function studentAssignmentRows(
         int $studentId
     ): Collection {
-        return DB::table('class_user')
+        $query = DB::table('class_user')
             ->join(
                 'class_rooms',
                 'class_user.class_id',
@@ -216,14 +217,42 @@ class LearningPathService
             )
             ->whereNotNull(
                 'class_user.subject_id'
-            )
-            ->select([
-                'class_user.id',
-                'class_user.user_id',
-                'class_user.subject_id',
-                'class_user.class_id',
-                'class_rooms.level_id',
-            ])
+            );
+
+        $hasClassSlots =
+            Schema::hasTable('class_slots')
+            && Schema::hasColumn(
+                'class_user',
+                'class_slot_id'
+            );
+
+        if ($hasClassSlots) {
+            $query->leftJoin(
+                'class_slots',
+                'class_user.class_slot_id',
+                '=',
+                'class_slots.id'
+            );
+        }
+
+        $columns = [
+            'class_user.id',
+            'class_user.user_id',
+            'class_user.subject_id',
+            'class_user.class_id',
+            'class_rooms.level_id',
+        ];
+
+        if ($hasClassSlots) {
+            $columns[] =
+                'class_user.class_slot_id';
+
+            $columns[] =
+                'class_slots.code as slot_code';
+        }
+
+        return $query
+            ->select($columns)
             ->get()
             ->unique(
                 function ($row) {
@@ -232,7 +261,12 @@ class LearningPathService
                         . ':'
                         . $row->level_id
                         . ':'
-                        . $row->class_id;
+                        . $row->class_id
+                        . ':'
+                        . (
+                            $row->class_slot_id
+                            ?? 'legacy'
+                        );
                 }
             )
             ->values();
@@ -429,12 +463,63 @@ class LearningPathService
             return false;
         }
 
-        return $this->studentCanAccessPath(
-            $student,
-            (int) $course->subject_id,
-            (int) $course->level_id,
-            (int) $course->class_id
-        );
+        if (
+            !$this->studentCanAccessPath(
+                $student,
+                (int) $course->subject_id,
+                (int) $course->level_id,
+                (int) $course->class_id
+            )
+        ) {
+            return false;
+        }
+
+        /*
+         * Les anciens cours sans slot_code restent accessibles
+         * par le parcours classique.
+         *
+         * Pour un nouveau cours D1/D2/I1/A1..., l'étudiant
+         * doit appartenir exactement au même créneau.
+         */
+        if (
+            !Schema::hasTable('class_slots')
+            || !Schema::hasColumn(
+                'class_user',
+                'class_slot_id'
+            )
+            || !Schema::hasColumn(
+                'courses',
+                'slot_code'
+            )
+            || empty($course->slot_code)
+        ) {
+            return true;
+        }
+
+        return DB::table('class_user')
+            ->join(
+                'class_slots',
+                'class_user.class_slot_id',
+                '=',
+                'class_slots.id'
+            )
+            ->where(
+                'class_user.user_id',
+                $student->id
+            )
+            ->where(
+                'class_user.subject_id',
+                $course->subject_id
+            )
+            ->where(
+                'class_user.class_id',
+                $course->class_id
+            )
+            ->where(
+                'class_slots.code',
+                $course->slot_code
+            )
+            ->exists();
     }
 
     public function professorCanAccessPath(

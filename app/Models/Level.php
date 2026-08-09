@@ -35,4 +35,11 @@ class Level extends Model
     {
         return $this->hasMany(ClassRoom::class, 'level_id');
     }
+
+    public function classSlots()
+    {
+        return $this->hasMany(
+            ClassSlot::class
+        );
+    }
 }

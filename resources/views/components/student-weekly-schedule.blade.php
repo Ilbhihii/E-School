@@ -4,8 +4,8 @@
             <span class="student-planning-kicker">Emploi du temps</span>
             <h3 id="student-planning-title">Mes prochaines classes</h3>
         </div>
-        @if(Route::has('student.schedule.index'))
-            <a href="{{ route('student.schedule.index') }}" class="student-planning-link">
+        @if(Route::has('student.lives'))
+            <a href="{{ route('student.lives') }}" class="student-planning-link">
                 Voir tout <i class="bi bi-arrow-right"></i>
             </a>
         @endif

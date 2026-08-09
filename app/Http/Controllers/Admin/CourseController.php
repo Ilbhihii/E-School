@@ -8,20 +8,26 @@ use App\Models\Course;
 use App\Models\ClassRoom;
 use App\Models\Level;
 use App\Models\Subject;
+use App\Models\Schedule;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ProfAssignment;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use App\Services\LearningPathService;
+use App\Services\PedagogicalStructureService;
 
 class CourseController extends Controller
 {
     private LearningPathService $paths;
+    private PedagogicalStructureService $structure;
 
-    public function __construct(LearningPathService $paths)
-    {
+    public function __construct(
+        LearningPathService $paths,
+        PedagogicalStructureService $structure
+    ) {
         $this->paths = $paths;
+        $this->structure = $structure;
     }
     // ================= SHOW =================
     public function show($id)
@@ -64,6 +70,7 @@ class CourseController extends Controller
          *
          * Matière → Niveau appartenant à la matière
          *         → Classe appartenant au niveau et liée à la matière
+         *         → Créneau / groupe
          */
         $courseHierarchy = $this->buildCourseHierarchy();
 
@@ -89,6 +96,10 @@ class CourseController extends Controller
             'class_id'
         );
 
+        $selectedSlotCode = $request->get(
+            'slot_code'
+        );
+
         /*
          * Certaines pages ouvrent la création avec seulement class_id.
          * Dans ce cas, le niveau est déduit pour préremplir le formulaire.
@@ -109,7 +120,8 @@ class CourseController extends Controller
                 'courseHierarchy',
                 'selectedSubjectId',
                 'selectedLevelId',
-                'selectedClassId'
+                'selectedClassId',
+                'selectedSlotCode'
             )
         );
     }
@@ -149,6 +161,11 @@ class CourseController extends Controller
                 'required',
                 'exists:class_rooms,id',
             ],
+            'slot_code' => [
+                'required',
+                'string',
+                'max:20',
+            ],
             'course_link' => [
                 'nullable',
                 'url',
@@ -172,6 +189,8 @@ class CourseController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
+            'slot_code.required' =>
+                'Veuillez sélectionner un créneau.',
         ]);
 
         $subject = Subject::findOrFail(
@@ -237,6 +256,21 @@ class CourseController extends Controller
             ]);
         }
 
+        $slotCode = strtoupper(
+            trim((string) $validated['slot_code'])
+        );
+
+        if (!in_array(
+            $slotCode,
+            $this->slotCodesForClass($classRoom),
+            true
+        )) {
+            throw ValidationException::withMessages([
+                'slot_code' =>
+                    'Ce créneau ne correspond pas à la classe sélectionnée.',
+            ]);
+        }
+
         /*
          * Un professeur ne peut utiliser que ses affectations.
          */
@@ -296,6 +330,7 @@ class CourseController extends Controller
             'subject_id' => $subject->id,
             'level_id' => $level->id,
             'class_id' => $classRoom->id,
+            'slot_code' => $slotCode,
             'video' => $videoPath,
             'pdf' => $pdfPath,
             'course_link' =>
@@ -315,40 +350,130 @@ class CourseController extends Controller
     // ================= EDIT =================
     public function edit($id)
     {
-        $course = Course::findOrFail($id);
+        $course = Course::query()
+            ->with([
+                'subject',
+                'level',
+                'classRoom',
+            ])
+            ->findOrFail($id);
+
         $this->authorizeCourseOwner($course);
-        if (auth()->user()->isAdmin()) {
-            $levels = Level::with('classes')->get();
-            $classes = ClassRoom::with('level')->get();
-            $subjects = Subject::all()->unique('name');
-        } else {
-            $scope = ProfAssignment::where('prof_id', auth()->id())->get();
-            $levels = Level::whereIn('id', $scope->pluck('level_id'))->with('classes')->get();
-            $classes = ClassRoom::whereIn('id', $scope->pluck('class_id'))->with('level')->get();
-            $subjects = Subject::whereIn('id', $scope->pluck('subject_id'))->get();
+
+        $editHierarchy =
+            $this->structure
+                ->hierarchyForAdmin();
+
+        /*
+         * Si l'éditeur est un professeur, limiter le formulaire
+         * aux créneaux qui lui sont réellement affectés.
+         */
+        if (!auth()->user()->isAdmin()) {
+            $allowedSlotIds = ProfAssignment::query()
+                ->where('prof_id', auth()->id())
+                ->whereNotNull('class_slot_id')
+                ->pluck('class_slot_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $editHierarchy = collect($editHierarchy)
+                ->map(function (array $subject) use ($allowedSlotIds) {
+                    $subject['levels'] = collect($subject['levels'])
+                        ->map(function (array $level) use ($allowedSlotIds) {
+                            $level['classes'] = collect($level['classes'])
+                                ->map(function (array $class) use ($allowedSlotIds) {
+                                    $class['slots'] = collect($class['slots'])
+                                        ->filter(
+                                            fn (array $slot) =>
+                                                in_array(
+                                                    (int) $slot['id'],
+                                                    $allowedSlotIds,
+                                                    true
+                                                )
+                                        )
+                                        ->values()
+                                        ->all();
+
+                                    return !empty($class['slots'])
+                                        ? $class
+                                        : null;
+                                })
+                                ->filter()
+                                ->values()
+                                ->all();
+
+                            return !empty($level['classes'])
+                                ? $level
+                                : null;
+                        })
+                        ->filter()
+                        ->values()
+                        ->all();
+
+                    return !empty($subject['levels'])
+                        ? $subject
+                        : null;
+                })
+                ->filter()
+                ->values()
+                ->all();
         }
 
-        $resourceUrls = [];
-        foreach (['video', 'pdf', 'link'] as $type) {
-            $exists = $type === 'video'
-                ? ($course->video || $course->video_url)
-                : ($type === 'pdf' ? $course->pdf : $course->course_link);
-            if ($exists) {
-                $resourceUrls[$type] = URL::temporarySignedRoute(
-                    'course.resource',
-                    now()->addMinutes(10),
-                    ['course' => $course->id, 'type' => $type]
-                );
+        $currentSlot = null;
+
+        if (
+            $course->subject_id
+            && $course->level_id
+            && $course->class_id
+            && trim((string) $course->slot_code) !== ''
+        ) {
+            try {
+                $currentSlot =
+                    $this->structure
+                        ->slotByCodeForPath(
+                            (string) $course->slot_code,
+                            (int) $course->subject_id,
+                            (int) $course->level_id,
+                            (int) $course->class_id
+                        );
+            } catch (ValidationException $exception) {
+                $currentSlot = null;
             }
         }
 
-        return view('admin.courses.edit', compact(
-            'course',
-            'levels',
-            'classes',
-            'subjects',
-            'resourceUrls'
-        ));
+        $resourceUrls = [];
+
+        foreach (['video', 'pdf', 'link'] as $type) {
+            $exists = $type === 'video'
+                ? ($course->video || $course->video_url)
+                : (
+                    $type === 'pdf'
+                        ? $course->pdf
+                        : $course->course_link
+                );
+
+            if ($exists) {
+                $resourceUrls[$type] =
+                    URL::temporarySignedRoute(
+                        'course.resource',
+                        now()->addMinutes(10),
+                        [
+                            'course' => $course->id,
+                            'type' => $type,
+                        ]
+                    );
+            }
+        }
+
+        return view(
+            'admin.courses.edit',
+            compact(
+                'course',
+                'editHierarchy',
+                'currentSlot',
+                'resourceUrls'
+            )
+        );
     }
 
     // ================= UPDATE =================
@@ -387,6 +512,11 @@ class CourseController extends Controller
                 'integer',
                 'exists:subjects,id',
             ],
+            'slot_code' => [
+                'required',
+                'string',
+                'max:20',
+            ],
             'course_link' => [
                 'nullable',
                 'url',
@@ -411,6 +541,8 @@ class CourseController extends Controller
                 'Veuillez sélectionner une classe.',
             'subject_id.required' =>
                 'Veuillez sélectionner une matière.',
+            'slot_code.required' =>
+                'Veuillez sélectionner un créneau.',
             'video.max' =>
                 'La vidéo ne doit pas dépasser 1 Go.',
             'video.mimes' =>
@@ -446,6 +578,51 @@ class CourseController extends Controller
             );
         }
 
+        $slotCode = strtoupper(
+            trim((string) $data['slot_code'])
+        );
+
+        $classSlot =
+            $this->structure
+                ->slotByCodeForPath(
+                    $slotCode,
+                    (int) $subject->id,
+                    (int) $level->id,
+                    (int) $classRoom->id
+                );
+
+        if (!auth()->user()->isAdmin()) {
+            $hasExactAssignment =
+                ProfAssignment::query()
+                    ->where(
+                        'prof_id',
+                        auth()->id()
+                    )
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->where(
+                        'level_id',
+                        $level->id
+                    )
+                    ->where(
+                        'class_id',
+                        $classRoom->id
+                    )
+                    ->where(
+                        'class_slot_id',
+                        $classSlot->id
+                    )
+                    ->exists();
+
+            abort_unless(
+                $hasExactAssignment,
+                403,
+                'Ce créneau ne fait pas partie de vos affectations.'
+            );
+        }
+
         $oldVideoPath = $course->video;
         $oldPdfPath = $course->pdf;
         $newVideoPath = null;
@@ -460,6 +637,7 @@ class CourseController extends Controller
         $data['subject_id'] = $subject->id;
         $data['level_id'] = $level->id;
         $data['class_id'] = $classRoom->id;
+        $data['slot_code'] = $slotCode;
 
         try {
             if ($request->hasFile('video')) {
@@ -578,7 +756,7 @@ class CourseController extends Controller
 
     /**
      * Construit les choix autorisés du formulaire :
-     * Matière → Niveaux → Classes.
+     * Matière → Niveaux → Classes → Créneaux.
      */
     private function buildCourseHierarchy(): array
     {
@@ -595,9 +773,22 @@ class CourseController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            $scheduleGroups = Schedule::query()
+                ->active()
+                ->orderByRaw('COALESCE(day_of_week, 8) asc')
+                ->orderByRaw('TIME(start_time) asc')
+                ->get()
+                ->groupBy(
+                    fn (Schedule $schedule) =>
+                        (int) $schedule->subject_id
+                        . ':' . (int) $schedule->level_id
+                        . ':' . (int) $schedule->class_id
+                        . ':' . strtoupper(trim((string) $schedule->slot_code))
+                );
+
             return $subjects
                 ->map(
-                    function (Subject $subject) use ($levels) {
+                    function (Subject $subject) use ($levels, $scheduleGroups) {
                         $subjectLevels = $levels
                             ->where(
                                 'subject_id',
@@ -640,7 +831,7 @@ class CourseController extends Controller
                             )
                             ->values()
                             ->map(
-                                function (Level $level) use ($subject) {
+                                function (Level $level) use ($subject, $scheduleGroups) {
                                     $classes = $level
                                         ->classes
                                         ->filter(
@@ -655,10 +846,52 @@ class CourseController extends Controller
                                         ->sortBy('name')
                                         ->values()
                                         ->map(
-                                            fn (ClassRoom $classRoom) => [
-                                                'id' => $classRoom->id,
-                                                'name' => $classRoom->name,
-                                            ]
+                                            function (ClassRoom $classRoom) use (
+                                                $subject,
+                                                $level,
+                                                $scheduleGroups
+                                            ) {
+                                                $slots = collect(
+                                                    $this->slotCodesForClass($classRoom)
+                                                )->map(
+                                                    function (string $code) use (
+                                                        $subject,
+                                                        $level,
+                                                        $classRoom,
+                                                        $scheduleGroups
+                                                    ) {
+                                                        $key = (int) $subject->id
+                                                            . ':' . (int) $level->id
+                                                            . ':' . (int) $classRoom->id
+                                                            . ':' . $code;
+
+                                                        $schedules = $scheduleGroups
+                                                            ->get($key, collect());
+
+                                                        $scheduleLabel = $schedules
+                                                            ->map(
+                                                                fn (Schedule $schedule) =>
+                                                                    $schedule->day_label
+                                                                    . ' '
+                                                                    . $schedule->time_range_label
+                                                            )
+                                                            ->implode(' / ');
+
+                                                        return [
+                                                            'code' => $code,
+                                                            'label' => $scheduleLabel !== ''
+                                                                ? $code . ' — ' . $scheduleLabel
+                                                                : $code,
+                                                        ];
+                                                    }
+                                                )->values()->all();
+
+                                                return [
+                                                    'id' => $classRoom->id,
+                                                    'name' => $classRoom->name,
+                                                    'slots' => $slots,
+                                                ];
+                                            }
                                         )
                                         ->all();
 
@@ -800,6 +1033,14 @@ class CourseController extends Controller
                                         fn (ClassRoom $classRoom) => [
                                             'id' => $classRoom->id,
                                             'name' => $classRoom->name,
+                                            'slots' => collect(
+                                                $this->slotCodesForClass($classRoom)
+                                            )->map(
+                                                fn (string $code) => [
+                                                    'code' => $code,
+                                                    'label' => $code,
+                                                ]
+                                            )->values()->all(),
                                         ]
                                     )
                                     ->all();
@@ -832,6 +1073,26 @@ class CourseController extends Controller
             )
             ->filter()
             ->values()
+            ->all();
+    }
+
+    /**
+     * Chaque classe possède quatre créneaux / groupes.
+     */
+    private function slotCodesForClass(
+        ClassRoom $classRoom
+    ): array {
+        $normalized = $this->normalizePathName($classRoom->name);
+
+        $prefix = match (true) {
+            str_contains($normalized, 'debutant') => 'D',
+            str_contains($normalized, 'intermediaire') => 'I',
+            str_contains($normalized, 'avance') => 'A',
+            default => 'G',
+        };
+
+        return collect(range(1, 4))
+            ->map(fn (int $number) => $prefix . $number)
             ->all();
     }
 

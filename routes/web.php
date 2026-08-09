@@ -355,11 +355,6 @@ Route::middleware(['auth','isAdmin'])
         // Soumissions (consultation + évaluation)
         Route::get('/submissions', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'index'])->name('submissions.index');
         Route::get('/submissions/{submission}', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'show'])->name('submissions.show');
-        Route::post(
-            '/submissions/{submission}/professors',
-            [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'assignProfessors']
-        )->name('submissions.professors');
-
         Route::post('/submissions/{submission}/review', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'review'])->name('submissions.review');
         Route::get('/submissions/{submission}/audio', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'audio'])->name('submissions.audio');
         Route::delete('/submissions/{submission}', [\App\Http\Controllers\Admin\VocalTestSubmissionController::class, 'destroy'])->name('submissions.destroy');
@@ -465,24 +460,6 @@ Route::middleware([
 
     Route::get('/assignments', [ProfController::class,'assignments'])
         ->name('assignments');
-
-
-    // Tests de nouveaux étudiants partagés par l'administrateur
-    Route::get(
-        '/vocal-tests',
-        [\App\Http\Controllers\Prof\VocalTestSubmissionController::class, 'index']
-    )->name('vocal-tests.index');
-
-    Route::get(
-        '/vocal-tests/{submission}',
-        [\App\Http\Controllers\Prof\VocalTestSubmissionController::class, 'show']
-    )->name('vocal-tests.show');
-
-    Route::get(
-        '/vocal-tests/{submission}/audio',
-        [\App\Http\Controllers\Prof\VocalTestSubmissionController::class, 'audio']
-    )->name('vocal-tests.audio');
-
 
     Route::post('/grade', [ProfController::class,'grade'])
         ->name('grade');
@@ -593,8 +570,13 @@ Route::middleware(['auth', 'active'])
 
     Route::get('/dashboard', [StudentController::class, 'dashboard'])->name('dashboard');
 
-    Route::get('/planning', [StudentScheduleController::class, 'index'])
-        ->name('schedule.index');
+    /* L'emploi du temps est intégré à l'interface Lives. */
+    Route::get('/planning', function () {
+        return redirect()->route(
+            'student.lives',
+            request()->query()
+        );
+    })->name('schedule.index');
     Route::get(
         '/lives',
         [StudentController::class, 'lives']

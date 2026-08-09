@@ -8,9 +8,19 @@ use App\Models\Assignment;
 use App\Models\ClassRoom;
 use App\Models\Course;
 use Illuminate\Support\Facades\Storage;
+use App\Services\PedagogicalStructureService;
+use Illuminate\Validation\ValidationException;
 
 class DevoirController extends Controller
 {
+    private PedagogicalStructureService $structure;
+
+    public function __construct(
+        PedagogicalStructureService $structure
+    ) {
+        $this->structure = $structure;
+    }
+
     public function index(Request $request)
     {
         $course_id = $request->course_id;
@@ -74,35 +84,213 @@ class DevoirController extends Controller
 
     public function edit(Assignment $devoir)
     {
-        $classes = ClassRoom::all();
-        return view('admin.devoirs.edit', compact('devoir', 'classes'));
+        $devoir->load([
+            'course',
+            'subject',
+            'classSlot.subject',
+            'classSlot.level',
+            'classSlot.classRoom',
+        ]);
+
+        $editHierarchy =
+            $this->structure
+                ->hierarchyForAdmin();
+
+        $courses = Course::query()
+            ->whereNotNull('slot_code')
+            ->where('slot_code', '!=', '')
+            ->orderBy('title')
+            ->get();
+
+        return view(
+            'admin.devoirs.edit',
+            [
+                'devoir' => $devoir,
+                'courses' => $courses,
+                'editHierarchy' =>
+                    $editHierarchy,
+                'selectedSubjectId' =>
+                    old(
+                        'subject_id',
+                        $devoir
+                            ->classSlot
+                            ?->subject_id
+                        ?? $devoir->subject_id
+                        ?? $devoir
+                            ->course
+                            ?->subject_id
+                    ),
+                'selectedLevelId' =>
+                    old(
+                        'level_id',
+                        $devoir
+                            ->classSlot
+                            ?->level_id
+                        ?? $devoir
+                            ->course
+                            ?->level_id
+                    ),
+                'selectedClassId' =>
+                    old(
+                        'class_id',
+                        $devoir
+                            ->classSlot
+                            ?->class_id
+                        ?? $devoir
+                            ->class_room_id
+                        ?? $devoir
+                            ->course
+                            ?->class_id
+                    ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $devoir->class_slot_id
+                    ),
+            ]
+        );
     }
 
-    public function update(Request $request, Assignment $devoir)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'class_room_id' => 'required|exists:class_rooms,id',
-            'due_date' => 'required|date',
-            'file' => 'nullable|file|mimes:pdf|max:5120',
+    public function update(
+        Request $request,
+        Assignment $devoir
+    ) {
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
+            'course_id' => [
+                'nullable',
+                'integer',
+                'exists:courses,id',
+            ],
+            'due_date' => [
+                'required',
+                'date',
+            ],
+            'file' => [
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:5120',
+            ],
         ]);
+
+        $slot =
+            $this->structure
+                ->slotForPath(
+                    (int) $validated['class_slot_id'],
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
+                );
+
+        $course = null;
+
+        if (!empty($validated['course_id'])) {
+            $course = Course::query()
+                ->findOrFail(
+                    (int) $validated['course_id']
+                );
+
+            if (
+                !$this->structure
+                    ->courseMatchesSlot(
+                        $course,
+                        $slot
+                    )
+            ) {
+                throw ValidationException::withMessages([
+                    'course_id' =>
+                        'Le cours sélectionné ne correspond pas '
+                        . 'au créneau '
+                        . $slot->code
+                        . '.',
+                ]);
+            }
+        }
 
         if ($request->hasFile('file')) {
             if ($devoir->file) {
-                Storage::disk('public')->delete($devoir->file);
+                Storage::disk('public')
+                    ->delete(
+                        $devoir->file
+                    );
             }
-            $devoir->file = $request->file('file')->store('assignments', 'public');
+
+            $devoir->file =
+                $request
+                    ->file('file')
+                    ->store(
+                        'assignments',
+                        'public'
+                    );
         }
 
-        $devoir->update([
-            'title' => $request->title,
-            'description' => $request->description,
-            'due_date' => $request->due_date,
-            'class_room_id' => $request->class_room_id,
-        ]);
+        $devoir->title =
+            $validated['title'];
 
-        return redirect()->route('admin.devoirs.index', ['course_id' => $devoir->course_id])->with('success', 'Devoir mis à jour!');
+        $devoir->description =
+            $validated['description']
+            ?? null;
+
+        $devoir->due_date =
+            $validated['due_date'];
+
+        $devoir->subject_id =
+            $slot->subject_id;
+
+        $devoir->class_room_id =
+            $slot->class_id;
+
+        $devoir->class_slot_id =
+            $slot->id;
+
+        $devoir->course_id =
+            $course?->id;
+
+        $devoir->save();
+
+        return redirect()
+            ->route(
+                'admin.devoirs.index',
+                [
+                    'course_id' =>
+                        $devoir->course_id,
+                ]
+            )
+            ->with(
+                'success',
+                'Devoir mis à jour pour le créneau '
+                . $slot->code
+                . '.'
+            );
     }
 
     public function destroy(Assignment $devoir)

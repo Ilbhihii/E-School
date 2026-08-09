@@ -2,7 +2,7 @@
 
 @section('title', 'Cours — ' . $subject->name)
 @section('page_title', 'Cours de ' . $subject->name)
-@section('breadcrumb', 'Matières / Cours')
+@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Cours')
 
 @push('styles')
     <link
@@ -50,7 +50,7 @@
 <div class="student-learning-page">
 
     <a
-        href="{{ route('student.subjects.index') }}"
+        href="{{ route('student.subjects.index', ['subject_id' => $subject->id, 'level_id' => $level->id, 'class_id' => $class->id, 'class_slot_id' => $classSlot->id]) }}"
         class="learning-back-link"
     >
         <i class="bi bi-arrow-left"></i>
@@ -80,6 +80,13 @@
                 <span>
                     <i class="bi bi-building-fill"></i>
                     {{ $class->name }}
+                </span>
+
+                <i class="bi bi-chevron-right"></i>
+
+                <span>
+                    <i class="bi bi-clock-fill"></i>
+                    {{ $classSlot->code }}
                 </span>
             </div>
         </div>

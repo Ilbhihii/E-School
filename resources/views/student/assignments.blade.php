@@ -2,7 +2,7 @@
 
 @section('title', 'Mes devoirs')
 @section('page_title', 'Mes devoirs')
-@section('breadcrumb', 'Devoirs')
+@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Devoirs')
 
 @push('styles')
     <link
@@ -196,10 +196,14 @@
                             <div class="sp-assignment-meta">
                                 <span>
                                     <i class="bi bi-person-fill"></i>
-                                    {{
-                                        $assignment->user?->name
-                                        ?? 'Professeur'
-                                    }}
+                                    {{ $assignment->user?->name ?? 'Professeur' }}
+                                </span>
+                                <span>
+                                    <i class="bi bi-diagram-3-fill"></i>
+                                    {{ $assignment->subject?->name ?? $assignment->course?->subject?->name ?? 'Matière' }}
+                                    → {{ $assignment->resolved_level_name ?? $assignment->course?->level?->name ?? 'Niveau' }}
+                                    → {{ $assignment->resolved_class_name ?? $assignment->course?->classRoom?->name ?? 'Classe' }}
+                                    → {{ $assignment->resolved_slot_code ?? $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Créneau' }}
                                 </span>
 
                                 <span class="{{ $isOverdue ? 'late' : '' }}">
@@ -293,7 +297,7 @@
 
                     <p>
                         Ajoutez un titre, puis choisissez
-                        Matière → Niveau → Classe avant
+                        Matière → Niveau → Classe → Créneau avant
                         d’importer votre fichier.
                     </p>
                 </div>
@@ -329,7 +333,7 @@
                     <i class="bi bi-exclamation-triangle-fill"></i>
 
                     <span>
-                        Aucun parcours Matière → Niveau → Classe
+                        Aucun parcours Matière → Niveau → Classe → Créneau
                         n’est assigné à votre compte.
                     </span>
                 </div>
@@ -485,6 +489,17 @@
                         </small>
                     @enderror
                 </div>
+
+                <div class="sp-field">
+                    <label for="assignmentSlot">Créneau</label>
+                    <div class="sp-select-wrap">
+                        <i class="bi bi-clock-fill"></i>
+                        <select name="class_slot_id" id="assignmentSlot" required disabled>
+                            <option value="">Choisissez d’abord une classe</option>
+                        </select>
+                    </div>
+                    @error('class_slot_id')<small class="sp-field-error">{{ $message }}</small>@enderror
+                </div>
             </div>
 
             <div
@@ -503,6 +518,8 @@
                     <span id="assignmentPathLevel">—</span>
                     <i class="bi bi-chevron-right"></i>
                     <span id="assignmentPathClass">—</span>
+                    <i class="bi bi-chevron-right"></i>
+                    <span id="assignmentPathSlot">—</span>
                 </strong>
             </div>
 
@@ -583,6 +600,7 @@
                         <tr>
                             <th>Devoir</th>
                             <th>Matière</th>
+                            <th>Parcours</th>
                             <th>Date d’envoi</th>
                             <th>Fichier</th>
                             <th>Correction</th>
@@ -624,10 +642,13 @@
                                 </td>
 
                                 <td data-label="Matière">
-                                    {{
-                                        $assignmentSubject?->name
-                                        ?? 'Non définie'
-                                    }}
+                                    {{ $assignmentSubject?->name ?? 'Non définie' }}
+                                </td>
+
+                                <td data-label="Parcours">
+                                    {{ $assignment->course?->level?->name ?? 'Niveau' }}
+                                    → {{ $assignment->course?->classRoom?->name ?? 'Classe' }}
+                                    → {{ $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Créneau' }}
                                 </td>
 
                                 <td data-label="Date d’envoi">
@@ -734,17 +755,12 @@
 window.studentAssignmentPathData = {
     levelsBySubject: @json($levelsBySubject),
     classesBySubjectLevel: @json($classesBySubjectLevel),
-    selectedSubjectId: @json(
-        (string) $defaultSubjectId
-    ),
-    selectedLevelId: @json(
-        (string) old('level_id')
-    ),
-    selectedClassId: @json(
-        (string) old('class_id')
-    )
+    slotsByPath: @json($slotsByPath),
+    selectedSubjectId: @json((string) $defaultSubjectId),
+    selectedLevelId: @json((string) old('level_id')),
+    selectedClassId: @json((string) old('class_id')),
+    selectedSlotId: @json((string) old('class_slot_id'))
 };
 </script>
-
-<script src="{{ asset('js/student-assignments-path-v9-1.js?v=9.1') }}"></script>
+<script src="{{ asset('js/student-assignments-path-v10.js?v=10') }}"></script>
 @endpush

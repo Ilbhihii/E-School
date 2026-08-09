@@ -2,7 +2,7 @@
 
 @section('title', 'Créer un live')
 @section('page_title', 'Nouveau live')
-@section('breadcrumb', 'Matière → Niveau → Classe → Live')
+@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Live')
 
 @section('content')
 <div class="row justify-content-center">
@@ -94,6 +94,29 @@
                                             D'abord choisir un niveau
                                         </option>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-12">
+                                <div class="adm-form-group" style="margin-bottom:0;">
+                                    <label class="adm-form-label" style="font-size:0.75rem;">
+                                        Créneau / groupe
+                                    </label>
+                                    <select
+                                        id="outlook_class_slot_id"
+                                        class="adm-form-select"
+                                        style="font-size:0.85rem;"
+                                        disabled
+                                    >
+                                        <option value="">
+                                            D'abord choisir une classe
+                                        </option>
+                                    </select>
+                                    <small style="display:block;margin-top:6px;color:#64748B;font-size:0.7rem;">
+                                        Débutant → D1/D2/D3/D4 · Intermédiaire → I1/I2/I3/I4 · Avancé → A1/A2/A3/A4.
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -268,6 +291,29 @@
                         </div>
 
                         <div class="adm-form-group">
+                            <label class="adm-form-label">
+                                Créneau / groupe
+                            </label>
+                            <select
+                                name="class_slot_id"
+                                id="manual_class_slot_id"
+                                class="adm-form-select @error('class_slot_id') error @enderror"
+                                disabled
+                                required
+                            >
+                                <option value="">
+                                    D'abord choisir une classe
+                                </option>
+                            </select>
+                            <small style="display:block;margin-top:6px;color:#64748B;font-size:0.7rem;">
+                                Créneau structurel indépendant de l'emploi du temps.
+                            </small>
+                            @error('class_slot_id')
+                                <div class="adm-form-error">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="adm-form-group">
                             <label class="adm-form-label">Lien de la réunion <span style="color:#EF4444;font-size:0.7rem;font-weight:400;">(obligatoire)</span></label>
                             <input type="url" name="stream_url" value="{{ old('stream_url') }}" class="adm-form-control @error('stream_url') error @enderror" placeholder="https://meet.google.com/xxx-xxxx-xxx">
                             <div style="font-size:0.7rem;color:#64748B;margin-top:0.35rem;">
@@ -339,7 +385,7 @@
                             <thead>
                                 <tr>
                                     <th>Titre</th>
-                                    <th>Classe</th>
+                                    <th>Parcours</th>
                                     <th>Date</th>
                                     <th>Horaire</th>
                                     <th>Lien de réunion</th>
@@ -351,11 +397,19 @@
                                 <tr>
                                     <td><span style="font-weight:500;">{{ $live->title }}</span></td>
                                     <td>
-                                        @if($live->classRoom)
+                                        @if($live->classSlot)
+                                            <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+                                                <span class="adm-badge adm-badge-primary">{{ $live->classSlot->subject?->name ?? '—' }}</span>
+                                                <span style="color:#64748B;">→</span>
+                                                <span class="adm-badge">{{ $live->classSlot->level?->name ?? '—' }}</span>
+                                                <span style="color:#64748B;">→</span>
+                                                <span class="adm-badge adm-badge-danger">{{ $live->classSlot->classRoom?->name ?? '—' }}</span>
+                                                <span style="color:#64748B;">→</span>
+                                                <span class="adm-badge adm-badge-warning">{{ $live->classSlot->code }}</span>
+                                            </div>
+                                        @elseif($live->classRoom)
                                             <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name }}</span>
-                                            @if($live->classRoom->level)
-                                                <span style="color:var(--adm-text-muted);font-size:0.7rem;margin-left:4px;">({{ $live->classRoom->level->name }})</span>
-                                            @endif
+                                            <small style="display:block;color:#64748B;margin-top:4px;">Ancien live sans créneau</small>
                                         @else
                                             <span style="color:var(--adm-text-muted);">—</span>
                                         @endif
@@ -425,6 +479,10 @@ document.addEventListener('DOMContentLoaded', () => {
         (string) old('class_id', '')
     );
 
+    const initialClassSlotId = @json(
+        (string) old('class_slot_id', '')
+    );
+
     const prefixes = [
         'outlook',
         'manual',
@@ -449,6 +507,22 @@ document.addEventListener('DOMContentLoaded', () => {
             level =>
                 String(level.id)
                 === String(levelId)
+        );
+    };
+
+    const findClass = (
+        subject,
+        level,
+        classId
+    ) => {
+        if (!subject || !level) {
+            return null;
+        }
+
+        return level.classes.find(
+            classRoom =>
+                String(classRoom.id)
+                === String(classId)
         );
     };
 
@@ -491,15 +565,69 @@ document.addEventListener('DOMContentLoaded', () => {
         select.value = '';
     };
 
+    const populateSlots = (
+        prefix,
+        subject,
+        levelId,
+        classId,
+        selectedSlotId = ''
+    ) => {
+        const slotSelect =
+            document.getElementById(
+                `${prefix}_class_slot_id`
+            );
+
+        const level = findLevel(subject, levelId);
+        const classRoom = findClass(
+            subject,
+            level,
+            classId
+        );
+
+        resetSelect(
+            slotSelect,
+            classRoom
+                ? 'Choisir un créneau...'
+                : 'D’abord choisir une classe',
+            !classRoom
+        );
+
+        if (!classRoom || !slotSelect) {
+            return;
+        }
+
+        (classRoom.slots || []).forEach(slot => {
+            slotSelect.appendChild(
+                createOption(
+                    slot.id,
+                    slot.code,
+                    selectedSlotId
+                )
+            );
+        });
+
+        slotSelect.disabled = false;
+
+        if (selectedSlotId) {
+            slotSelect.value = String(selectedSlotId);
+        }
+    };
+
     const populateClasses = (
         prefix,
         subject,
         levelId,
-        selectedClassId = ''
+        selectedClassId = '',
+        selectedSlotId = ''
     ) => {
         const classSelect =
             document.getElementById(
                 `${prefix}_class_id`
+            );
+
+        const slotSelect =
+            document.getElementById(
+                `${prefix}_class_slot_id`
             );
 
         const level = findLevel(
@@ -513,6 +641,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? 'Choisir une classe...'
                 : 'D’abord choisir un niveau',
             !level
+        );
+
+        resetSelect(
+            slotSelect,
+            'D’abord choisir une classe',
+            true
         );
 
         if (!level || !classSelect) {
@@ -534,6 +668,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClassId) {
             classSelect.value =
                 String(selectedClassId);
+
+            populateSlots(
+                prefix,
+                subject,
+                levelId,
+                selectedClassId,
+                selectedSlotId
+            );
         }
     };
 
@@ -541,7 +683,8 @@ document.addEventListener('DOMContentLoaded', () => {
         prefix,
         subjectId,
         selectedLevelId = '',
-        selectedClassId = ''
+        selectedClassId = '',
+        selectedSlotId = ''
     ) => {
         const levelSelect =
             document.getElementById(
@@ -551,6 +694,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const classSelect =
             document.getElementById(
                 `${prefix}_class_id`
+            );
+
+        const slotSelect =
+            document.getElementById(
+                `${prefix}_class_slot_id`
             );
 
         const subject = findSubject(
@@ -568,6 +716,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resetSelect(
             classSelect,
             'D’abord choisir un niveau',
+            true
+        );
+
+        resetSelect(
+            slotSelect,
+            'D’abord choisir une classe',
             true
         );
 
@@ -595,7 +749,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 prefix,
                 subject,
                 selectedLevelId,
-                selectedClassId
+                selectedClassId,
+                selectedSlotId
             );
         }
     };
@@ -621,6 +776,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 'outlook_class_id'
             );
 
+        const outlookSlot =
+            document.getElementById(
+                'outlook_class_slot_id'
+            );
+
         if (
             manualSubject
             && outlookSubject
@@ -632,7 +792,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 'manual',
                 outlookSubject.value,
                 outlookLevel?.value ?? '',
-                outlookClass?.value ?? ''
+                outlookClass?.value ?? '',
+                outlookSlot?.value ?? ''
             );
         }
     };
@@ -728,6 +889,9 @@ document.addEventListener('DOMContentLoaded', () => {
             )?.value
             && document.getElementById(
                 'outlook_class_id'
+            )?.value
+            && document.getElementById(
+                'outlook_class_slot_id'
             )?.value
             && document.getElementById(
                 'outlook_date'
@@ -828,7 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         + '<i class="bi bi-check-circle me-1"></i>'
                         + 'Créez la réunion puis collez son lien'
                         + '</span>'
-                    : 'Remplissez Matière → Niveau → Classe, '
+                    : 'Remplissez Matière → Niveau → Classe → Créneau, '
                         + 'titre, date et heures';
         }
     };
@@ -847,6 +1011,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const classSelect =
             document.getElementById(
                 `${prefix}_class_id`
+            );
+
+        const slotSelect =
+            document.getElementById(
+                `${prefix}_class_slot_id`
             );
 
         subjectSelect?.addEventListener(
@@ -881,6 +1050,22 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         classSelect?.addEventListener(
+            'change',
+            () => {
+                populateSlots(
+                    prefix,
+                    findSubject(subjectSelect?.value),
+                    levelSelect?.value ?? '',
+                    classSelect.value
+                );
+
+                if (prefix === 'outlook') {
+                    syncFields();
+                }
+            }
+        );
+
+        slotSelect?.addEventListener(
             'change',
             () => {
                 if (prefix === 'outlook') {
@@ -932,7 +1117,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 prefix,
                 initialSubjectId,
                 initialLevelId,
-                initialClassId
+                initialClassId,
+                initialClassSlotId
             );
         } else {
             populateLevels(

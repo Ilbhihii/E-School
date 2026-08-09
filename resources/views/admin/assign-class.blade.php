@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation étudiants')
 @section(
     'breadcrumb',
-    'Étudiants → Matière → Niveau → Classe'
+    'Étudiants → Matière → Niveau → Classe → Créneau'
 )
 
 @section('content')
@@ -20,8 +20,8 @@
         </h1>
 
         <div class="subtitle">
-            Choisissez la matière, puis son niveau,
-            puis la classe appartenant à ce niveau.
+            Choisissez la matière, le niveau et la classe.
+            Le créneau est généré automatiquement depuis la structure Matière → Niveau → Classe. Aucun emploi du temps n’est nécessaire pour assigner l’étudiant.
         </div>
     </div>
 </div>
@@ -67,7 +67,7 @@
                     </h4>
 
                     <p class="assignment-card-subtitle">
-                        Matière → Niveau → Classe
+                        Matière → Niveau → Classe → Créneau
                     </p>
                 </div>
             </div>
@@ -150,6 +150,12 @@
 
                             <span id="studentPathClass">
                                 Classe
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                            <span id="studentPathSchedule">
+                                Créneau
                             </span>
                         </div>
 
@@ -289,6 +295,61 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="assignment-step assignment-slot-step">
+                            <span class="assignment-step-number">
+                                4
+                            </span>
+
+                            <div class="adm-form-group mb-0">
+                                <label
+                                    class="adm-form-label"
+                                    for="assignment_class_slot_id"
+                                >
+                                    Créneau / groupe
+                                    <span class="assignment-required">*</span>
+                                </label>
+
+                                <select
+                                    name="class_slot_id"
+                                    id="assignment_class_slot_id"
+                                    class="adm-form-select
+                                        @error('class_slot_id') error @enderror"
+                                    disabled
+                                    required
+                                >
+                                    <option value="">
+                                        Choisissez d’abord une classe
+                                    </option>
+                                </select>
+
+                                <div
+                                    class="assignment-slot-preview"
+                                    id="assignmentSlotPreview"
+                                    hidden
+                                >
+                                    <span>
+                                        <i class="bi bi-grid-1x2-fill"></i>
+                                        Groupe sélectionné :
+                                        <strong id="assignmentSlotCode">—</strong>
+                                    </span>
+                                </div>
+
+                                <small class="assignment-help">
+                                    Ces créneaux sont créés avec la classe :
+                                    Débutant → D1 à D4,
+                                    Intermédiaire → I1 à I4,
+                                    Avancé → A1 à A4.
+                                    Ils existent même si aucun horaire n’est encore défini.
+                                </small>
+
+                                @error('class_slot_id')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
 
                     <button
@@ -334,6 +395,7 @@
                                 <th>Matière</th>
                                 <th>Niveau</th>
                                 <th>Classe</th>
+                                <th>Créneau</th>
                                 <th style="text-align:right;">
                                     Actions
                                 </th>
@@ -390,6 +452,21 @@
                                         </span>
                                     </td>
 
+                                    <td>
+                                        @if($assignment->class_slot_id)
+                                            <span
+                                                class="assignment-structural-slot"
+                                            >
+                                                <i class="bi bi-grid-1x2-fill"></i>
+                                                {{ $assignment->slot_code }}
+                                            </span>
+                                        @else
+                                            <span class="assignment-slot-missing">
+                                                Créneau non défini
+                                            </span>
+                                        @endif
+                                    </td>
+
                                     <td style="text-align:right;">
                                         <div class="assignment-actions">
                                             <button
@@ -402,6 +479,7 @@
                                                     {{ $assignment->subject_id ?: 'null' }},
                                                     {{ $assignment->level_id ?: 'null' }},
                                                     {{ $assignment->class_id }},
+                                                    {{ $assignment->class_slot_id ?: 'null' }},
                                                     {{ $assignment->pivot_id }}
                                                 )"
                                             >
@@ -446,7 +524,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5">
+                                    <td colspan="6">
                                         <div class="adm-empty">
                                             <div
                                                 class="adm-empty-icon"
@@ -611,6 +689,31 @@
                         </option>
                     </select>
                 </div>
+
+                <div class="adm-form-group">
+                    <label
+                        class="adm-form-label"
+                        for="edit_assignment_class_slot_id"
+                    >
+                        Créneau
+                    </label>
+
+                    <select
+                        name="class_slot_id"
+                        id="edit_assignment_class_slot_id"
+                        class="adm-form-select"
+                        disabled
+                        required
+                    >
+                        <option value="">
+                            Choisissez d’abord une classe
+                        </option>
+                    </select>
+
+                    <small class="assignment-help">
+                        Créneau structurel de la classe. Il ne dépend pas encore du jour ni de l’heure.
+                    </small>
+                </div>
             </div>
 
             <div class="adm-modal-footer">
@@ -739,6 +842,116 @@
 .assignment-actions form {
     margin: 0;
 }
+
+.assignment-slot-step {
+    border-color: rgba(34,197,94,0.14);
+    background: rgba(34,197,94,0.035);
+}
+
+.assignment-slot-preview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 8px;
+}
+
+.assignment-slot-preview[hidden] {
+    display: none;
+}
+
+.assignment-slot-preview span {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    color: #94A3B8;
+    border: 1px solid rgba(148,163,184,0.10);
+    border-radius: 9px;
+    background: rgba(255,255,255,0.025);
+    font-size: 0.58rem;
+}
+
+.assignment-slot-preview span i {
+    color: #60A5FA;
+}
+
+.assignment-slot-preview strong {
+    overflow: hidden;
+    color: #E2E8F0;
+    font-size: 0.59rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assignment-table-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+
+.assignment-table-slot strong,
+.assignment-table-slot span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.assignment-table-slot strong {
+    color: #BFDBFE;
+    font-size: 0.64rem;
+}
+
+.assignment-table-slot span {
+    color: #E2E8F0;
+    font-size: 0.62rem;
+}
+
+.assignment-table-slot small {
+    color: #64748B;
+    font-size: 0.54rem;
+}
+
+.assignment-slot-missing {
+    display: inline-flex;
+    padding: 4px 7px;
+    color: #FBBF24;
+    border-radius: 8px;
+    background: rgba(245,158,11,0.08);
+    font-size: 0.56rem;
+    font-weight: 750;
+}
+
+.assignment-help a {
+    color: #93C5FD;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+@media (max-width: 720px) {
+    .assignment-slot-preview {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+.assignment-structural-slot {
+    display: inline-flex;
+    min-width: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    color: #DBEAFE;
+    border: 1px solid rgba(96,165,250,0.20);
+    border-radius: 10px;
+    background: rgba(37,99,235,0.10);
+    font-size: 0.64rem;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+}
+
 </style>
 
 <script>
@@ -748,16 +961,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const createOption = (
         value,
         label,
-        selectedValue = ''
+        selectedValue = '',
+        dataset = {}
     ) => {
-        const option =
-            document.createElement('option');
+        const option = document.createElement('option');
 
         option.value = String(value);
         option.textContent = label;
         option.selected =
-            String(value)
-            === String(selectedValue);
+            String(value) === String(selectedValue);
+
+        Object.entries(dataset).forEach(([key, value]) => {
+            option.dataset[key] = value ?? '';
+        });
 
         return option;
     };
@@ -765,22 +981,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const findSubject = subjectId =>
         hierarchy.find(
             subject =>
-                String(subject.id)
-                === String(subjectId)
+                String(subject.id) === String(subjectId)
         );
 
-    const findLevel = (
-        subject,
-        levelId
-    ) => {
+    const findLevel = (subject, levelId) => {
         if (!subject) {
             return null;
         }
 
         return subject.levels.find(
             level =>
-                String(level.id)
-                === String(levelId)
+                String(level.id) === String(levelId)
+        );
+    };
+
+    const findClass = (
+        subject,
+        level,
+        classId
+    ) => {
+        if (!subject || !level) {
+            return null;
+        }
+
+        return level.classes.find(
+            classRoom =>
+                String(classRoom.id) === String(classId)
         );
     };
 
@@ -796,20 +1022,75 @@ document.addEventListener('DOMContentLoaded', () => {
         select.disabled = disabled;
     };
 
+    const fillSlots = (
+        subjectSelect,
+        levelSelect,
+        classSelect,
+        scheduleSelect,
+        selectedScheduleId = ''
+    ) => {
+        const subject = findSubject(subjectSelect.value);
+        const level = findLevel(subject, levelSelect.value);
+        const classRoom = findClass(
+            subject,
+            level,
+            classSelect.value
+        );
+
+        resetSelect(
+            scheduleSelect,
+            classRoom
+                ? 'Sélectionner un créneau'
+                : 'Choisissez d’abord une classe',
+            !classRoom
+        );
+
+        if (!classRoom) {
+            return;
+        }
+
+        const slots = classRoom.slots || [];
+
+        if (slots.length === 0) {
+            resetSelect(
+                scheduleSelect,
+                'Aucun créneau généré pour cette classe',
+                true
+            );
+
+            return;
+        }
+
+        slots.forEach(slot => {
+            scheduleSelect.appendChild(
+                createOption(
+                    slot.id,
+                    slot.code || slot.name,
+                    selectedScheduleId,
+                    {
+                        code: slot.code || slot.name,
+                    }
+                )
+            );
+        });
+
+        scheduleSelect.disabled = false;
+        scheduleSelect.value =
+            selectedScheduleId
+                ? String(selectedScheduleId)
+                : '';
+    };
+
     const fillClasses = (
         subjectSelect,
         levelSelect,
         classSelect,
-        selectedClassId = ''
+        scheduleSelect,
+        selectedClassId = '',
+        selectedScheduleId = ''
     ) => {
-        const subject = findSubject(
-            subjectSelect.value
-        );
-
-        const level = findLevel(
-            subject,
-            levelSelect.value
-        );
+        const subject = findSubject(subjectSelect.value);
+        const level = findLevel(subject, levelSelect.value);
 
         resetSelect(
             classSelect,
@@ -817,6 +1098,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? 'Sélectionner une classe'
                 : 'Choisissez d’abord un niveau',
             !level
+        );
+
+        resetSelect(
+            scheduleSelect,
+            'Choisissez d’abord une classe',
+            true
         );
 
         if (!level) {
@@ -838,18 +1125,28 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedClassId
                 ? String(selectedClassId)
                 : '';
+
+        if (selectedClassId) {
+            fillSlots(
+                subjectSelect,
+                levelSelect,
+                classSelect,
+                scheduleSelect,
+                selectedScheduleId
+            );
+        }
     };
 
     const fillLevels = (
         subjectSelect,
         levelSelect,
         classSelect,
+        scheduleSelect,
         selectedLevelId = '',
-        selectedClassId = ''
+        selectedClassId = '',
+        selectedScheduleId = ''
     ) => {
-        const subject = findSubject(
-            subjectSelect.value
-        );
+        const subject = findSubject(subjectSelect.value);
 
         resetSelect(
             levelSelect,
@@ -862,6 +1159,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resetSelect(
             classSelect,
             'Choisissez d’abord un niveau',
+            true
+        );
+
+        resetSelect(
+            scheduleSelect,
+            'Choisissez d’abord une classe',
             true
         );
 
@@ -882,53 +1185,76 @@ document.addEventListener('DOMContentLoaded', () => {
         levelSelect.disabled = false;
 
         if (selectedLevelId) {
-            levelSelect.value =
-                String(selectedLevelId);
+            levelSelect.value = String(selectedLevelId);
 
             fillClasses(
                 subjectSelect,
                 levelSelect,
                 classSelect,
-                selectedClassId
+                scheduleSelect,
+                selectedClassId,
+                selectedScheduleId
             );
         }
     };
 
     const mainSubject =
-        document.getElementById(
-            'assignment_subject_id'
-        );
+        document.getElementById('assignment_subject_id');
 
     const mainLevel =
-        document.getElementById(
-            'assignment_level_id'
-        );
+        document.getElementById('assignment_level_id');
 
     const mainClass =
-        document.getElementById(
-            'assignment_class_id'
-        );
+        document.getElementById('assignment_class_id');
+
+    const mainSchedule =
+        document.getElementById('assignment_class_slot_id');
 
     const pathSubject =
-        document.getElementById(
-            'studentPathSubject'
-        );
+        document.getElementById('studentPathSubject');
 
     const pathLevel =
-        document.getElementById(
-            'studentPathLevel'
-        );
+        document.getElementById('studentPathLevel');
 
     const pathClass =
-        document.getElementById(
-            'studentPathClass'
-        );
+        document.getElementById('studentPathClass');
+
+    const pathSchedule =
+        document.getElementById('studentPathSchedule');
+
+    const slotPreview =
+        document.getElementById('assignmentSlotPreview');
+
+    const slotCode =
+        document.getElementById('assignmentSlotCode');
+
+    const updateSlotPreview = () => {
+        const option =
+            mainSchedule.options[
+                mainSchedule.selectedIndex
+            ];
+
+        const hasSlot = Boolean(mainSchedule.value);
+
+        slotPreview.hidden = !hasSlot;
+
+        if (!hasSlot || !option) {
+            slotCode.textContent = '—';
+            return;
+        }
+
+        slotCode.textContent =
+            option.dataset.code
+            || option.textContent
+            || '—';
+    };
 
     const updatePath = () => {
         const values = [
             [mainSubject, pathSubject, 'Matière'],
             [mainLevel, pathLevel, 'Niveau'],
             [mainClass, pathClass, 'Classe'],
+            [mainSchedule, pathSchedule, 'Créneau'],
         ];
 
         values.forEach(
@@ -946,35 +1272,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
         );
+
+        updateSlotPreview();
     };
 
-    mainSubject.addEventListener(
-        'change',
-        () => {
-            fillLevels(
-                mainSubject,
-                mainLevel,
-                mainClass
-            );
+    mainSubject.addEventListener('change', () => {
+        fillLevels(
+            mainSubject,
+            mainLevel,
+            mainClass,
+            mainSchedule
+        );
 
-            updatePath();
-        }
-    );
+        updatePath();
+    });
 
-    mainLevel.addEventListener(
-        'change',
-        () => {
-            fillClasses(
-                mainSubject,
-                mainLevel,
-                mainClass
-            );
+    mainLevel.addEventListener('change', () => {
+        fillClasses(
+            mainSubject,
+            mainLevel,
+            mainClass,
+            mainSchedule
+        );
 
-            updatePath();
-        }
-    );
+        updatePath();
+    });
 
-    mainClass.addEventListener(
+    mainClass.addEventListener('change', () => {
+        fillSlots(
+            mainSubject,
+            mainLevel,
+            mainClass,
+            mainSchedule
+        );
+
+        updatePath();
+    });
+
+    mainSchedule.addEventListener(
         'change',
         updatePath
     );
@@ -991,63 +1326,71 @@ document.addEventListener('DOMContentLoaded', () => {
         (string) old('class_id', '')
     );
 
+    const oldScheduleId = @json(
+        (string) old('class_slot_id', '')
+    );
+
     if (oldSubjectId) {
-        mainSubject.value =
-            oldSubjectId;
+        mainSubject.value = oldSubjectId;
 
         fillLevels(
             mainSubject,
             mainLevel,
             mainClass,
+            mainSchedule,
             oldLevelId,
-            oldClassId
+            oldClassId,
+            oldScheduleId
         );
     }
 
     updatePath();
 
     const editSubject =
-        document.getElementById(
-            'edit_assignment_subject_id'
-        );
+        document.getElementById('edit_assignment_subject_id');
 
     const editLevel =
-        document.getElementById(
-            'edit_assignment_level_id'
-        );
+        document.getElementById('edit_assignment_level_id');
 
     const editClass =
-        document.getElementById(
-            'edit_assignment_class_id'
+        document.getElementById('edit_assignment_class_id');
+
+    const editSchedule =
+        document.getElementById('edit_assignment_class_slot_id');
+
+    editSubject.addEventListener('change', () => {
+        fillLevels(
+            editSubject,
+            editLevel,
+            editClass,
+            editSchedule
         );
+    });
 
-    editSubject.addEventListener(
-        'change',
-        () => {
-            fillLevels(
-                editSubject,
-                editLevel,
-                editClass
-            );
-        }
-    );
+    editLevel.addEventListener('change', () => {
+        fillClasses(
+            editSubject,
+            editLevel,
+            editClass,
+            editSchedule
+        );
+    });
 
-    editLevel.addEventListener(
-        'change',
-        () => {
-            fillClasses(
-                editSubject,
-                editLevel,
-                editClass
-            );
-        }
-    );
+    editClass.addEventListener('change', () => {
+        fillSlots(
+            editSubject,
+            editLevel,
+            editClass,
+            editSchedule
+        );
+    });
 
     window.openStudentAssignmentEdit = (
         userId,
         subjectId,
         levelId,
         classId,
+        scheduleId,
         pivotId
     ) => {
         document.getElementById(
@@ -1063,11 +1406,15 @@ document.addEventListener('DOMContentLoaded', () => {
             editSubject,
             editLevel,
             editClass,
+            editSchedule,
             levelId
                 ? String(levelId)
                 : '',
             classId
                 ? String(classId)
+                : '',
+            scheduleId
+                ? String(scheduleId)
                 : ''
         );
 
@@ -1086,8 +1433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'studentAssignmentModal'
         ).style.display = 'flex';
 
-        document.body.style.overflow =
-            'hidden';
+        document.body.style.overflow = 'hidden';
     };
 
     window.closeStudentAssignmentEdit = () => {
@@ -1095,8 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'studentAssignmentModal'
         ).style.display = 'none';
 
-        document.body.style.overflow =
-            '';
+        document.body.style.overflow = '';
     };
 });
 </script>

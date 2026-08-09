@@ -23,12 +23,14 @@ class ProfAssignment extends Model
         'level_id',
         'class_id',
         'subject_id',
+        'class_slot_id',
         'day_of_week',
         'start_time',
         'end_time',
     ];
 
     protected $casts = [
+        'class_slot_id' => 'integer',
         'day_of_week' => 'integer',
     ];
 
@@ -61,6 +63,14 @@ class ProfAssignment extends Model
         return $this->belongsTo(
             Subject::class,
             'subject_id'
+        );
+    }
+
+    public function classSlot(): BelongsTo
+    {
+        return $this->belongsTo(
+            ClassSlot::class,
+            'class_slot_id'
         );
     }
 

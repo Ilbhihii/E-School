@@ -31,17 +31,10 @@
             'tone' => 'indigo',
         ],
         [
-            'route' => 'student.schedule.index',
-            'icon' => 'bi-calendar-week',
-            'title' => 'Emploi du temps',
-            'description' => 'Consulter les prochaines séances',
-            'tone' => 'blue',
-        ],
-        [
             'route' => 'student.lives',
             'icon' => 'bi-camera-video',
-            'title' => 'Lives',
-            'description' => 'Rejoindre les cours en direct',
+            'title' => 'Lives & planning',
+            'description' => 'Planning, calendrier et cours en direct',
             'tone' => 'red',
         ],
         [
@@ -89,9 +82,9 @@
                 <i class="bi bi-book"></i>
                 Voir mes matières
             </a>
-            <a href="{{ route('student.schedule.index') }}" class="sd-btn sd-btn-secondary">
-                <i class="bi bi-calendar-week"></i>
-                Emploi du temps
+            <a href="{{ route('student.lives') }}" class="sd-btn sd-btn-secondary">
+                <i class="bi bi-broadcast-pin"></i>
+                Lives & planning
             </a>
         </div>
     </section>

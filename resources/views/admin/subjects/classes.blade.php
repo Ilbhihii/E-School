@@ -241,6 +241,39 @@
                         $subject->id
                     )
                     ->count();
+
+                /*
+                 * Les 4 créneaux sont maintenant stockés en base
+                 * dans class_slots et ne dépendent pas de l'emploi
+                 * du temps.
+                 */
+                $classSlots = $class
+                    ->classSlots
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->where(
+                        'level_id',
+                        $level->id
+                    )
+                    ->where(
+                        'is_active',
+                        true
+                    )
+                    ->sortBy('position')
+                    ->values();
+
+                $slotCodes = $classSlots
+                    ->pluck('code');
+
+                $slotCourseCounts = $class
+                    ->courses()
+                    ->where('subject_id', $subject->id)
+                    ->whereIn('slot_code', $slotCodes)
+                    ->get()
+                    ->groupBy('slot_code')
+                    ->map->count();
             @endphp
 
             <article
@@ -305,6 +338,31 @@
                                         : 'cours disponible'
                                 }}
                             </span>
+                        </div>
+                    </div>
+
+                    <div class="subject-class-slots">
+                        <div class="subject-class-slots-title">
+                            <i class="bi bi-clock-history"></i>
+                            4 créneaux / groupes de la classe
+                        </div>
+
+                        <div class="subject-class-slots-grid">
+                            @foreach($slotCodes as $slotCode)
+                                <a
+                                    href="{{ route('admin.courses.create', [
+                                        'subject_id' => $subject->id,
+                                        'level_id' => $level->id,
+                                        'class_id' => $class->id,
+                                        'slot_code' => $slotCode,
+                                    ]) }}"
+                                    class="subject-class-slot"
+                                    title="Créer un cours pour {{ $slotCode }}"
+                                >
+                                    <strong>{{ $slotCode }}</strong>
+                                    <span>{{ $slotCourseCounts->get($slotCode, 0) }} cours</span>
+                                </a>
+                            @endforeach
                         </div>
                     </div>
 
@@ -685,6 +743,64 @@
         padding: 1.05rem;
     }
 }
+
+.subject-class-slots {
+    margin: 0 0 12px;
+    padding: 11px;
+    border: 1px solid var(--class-border);
+    border-radius: 12px;
+    background: var(--class-soft);
+}
+
+.subject-class-slots-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    color: rgba(255,255,255,.68);
+    font-size: .66rem;
+    font-weight: 750;
+}
+
+.subject-class-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.subject-class-slot {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 9px;
+    color: #fff;
+    background: rgba(7,15,30,.30);
+    text-decoration: none;
+    transition: .18s ease;
+}
+
+.subject-class-slot:hover {
+    color: #fff;
+    border-color: var(--class-border);
+    background: rgba(255,255,255,.06);
+    transform: translateY(-1px);
+}
+
+.subject-class-slot strong {
+    color: var(--class-accent);
+    font-size: .78rem;
+}
+
+.subject-class-slot span {
+    color: rgba(255,255,255,.48);
+    font-size: .52rem;
+    white-space: nowrap;
+}
+
 </style>
 
 @endsection

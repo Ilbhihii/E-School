@@ -5,44 +5,102 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Live;
 use App\Models\ClassRoom;
+use App\Models\ClassSlot;
 use App\Models\Subject;
 use App\Models\Level;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Services\ClassSlotService;
+use App\Services\PedagogicalStructureService;
 
 
 class LiveController extends Controller
 {
+    private PedagogicalStructureService $structure;
+
+    public function __construct(
+        PedagogicalStructureService $structure
+    ) {
+        $this->structure = $structure;
+    }
+
     /**
      * Affiche la liste des matières avec le nombre de lives (entrée de la navigation hiérarchique)
      */
     public function index()
     {
-        // Tous les lives globaux pour les stats
-        $allLives = Live::with('classRoom')->orderBy('created_at', 'desc')->get();
+        $allLives = Live::with([
+                'classRoom.level',
+                'classRoom.subjects',
+                'classSlot.subject',
+                'classSlot.level',
+                'classSlot.classRoom',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        // Stats
         $totalLives = $allLives->count();
         $recentLives = $allLives->take(5);
 
-        // Sujets qui ont des lives via leurs classes
-        $subjects = Subject::whereHas('classes', function($q) {
-            $q->whereHas('lives');
-        })->withCount(['classes' => function($q) {
-            $q->whereHas('lives');
-        }])->orderBy('name')->get();
+        $subjectIds = $allLives
+            ->flatMap(function (Live $live) {
+                if ($live->classSlot) {
+                    return [
+                        (int) $live->classSlot->subject_id,
+                    ];
+                }
 
-        // Compter les lives par sujet
+                return $live->classRoom
+                    ? $live->classRoom
+                        ->subjects
+                        ->pluck('id')
+                        ->map(fn ($id) => (int) $id)
+                        ->all()
+                    : [];
+            })
+            ->unique()
+            ->values();
+
+        $subjects = Subject::query()
+            ->whereIn('id', $subjectIds)
+            ->withCount('classes')
+            ->orderBy('name')
+            ->get();
+
         $subjectLiveCounts = [];
+
         foreach ($subjects as $subject) {
-            $subjectLiveCounts[$subject->id] = Live::whereHas('classRoom.subjects', function($q) use ($subject) {
-                $q->where('subject_id', $subject->id);
-            })->count();
+            $subjectLiveCounts[$subject->id] =
+                $allLives
+                    ->filter(function (Live $live) use ($subject) {
+                        if ($live->classSlot) {
+                            return (int) $live->classSlot->subject_id
+                                === (int) $subject->id;
+                        }
+
+                        return $live->classRoom
+                            && $live->classRoom
+                                ->subjects
+                                ->contains(
+                                    'id',
+                                    $subject->id
+                                );
+                    })
+                    ->count();
         }
 
-        return view('admin.lives.index', compact('subjects', 'totalLives', 'recentLives', 'subjectLiveCounts', 'allLives'));
+        return view(
+            'admin.lives.index',
+            compact(
+                'subjects',
+                'totalLives',
+                'recentLives',
+                'subjectLiveCounts',
+                'allLives'
+            )
+        );
     }
 
     /**
@@ -136,6 +194,9 @@ class LiveController extends Controller
         $recentLives = Live::with([
                 'classRoom.level',
                 'classRoom.subjects',
+                'classSlot.subject',
+                'classSlot.level',
+                'classSlot.classRoom',
             ])
             ->orderBy(
                 'created_at',
@@ -188,6 +249,11 @@ class LiveController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'provider' => [
                 'required',
                 'in:teams,google_meet',
@@ -216,6 +282,8 @@ class LiveController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
+            'class_slot_id.required' =>
+                'Veuillez sélectionner un créneau.',
             'end_time.after' =>
                 'L’heure de fin doit être après '
                 . 'l’heure de début.',
@@ -282,6 +350,27 @@ class LiveController extends Controller
             ]);
         }
 
+        /*
+         * Le créneau D1/D2/I1/A1... vient de class_slots.
+         * Il n'a pas besoin d'exister dans /admin/schedule.
+         */
+        $classSlot = app(
+            ClassSlotService::class
+        )->slotForPath(
+            (int) $validated['class_slot_id'],
+            (int) $subject->id,
+            (int) $level->id,
+            (int) $classRoom->id
+        );
+
+        if (!$classSlot) {
+            throw ValidationException::withMessages([
+                'class_slot_id' =>
+                    'Ce créneau n’appartient pas au parcours '
+                    . 'Matière → Niveau → Classe sélectionné.',
+            ]);
+        }
+
         $meetingHost = strtolower(
             (string) parse_url(
                 $validated['stream_url'],
@@ -322,6 +411,10 @@ class LiveController extends Controller
          * ET nouvelle fin > début existant.
          */
         $conflict = Live::query()
+            ->where(
+                'class_slot_id',
+                $classSlot->id
+            )
             ->whereDate(
                 'live_date',
                 $validated['live_date']
@@ -344,13 +437,16 @@ class LiveController extends Controller
                 ->withErrors([
                     'live_date' =>
                         'Cette plage horaire est déjà occupée '
-                        . 'par un autre live.',
+                        . 'par un autre live du créneau '
+                        . $classSlot->code
+                        . '.',
                 ]);
         }
 
         Live::create([
             'title' => $validated['title'],
             'class_id' => $classRoom->id,
+            'class_slot_id' => $classSlot->id,
             'stream_url' =>
                 $validated['stream_url'],
             'provider' =>
@@ -466,14 +562,41 @@ class LiveController extends Controller
                                     ->unique('id')
                                     ->values()
                                     ->map(
-                                        fn (
+                                        function (
                                             ClassRoom $classRoom
-                                        ) => [
-                                            'id' =>
-                                                $classRoom->id,
-                                            'name' =>
-                                                $classRoom->name,
-                                        ]
+                                        ) use (
+                                            $subject,
+                                            $level
+                                        ) {
+                                            $slots = app(
+                                                ClassSlotService::class
+                                            )->syncForPath(
+                                                $subject,
+                                                $level,
+                                                $classRoom
+                                            );
+
+                                            return [
+                                                'id' =>
+                                                    $classRoom->id,
+                                                'name' =>
+                                                    $classRoom->name,
+                                                'slots' =>
+                                                    $slots
+                                                        ->map(
+                                                            fn (
+                                                                ClassSlot $slot
+                                                            ) => [
+                                                                'id' =>
+                                                                    $slot->id,
+                                                                'code' =>
+                                                                    $slot->code,
+                                                            ]
+                                                        )
+                                                        ->values()
+                                                        ->all(),
+                                            ];
+                                        }
                                     )
                                     ->all();
 
@@ -553,30 +676,168 @@ class LiveController extends Controller
     // Formulaire édition
     public function edit($id)
     {
-        $live = Live::findOrFail($id);
-        $classes = ClassRoom::all();
-        return view('admin.lives.edit', compact('live','classes'));
+        $live = Live::query()
+            ->with([
+                'classSlot.subject',
+                'classSlot.level',
+                'classSlot.classRoom',
+                'classRoom.level',
+            ])
+            ->findOrFail($id);
+
+        $editHierarchy =
+            $this->structure
+                ->hierarchyForAdmin();
+
+        return view(
+            'admin.lives.edit',
+            [
+                'live' => $live,
+                'editHierarchy' =>
+                    $editHierarchy,
+                'selectedSubjectId' =>
+                    old(
+                        'subject_id',
+                        $live->classSlot?->subject_id
+                    ),
+                'selectedLevelId' =>
+                    old(
+                        'level_id',
+                        $live->classSlot?->level_id
+                    ),
+                'selectedClassId' =>
+                    old(
+                        'class_id',
+                        $live->classSlot?->class_id
+                            ?? $live->class_id
+                    ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $live->class_slot_id
+                    ),
+            ]
+        );
     }
 
     // Mettre à jour un live
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'class_id' => 'required|exists:class_rooms,id',
-            'stream_url' => 'required|url'
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
+            'stream_url' => [
+                'required',
+                'url',
+                'max:2048',
+            ],
+            'live_date' => [
+                'required',
+                'date',
+            ],
+            'start_time' => [
+                'required',
+                'date_format:H:i',
+            ],
+            'end_time' => [
+                'required',
+                'date_format:H:i',
+                'after:start_time',
+            ],
         ]);
 
-        $live = Live::findOrFail($id);
+        $live = Live::query()
+            ->findOrFail($id);
+
+        $slot =
+            $this->structure
+                ->slotForPath(
+                    (int) $validated['class_slot_id'],
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
+                );
+
+        $conflict = Live::query()
+            ->where('id', '!=', $live->id)
+            ->where(
+                'class_slot_id',
+                $slot->id
+            )
+            ->whereDate(
+                'live_date',
+                $validated['live_date']
+            )
+            ->where(function ($query) use ($validated) {
+                $query
+                    ->where(
+                        'start_time',
+                        '<',
+                        $validated['end_time']
+                    )
+                    ->where(
+                        'end_time',
+                        '>',
+                        $validated['start_time']
+                    );
+            })
+            ->exists();
+
+        if ($conflict) {
+            throw ValidationException::withMessages([
+                'live_date' =>
+                    'Un autre live occupe déjà le créneau '
+                    . $slot->code
+                    . ' pendant cette plage horaire.',
+            ]);
+        }
+
         $live->update([
-            'title' => $request->title,
-            'class_id' => $request->class_id,
-            'stream_url' => $request->stream_url,
+            'title' =>
+                $validated['title'],
+            'class_id' =>
+                $slot->class_id,
+            'class_slot_id' =>
+                $slot->id,
+            'stream_url' =>
+                $validated['stream_url'],
+            'live_date' =>
+                $validated['live_date'],
+            'start_time' =>
+                $validated['start_time'],
+            'end_time' =>
+                $validated['end_time'],
         ]);
 
-
-        return redirect()->to(url()->previous())
-                         ->with('success', 'Live modifié avec succès');
+        return redirect()
+            ->route('admin.lives.index')
+            ->with(
+                'success',
+                'Live modifié avec succès.'
+            );
     }
 
     // Supprimer un live

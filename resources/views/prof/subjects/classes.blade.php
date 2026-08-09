@@ -1,83 +1,174 @@
 @extends('layouts.prof')
 
-@section('title', 'Classes - ' . $subject->name . ' - ' . $level->name)
-@section('page_title', $level->name . ' — ' . $subject->name)
-@section('breadcrumb', 'Matières → Niveaux → Classes')
+@section('title', 'Mes classes et créneaux')
+@section('page_title', $level->name)
+@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
 
 @section('content')
-<div class="admin-page">
-    <div class="admin-container">
+<section class="pp-page-head">
+    <div class="pp-page-copy">
+        <span class="pp-eyebrow">
+            {{ $subject->name }} → {{ $level->name }}
+        </span>
 
-        <div class="admin-header">
-            <div>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px;color:var(--muted);">
-                    <a href="{{ route('prof.subjects.list') }}" style="color:var(--muted);text-decoration:none;"><i class="bi bi-book me-1"></i>Matières</a>
-                    <span>/</span>
-                    <a href="{{ route('prof.subjects.levels', $subject) }}" style="color:var(--muted);text-decoration:none;">{{ $subject->name }}</a>
-                    <span>/</span>
-                    <span style="color:var(--text);font-weight:600;">{{ $level->name }}</span>
-                </div>
-                <h1 class="admin-header-title"><span class="gradient">🏫 Classes — {{ $subject->name }} · {{ $level->name }}</span></h1>
-                <p class="admin-header-subtitle">Sélectionnez une classe pour gérer cours, lives et devoirs</p>
-            </div>
-        </div>
+        <h1 class="pp-page-title">
+            Classes & créneaux
+        </h1>
 
-        @if($classes->isEmpty())
-            <div class="adm-card">
-                <div class="adm-empty">
-                    <i class="bi bi-inbox"></i>
-                    <h3>Aucune classe</h3>
-                    <p>Aucune classe n'est liée à cette matière pour ce niveau.</p>
-                </div>
-            </div>
-        @else
-            <div class="prof-card-grid">
-                @foreach($classes as $class)
-                    @php
-                        $gradients = [
-                            'linear-gradient(135deg, #16A34A, #22C55E)',
-                            'linear-gradient(135deg, #003A8F, #2563EB)',
-                            'linear-gradient(135deg, #D97706, #FFB347)',
-                            'linear-gradient(135deg, #7C3AED, #A78BFA)',
-                            'linear-gradient(135deg, #D90429, #EF4444)',
-                            'linear-gradient(135deg, #06B6D4, #0891B2)',
-                        ];
-                        $gIdx = $loop->index % count($gradients);
-                        $colorMap = ['primary','success','danger','warning','info','purple'];
-                    @endphp
-                    <div>
-                        <article class="prof-path-card prof-class-card st-fade-up">
-                            <div class="prof-path-cover" style="--path-gradient:{{ $gradients[$gIdx] }};">
-                                <div style="position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);top:-40px;right:-40px;"></div>
-                                <i class="bi bi-mortarboard-fill" style="font-size:2.5rem;color:rgba(255,255,255,0.3);position:relative;z-index:1;"></i>
-                            </div>
-                            <div class="prof-path-body">
-                                <span class="prof-path-kicker"><i class="bi bi-people"></i> Classe</span>
-                                <h2>{{ $class->name }}</h2>
-                                <div class="prof-class-actions">
-                                    <a href="{{ route('prof.subjects.courses', [$subject, $level, $class]) }}" class="adm-btn adm-btn-{{ $colorMap[$gIdx % count($colorMap)] }} adm-btn-sm">
-                                        <i class="bi bi-play-circle me-1"></i> Cours
-                                    </a>
-                                    <a href="{{ route('prof.subjects.lives', [$subject, $level, $class]) }}" class="adm-btn adm-btn-danger adm-btn-sm">
-                                        <i class="bi bi-camera-video me-1"></i> Lives
-                                    </a>
-                                    <a href="{{ route('prof.subjects.devoirs', [$subject, $level, $class]) }}" class="adm-btn adm-btn-success adm-btn-sm">
-                                        <i class="bi bi-file-earmark-check me-1"></i> Devoirs
-                                    </a>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-                @endforeach
-            </div>
-        @endif
-
-        <div class="mt-4">
-            <a href="{{ route('prof.subjects.levels', $subject) }}" class="adm-btn adm-btn-ghost">
-                <i class="bi bi-arrow-left me-1"></i> Retour aux niveaux
-            </a>
-        </div>
-
+        <p class="pp-page-description">
+            Chaque classe affiche uniquement les créneaux
+            qui vous ont été affectés par l’administration.
+        </p>
     </div>
+
+    <div class="pp-page-actions">
+        <a
+            href="{{
+                route(
+                    'prof.subjects.levels',
+                    $subject
+                )
+            }}"
+            class="adm-btn adm-btn-ghost"
+        >
+            <i class="bi bi-arrow-left"></i>
+            Niveaux
+        </a>
+    </div>
+</section>
+
+<div class="row g-3">
+    @forelse($classes as $class)
+        <div class="col-12">
+            <section class="pp-panel">
+                <header class="pp-panel-head">
+                    <div class="pp-panel-title-wrap">
+                        <h2 class="pp-panel-title">
+                            <i class="bi bi-people-fill"></i>
+                            {{ $class->name }}
+                        </h2>
+
+                        <p class="pp-panel-subtitle">
+                            {{ $subject->name }}
+                            → {{ $level->name }}
+                            → {{ $class->name }}
+                            → Créneau
+                        </p>
+                    </div>
+
+                    <span class="pp-panel-meta">
+                        {{
+                            $class->assignedSlots
+                                ->count()
+                        }}
+                        créneau(x)
+                    </span>
+                </header>
+
+                <div class="pp-panel-body">
+                    @if(
+                        $class->assignedSlots
+                            ->isNotEmpty()
+                    )
+                        <div class="pps-slot-grid">
+                            @foreach(
+                                $class->assignedSlots
+                                as $slot
+                            )
+                                <article class="pps-slot-card">
+                                    <div class="pps-slot-card-copy">
+                                        <span class="pps-slot-badge">
+                                            {{ $slot->code }}
+                                        </span>
+
+                                        <small>
+                                            {{
+                                                $subject->name
+                                            }}
+                                            →
+                                            {{
+                                                $level->name
+                                            }}
+                                            →
+                                            {{
+                                                $class->name
+                                            }}
+                                        </small>
+                                    </div>
+
+                                    <div class="pps-inline-actions">
+                                        <a
+                                            href="{{
+                                                route(
+                                                    'prof.subjects.courses',
+                                                    [
+                                                        $subject,
+                                                        $level,
+                                                        $class,
+                                                        'class_slot_id'
+                                                            => $slot->id,
+                                                    ]
+                                                )
+                                            }}"
+                                            class="adm-btn adm-btn-primary adm-btn-sm"
+                                        >
+                                            Cours
+                                        </a>
+
+                                        <a
+                                            href="{{
+                                                route(
+                                                    'prof.subjects.lives',
+                                                    [
+                                                        $subject,
+                                                        $level,
+                                                        $class,
+                                                        'class_slot_id'
+                                                            => $slot->id,
+                                                    ]
+                                                )
+                                            }}"
+                                            class="adm-btn adm-btn-danger adm-btn-sm"
+                                        >
+                                            Lives
+                                        </a>
+
+                                        <a
+                                            href="{{
+                                                route(
+                                                    'prof.subjects.devoirs',
+                                                    [
+                                                        $subject,
+                                                        $level,
+                                                        $class,
+                                                        'class_slot_id'
+                                                            => $slot->id,
+                                                    ]
+                                                )
+                                            }}"
+                                            class="adm-btn adm-btn-success adm-btn-sm"
+                                        >
+                                            Devoirs
+                                        </a>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="pps-empty">
+                            Aucun créneau ne vous est assigné
+                            dans cette classe.
+                        </div>
+                    @endif
+                </div>
+            </section>
+        </div>
+    @empty
+        <div class="col-12">
+            <div class="pps-empty">
+                Aucune classe assignée.
+            </div>
+        </div>
+    @endforelse
 </div>
 @endsection

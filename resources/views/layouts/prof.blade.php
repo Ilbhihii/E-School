@@ -48,6 +48,7 @@
     <link rel="stylesheet" href="{{ asset('css/prof-refresh.css') }}?v={{ file_exists(public_path('css/prof-refresh.css')) ? filemtime(public_path('css/prof-refresh.css')) : time() }}">
     <link rel="stylesheet" href="{{ asset('css/prof-pages.css') }}?v={{ file_exists(public_path('css/prof-pages.css')) ? filemtime(public_path('css/prof-pages.css')) : time() }}">
 
+    <link rel="stylesheet" href="{{ asset('css/prof-path-structure-v1.css') }}?v={{ file_exists(public_path('css/prof-path-structure-v1.css')) ? filemtime(public_path('css/prof-path-structure-v1.css')) : time() }}">
     @stack('styles')
 
 </head>
@@ -138,18 +139,6 @@
                     >
                         <span class="nav-icon"><i class="bi bi-journal-check"></i></span>
                         <span class="nav-label">Copies des étudiants</span>
-                    </a>
-
-                    <a
-                        href="{{ route('prof.vocal-tests.index') }}"
-                        class="prof-nav-link {{ request()->routeIs('prof.vocal-tests*') ? 'active' : '' }}"
-                        @if(request()->routeIs('prof.vocal-tests*')) aria-current="page" @endif
-                    >
-                        <span class="nav-icon"><i class="bi bi-mic-fill"></i></span>
-                        <span class="nav-label">
-                            Tests nouveaux étudiants
-                            <small>Affectés par l’administrateur</small>
-                        </span>
                     </a>
 
                     <a

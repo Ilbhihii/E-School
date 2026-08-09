@@ -8,6 +8,7 @@ use App\Models\ClassRoom;
 use App\Models\Subject;
 use App\Models\Course;
 use App\Models\VocalTestPrompt;
+use App\Services\ClassSlotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -565,7 +566,8 @@ class LevelController extends Controller
      */
     public function subjectClasses(
         Subject $subject,
-        Level $level
+        Level $level,
+        ClassSlotService $classSlotService
     ) {
         abort_unless(
             $this->isAllowedSubject($subject),
@@ -633,6 +635,44 @@ class LevelController extends Controller
             )
             ->unique('name')
             ->values();
+
+        /*
+         * Les créneaux D1-D4 / I1-I4 / A1-A4 sont
+         * STRUCTURELS. Ils existent dès que la classe existe,
+         * sans attendre la création d'une séance dans l'emploi
+         * du temps.
+         */
+        foreach ($classes as $classRoom) {
+            $classSlotService->syncForPath(
+                $subject,
+                $level,
+                $classRoom
+            );
+        }
+
+        $classes->load([
+            'classSlots' =>
+                function ($query) use (
+                    $subject,
+                    $level
+                ) {
+                    $query
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->where(
+                            'level_id',
+                            $level->id
+                        )
+                        ->where(
+                            'is_active',
+                            true
+                        )
+                        ->orderBy('position')
+                        ->orderBy('code');
+                },
+        ]);
 
         return view(
             'admin.subjects.classes',

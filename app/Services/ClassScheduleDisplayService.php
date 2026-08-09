@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Schedule;
+use App\Models\ProfAssignment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -84,9 +85,36 @@ class ClassScheduleDisplayService
             return collect();
         }
 
-        $assignments = DB::table('class_user')
-            ->where('user_id', $student->id)
-            ->get(['subject_id', 'class_id']);
+        $assignmentsQuery =
+            DB::table('class_user')
+                ->where(
+                    'class_user.user_id',
+                    $student->id
+                );
+
+        if (Schema::hasTable('class_slots')) {
+            $assignmentsQuery
+                ->leftJoin(
+                    'class_slots',
+                    'class_user.class_slot_id',
+                    '=',
+                    'class_slots.id'
+                );
+        }
+
+        $assignments = $assignmentsQuery
+            ->get(
+                Schema::hasTable('class_slots')
+                    ? [
+                        'class_user.subject_id',
+                        'class_user.class_id',
+                        'class_slots.code as slot_code',
+                    ]
+                    : [
+                        'class_user.subject_id',
+                        'class_user.class_id',
+                    ]
+            );
 
         if ($assignments->isEmpty()) {
             return collect();
@@ -94,23 +122,76 @@ class ClassScheduleDisplayService
 
         $query = $this->baseQuery();
 
-        $query->where(function (Builder $outer) use ($assignments) {
-            foreach ($assignments as $assignment) {
-                $outer->orWhere(function (Builder $path) use ($assignment) {
-                    $path->where('class_id', $assignment->class_id);
+        $scheduleHasSlotCode =
+            Schema::hasColumn(
+                'schedules',
+                'slot_code'
+            );
 
-                    if (!empty($assignment->subject_id)) {
-                        $path->where('subject_id', $assignment->subject_id);
-                    }
-                });
+        $query->where(
+            function (Builder $outer) use (
+                $assignments,
+                $scheduleHasSlotCode
+            ) {
+                foreach (
+                    $assignments as $assignment
+                ) {
+                    $outer->orWhere(
+                        function (
+                            Builder $path
+                        ) use (
+                            $assignment,
+                            $scheduleHasSlotCode
+                        ) {
+                            $path->where(
+                                'class_id',
+                                $assignment->class_id
+                            );
+
+                            if (
+                                !empty(
+                                    $assignment->subject_id
+                                )
+                            ) {
+                                $path->where(
+                                    'subject_id',
+                                    $assignment->subject_id
+                                );
+                            }
+
+                            /*
+                             * Le créneau étudiant est structurel.
+                             * Lorsqu'un horaire D1/I1/A1 est créé
+                             * plus tard dans /admin/schedule,
+                             * le planning étudiant le retrouve
+                             * automatiquement par slot_code.
+                             */
+                            if (
+                                $scheduleHasSlotCode
+                                && !empty(
+                                    $assignment->slot_code
+                                    ?? null
+                                )
+                            ) {
+                                $path->where(
+                                    'slot_code',
+                                    $assignment->slot_code
+                                );
+                            }
+                        }
+                    );
+                }
             }
-        });
+        );
 
         $subjectId = !empty($filters['subject_id'])
             ? (int) $filters['subject_id']
             : null;
         $levelId = !empty($filters['level_id'])
             ? (int) $filters['level_id']
+            : null;
+        $classId = !empty($filters['class_id'])
+            ? (int) $filters['class_id']
             : null;
 
         if ($subjectId) {
@@ -127,7 +208,212 @@ class ClassScheduleDisplayService
             });
         }
 
+        if ($classId) {
+            $query->where('class_id', $classId);
+        }
+
+        $slotCode = !empty($filters['slot_code'])
+            ? trim((string) $filters['slot_code'])
+            : null;
+
+        if (
+            $slotCode
+            && Schema::hasColumn('schedules', 'slot_code')
+        ) {
+            $query->whereRaw(
+                'UPPER(TRIM(slot_code)) = ?',
+                [strtoupper($slotCode)]
+            );
+        }
+
         return $this->occurrences($query->get(), $from, $to, $limit);
+    }
+
+    /**
+     * Planning professeur : uniquement les créneaux structurels
+     * qui lui ont été affectés par l'administration.
+     */
+    public function forProfessor(
+        User $professor,
+        ?Carbon $from = null,
+        int $days = 14,
+        ?int $limit = null,
+        array $filters = []
+    ): Collection {
+        $from = ($from ?: now())->copy();
+        $to = $from->copy()->addDays(
+            max(1, $days)
+        );
+
+        if (
+            !Schema::hasTable(
+                'prof_assignments'
+            )
+        ) {
+            return collect();
+        }
+
+        $assignmentQuery =
+            ProfAssignment::query()
+                ->where(
+                    'prof_id',
+                    $professor->id
+                );
+
+        if (
+            Schema::hasColumn(
+                'prof_assignments',
+                'class_slot_id'
+            )
+        ) {
+            $assignmentQuery
+                ->with('classSlot')
+                ->whereNotNull(
+                    'class_slot_id'
+                );
+        }
+
+        $assignments =
+            $assignmentQuery->get();
+
+        if ($assignments->isEmpty()) {
+            return collect();
+        }
+
+        $query = $this->baseQuery();
+
+        $scheduleHasSlotCode =
+            Schema::hasColumn(
+                'schedules',
+                'slot_code'
+            );
+
+        $query->where(
+            function (
+                Builder $outer
+            ) use (
+                $assignments,
+                $scheduleHasSlotCode
+            ) {
+                foreach (
+                    $assignments as $assignment
+                ) {
+                    $outer->orWhere(
+                        function (
+                            Builder $path
+                        ) use (
+                            $assignment,
+                            $scheduleHasSlotCode
+                        ) {
+                            $path->where(
+                                'subject_id',
+                                $assignment->subject_id
+                            )
+                            ->where(
+                                'level_id',
+                                $assignment->level_id
+                            )
+                            ->where(
+                                'class_id',
+                                $assignment->class_id
+                            );
+
+                            if (
+                                $scheduleHasSlotCode
+                                && $assignment
+                                    ->classSlot
+                                && trim(
+                                    (string) $assignment
+                                        ->classSlot
+                                        ->code
+                                ) !== ''
+                            ) {
+                                $path->whereRaw(
+                                    'UPPER(TRIM(slot_code)) = ?',
+                                    [
+                                        strtoupper(
+                                            trim(
+                                                (string)
+                                                $assignment
+                                                    ->classSlot
+                                                    ->code
+                                            )
+                                        ),
+                                    ]
+                                );
+                            }
+                        }
+                    );
+                }
+            }
+        );
+
+        $subjectId = !empty(
+            $filters['subject_id']
+        )
+            ? (int) $filters['subject_id']
+            : null;
+
+        $levelId = !empty(
+            $filters['level_id']
+        )
+            ? (int) $filters['level_id']
+            : null;
+
+        $classId = !empty(
+            $filters['class_id']
+        )
+            ? (int) $filters['class_id']
+            : null;
+
+        $slotCode = !empty(
+            $filters['slot_code']
+        )
+            ? strtoupper(
+                trim(
+                    (string)
+                    $filters['slot_code']
+                )
+            )
+            : null;
+
+        if ($subjectId) {
+            $query->where(
+                'subject_id',
+                $subjectId
+            );
+        }
+
+        if ($levelId) {
+            $query->where(
+                'level_id',
+                $levelId
+            );
+        }
+
+        if ($classId) {
+            $query->where(
+                'class_id',
+                $classId
+            );
+        }
+
+        if (
+            $slotCode
+            && $scheduleHasSlotCode
+        ) {
+            $query->whereRaw(
+                'UPPER(TRIM(slot_code)) = ?',
+                [$slotCode]
+            );
+        }
+
+        return $this->occurrences(
+            $query->get(),
+            $from,
+            $to,
+            $limit
+        );
     }
 
     private function baseQuery(): Builder
@@ -177,6 +463,7 @@ class ClassScheduleDisplayService
             'start_label' => $start->format('H:i'),
             'end_label' => $end->format('H:i'),
             'time_label' => $start->format('H:i') . ' – ' . $end->format('H:i'),
+            'slot_label' => $dayLabel . ' · ' . $start->format('H:i') . ' – ' . $end->format('H:i'),
             'duration_label' => $this->formatDurationLabel($duration),
             'subject_id' => $schedule->subject_id ? (int) $schedule->subject_id : null,
             'level_id' => $schedule->level_id
@@ -186,8 +473,20 @@ class ClassScheduleDisplayService
             'subject' => $subject,
             'level' => $level,
             'class_name' => $className,
+            'slot_code' => trim((string) ($schedule->slot_code ?? '')),
             'room' => optional($schedule->room)->name ?: 'Salle à confirmer',
-            'path' => collect([$subject, $level, $className])->filter()->implode(' → '),
+            'path' => collect([
+                $subject,
+                $level,
+                $className,
+                trim((string) ($schedule->slot_code ?? '')) ?: null,
+            ])->filter()->implode(' → '),
+            'full_path' => collect([
+                $subject,
+                $level,
+                $className,
+                $dayLabel . ' · ' . $start->format('H:i') . ' – ' . $end->format('H:i'),
+            ])->filter()->implode(' → '),
             'teacher' => optional($schedule->prof)->name ?: 'Professeur à confirmer',
             'recurrence' => $recurrence,
             'recurrence_label' => $recurrence === Schedule::RECURRENCE_WEEKLY
@@ -325,6 +624,8 @@ class ClassScheduleDisplayService
             'day_short' => ucfirst($start->locale('fr')->isoFormat('ddd')),
             'day_number' => $start->format('d'),
             'time_label' => $start->format('H:i') . ' – ' . $end->format('H:i'),
+            'slot_label' => ucfirst($start->locale('fr')->isoFormat('dddd'))
+                . ' · ' . $start->format('H:i') . ' – ' . $end->format('H:i'),
             'start_label' => $start->format('H:i'),
             'end_label' => $end->format('H:i'),
             'duration_label' => $this->formatDurationLabel($duration),
@@ -336,8 +637,21 @@ class ClassScheduleDisplayService
             'subject' => $subject,
             'level' => $level,
             'class_name' => $className,
+            'slot_code' => trim((string) ($schedule->slot_code ?? '')),
             'room' => optional($schedule->room)->name ?: 'Salle à confirmer',
-            'path' => collect([$subject, $level, $className])->filter()->implode(' → '),
+            'path' => collect([
+                $subject,
+                $level,
+                $className,
+                trim((string) ($schedule->slot_code ?? '')) ?: null,
+            ])->filter()->implode(' → '),
+            'full_path' => collect([
+                $subject,
+                $level,
+                $className,
+                ucfirst($start->locale('fr')->isoFormat('dddd'))
+                    . ' · ' . $start->format('H:i') . ' – ' . $end->format('H:i'),
+            ])->filter()->implode(' → '),
             'teacher' => optional($schedule->prof)->name ?: 'Professeur à confirmer',
         ];
     }

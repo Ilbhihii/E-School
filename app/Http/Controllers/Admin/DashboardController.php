@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
+use App\Models\ClassSlot;
 use App\Models\Course;
 use App\Models\Live;
 use App\Models\Level;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use App\Services\ClassSlotService;
+use App\Services\PedagogicalStructureService;
 
 class DashboardController extends Controller
 {
@@ -180,6 +183,7 @@ public function index()
             'subject',
             'level',
             'classRoom',
+            'classSlot',
         ]);
 
         if ($request->filled('search')) {
@@ -204,7 +208,17 @@ public function index()
         }
 
         if ($request->filled('class_id')) {
-            $query->where('class_id', (int) $request->class_id);
+            $query->where(
+                'class_id',
+                (int) $request->class_id
+            );
+        }
+
+        if ($request->filled('class_slot_id')) {
+            $query->where(
+                'class_slot_id',
+                (int) $request->class_slot_id
+            );
         }
 
         $allowedSorts = ['date', 'created_at', 'present'];
@@ -236,6 +250,7 @@ public function index()
             'subject',
             'level',
             'classRoom',
+            'classSlot',
         ]);
 
         return view('admin.absences.show', compact('absence'));
@@ -248,23 +263,145 @@ public function index()
             'subject',
             'level',
             'classRoom',
+            'classSlot',
         ]);
 
-        return view('admin.absences.edit', compact('absence'));
+        $editHierarchy = app(
+            PedagogicalStructureService::class
+        )->hierarchyForAdmin();
+
+        return view(
+            'admin.absences.edit',
+            [
+                'absence' => $absence,
+                'editHierarchy' =>
+                    $editHierarchy,
+                'selectedSubjectId' =>
+                    old(
+                        'subject_id',
+                        $absence->subject_id
+                            ?? $absence
+                                ->classSlot
+                                ?->subject_id
+                    ),
+                'selectedLevelId' =>
+                    old(
+                        'level_id',
+                        $absence->level_id
+                            ?? $absence
+                                ->classSlot
+                                ?->level_id
+                    ),
+                'selectedClassId' =>
+                    old(
+                        'class_id',
+                        $absence->class_id
+                            ?? $absence
+                                ->classSlot
+                                ?->class_id
+                    ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $absence->class_slot_id
+                    ),
+            ]
+        );
     }
 
-    public function update(Request $request, Absence $absence)
-    {
+    public function update(
+        Request $request,
+        Absence $absence
+    ) {
         $validated = $request->validate([
-            'date' => ['required', 'date'],
-            'present' => ['required', 'boolean'],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
+            'date' => [
+                'required',
+                'date',
+            ],
+            'present' => [
+                'required',
+                'boolean',
+            ],
         ]);
 
-        $absence->update($validated);
+        $structure = app(
+            PedagogicalStructureService::class
+        );
+
+        $slot = $structure->slotForPath(
+            (int) $validated['class_slot_id'],
+            (int) $validated['subject_id'],
+            (int) $validated['level_id'],
+            (int) $validated['class_id']
+        );
+
+        if (
+            !$structure->studentAssignedToSlot(
+                (int) $absence->user_id,
+                $slot
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'class_slot_id' =>
+                    'Cet étudiant n’est pas assigné au créneau '
+                    . $slot->code
+                    . '.',
+            ]);
+        }
+
+        $absence->update([
+            'subject_id' =>
+                $slot->subject_id,
+            'level_id' =>
+                $slot->level_id,
+            'class_id' =>
+                $slot->class_id,
+            'class_slot_id' =>
+                $slot->id,
+            'date' =>
+                $validated['date'],
+            'present' =>
+                (bool) $validated['present'],
+        ]);
 
         return redirect()
-            ->route('admin.absences')
-            ->with('success', 'Absence modifiée.');
+            ->route(
+                'admin.absences',
+                [
+                    'subject_id' =>
+                        $slot->subject_id,
+                    'level_id' =>
+                        $slot->level_id,
+                    'class_id' =>
+                        $slot->class_id,
+                    'class_slot_id' =>
+                        $slot->id,
+                ]
+            )
+            ->with(
+                'success',
+                'Absence modifiée.'
+            );
     }
 
     public function destroy(Absence $absence)
@@ -295,6 +432,7 @@ public function index()
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'level_id' => ['required', 'integer', 'exists:levels,id'],
             'class_id' => ['required', 'integer', 'exists:class_rooms,id'],
+            'class_slot_id' => ['required', 'integer', 'exists:class_slots,id'],
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'date' => ['required', 'date'],
             'present' => ['required', 'boolean'],
@@ -322,6 +460,22 @@ public function index()
             ]);
         }
 
+        $classSlot = app(
+            ClassSlotService::class
+        )->slotForPath(
+            (int) $validated['class_slot_id'],
+            (int) $validated['subject_id'],
+            (int) $validated['level_id'],
+            (int) $validated['class_id']
+        );
+
+        if (!$classSlot) {
+            throw ValidationException::withMessages([
+                'class_slot_id' =>
+                    'Ce créneau n’appartient pas au parcours sélectionné.',
+            ]);
+        }
+
         $student = User::query()
             ->whereKey($validated['user_id'])
             ->where('role', User::ROLE_STUDENT)
@@ -334,16 +488,31 @@ public function index()
         }
 
         $hasAssignment = DB::table('class_user')
-            ->where('user_id', $student->id)
-            ->where('class_id', $classRoom->id)
-            ->where('subject_id', $validated['subject_id'])
+            ->where(
+                'user_id',
+                $student->id
+            )
+            ->where(
+                'class_id',
+                $classRoom->id
+            )
+            ->where(
+                'subject_id',
+                $validated['subject_id']
+            )
+            ->where(
+                'class_slot_id',
+                $classSlot->id
+            )
             ->exists();
 
-        $hasLegacyClass = (int) $student->class_id === (int) $classRoom->id;
-
-        if (!$hasAssignment && !$hasLegacyClass) {
+        if (!$hasAssignment) {
             throw ValidationException::withMessages([
-                'user_id' => 'Cet étudiant n’est pas assigné à ce parcours.',
+                'user_id' =>
+                    'Cet étudiant n’est pas assigné au créneau '
+                    . $classSlot->code
+                    . '. Affectez-le d’abord dans '
+                    . 'Matière → Niveau → Classe → Créneau.',
             ]);
         }
 
@@ -353,6 +522,7 @@ public function index()
                 'subject_id' => (int) $validated['subject_id'],
                 'level_id' => (int) $validated['level_id'],
                 'class_id' => (int) $validated['class_id'],
+                'class_slot_id' => (int) $classSlot->id,
                 'date' => $validated['date'],
             ],
             [
@@ -365,6 +535,7 @@ public function index()
                 'subject_id' => $validated['subject_id'],
                 'level_id' => $validated['level_id'],
                 'class_id' => $validated['class_id'],
+                'class_slot_id' => $classSlot->id,
             ])
             ->with('success', 'Présence enregistrée avec succès.');
     }
@@ -435,7 +606,30 @@ public function index()
                             )
                             ->sortBy('name')
                             ->unique('id')
-                            ->values();
+                            ->values()
+                            ->map(
+                                function (
+                                    ClassRoom $classRoom
+                                ) use (
+                                    $subject,
+                                    $level
+                                ) {
+                                    $slots = app(
+                                        ClassSlotService::class
+                                    )->syncForPath(
+                                        $subject,
+                                        $level,
+                                        $classRoom
+                                    );
+
+                                    $classRoom->setRelation(
+                                        'classSlots',
+                                        $slots
+                                    );
+
+                                    return $classRoom;
+                                }
+                            );
 
                         if ($classes->isEmpty()) {
                             return null;
@@ -480,6 +674,16 @@ public function index()
                             return [
                                 'id' => (int) $classRoom->id,
                                 'name' => $classRoom->name,
+                                'slots' => $classRoom
+                                    ->classSlots
+                                    ->map(
+                                        fn (ClassSlot $slot) => [
+                                            'id' => (int) $slot->id,
+                                            'code' => $slot->code,
+                                        ]
+                                    )
+                                    ->values()
+                                    ->all(),
                             ];
                         })->values()->all(),
                     ];
@@ -526,13 +730,67 @@ public function index()
     {
         $groups = [];
 
+        /*
+         * Seules les assignations structurelles exactes sont utilisées.
+         *
+         * Clé :
+         * subject_id:level_id:class_id:class_slot_id
+         */
         $rows = DB::table('class_user as cu')
-            ->join('users as u', 'u.id', '=', 'cu.user_id')
-            ->join('class_rooms as cr', 'cr.id', '=', 'cu.class_id')
-            ->join('levels as l', 'l.id', '=', 'cr.level_id')
-            ->where('u.role', User::ROLE_STUDENT)
-            ->whereNotNull('cu.subject_id')
-            ->whereColumn('l.subject_id', 'cu.subject_id')
+            ->join(
+                'users as u',
+                'u.id',
+                '=',
+                'cu.user_id'
+            )
+            ->join(
+                'class_rooms as cr',
+                'cr.id',
+                '=',
+                'cu.class_id'
+            )
+            ->join(
+                'levels as l',
+                'l.id',
+                '=',
+                'cr.level_id'
+            )
+            ->join(
+                'class_slots as cs',
+                'cs.id',
+                '=',
+                'cu.class_slot_id'
+            )
+            ->where(
+                'u.role',
+                User::ROLE_STUDENT
+            )
+            ->whereNotNull(
+                'cu.subject_id'
+            )
+            ->whereNotNull(
+                'cu.class_slot_id'
+            )
+            ->where(
+                'cs.is_active',
+                true
+            )
+            ->whereColumn(
+                'l.subject_id',
+                'cu.subject_id'
+            )
+            ->whereColumn(
+                'cs.subject_id',
+                'cu.subject_id'
+            )
+            ->whereColumn(
+                'cs.level_id',
+                'l.id'
+            )
+            ->whereColumn(
+                'cs.class_id',
+                'cr.id'
+            )
             ->select([
                 'u.id',
                 'u.name',
@@ -540,38 +798,24 @@ public function index()
                 'cu.subject_id',
                 'l.id as level_id',
                 'cr.id as class_id',
+                'cu.class_slot_id',
+                'cs.code as slot_code',
             ])
-            ->orderBy('u.name')
+            ->orderBy(
+                'u.name'
+            )
             ->get();
 
         foreach ($rows as $row) {
-            $key = $row->subject_id . ':' . $row->level_id . ':' . $row->class_id;
-            $groups[$key][(int) $row->id] = [
-                'id' => (int) $row->id,
-                'name' => $row->name,
-                'email' => $row->email,
-            ];
-        }
+            $key =
+                $row->subject_id
+                . ':'
+                . $row->level_id
+                . ':'
+                . $row->class_id
+                . ':'
+                . $row->class_slot_id;
 
-        $legacyRows = DB::table('users as u')
-            ->join('class_rooms as cr', 'cr.id', '=', 'u.class_id')
-            ->join('levels as l', 'l.id', '=', 'cr.level_id')
-            ->where('u.role', User::ROLE_STUDENT)
-            ->whereNotNull('u.class_id')
-            ->whereNotNull('l.subject_id')
-            ->select([
-                'u.id',
-                'u.name',
-                'u.email',
-                'l.subject_id',
-                'l.id as level_id',
-                'cr.id as class_id',
-            ])
-            ->orderBy('u.name')
-            ->get();
-
-        foreach ($legacyRows as $row) {
-            $key = $row->subject_id . ':' . $row->level_id . ':' . $row->class_id;
             $groups[$key][(int) $row->id] = [
                 'id' => (int) $row->id,
                 'name' => $row->name,
@@ -580,7 +824,8 @@ public function index()
         }
 
         foreach ($groups as $key => $students) {
-            $groups[$key] = array_values($students);
+            $groups[$key] =
+                array_values($students);
         }
 
         return $groups;

@@ -4,7 +4,7 @@
 @section('page_title', 'Nouveau cours')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Cours'
+    'Matière → Niveau → Classe → Créneau → Cours'
 )
 
 @section('content')
@@ -27,7 +27,7 @@
 
                     <p>
                         Choisissez d’abord la matière, puis son niveau,
-                        puis la classe appartenant à ce niveau.
+                        puis la classe et enfin le créneau associé à cette classe.
                     </p>
                 </div>
 
@@ -37,6 +37,8 @@
                     <span id="pathLevel">Niveau</span>
                     <i class="bi bi-chevron-right"></i>
                     <span id="pathClass">Classe</span>
+                    <i class="bi bi-chevron-right"></i>
+                    <span id="pathSlot">Créneau</span>
                 </div>
             </div>
 
@@ -114,7 +116,7 @@
                     </div>
 
                     <!-- =========================================
-                         MATIÈRE → NIVEAU → CLASSE
+                         MATIÈRE → NIVEAU → CLASSE → CRÉNEAU
                          ========================================= -->
                     <div class="course-hierarchy-box">
                         <div class="course-hierarchy-title">
@@ -136,7 +138,7 @@
 
                         <div class="row g-3">
                             <!-- 1. MATIÈRE -->
-                            <div class="col-lg-4">
+                            <div class="col-lg-3">
                                 <div class="course-step">
                                     <span class="course-step-number">
                                         1
@@ -192,7 +194,7 @@
                             </div>
 
                             <!-- 2. NIVEAU -->
-                            <div class="col-lg-4">
+                            <div class="col-lg-3">
                                 <div class="course-step">
                                     <span class="course-step-number">
                                         2
@@ -242,7 +244,7 @@
                             </div>
 
                             <!-- 3. CLASSE -->
-                            <div class="col-lg-4">
+                            <div class="col-lg-3">
                                 <div class="course-step">
                                     <span class="course-step-number">
                                         3
@@ -286,6 +288,33 @@
                                             <div class="adm-form-error">
                                                 {{ $message }}
                                             </div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. CRÉNEAU -->
+                            <div class="col-lg-3">
+                                <div class="course-step course-slot-step">
+                                    <span class="course-step-number">4</span>
+                                    <div class="adm-form-group mb-0">
+                                        <label class="adm-form-label" for="slot_code">
+                                            Créneau <span class="course-required">*</span>
+                                        </label>
+                                        <select
+                                            name="slot_code"
+                                            id="slot_code"
+                                            class="adm-form-select @error('slot_code') error @enderror"
+                                            disabled
+                                            required
+                                        >
+                                            <option value="">Choisissez d’abord une classe</option>
+                                        </select>
+                                        <small class="course-field-help">
+                                            Débutant : D1–D4 · Intermédiaire : I1–I4 · Avancé : A1–A4.
+                                        </small>
+                                        @error('slot_code')
+                                            <div class="adm-form-error">{{ $message }}</div>
                                         @enderror
                                     </div>
                                 </div>
@@ -686,6 +715,12 @@
         justify-content: center;
     }
 }
+
+.course-slot-step {
+    border-color: rgba(34,197,94,0.10);
+    background: rgba(34,197,94,0.025);
+}
+
 </style>
 
 <script>
@@ -713,6 +748,13 @@ document.addEventListener('DOMContentLoaded', () => {
         )
     );
 
+    const initialSlotCode = @json(
+        (string) old(
+            'slot_code',
+            $selectedSlotCode ?? ''
+        )
+    );
+
     const subjectSelect =
         document.getElementById('subject_id');
 
@@ -722,6 +764,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const classSelect =
         document.getElementById('class_id');
 
+    const slotSelect =
+        document.getElementById('slot_code');
+
     const pathSubject =
         document.getElementById('pathSubject');
 
@@ -730,6 +775,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const pathClass =
         document.getElementById('pathClass');
+
+    const pathSlot =
+        document.getElementById('pathSlot');
 
     const findSubject = subjectId =>
         hierarchy.find(
@@ -750,6 +798,17 @@ document.addEventListener('DOMContentLoaded', () => {
             level =>
                 String(level.id)
                 === String(levelId)
+        );
+    };
+
+    const findClass = (level, classId) => {
+        if (!level) {
+            return null;
+        }
+
+        return level.classes.find(
+            classRoom =>
+                String(classRoom.id) === String(classId)
         );
     };
 
@@ -805,6 +864,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 classSelect.selectedIndex
             ];
 
+        const slotOption =
+            slotSelect.options[
+                slotSelect.selectedIndex
+            ];
+
         pathSubject.textContent =
             subjectSelect.value
                 ? subjectOption.textContent
@@ -820,6 +884,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? classOption.textContent
                 : 'Classe';
 
+        pathSlot.textContent =
+            slotSelect.value
+                ? slotOption.textContent
+                : 'Créneau';
+
         pathSubject.classList.toggle(
             'is-selected',
             Boolean(subjectSelect.value)
@@ -834,12 +903,59 @@ document.addEventListener('DOMContentLoaded', () => {
             'is-selected',
             Boolean(classSelect.value)
         );
+
+        pathSlot.classList.toggle(
+            'is-selected',
+            Boolean(slotSelect.value)
+        );
+    };
+
+    const populateSlots = (
+        subject,
+        levelId,
+        classId,
+        selectedSlotCode = ''
+    ) => {
+        const level = findLevel(subject, levelId);
+        const classRoom = findClass(level, classId);
+
+        resetSelect(
+            slotSelect,
+            classRoom
+                ? 'Sélectionner un créneau'
+                : 'Choisissez d’abord une classe',
+            !classRoom
+        );
+
+        if (!classRoom) {
+            updatePath();
+            return;
+        }
+
+        (classRoom.slots || []).forEach(slot => {
+            slotSelect.appendChild(
+                createOption(
+                    slot.code,
+                    slot.label,
+                    selectedSlotCode
+                )
+            );
+        });
+
+        slotSelect.disabled = false;
+
+        if (selectedSlotCode) {
+            slotSelect.value = String(selectedSlotCode);
+        }
+
+        updatePath();
     };
 
     const populateClasses = (
         subject,
         levelId,
-        selectedClassId = ''
+        selectedClassId = '',
+        selectedSlotCode = ''
     ) => {
         const level = findLevel(
             subject,
@@ -852,6 +968,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? 'Sélectionner une classe'
                 : 'Choisissez d’abord un niveau',
             !level
+        );
+
+        resetSelect(
+            slotSelect,
+            'Choisissez d’abord une classe',
+            true
         );
 
         if (!level) {
@@ -872,8 +994,14 @@ document.addEventListener('DOMContentLoaded', () => {
         classSelect.disabled = false;
 
         if (selectedClassId) {
-            classSelect.value =
-                String(selectedClassId);
+            classSelect.value = String(selectedClassId);
+            populateSlots(
+                subject,
+                levelId,
+                selectedClassId,
+                selectedSlotCode
+            );
+            return;
         }
 
         updatePath();
@@ -882,7 +1010,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const populateLevels = (
         subjectId,
         selectedLevelId = '',
-        selectedClassId = ''
+        selectedClassId = '',
+        selectedSlotCode = ''
     ) => {
         const subject = findSubject(
             subjectId
@@ -899,6 +1028,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resetSelect(
             classSelect,
             'Choisissez d’abord un niveau',
+            true
+        );
+
+        resetSelect(
+            slotSelect,
+            'Choisissez d’abord une classe',
             true
         );
 
@@ -926,7 +1061,8 @@ document.addEventListener('DOMContentLoaded', () => {
             populateClasses(
                 subject,
                 selectedLevelId,
-                selectedClassId
+                selectedClassId,
+                selectedSlotCode
             );
         }
 
@@ -956,8 +1092,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     classSelect.addEventListener(
         'change',
-        updatePath
+        () => {
+            populateSlots(
+                findSubject(subjectSelect.value),
+                levelSelect.value,
+                classSelect.value
+            );
+        }
     );
+
+    slotSelect.addEventListener('change', updatePath);
 
     /*
      * Restaurer les choix après validation ou préremplissage.
@@ -969,7 +1113,8 @@ document.addEventListener('DOMContentLoaded', () => {
         populateLevels(
             initialSubjectId,
             initialLevelId,
-            initialClassId
+            initialClassId,
+            initialSlotCode
         );
     } else {
         resetSelect(
@@ -981,6 +1126,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resetSelect(
             classSelect,
             'Choisissez d’abord un niveau',
+            true
+        );
+
+        resetSelect(
+            slotSelect,
+            'Choisissez d’abord une classe',
             true
         );
 

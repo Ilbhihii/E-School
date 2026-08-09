@@ -139,16 +139,6 @@
                     </a>
 
                     <a
-                        href="{{ route('student.schedule.index') }}"
-                        class="student-nav-link {{ request()->routeIs('student.schedule.*') ? 'active' : '' }}"
-                    >
-                        <span class="student-nav-icon">
-                            <i class="bi bi-calendar-week-fill"></i>
-                        </span>
-                        <span>Emploi du temps</span>
-                    </a>
-
-                    <a
                         href="{{ route('student.lives') }}"
                         class="student-nav-link {{ request()->routeIs('student.lives*') ? 'active' : '' }}"
                     >

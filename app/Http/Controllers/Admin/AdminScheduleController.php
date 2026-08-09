@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
 use App\Models\Level;
+use App\Models\ProfAssignment;
 use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\User;
@@ -27,7 +28,7 @@ class AdminScheduleController extends Controller
                 'prof',
             ]);
 
-        foreach (['subject_id', 'level_id', 'class_id', 'prof_id', 'status'] as $filter) {
+        foreach (['subject_id', 'level_id', 'class_id', 'slot_code', 'prof_id', 'status'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->input($filter));
             }
@@ -113,7 +114,8 @@ class AdminScheduleController extends Controller
                     'textColor' => '#ffffff',
                     'extendedProps' => [
                         'schedule_id' => $schedule->id,
-                        'path' => $schedule->path_label,
+                        'path' => $schedule->full_path_label,
+                        'slot_code' => $schedule->slot_code,
                         'teacher' => optional($schedule->prof)->name ?: 'Professeur non défini',
                         'recurrence' => $schedule->recurrence,
                     ],
@@ -132,6 +134,10 @@ class AdminScheduleController extends Controller
 
         Schedule::create($data);
 
+        if (!empty($data['prof_id'])) {
+            $this->syncTeachingAssignment($data);
+        }
+
         return redirect()
             ->route('admin.schedule.index')
             ->with('success', 'La séance a été planifiée avec succès.');
@@ -145,9 +151,91 @@ class AdminScheduleController extends Controller
 
         $schedule->update($data);
 
+        if (!empty($data['prof_id'])) {
+            $this->syncTeachingAssignment($data);
+        }
+
         return redirect()
             ->route('admin.schedule.index')
             ->with('success', 'Le planning a été modifié avec succès.');
+    }
+
+    /**
+     * Modifier uniquement le professeur associé à un créneau.
+     *
+     * Hiérarchie :
+     * Matière → Niveau → Classe → Créneau.
+     * Le professeur est une propriété du créneau.
+     */
+    public function updateProfessor(
+        Request $request,
+        Schedule $schedule
+    ) {
+        $validated = $request->validate([
+            'prof_id' => [
+                'required',
+                'integer',
+                'exists:users,id',
+            ],
+        ], [
+            'prof_id.required' =>
+                'Veuillez sélectionner un professeur.',
+        ]);
+
+        $teacher = User::findOrFail(
+            (int) $validated['prof_id']
+        );
+
+        if ($teacher->role !== User::ROLE_PROF) {
+            throw ValidationException::withMessages([
+                'prof_id' =>
+                    'Le compte sélectionné n’est pas un professeur.',
+            ]);
+        }
+
+        $conflictData = [
+            'subject_id' => (int) $schedule->subject_id,
+            'level_id' => (int) $schedule->level_id,
+            'class_id' => (int) $schedule->class_id,
+            'prof_id' => (int) $teacher->id,
+            'day_of_week' => (int) $schedule->day_of_week,
+            'start_time' => Carbon::parse(
+                $schedule->start_time
+            )->format('H:i'),
+            'end_time' => Carbon::parse(
+                $schedule->end_time
+            )->format('H:i'),
+            'recurrence' =>
+                $schedule->recurrence
+                ?: Schedule::RECURRENCE_WEEKLY,
+            'valid_from' => Carbon::parse(
+                $schedule->valid_from
+                ?: now()
+            )->format('Y-m-d'),
+            'status' =>
+                $schedule->status
+                ?: Schedule::STATUS_ACTIVE,
+        ];
+
+        $this->assertNoConflict(
+            $conflictData,
+            $schedule->id
+        );
+
+        $schedule->update([
+            'prof_id' => $teacher?->id,
+        ]);
+
+        $this->syncTeachingAssignment(
+            $conflictData
+        );
+
+        return redirect()
+            ->route('admin.schedule.index')
+            ->with(
+                'success',
+                'Le professeur du créneau a été modifié avec succès.'
+            );
     }
 
     public function destroy(Schedule $schedule)
@@ -165,7 +253,8 @@ class AdminScheduleController extends Controller
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'level_id' => ['required', 'integer', 'exists:levels,id'],
             'class_id' => ['required', 'integer', 'exists:class_rooms,id'],
-            'prof_id' => ['required', 'integer', 'exists:users,id'],
+            'slot_code' => ['required', 'string', 'max:20'],
+            'prof_id' => ['nullable', 'integer', 'exists:users,id'],
             'day_of_week' => ['required', 'integer', 'between:1,7'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
@@ -182,7 +271,7 @@ class AdminScheduleController extends Controller
             'subject_id.required' => 'Veuillez sélectionner une matière.',
             'level_id.required' => 'Veuillez sélectionner un niveau.',
             'class_id.required' => 'Veuillez sélectionner une classe pédagogique.',
-            'prof_id.required' => 'Veuillez sélectionner un professeur.',
+            'slot_code.required' => 'Veuillez sélectionner un créneau (D1, D2, D3, D4...).',
             'start_time.required' => 'Veuillez sélectionner l’heure de début.',
             'end_time.required' => 'Veuillez sélectionner l’heure de fin.',
             'end_time.date_format' => 'L’heure de fin doit être au format HH:MM.',
@@ -194,7 +283,9 @@ class AdminScheduleController extends Controller
         $classRoom = ClassRoom::query()
             ->with('subjects')
             ->findOrFail($validated['class_id']);
-        $teacher = User::findOrFail($validated['prof_id']);
+        $teacher = !empty($validated['prof_id'])
+            ? User::findOrFail($validated['prof_id'])
+            : null;
 
         if ((int) $level->subject_id !== (int) $subject->id) {
             throw ValidationException::withMessages([
@@ -214,7 +305,19 @@ class AdminScheduleController extends Controller
             ]);
         }
 
-        if ($teacher->role !== User::ROLE_PROF) {
+        $allowedSlotCodes = $this->slotCodesForClass($classRoom);
+        $slotCode = strtoupper(
+            trim((string) $validated['slot_code'])
+        );
+
+        if (!in_array($slotCode, $allowedSlotCodes, true)) {
+            throw ValidationException::withMessages([
+                'slot_code' =>
+                    'Le créneau sélectionné ne correspond pas à cette classe.',
+            ]);
+        }
+
+        if ($teacher && $teacher->role !== User::ROLE_PROF) {
             throw ValidationException::withMessages([
                 'prof_id' => 'Le compte sélectionné n’est pas un professeur.',
             ]);
@@ -249,8 +352,9 @@ class AdminScheduleController extends Controller
             'subject_id' => $subject->id,
             'level_id' => $level->id,
             'class_id' => $classRoom->id,
+            'slot_code' => $slotCode,
             'room_id' => null,
-            'prof_id' => $teacher->id,
+            'prof_id' => $teacher?->id,
             'subject' => $subject->name,
             'date' => $anchorDate->toDateString(),
             'day_of_week' => $dayOfWeek,
@@ -264,51 +368,142 @@ class AdminScheduleController extends Controller
         ];
     }
 
-    private function assertNoConflict(array $data, ?int $ignoreScheduleId = null): void
-    {
+    private function assertNoConflict(
+        array $data,
+        ?int $ignoreScheduleId = null
+    ): void {
         if ($data['status'] !== Schedule::STATUS_ACTIVE) {
             return;
         }
 
         $candidates = Schedule::query()
             ->active()
-            ->when($ignoreScheduleId, function ($query) use ($ignoreScheduleId) {
-                return $query->where('id', '<>', $ignoreScheduleId);
-            })
+            ->when(
+                $ignoreScheduleId,
+                fn ($query) =>
+                    $query->where(
+                        'id',
+                        '<>',
+                        $ignoreScheduleId
+                    )
+            )
             ->where(function ($query) use ($data) {
-                $query->where('prof_id', $data['prof_id'])
-                    ->orWhere('class_id', $data['class_id']);
+                /*
+                 * On récupère les séances de la même classe
+                 * pour vérifier le même groupe D1/D2/...,
+                 * et celles du même professeur s'il existe.
+                 */
+                $query->where(
+                    'class_id',
+                    $data['class_id']
+                );
+
+                if (!empty($data['prof_id'])) {
+                    $query->orWhere(
+                        'prof_id',
+                        $data['prof_id']
+                    );
+                }
             })
             ->with(['prof', 'classRoom'])
             ->get();
 
         foreach ($candidates as $existing) {
+            $sameTeacher =
+                !empty($data['prof_id'])
+                && (int) $existing->prof_id
+                    === (int) $data['prof_id'];
+
+            $existingSlot =
+                strtoupper(
+                    trim(
+                        (string) $existing->slot_code
+                    )
+                );
+
+            $newSlot =
+                strtoupper(
+                    trim(
+                        (string) ($data['slot_code'] ?? '')
+                    )
+                );
+
+            /*
+             * Anciennes séances sans slot_code :
+             * on les considère comme couvrant toute la classe
+             * pour éviter un chevauchement involontaire.
+             */
+            $sameClassGroup =
+                (int) $existing->class_id
+                    === (int) $data['class_id']
+                && (
+                    $existingSlot === ''
+                    || $newSlot === ''
+                    || $existingSlot === $newSlot
+                );
+
+            if (!$sameTeacher && !$sameClassGroup) {
+                continue;
+            }
+
             if (!$this->timesOverlap(
-                Carbon::parse($existing->start_time)->format('H:i:s'),
-                Carbon::parse($existing->end_time)->format('H:i:s'),
-                Carbon::parse($data['start_time'])->format('H:i:s'),
-                Carbon::parse($data['end_time'])->format('H:i:s')
+                Carbon::parse(
+                    $existing->start_time
+                )->format('H:i:s'),
+                Carbon::parse(
+                    $existing->end_time
+                )->format('H:i:s'),
+                Carbon::parse(
+                    $data['start_time']
+                )->format('H:i:s'),
+                Carbon::parse(
+                    $data['end_time']
+                )->format('H:i:s')
             )) {
                 continue;
             }
 
-            if (!$this->datePatternsOverlap($existing, $data)) {
+            if (!$this->datePatternsOverlap(
+                $existing,
+                $data
+            )) {
                 continue;
             }
 
             $reasons = [];
 
-            if ((int) $existing->prof_id === (int) $data['prof_id']) {
-                $reasons[] = 'le professeur « ' . (optional($existing->prof)->name ?: 'sélectionné') . ' »';
+            if ($sameTeacher) {
+                $reasons[] =
+                    'le professeur « '
+                    . (
+                        optional($existing->prof)->name
+                        ?: 'sélectionné'
+                    )
+                    . ' »';
             }
 
-            if ((int) $existing->class_id === (int) $data['class_id']) {
-                $reasons[] = 'la classe pédagogique « ' . (optional($existing->classRoom)->name ?: 'sélectionnée') . ' »';
+            if ($sameClassGroup) {
+                $label =
+                    optional($existing->classRoom)->name
+                    ?: 'classe sélectionnée';
+
+                if ($newSlot !== '') {
+                    $label .= ' · ' . $newSlot;
+                }
+
+                $reasons[] =
+                    'le groupe « '
+                    . $label
+                    . ' »';
             }
 
             throw ValidationException::withMessages([
-                'start_time' => 'Conflit avec la séance #' . $existing->id
-                    . ' : ' . implode(' et ', $reasons) . ' est déjà occupé(e) à cette heure.',
+                'start_time' =>
+                    'Conflit avec la séance #'
+                    . $existing->id
+                    . ' : '
+                    . implode(' et ', $reasons)
+                    . ' est déjà occupé(e) à cette heure.',
             ]);
         }
     }
@@ -452,10 +647,24 @@ class AdminScheduleController extends Controller
 
     private function eventTitle(Schedule $schedule): string
     {
-        $subject = optional($schedule->subjectModel)->name ?: $schedule->subject;
-        $class = optional($schedule->classRoom)->name ?: 'Classe';
+        $subject =
+            optional($schedule->subjectModel)->name
+            ?: $schedule->subject;
 
-        return trim($subject . ' — ' . $class);
+        $class =
+            optional($schedule->classRoom)->name
+            ?: 'Classe';
+
+        $slotCode =
+            trim((string) $schedule->slot_code);
+
+        return collect([
+            $subject,
+            $class,
+            $slotCode !== '' ? $slotCode : null,
+        ])
+            ->filter()
+            ->implode(' — ');
     }
 
     private function eventColor(Schedule $schedule): string
@@ -479,31 +688,112 @@ class AdminScheduleController extends Controller
         return '#7c3aed';
     }
 
+    /**
+     * Un créneau créé dans l'emploi du temps doit aussi donner au professeur
+     * l'accès pédagogique au parcours Matière → Niveau → Classe.
+     *
+     * Les heures de ProfAssignment sont conservées uniquement pour la
+     * rétrocompatibilité. La source officielle des créneaux est schedules.
+     */
+    private function syncTeachingAssignment(array $data): void
+    {
+        if (empty($data['prof_id'])) {
+            return;
+        }
+
+        $assignment = ProfAssignment::firstOrCreate([
+            'prof_id' => $data['prof_id'],
+            'subject_id' => $data['subject_id'],
+            'level_id' => $data['level_id'],
+            'class_id' => $data['class_id'],
+        ]);
+
+        if (!$assignment->day_of_week) {
+            $assignment->day_of_week = $data['day_of_week'];
+        }
+
+        if (!$assignment->start_time) {
+            $assignment->start_time = Carbon::parse($data['start_time'])
+                ->format('H:i:s');
+        }
+
+        if (!$assignment->end_time) {
+            $assignment->end_time = Carbon::parse($data['end_time'])
+                ->format('H:i:s');
+        }
+
+        if ($assignment->isDirty()) {
+            $assignment->save();
+        }
+    }
+
     private function buildScheduleHierarchy(): array
     {
-        $subjects = Subject::query()
-            ->orderByRaw(
-                "CASE
-                    WHEN LOWER(name) = 'arabe' THEN 1
-                    WHEN LOWER(name) = 'coran' THEN 2
-                    WHEN LOWER(name) = 'soutien lycée' THEN 3
-                    ELSE 4
-                END"
-            )
-            ->orderBy('name')
-            ->get();
+        /*
+         * IMPORTANT : l'emploi du temps doit reprendre EXACTEMENT
+         * la structure déjà créée dans :
+         * Matières → Niveaux → Classes.
+         *
+         * On ne refiltre donc plus les niveaux/classes avec une liste
+         * parallèle. Cela évite le cas où la matière s'affiche mais où
+         * le menu "Niveau" reste vide.
+         *
+         * Structure :
+         * Matière → Niveau → Classe → Créneau
+         */
+        /*
+         * L'application utilise uniquement ces trois matières
+         * dans la structure pédagogique principale.
+         */
+        $subjectOrder = [
+            'arabe' => 1,
+            'coran' => 2,
+            'soutien lycee' => 3,
+            'soutient lycee' => 3,
+        ];
 
-        $levels = Level::query()
-            ->with(['classes.subjects'])
+        $subjects = Subject::query()
+            ->get()
+            ->filter(function (Subject $subject) use ($subjectOrder) {
+                return array_key_exists(
+                    $this->normalizePathName($subject->name),
+                    $subjectOrder
+                );
+            })
+            ->sortBy(function (Subject $subject) use ($subjectOrder) {
+                return $subjectOrder[
+                    $this->normalizePathName($subject->name)
+                ] ?? PHP_INT_MAX;
+            })
+            ->values();
+
+        $levelsBySubject = Level::query()
+            ->with([
+                'classes' => fn ($query) =>
+                    $query->orderBy('name'),
+            ])
             ->orderBy('order')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->groupBy('subject_id');
 
         return $subjects
-            ->map(function (Subject $subject) use ($levels) {
-                $subjectLevels = $levels
-                    ->where('subject_id', $subject->id);
+            ->map(function (Subject $subject) use ($levelsBySubject) {
+                $subjectLevels = $levelsBySubject
+                    ->get($subject->id, collect());
 
+                /*
+                 * Pour Arabe, seuls les deux niveaux officiels doivent
+                 * apparaître dans toute la chaîne du planning :
+                 *
+                 * Arabe → Communication
+                 * Arabe → Lecture & Écriture
+                 *
+                 * Les anciens enregistrements Débutant / Intermédiaire /
+                 * Avancé éventuellement présents dans la table levels
+                 * ne sont PAS supprimés de la base, mais ils ne sont plus
+                 * proposés comme niveaux dans /admin/schedule.
+                 */
                 $allowedLevelNames =
                     $this->allowedLevelNamesForSubject(
                         $subject
@@ -511,67 +801,76 @@ class AdminScheduleController extends Controller
 
                 if ($allowedLevelNames !== null) {
                     $subjectLevels = $subjectLevels
-                        ->filter(
-                            fn (Level $level) =>
-                                in_array(
-                                    $this->normalizePathName(
-                                        $level->name
-                                    ),
+                        ->filter(function (Level $level) use (
+                            $allowedLevelNames
+                        ) {
+                            return in_array(
+                                $this->normalizePathName(
+                                    $level->name
+                                ),
+                                $allowedLevelNames,
+                                true
+                            );
+                        })
+                        ->sortBy(function (Level $level) use (
+                            $allowedLevelNames
+                        ) {
+                            $normalized =
+                                $this->normalizePathName(
+                                    $level->name
+                                );
+
+                            $position =
+                                array_search(
+                                    $normalized,
                                     $allowedLevelNames,
                                     true
-                                )
-                        );
+                                );
+
+                            return $position === false
+                                ? PHP_INT_MAX
+                                : $position;
+                        })
+                        ->unique(function (Level $level) {
+                            return $this->normalizePathName(
+                                $level->name
+                            );
+                        })
+                        ->values();
                 }
 
                 $subjectLevels = $subjectLevels
-                    ->unique(
-                        fn (Level $level) =>
-                            $this->normalizePathName(
-                                $level->name
-                            )
-                    )
-                    ->values()
-                    ->map(function (Level $level) use ($subject) {
+                    ->map(function (Level $level) {
                         $classes = $level->classes
-                            ->filter(function (ClassRoom $classRoom) use ($subject) {
-                                return $classRoom->subjects->contains('id', $subject->id);
-                            })
-                            ->sortBy('name')
                             ->unique('id')
                             ->values()
                             ->map(function (ClassRoom $classRoom) {
                                 return [
-                                    'id' => $classRoom->id,
+                                    'id' => (int) $classRoom->id,
                                     'name' => $classRoom->name,
+                                    'slot_codes' =>
+                                        $this->slotCodesForClass(
+                                            $classRoom
+                                        ),
                                 ];
                             })
                             ->all();
 
-                        if (empty($classes)) {
-                            return null;
-                        }
-
                         return [
-                            'id' => $level->id,
+                            'id' => (int) $level->id,
                             'name' => $level->name,
                             'classes' => $classes,
                         ];
                     })
-                    ->filter()
                     ->values()
                     ->all();
 
-                if (empty($subjectLevels)) {
-                    return null;
-                }
-
                 return [
-                    'id' => $subject->id,
+                    'id' => (int) $subject->id,
                     'name' => $subject->name,
                     'levels' => $subjectLevels,
                 ];
             })
-            ->filter()
             ->values()
             ->all();
     }
@@ -586,18 +885,66 @@ class AdminScheduleController extends Controller
         return match (
             $this->normalizePathName($subject->name)
         ) {
+            /*
+             * Arabe possède exactement deux niveaux.
+             * Débutant / Intermédiaire / Avancé sont des CLASSES,
+             * pas des niveaux.
+             */
             'arabe' => [
-                'lecture & ecriture',
                 'communication',
+                'lecture & ecriture',
             ],
-            'coran' => [
-                'apprentissage & tajwid',
-            ],
-            'soutien lycee' => [
-                'bac',
-            ],
+
+            /*
+             * Pour Coran et Soutien Lycée, on conserve les niveaux
+             * configurés actuellement dans l'administration.
+             */
             default => null,
         };
+    }
+
+
+    /**
+     * Les niveaux/parcours restent inchangés.
+     *
+     * Exemple :
+     * Arabe → Communication → Débutant → D1 / D2 / D3 / D4
+     * Arabe → Communication → Intermédiaire → I1 / I2 / I3 / I4
+     * Arabe → Communication → Avancé → A1 / A2 / A3 / A4
+     */
+    private function slotCodesForClass(
+        ClassRoom $classRoom
+    ): array {
+        $normalized =
+            $this->normalizePathName(
+                $classRoom->name
+            );
+
+        $prefix = match (true) {
+            str_contains(
+                $normalized,
+                'debutant'
+            ) => 'D',
+
+            str_contains(
+                $normalized,
+                'intermediaire'
+            ) => 'I',
+
+            str_contains(
+                $normalized,
+                'avance'
+            ) => 'A',
+
+            default => 'G',
+        };
+
+        return collect(range(1, 4))
+            ->map(
+                fn (int $number) =>
+                    $prefix . $number
+            )
+            ->all();
     }
 
     private function normalizePathName(

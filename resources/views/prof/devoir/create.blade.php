@@ -2,309 +2,603 @@
 
 @section('title', 'Créer un devoir')
 @section('page_title', 'Nouveau devoir')
-@section('breadcrumb', 'Création d’un devoir')
+@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
 
 @section('content')
 <section class="pp-page-head">
     <div class="pp-page-copy">
-        <span class="pp-eyebrow"><i class="bi bi-file-earmark-plus-fill"></i> Nouvelle activité</span>
+        <span class="pp-eyebrow">
+            <i class="bi bi-file-earmark-plus-fill"></i>
+            Nouvelle activité
+        </span>
+
         <h1 class="pp-page-title">Créer un devoir</h1>
+
         <p class="pp-page-description">
-            Suivez le parcours <strong>Matière → Niveau → Classe</strong>, puis renseignez les consignes et la date limite.
+            Choisissez d’abord le parcours exact
+            Matière → Niveau → Classe → Créneau.
         </p>
     </div>
 
     <div class="pp-page-actions">
-        <a href="{{ route('prof.devoir.index', ['course_id' => $course_id ?? null]) }}" class="adm-btn adm-btn-ghost">
+        <a
+            href="{{ route('prof.devoir.index') }}"
+            class="adm-btn adm-btn-ghost"
+        >
             <i class="bi bi-arrow-left"></i>
-            Retour aux devoirs
+            Retour
         </a>
     </div>
 </section>
 
 @if($errors->any())
-    <div class="adm-alert adm-alert-danger">
-        <span class="adm-alert-icon"><i class="bi bi-exclamation-circle-fill"></i></span>
-        <div>
-            <strong>Le formulaire contient des erreurs.</strong>
-            <ul class="mb-0 mt-2 ps-3">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
+    <div class="adm-alert adm-alert-danger mb-4">
+        <strong>Le formulaire contient des erreurs.</strong>
+        <ul class="mb-0 mt-2">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
 @endif
 
-@if($course)
-    <div class="pp-course-context">
-        <span class="pp-course-context-icon"><i class="bi bi-book-fill"></i></span>
-        <span>
-            <strong>{{ $course->title }}</strong>
-            <span>
-                {{ $course->subject?->name ?? 'Matière' }}
-                → {{ $course->classRoom?->level?->name ?? 'Niveau' }}
-                → {{ $course->classRoom?->name ?? 'Classe' }}
-            </span>
-        </span>
-    </div>
-@endif
-
-<form method="POST" action="{{ route('prof.devoir.store') }}" enctype="multipart/form-data">
+<form
+    method="POST"
+    action="{{ route('prof.devoir.store') }}"
+    enctype="multipart/form-data"
+    id="profDevoirCreate"
+>
     @csrf
 
     <div class="pp-form-grid">
         <section class="pp-panel">
             <header class="pp-panel-head">
                 <div class="pp-panel-title-wrap">
-                    <h2 class="pp-panel-title"><i class="bi bi-card-text"></i> Contenu du devoir</h2>
-                    <p class="pp-panel-subtitle">Donnez un titre clair et des consignes compréhensibles.</p>
+                    <h2 class="pp-panel-title">
+                        <i class="bi bi-diagram-3-fill"></i>
+                        Affectation
+                    </h2>
+
+                    <p class="pp-panel-subtitle">
+                        Le devoir sera visible uniquement
+                        par les étudiants de ce créneau.
+                    </p>
                 </div>
             </header>
 
             <div class="pp-form-section">
-                <div class="pp-field">
-                    <label for="title" class="pp-label">
-                        <i class="bi bi-type"></i> Titre du devoir <span class="required">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="title"
-                        name="title"
-                        value="{{ old('title') }}"
-                        class="adm-form-control @error('title') is-invalid @enderror"
-                        placeholder="Ex. Exercices du chapitre 3"
-                        maxlength="255"
-                        required
-                        autofocus
-                    >
-                    @error('title') <span class="adm-form-error">{{ $message }}</span> @enderror
+                <div class="pps-form-path">
+                    <div class="pp-field">
+                        <label
+                            for="devoirSubject"
+                            class="pp-label"
+                        >
+                            Matière *
+                        </label>
+
+                        <select
+                            name="subject_id"
+                            id="devoirSubject"
+                            class="adm-form-select"
+                            required
+                        >
+                            <option value="">
+                                Choisir une matière
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="pp-field">
+                        <label
+                            for="devoirLevel"
+                            class="pp-label"
+                        >
+                            Niveau *
+                        </label>
+
+                        <select
+                            name="level_id"
+                            id="devoirLevel"
+                            class="adm-form-select"
+                            disabled
+                            required
+                        >
+                            <option value="">
+                                Choisir un niveau
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="pp-field">
+                        <label
+                            for="devoirClass"
+                            class="pp-label"
+                        >
+                            Classe *
+                        </label>
+
+                        <select
+                            name="class_id"
+                            id="devoirClass"
+                            class="adm-form-select"
+                            disabled
+                            required
+                        >
+                            <option value="">
+                                Choisir une classe
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="pp-field">
+                        <label
+                            for="devoirSlot"
+                            class="pp-label"
+                        >
+                            Créneau *
+                        </label>
+
+                        <select
+                            name="class_slot_id"
+                            id="devoirSlot"
+                            class="adm-form-select"
+                            disabled
+                            required
+                        >
+                            <option value="">
+                                Choisir un créneau
+                            </option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="pp-field">
-                    <label for="description" class="pp-label">
-                        <i class="bi bi-text-paragraph"></i> Description et consignes
+                <div class="pp-field mt-3">
+                    <label
+                        for="course_id"
+                        class="pp-label"
+                    >
+                        Cours associé
                     </label>
-                    <textarea
-                        id="description"
-                        name="description"
-                        rows="9"
-                        class="adm-form-control @error('description') is-invalid @enderror"
-                        placeholder="Précisez les exercices à réaliser, les objectifs et les consignes de remise..."
-                    >{{ old('description') }}</textarea>
-                    @error('description') <span class="adm-form-error">{{ $message }}</span> @enderror
-                    <p class="pp-help">Une consigne précise aide les étudiants à rendre un travail conforme.</p>
+
+                    <select
+                        name="course_id"
+                        id="course_id"
+                        class="adm-form-select"
+                    >
+                        <option value="">
+                            Aucun cours spécifique
+                        </option>
+
+                        @foreach($courses as $courseOption)
+                            <option
+                                value="{{ $courseOption->id }}"
+                                data-subject="{{
+                                    $courseOption->subject_id
+                                }}"
+                                data-level="{{
+                                    $courseOption->level_id
+                                }}"
+                                data-class="{{
+                                    $courseOption->class_id
+                                }}"
+                                data-slot="{{
+                                    strtoupper(
+                                        trim(
+                                            (string)
+                                            $courseOption->slot_code
+                                        )
+                                    )
+                                }}"
+                                {{
+                                    (string) old(
+                                        'course_id',
+                                        $courseId ?? ''
+                                    )
+                                    ===
+                                    (string) $courseOption->id
+                                        ? 'selected'
+                                        : ''
+                                }}
+                            >
+                                {{ $courseOption->title }}
+                                @if($courseOption->slot_code)
+                                    — {{ $courseOption->slot_code }}
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <small class="pp-help">
+                        Seuls les cours correspondant au créneau
+                        sélectionné restent disponibles.
+                    </small>
                 </div>
             </div>
         </section>
 
-        <aside class="pp-panel">
+        <section class="pp-panel">
             <header class="pp-panel-head">
                 <div class="pp-panel-title-wrap">
-                    <h2 class="pp-panel-title"><i class="bi bi-diagram-3-fill"></i> Affectation</h2>
-                    <p class="pp-panel-subtitle">Matière → Niveau → Classe → Cours.</p>
+                    <h2 class="pp-panel-title">
+                        <i class="bi bi-card-text"></i>
+                        Contenu du devoir
+                    </h2>
                 </div>
             </header>
 
             <div class="pp-form-section">
                 <div class="pp-field">
-                    <label for="subject_id" class="pp-label">
-                        <i class="bi bi-journal-bookmark-fill"></i> Matière <span class="required">*</span>
+                    <label
+                        for="title"
+                        class="pp-label"
+                    >
+                        Titre *
                     </label>
-                    <select id="subject_id" name="subject_id" class="adm-form-select @error('subject_id') is-invalid @enderror" required>
-                        <option value="">Sélectionner une matière</option>
-                    </select>
-                    @error('subject_id') <span class="adm-form-error">{{ $message }}</span> @enderror
-                </div>
 
-                <div class="pp-field">
-                    <label for="level_id" class="pp-label">
-                        <i class="bi bi-layers-fill"></i> Niveau <span class="required">*</span>
-                    </label>
-                    <select id="level_id" name="level_id" class="adm-form-select @error('level_id') is-invalid @enderror" required disabled>
-                        <option value="">Sélectionner d’abord une matière</option>
-                    </select>
-                    @error('level_id') <span class="adm-form-error">{{ $message }}</span> @enderror
-                </div>
-
-                <div class="pp-field">
-                    <label for="class_room_id" class="pp-label">
-                        <i class="bi bi-people-fill"></i> Classe <span class="required">*</span>
-                    </label>
-                    <select id="class_room_id" name="class_room_id" class="adm-form-select @error('class_room_id') is-invalid @enderror" required disabled>
-                        <option value="">Sélectionner d’abord un niveau</option>
-                    </select>
-                    @error('class_room_id') <span class="adm-form-error">{{ $message }}</span> @enderror
-                </div>
-
-                <div class="pp-field">
-                    <label for="course_id" class="pp-label"><i class="bi bi-book"></i> Cours associé</label>
-                    <select id="course_id" name="course_id" class="adm-form-select @error('course_id') is-invalid @enderror" disabled>
-                        <option value="">Aucun cours spécifique</option>
-                    </select>
-                    @error('course_id') <span class="adm-form-error">{{ $message }}</span> @enderror
-                    <p class="pp-help">Les cours proposés correspondent uniquement à la matière, au niveau et à la classe choisis.</p>
-                </div>
-
-                <div class="pp-field">
-                    <label for="due_date" class="pp-label">
-                        <i class="bi bi-calendar-check"></i> Date limite <span class="required">*</span>
-                    </label>
                     <input
-                        type="date"
-                        id="due_date"
-                        name="due_date"
-                        value="{{ old('due_date') }}"
-                        min="{{ now()->addDay()->toDateString() }}"
-                        class="adm-form-control @error('due_date') is-invalid @enderror"
+                        type="text"
+                        name="title"
+                        id="title"
+                        value="{{ old('title') }}"
+                        class="adm-form-control"
+                        maxlength="255"
                         required
                     >
-                    @error('due_date') <span class="adm-form-error">{{ $message }}</span> @enderror
-                    <p class="pp-help">La date doit être postérieure à aujourd’hui.</p>
                 </div>
 
                 <div class="pp-field">
-                    <label for="file" class="pp-label"><i class="bi bi-paperclip"></i> Document PDF</label>
-                    <div class="pp-upload">
-                        <span class="pp-upload-icon"><i class="bi bi-cloud-arrow-up-fill"></i></span>
-                        <input
-                            type="file"
-                            id="file"
-                            name="file"
-                            accept="application/pdf,.pdf"
-                            class="adm-form-control @error('file') is-invalid @enderror"
-                        >
-                        <p class="pp-help">PDF uniquement · taille maximale 5 Mo.</p>
-                    </div>
-                    @error('file') <span class="adm-form-error">{{ $message }}</span> @enderror
+                    <label
+                        for="description"
+                        class="pp-label"
+                    >
+                        Description
+                    </label>
+
+                    <textarea
+                        name="description"
+                        id="description"
+                        rows="7"
+                        class="adm-form-control"
+                    >{{ old('description') }}</textarea>
+                </div>
+
+                <div class="pp-field">
+                    <label
+                        for="due_date"
+                        class="pp-label"
+                    >
+                        Date limite *
+                    </label>
+
+                    <input
+                        type="date"
+                        name="due_date"
+                        id="due_date"
+                        value="{{ old('due_date') }}"
+                        min="{{ now()->addDay()->toDateString() }}"
+                        class="adm-form-control"
+                        required
+                    >
+                </div>
+
+                <div class="pp-field">
+                    <label
+                        for="file"
+                        class="pp-label"
+                    >
+                        Document PDF
+                    </label>
+
+                    <input
+                        type="file"
+                        name="file"
+                        id="file"
+                        accept="application/pdf,.pdf"
+                        class="adm-form-control"
+                    >
                 </div>
             </div>
-        </aside>
+        </section>
     </div>
 
-    <div class="pp-panel pp-section-gap">
+    <section class="pp-panel pp-section-gap">
         <div class="pp-form-actions">
-            <a href="{{ route('prof.devoir.index', ['course_id' => $course_id ?? null]) }}" class="adm-btn adm-btn-ghost">
-                <i class="bi bi-x-lg"></i> Annuler
+            <a
+                href="{{ route('prof.devoir.index') }}"
+                class="adm-btn adm-btn-ghost"
+            >
+                Annuler
             </a>
-            <button type="submit" class="adm-btn adm-btn-success">
-                <i class="bi bi-check-circle-fill"></i> Publier le devoir
+
+            <button
+                type="submit"
+                class="adm-btn adm-btn-success"
+            >
+                <i class="bi bi-check-circle-fill"></i>
+                Publier le devoir
             </button>
         </div>
-    </div>
+    </section>
 </form>
+@endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const paths = @json($teachingPaths ?? []);
-    const courses = @json($courseOptions ?? []);
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        const hierarchy =
+            @json($profHierarchy);
 
-    const subjectSelect = document.getElementById('subject_id');
-    const levelSelect = document.getElementById('level_id');
-    const classSelect = document.getElementById('class_room_id');
-    const courseSelect = document.getElementById('course_id');
+        const subject =
+            document.getElementById('devoirSubject');
 
-    const initial = {
-        subject: String(@json($selectedSubjectId ?? '')),
-        level: String(@json($selectedLevelId ?? '')),
-        classRoom: String(@json($selectedClassId ?? '')),
-        course: String(@json($selectedCourseId ?? ''))
-    };
+        const level =
+            document.getElementById('devoirLevel');
 
-    function unique(items, idKey, nameKey) {
-        const seen = new Map();
-        items.forEach(function (item) {
-            const id = String(item[idKey]);
-            if (!seen.has(id)) seen.set(id, item[nameKey]);
-        });
-        return Array.from(seen, function ([id, name]) { return { id, name }; });
-    }
+        const classroom =
+            document.getElementById('devoirClass');
 
-    function setOptions(select, placeholder, items, selectedValue) {
-        select.innerHTML = '';
-        select.add(new Option(placeholder, ''));
-        items.forEach(function (item) {
-            select.add(new Option(item.name, item.id));
-        });
-        select.disabled = items.length === 0;
-        if (selectedValue && items.some(function (item) { return item.id === String(selectedValue); })) {
-            select.value = String(selectedValue);
+        const slot =
+            document.getElementById('devoirSlot');
+
+        const course =
+            document.getElementById('course_id');
+
+        const wantedSubject =
+            @json((string) ($selectedSubjectId ?? ''));
+
+        const wantedLevel =
+            @json((string) ($selectedLevelId ?? ''));
+
+        const wantedClass =
+            @json((string) ($selectedClassId ?? ''));
+
+        const wantedSlot =
+            @json((string) ($selectedSlotId ?? ''));
+
+        const makeOption = (
+            value,
+            label,
+            selected = false
+        ) => {
+            const item =
+                document.createElement('option');
+
+            item.value = String(value);
+            item.textContent = label;
+            item.selected = selected;
+
+            return item;
+        };
+
+        const subjectData = () =>
+            hierarchy.find(
+                item =>
+                    String(item.id)
+                    === String(subject.value)
+            );
+
+        const levelData = () =>
+            subjectData()
+                ?.levels
+                ?.find(
+                    item =>
+                        String(item.id)
+                        === String(level.value)
+                );
+
+        const classData = () =>
+            levelData()
+                ?.classes
+                ?.find(
+                    item =>
+                        String(item.id)
+                        === String(classroom.value)
+                );
+
+        function refreshCourses() {
+            if (!course) {
+                return;
+            }
+
+            const slotItem =
+                classData()
+                    ?.slots
+                    ?.find(
+                        item =>
+                            String(item.id)
+                            === String(slot.value)
+                    );
+
+            const selectedSlotCode =
+                String(
+                    slotItem?.code || ''
+                ).toUpperCase();
+
+            Array.from(
+                course.options
+            ).forEach(option => {
+                if (!option.value) {
+                    option.hidden = false;
+                    option.disabled = false;
+                    return;
+                }
+
+                const matches =
+                    String(option.dataset.subject)
+                        === String(subject.value)
+                    && String(option.dataset.level)
+                        === String(level.value)
+                    && String(option.dataset.class)
+                        === String(classroom.value)
+                    && String(option.dataset.slot || '')
+                        .toUpperCase()
+                        === selectedSlotCode;
+
+                option.hidden = !matches;
+                option.disabled = !matches;
+            });
+
+            const current =
+                course.options[
+                    course.selectedIndex
+                ];
+
+            if (
+                current
+                && current.value
+                && current.disabled
+            ) {
+                course.value = '';
+            }
         }
-    }
 
-    function fillSubjects(selectedValue = '') {
-        const subjects = unique(paths, 'subject_id', 'subject_name');
-        setOptions(subjectSelect, 'Sélectionner une matière', subjects, selectedValue);
-    }
+        function fillSlots(wanted = '') {
+            slot.innerHTML = '';
 
-    function fillLevels(selectedValue = '') {
-        const subjectId = subjectSelect.value;
-        const levels = unique(
-            paths.filter(function (path) { return String(path.subject_id) === subjectId; }),
-            'level_id',
-            'level_name'
-        );
-        setOptions(levelSelect, subjectId ? 'Sélectionner un niveau' : 'Sélectionner d’abord une matière', levels, selectedValue);
-    }
+            slot.appendChild(
+                makeOption(
+                    '',
+                    'Choisir un créneau'
+                )
+            );
 
-    function fillClasses(selectedValue = '') {
-        const subjectId = subjectSelect.value;
-        const levelId = levelSelect.value;
-        const classes = unique(
-            paths.filter(function (path) {
-                return String(path.subject_id) === subjectId && String(path.level_id) === levelId;
-            }),
-            'class_id',
-            'class_name'
-        );
-        setOptions(classSelect, levelId ? 'Sélectionner une classe' : 'Sélectionner d’abord un niveau', classes, selectedValue);
-    }
+            const items =
+                classData()?.slots || [];
 
-    function fillCourses(selectedValue = '') {
-        const subjectId = subjectSelect.value;
-        const levelId = levelSelect.value;
-        const classId = classSelect.value;
-        const matchingCourses = courses
-            .filter(function (course) {
-                return String(course.subject_id) === subjectId
-                    && String(course.level_id) === levelId
-                    && String(course.class_id) === classId;
-            })
-            .map(function (course) { return { id: String(course.id), name: course.title }; });
+            items.forEach(item => {
+                slot.appendChild(
+                    makeOption(
+                        item.id,
+                        item.code,
+                        String(item.id)
+                        === String(wanted)
+                    )
+                );
+            });
 
-        courseSelect.innerHTML = '';
-        courseSelect.add(new Option('Aucun cours spécifique', ''));
-        matchingCourses.forEach(function (course) {
-            courseSelect.add(new Option(course.name, course.id));
-        });
-        courseSelect.disabled = !classId;
+            slot.disabled =
+                !classData();
 
-        if (selectedValue && matchingCourses.some(function (course) { return course.id === String(selectedValue); })) {
-            courseSelect.value = String(selectedValue);
+            refreshCourses();
         }
+
+        function fillClasses(
+            wanted = '',
+            wantedSlotId = ''
+        ) {
+            classroom.innerHTML = '';
+
+            classroom.appendChild(
+                makeOption(
+                    '',
+                    'Choisir une classe'
+                )
+            );
+
+            const items =
+                levelData()?.classes || [];
+
+            items.forEach(item => {
+                classroom.appendChild(
+                    makeOption(
+                        item.id,
+                        item.name,
+                        String(item.id)
+                        === String(wanted)
+                    )
+                );
+            });
+
+            classroom.disabled =
+                !levelData();
+
+            fillSlots(wantedSlotId);
+        }
+
+        function fillLevels(
+            wanted = '',
+            wantedClassId = '',
+            wantedSlotId = ''
+        ) {
+            level.innerHTML = '';
+
+            level.appendChild(
+                makeOption(
+                    '',
+                    'Choisir un niveau'
+                )
+            );
+
+            const items =
+                subjectData()?.levels || [];
+
+            items.forEach(item => {
+                level.appendChild(
+                    makeOption(
+                        item.id,
+                        item.name,
+                        String(item.id)
+                        === String(wanted)
+                    )
+                );
+            });
+
+            level.disabled =
+                !subjectData();
+
+            fillClasses(
+                wantedClassId,
+                wantedSlotId
+            );
+        }
+
+        hierarchy.forEach(item => {
+            subject.appendChild(
+                makeOption(
+                    item.id,
+                    item.name,
+                    String(item.id)
+                    === String(wantedSubject)
+                )
+            );
+        });
+
+        if (wantedSubject) {
+            subject.value = wantedSubject;
+
+            fillLevels(
+                wantedLevel,
+                wantedClass,
+                wantedSlot
+            );
+        } else {
+            fillLevels();
+        }
+
+        subject.addEventListener(
+            'change',
+            () => fillLevels()
+        );
+
+        level.addEventListener(
+            'change',
+            () => fillClasses()
+        );
+
+        classroom.addEventListener(
+            'change',
+            () => fillSlots()
+        );
+
+        slot.addEventListener(
+            'change',
+            refreshCourses
+        );
+
+        refreshCourses();
     }
-
-    subjectSelect.addEventListener('change', function () {
-        fillLevels();
-        fillClasses();
-        fillCourses();
-    });
-
-    levelSelect.addEventListener('change', function () {
-        fillClasses();
-        fillCourses();
-    });
-
-    classSelect.addEventListener('change', function () {
-        fillCourses();
-    });
-
-    fillSubjects(initial.subject);
-    fillLevels(initial.level);
-    fillClasses(initial.classRoom);
-    fillCourses(initial.course);
-});
+);
 </script>
 @endpush
-@endsection

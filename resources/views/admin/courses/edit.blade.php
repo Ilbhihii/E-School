@@ -2,7 +2,7 @@
 
 @section('title', 'Modifier le cours')
 @section('page_title', 'Modifier cours')
-@section('breadcrumb', 'Modifier le cours')
+@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Modifier')
 
 @section('content')
 <div class="row justify-content-center">
@@ -94,123 +94,39 @@
                         @enderror
                     </div>
 
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <div class="adm-form-group">
-                                <label class="adm-form-label" for="level_name">
-                                    Niveau
-                                </label>
-
-                                <input
-                                    id="level_name"
-                                    type="text"
-                                    class="adm-form-control"
-                                    value="{{ optional($course->level)->name }}"
-                                    readonly
-                                >
-
-                                {{--
-                                    Important : un champ disabled n'est jamais
-                                    envoyé par le navigateur. Le champ caché
-                                    transmet donc le niveau au contrôleur.
-                                --}}
-                                <input
-                                    id="level_id"
-                                    type="hidden"
-                                    name="level_id"
-                                    value="{{ old('level_id', $course->level_id) }}"
-                                >
-
-                                <small
-                                    style="
-                                        color:var(--adm-text-muted);
-                                        font-size:0.7rem;
-                                    "
-                                >
-                                    Déduit automatiquement de la classe
-                                </small>
-
-                                @error('level_id')
-                                    <div class="adm-form-error">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <div class="adm-form-group">
-                                <label class="adm-form-label" for="class_id">
-                                    Classe
-                                    <span style="color:var(--adm-danger);">*</span>
-                                </label>
-
-                                <select
-                                    id="class_id"
-                                    name="class_id"
-                                    class="adm-form-select @error('class_id') error @enderror"
-                                    required
-                                >
-                                    <option value="">-- Choisir --</option>
-
-                                    @foreach($classes as $class)
-                                        <option
-                                            value="{{ $class->id }}"
-                                            data-level-id="{{ $class->level_id }}"
-                                            data-level-name="{{ $class->level->name ?? '' }}"
-                                            {{
-                                                (string) old('class_id', $course->class_id)
-                                                === (string) $class->id
-                                                    ? 'selected'
-                                                    : ''
-                                            }}
-                                        >
-                                            {{ $class->level->name ?? '' }}
-                                            — {{ $class->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                                @error('class_id')
-                                    <div class="adm-form-error">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <div class="adm-form-group">
-                                <label class="adm-form-label" for="subject_id">
-                                    Matière
-                                    <span style="color:var(--adm-danger);">*</span>
-                                </label>
-
-                                <select
-                                    id="subject_id"
-                                    name="subject_id"
-                                    class="adm-form-select @error('subject_id') error @enderror"
-                                    required
-                                >
-                                    <option value="">-- Choisir --</option>
-
-                                    @foreach($subjects as $subject)
-                                        <option
-                                            value="{{ $subject->id }}"
-                                            {{
-                                                (string) old('subject_id', $course->subject_id)
-                                                === (string) $subject->id
-                                                    ? 'selected'
-                                                    : ''
-                                            }}
-                                        >
-                                            {{ $subject->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                                @error('subject_id')
-                                    <div class="adm-form-error">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
+                    @include(
+                        'components.pedagogical-path-edit',
+                        [
+                            'hierarchy' => $editHierarchy,
+                            'prefix' => 'courseEditPath',
+                            'subjectName' => 'subject_id',
+                            'levelName' => 'level_id',
+                            'className' => 'class_id',
+                            'slotName' => 'slot_code',
+                            'slotValueKey' => 'code',
+                            'slotLabelKey' => 'label',
+                            'selectedSubject' =>
+                                old(
+                                    'subject_id',
+                                    $course->subject_id
+                                ),
+                            'selectedLevel' =>
+                                old(
+                                    'level_id',
+                                    $course->level_id
+                                ),
+                            'selectedClass' =>
+                                old(
+                                    'class_id',
+                                    $course->class_id
+                                ),
+                            'selectedSlot' =>
+                                old(
+                                    'slot_code',
+                                    $course->slot_code
+                                ),
+                        ]
+                    )
 
                     <div class="adm-form-group">
                         <label class="adm-form-label" for="course_link">
@@ -412,126 +328,58 @@
 </div>
 
 <script>
-(function () {
-    'use strict';
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        const form =
+            document.getElementById(
+                'courseUpdateForm'
+            );
 
-    const initialSubjectId = @json(
-        (string) old('subject_id', $course->subject_id)
-    );
+        const submitButton =
+            document.getElementById(
+                'submitCourseButton'
+            );
 
-    const fallbackSubjects = @json(
-        $subjects->map(function ($subject) {
-            return [
-                'id' => $subject->id,
-                'name' => $subject->name,
-            ];
-        })->values()
-    );
+        const uploadNotice =
+            document.getElementById(
+                'uploadNotice'
+            );
 
-    function escapeHtml(value) {
-        const div = document.createElement('div');
-        div.textContent = value ?? '';
-        return div.innerHTML;
-    }
-
-    function updateLevel() {
-        const classSelect = document.getElementById('class_id');
-        const levelIdInput = document.getElementById('level_id');
-        const levelNameInput = document.getElementById('level_name');
-        const selectedOption = classSelect.options[classSelect.selectedIndex];
-
-        if (selectedOption && selectedOption.dataset.levelId) {
-            levelIdInput.value = selectedOption.dataset.levelId;
-            levelNameInput.value = selectedOption.dataset.levelName || '';
+        if (
+            !form
+            || !submitButton
+        ) {
             return;
         }
 
-        levelIdInput.value = '';
-        levelNameInput.value = '';
-    }
+        form.addEventListener(
+            'submit',
+            function () {
+                submitButton.disabled = true;
 
-    function addSubjectOption(subjectSelect, subject, selectedId) {
-        const option = document.createElement('option');
-        option.value = String(subject.id);
-        option.textContent = subject.name;
-        option.selected = String(subject.id) === String(selectedId);
-        subjectSelect.appendChild(option);
-    }
+                submitButton.setAttribute(
+                    'aria-disabled',
+                    'true'
+                );
 
-    function showFallbackSubjects(selectedId) {
-        const subjectSelect = document.getElementById('subject_id');
-        subjectSelect.innerHTML = '<option value="">-- Choisir --</option>';
+                const label =
+                    submitButton.querySelector(
+                        'span'
+                    );
 
-        fallbackSubjects.forEach(function (subject) {
-            addSubjectOption(subjectSelect, subject, selectedId);
-        });
-
-        subjectSelect.disabled = false;
-    }
-
-    function filterSubjectsByClass(selectedId = initialSubjectId) {
-        const classSelect = document.getElementById('class_id');
-        const subjectSelect = document.getElementById('subject_id');
-        const classId = classSelect.value;
-
-        if (!classId) {
-            showFallbackSubjects(selectedId);
-            return;
-        }
-
-        subjectSelect.disabled = true;
-        subjectSelect.innerHTML = '<option value="">Chargement...</option>';
-
-        fetch('/admin/get-class-subjects/' + encodeURIComponent(classId), {
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('Réponse HTTP ' + response.status);
+                if (label) {
+                    label.textContent =
+                        'Envoi en cours…';
                 }
 
-                return response.json();
-            })
-            .then(function (subjects) {
-                subjectSelect.innerHTML =
-                    '<option value="">-- Choisir --</option>';
-
-                subjects.forEach(function (subject) {
-                    addSubjectOption(subjectSelect, subject, selectedId);
-                });
-
-                subjectSelect.disabled = false;
-            })
-            .catch(function (error) {
-                console.error('Erreur de chargement des matières :', error);
-                showFallbackSubjects(selectedId);
-            });
+                if (uploadNotice) {
+                    uploadNotice.style.display =
+                        'block';
+                }
+            }
+        );
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const classSelect = document.getElementById('class_id');
-        const form = document.getElementById('courseUpdateForm');
-        const submitButton = document.getElementById('submitCourseButton');
-        const uploadNotice = document.getElementById('uploadNotice');
-
-        classSelect.addEventListener('change', function () {
-            updateLevel();
-            filterSubjectsByClass('');
-        });
-
-        form.addEventListener('submit', function () {
-            submitButton.disabled = true;
-            submitButton.setAttribute('aria-disabled', 'true');
-            submitButton.querySelector('span').textContent = 'Envoi en cours…';
-            uploadNotice.style.display = 'block';
-        });
-
-        updateLevel();
-        filterSubjectsByClass(initialSubjectId);
-    });
-})();
+);
 </script>
 @endsection

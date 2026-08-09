@@ -4,72 +4,138 @@ namespace App\Http\Controllers\Prof;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
-use App\Models\ProfAssignment;
+use App\Models\ClassSlot;
+use App\Services\ClassScheduleDisplayService;
+use App\Services\ProfessorPathService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
 {
-    public function index()
-    {
-        $assignments =
-            $this->scheduledAssignments();
+    private ProfessorPathService $profPaths;
 
-        $classes =
-            ClassRoom::query()
-                ->whereIn(
-                    'id',
-                    $this->assignedClassIds()
-                )
-                ->orderBy('name')
-                ->get();
+    public function __construct(
+        ProfessorPathService $profPaths
+    ) {
+        $this->profPaths = $profPaths;
+    }
+
+    public function index(
+        Request $request,
+        ClassScheduleDisplayService $scheduleService
+    ) {
+        $profHierarchy =
+            $this->profPaths->hierarchy(
+                auth()->id()
+            );
+
+        $filters =
+            $this->profPaths
+                ->selectedFilters($request);
+
+        $slot = !empty(
+            $filters['selectedSlotId']
+        )
+            ? ClassSlot::query()->find(
+                $filters['selectedSlotId']
+            )
+            : null;
+
+        if (
+            $slot
+            && !$this->profPaths->ownsSlot(
+                auth()->id(),
+                (int) $slot->id
+            )
+        ) {
+            abort(403);
+        }
+
+        $scheduleFilters = array_filter([
+            'subject_id' =>
+                $filters['selectedSubjectId'],
+            'level_id' =>
+                $filters['selectedLevelId'],
+            'class_id' =>
+                $filters['selectedClassId'],
+            'slot_code' =>
+                $slot?->code,
+        ]);
+
+        $occurrences =
+            $scheduleService
+                ->forProfessor(
+                    auth()->user(),
+                    now()->startOfDay(),
+                    35,
+                    null,
+                    $scheduleFilters
+                );
+
+        $classes = ClassRoom::query()
+            ->whereIn(
+                'id',
+                $this->profPaths
+                    ->assignments(
+                        auth()->id()
+                    )
+                    ->pluck('class_id')
+                    ->unique()
+            )
+            ->orderBy('name')
+            ->get();
 
         return view(
             'prof.schedule',
-            compact(
-                'classes',
-                'assignments'
+            array_merge(
+                compact(
+                    'profHierarchy',
+                    'occurrences',
+                    'classes'
+                ),
+                $filters
             )
         );
     }
 
     public function classes()
     {
-        $classes =
-            ClassRoom::query()
-                ->whereIn(
-                    'id',
-                    $this->assignedClassIds()
-                )
-                ->orderBy('name')
-                ->get([
-                    'id',
-                    'name',
-                ]);
+        $classes = ClassRoom::query()
+            ->whereIn(
+                'id',
+                $this->profPaths
+                    ->assignments(
+                        auth()->id()
+                    )
+                    ->pluck('class_id')
+                    ->unique()
+            )
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+            ]);
 
         return response()->json(
             $classes
         );
     }
 
-    /**
-     * Retourne les occurrences hebdomadaires
-     * enregistrées par l'administration.
-     */
-    public function data(Request $request)
-    {
-        $rangeStart =
-            Carbon::parse(
+    public function data(
+        Request $request,
+        ClassScheduleDisplayService $scheduleService
+    ) {
+        try {
+            $rangeStart = Carbon::parse(
                 $request->query(
                     'start',
                     now()
                         ->startOfWeek()
                         ->toIso8601String()
                 )
-            )->startOfDay();
+            );
 
-        $rangeEnd =
-            Carbon::parse(
+            $rangeEnd = Carbon::parse(
                 $request->query(
                     'end',
                     now()
@@ -77,181 +143,168 @@ class ScheduleController extends Controller
                         ->addDay()
                         ->toIso8601String()
                 )
-            )->startOfDay();
-
-        if ($rangeEnd->lessThanOrEqualTo(
-            $rangeStart
-        )) {
-            $rangeEnd =
-                $rangeStart
-                    ->copy()
-                    ->addWeek();
-        }
-
-        $query =
-            ProfAssignment::query()
-                ->with([
-                    'subject',
-                    'level',
-                    'classRoom',
-                ])
-                ->where(
-                    'prof_id',
-                    auth()->id()
-                )
-                ->whereNotNull(
-                    'day_of_week'
-                )
-                ->whereNotNull(
-                    'start_time'
-                )
-                ->whereNotNull(
-                    'end_time'
-                );
-
-        if ($request->filled('class_id')) {
-            abort_unless(
-                $this
-                    ->assignedClassIds()
-                    ->contains(
-                        (int) $request->class_id
-                    ),
-                403
             );
-
-            $query->where(
-                'class_id',
-                $request->class_id
+        } catch (\Throwable $exception) {
+            return response()->json(
+                [],
+                422
             );
         }
 
-        $assignments =
-            $query
-                ->orderBy('day_of_week')
-                ->orderBy('start_time')
-                ->get();
+        if (
+            $rangeEnd
+                ->lessThanOrEqualTo(
+                    $rangeStart
+                )
+        ) {
+            $rangeEnd = $rangeStart
+                ->copy()
+                ->addWeek();
+        }
 
-        $events = collect();
-
-        foreach ($assignments as $assignment) {
-            $firstOccurrence =
+        $days = min(
+            370,
+            max(
+                1,
                 $rangeStart
                     ->copy()
-                    ->addDays(
-                        (
-                            (int) $assignment
-                                ->day_of_week
-                            - $rangeStart
-                                ->dayOfWeekIso
-                            + 7
-                        ) % 7
-                    );
+                    ->startOfDay()
+                    ->diffInDays(
+                        $rangeEnd
+                            ->copy()
+                            ->endOfDay()
+                    ) + 1
+            )
+        );
 
-            $startClock =
-                Carbon::parse(
-                    $assignment->start_time
-                )->format('H:i:s');
+        $filters =
+            $this->profPaths
+                ->selectedFilters($request);
 
-            $endClock =
-                Carbon::parse(
-                    $assignment->end_time
-                )->format('H:i:s');
+        $slot = !empty(
+            $filters['selectedSlotId']
+        )
+            ? ClassSlot::query()->find(
+                $filters['selectedSlotId']
+            )
+            : null;
 
-            for (
-                $date =
-                    $firstOccurrence->copy();
-                $date->lessThan($rangeEnd);
-                $date->addWeek()
-            ) {
-                $start =
-                    $date
-                        ->copy()
-                        ->setTimeFromTimeString(
-                            $startClock
-                        );
-
-                $end =
-                    $date
-                        ->copy()
-                        ->setTimeFromTimeString(
-                            $endClock
-                        );
-
-                $color =
-                    $this->eventColor(
-                        (int) $assignment
-                            ->subject_id
-                    );
-
-                $events->push([
-                    'id' =>
-                        $assignment->id
-                        . '-'
-                        . $date->format(
-                            'Ymd'
-                        ),
-                    'title' =>
-                        (
-                            $assignment
-                                ->subject
-                                ?->name
-                            ?? 'Matière'
-                        )
-                        . ' ('
-                        . (
-                            $assignment
-                                ->classRoom
-                                ?->name
-                            ?? 'Classe'
-                        )
-                        . ')',
-                    'start' =>
-                        $start
-                            ->toIso8601String(),
-                    'end' =>
-                        $end
-                            ->toIso8601String(),
-                    'backgroundColor' =>
-                        $color,
-                    'borderColor' =>
-                        $color,
-                    'textColor' =>
-                        '#ffffff',
-                    'extendedProps' => [
-                        'assignment_id' =>
-                            $assignment->id,
-                        'subject' =>
-                            $assignment
-                                ->subject
-                                ?->name,
-                        'level' =>
-                            $assignment
-                                ->level
-                                ?->name,
-                        'class' =>
-                            $assignment
-                                ->classRoom
-                                ?->name,
-                        'day' =>
-                            $assignment
-                                ->day_label,
-                        'time' =>
-                            $assignment
-                                ->time_range_label,
-                    ],
-                ]);
-            }
+        if (
+            $slot
+            && !$this->profPaths->ownsSlot(
+                auth()->id(),
+                (int) $slot->id
+            )
+        ) {
+            abort(403);
         }
+
+        $scheduleFilters = array_filter([
+            'subject_id' =>
+                $filters['selectedSubjectId'],
+            'level_id' =>
+                $filters['selectedLevelId'],
+            'class_id' =>
+                $filters['selectedClassId'],
+            'slot_code' =>
+                $slot?->code,
+        ]);
+
+        $events =
+            $scheduleService
+                ->forProfessor(
+                    auth()->user(),
+                    $rangeStart,
+                    $days,
+                    null,
+                    $scheduleFilters
+                )
+                ->map(
+                    function (
+                        array $occurrence
+                    ) {
+                        return [
+                            'id' =>
+                                $occurrence[
+                                    'schedule_id'
+                                ]
+                                . '-'
+                                . $occurrence[
+                                    'date_key'
+                                ],
+                            'title' =>
+                                collect([
+                                    $occurrence[
+                                        'subject'
+                                    ],
+                                    $occurrence[
+                                        'class_name'
+                                    ],
+                                    $occurrence[
+                                        'slot_code'
+                                    ]
+                                        ?: null,
+                                ])
+                                    ->filter()
+                                    ->implode(
+                                        ' · '
+                                    ),
+                            'start' =>
+                                $occurrence[
+                                    'start'
+                                ]
+                                    ->toIso8601String(),
+                            'end' =>
+                                $occurrence[
+                                    'end'
+                                ]
+                                    ->toIso8601String(),
+                            'allDay' =>
+                                false,
+                            'extendedProps' => [
+                                'subject' =>
+                                    $occurrence[
+                                        'subject'
+                                    ],
+                                'level' =>
+                                    $occurrence[
+                                        'level'
+                                    ],
+                                'class' =>
+                                    $occurrence[
+                                        'class_name'
+                                    ],
+                                'slot_code' =>
+                                    $occurrence[
+                                        'slot_code'
+                                    ],
+                                'path' =>
+                                    $occurrence[
+                                        'path'
+                                    ],
+                                'time' =>
+                                    $occurrence[
+                                        'time_label'
+                                    ],
+                                'teacher' =>
+                                    $occurrence[
+                                        'teacher'
+                                    ],
+                                'room' =>
+                                    $occurrence[
+                                        'room'
+                                    ],
+                            ],
+                        ];
+                    }
+                )
+                ->values();
 
         return response()->json(
-            $events->values()
+            $events
         );
     }
 
-    /**
-     * Le planning du professeur est géré
-     * uniquement par l'administration.
-     */
     public function store(Request $request)
     {
         abort(
@@ -277,65 +330,5 @@ class ScheduleController extends Controller
             'Le planning est géré '
             . 'par l’administration.'
         );
-    }
-
-    private function assignedClassIds()
-    {
-        return ProfAssignment::query()
-            ->where(
-                'prof_id',
-                auth()->id()
-            )
-            ->pluck('class_id')
-            ->unique()
-            ->values();
-    }
-
-    private function scheduledAssignments()
-    {
-        return ProfAssignment::query()
-            ->with([
-                'subject',
-                'level',
-                'classRoom',
-            ])
-            ->where(
-                'prof_id',
-                auth()->id()
-            )
-            ->whereNotNull(
-                'day_of_week'
-            )
-            ->whereNotNull(
-                'start_time'
-            )
-            ->whereNotNull(
-                'end_time'
-            )
-            ->orderBy(
-                'day_of_week'
-            )
-            ->orderBy(
-                'start_time'
-            )
-            ->get();
-    }
-
-    private function eventColor(
-        int $subjectId
-    ): string {
-        $colors = [
-            '#4F6FF5',
-            '#7C3AED',
-            '#0891B2',
-            '#16A34A',
-            '#D97706',
-            '#DC2626',
-        ];
-
-        return $colors[
-            $subjectId
-            % count($colors)
-        ];
     }
 }

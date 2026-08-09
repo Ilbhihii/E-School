@@ -24,7 +24,6 @@
         'subject_id',
         'level_id',
         'class_id',
-        'prof_id',
     ]);
 
     $scheduleEditData = $schedules->mapWithKeys(function ($schedule) {
@@ -33,6 +32,7 @@
             'subject_id' => $schedule->subject_id,
             'level_id' => $schedule->level_id ?: optional($schedule->classRoom)->level_id,
             'class_id' => $schedule->class_id,
+            'slot_code' => $schedule->slot_code,
             'prof_id' => $schedule->prof_id,
             'day_of_week' => $schedule->day_of_week,
             'start_time' => optional($schedule->start_time)->format('H:i'),
@@ -56,7 +56,7 @@
                 <span class="schedule-title-icon"><i class="bi bi-calendar3-week"></i></span>
                 Emploi du temps des classes
             </h2>
-            <p>Planifiez chaque séance selon le parcours Matière → Niveau → Classe, puis associez le professeur et les horaires.</p>
+            <p>Planifiez le parcours complet Matière → Niveau → Classe → Créneau.</p>
         </div>
 
         <div class="schedule-hero-actions">
@@ -90,7 +90,7 @@
                 <span class="schedule-card-icon is-violet"><i class="bi bi-funnel"></i></span>
                 <div>
                     <h3>Filtrer l’emploi du temps</h3>
-                    <p>Affinez les résultats par matière, niveau, classe ou professeur.</p>
+                    <p>Affinez les résultats par matière, niveau et classe.</p>
                 </div>
             </div>
 
@@ -158,6 +158,12 @@
         </div>
     </section>
 
+    <x-schedule-slot-matrix
+        :items="$schedules"
+        title="Organisation des créneaux"
+        :show-teacher="false"
+    />
+
     <div class="schedule-main-grid">
         <section class="adm-card schedule-card" id="planningFormCard">
             <div class="adm-card-header schedule-card-head schedule-table-meta">
@@ -174,7 +180,7 @@
             <div class="adm-card-body schedule-card-body">
                 <div class="schedule-form-intro">
                     <i class="bi bi-info-circle"></i>
-                    <span>Sélectionnez d’abord la matière, puis le niveau et la classe. L’heure de fin reste libre et peut dépasser une heure.</span>
+                    <span>Sélectionnez la matière, le niveau et la classe, puis choisissez le créneau.</span>
                 </div>
 
                 <form method="POST" action="{{ route('admin.schedule.store') }}" id="planningForm">
@@ -187,7 +193,7 @@
                                 <span class="schedule-panel-number">01</span>
                                 <div>
                                     <h5>Parcours pédagogique</h5>
-                                    <p>Matière → niveau → classe → professeur</p>
+                                    <p>Matière → niveau → classe → créneau</p>
                                 </div>
                             </div>
 
@@ -197,6 +203,8 @@
                                 <strong id="pathLevel">Niveau</strong>
                                 <i class="bi bi-chevron-right"></i>
                                 <strong id="pathClass">Classe</strong>
+                                <i class="bi bi-chevron-right"></i>
+                                <strong id="pathSlot">Créneau</strong>
                             </div>
 
                             <div class="schedule-form-grid">
@@ -226,14 +234,31 @@
                                 </div>
 
                                 <div class="adm-form-group mb-0">
-                                    <label class="adm-form-label">Professeur <span class="schedule-required">*</span></label>
-                                    <select name="prof_id" id="planningProfessor" class="adm-form-select" required>
-                                        <option value="">Choisir un professeur</option>
-                                        @foreach($teachers as $teacher)
-                                            <option value="{{ $teacher->id }}" {{ (string) old('prof_id') === (string) $teacher->id ? 'selected' : '' }}>{{ $teacher->name }}</option>
-                                        @endforeach
+                                    <label class="adm-form-label">
+                                        Créneau / groupe
+                                        <span class="schedule-required">*</span>
+                                    </label>
+
+                                    <select
+                                        name="slot_code"
+                                        id="planningSlotCode"
+                                        class="adm-form-select"
+                                        required
+                                        disabled
+                                    >
+                                        <option value="">
+                                            Choisissez d’abord la classe
+                                        </option>
                                     </select>
+
+                                    <small class="schedule-help">
+                                        Exemple :
+                                        Débutant → D1, D2, D3, D4 ·
+                                        Intermédiaire → I1, I2, I3, I4 ·
+                                        Avancé → A1, A2, A3, A4.
+                                    </small>
                                 </div>
+
                             </div>
                         </section>
 
@@ -241,17 +266,16 @@
                             <div class="schedule-panel-head">
                                 <span class="schedule-panel-number">02</span>
                                 <div>
-                                    <h5>Organisation de la séance</h5>
-                                    <p>Jour, répétition, horaires et statut</p>
+                                    <h5>Créneau</h5>
+                                    <p>Jour, horaires, répétition et statut</p>
                                 </div>
                             </div>
-
                             <div class="schedule-form-grid">
                                 <div class="adm-form-group mb-0">
                                     <label class="adm-form-label">Jour <span class="schedule-required">*</span></label>
                                     <select name="day_of_week" id="planningDay" class="adm-form-select" required>
                                         @foreach($dayNames as $dayNumber => $dayName)
-                                            <option value="{{ $dayNumber }}" {{ (string) old('day_of_week', 1) === (string) $dayNumber ? 'selected' : '' }}>{{ $dayName }}</option>
+                                            <option value="{{ $dayNumber }}" {{ (string) old('day_of_week', 7) === (string) $dayNumber ? 'selected' : '' }}>{{ $dayName }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -266,12 +290,12 @@
 
                                 <div class="adm-form-group mb-0">
                                     <label class="adm-form-label">Heure de début <span class="schedule-required">*</span></label>
-                                    <input type="time" name="start_time" id="planningStartTime" value="{{ old('start_time', '13:00') }}" class="adm-form-input" step="300" required>
+                                    <input type="time" name="start_time" id="planningStartTime" value="{{ old('start_time', '09:00') }}" class="adm-form-input" step="300" required>
                                 </div>
 
                                 <div class="adm-form-group mb-0">
                                     <label class="adm-form-label">Heure de fin <span class="schedule-required">*</span></label>
-                                    <input type="time" name="end_time" id="planningEndTime" value="{{ old('end_time', '14:00') }}" class="adm-form-input" step="300" required>
+                                    <input type="time" name="end_time" id="planningEndTime" value="{{ old('end_time', '10:30') }}" class="adm-form-input" step="300" required>
                                 </div>
 
                                 <div class="adm-form-group mb-0">
@@ -333,9 +357,8 @@
                     <table class="adm-table schedule-table">
                         <thead>
                             <tr>
-                                <th>Jour / heure</th>
+                                <th>Créneau</th>
                                 <th>Parcours</th>
-                                <th>Professeur</th>
                                 <th>Répétition</th>
                                 <th>Statut</th>
                                 <th style="text-align:right">Actions</th>
@@ -344,24 +367,26 @@
                         <tbody>
                             @forelse($schedules as $schedule)
                                 <tr>
-                                    <td data-label="Jour / heure">
+                                    <td data-label="Créneau">
                                         <div class="schedule-time-block">
                                             <span class="schedule-day-icon"><i class="bi bi-clock"></i></span>
                                             <div>
-                                                <div class="schedule-day-name">{{ $schedule->day_label }}</div>
+                                                <div class="schedule-day-name">
+                                                    @if($schedule->slot_code)
+                                                        <span class="schedule-slot-code">
+                                                            {{ $schedule->slot_code }}
+                                                        </span>
+                                                    @endif
+                                                    {{ $schedule->day_label }}
+                                                </div>
                                                 <small class="schedule-cell-muted">{{ $schedule->time_range_label }} · {{ $schedule->duration_label }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td data-label="Parcours" class="schedule-route-cell">
                                         <strong>{{ optional($schedule->subjectModel)->name ?: $schedule->subject }}</strong>
-                                        <small class="schedule-cell-muted">{{ optional($schedule->level)->name ?: optional(optional($schedule->classRoom)->level)->name ?: '-' }} → {{ optional($schedule->classRoom)->name ?: '-' }}</small>
-                                    </td>
-                                    <td data-label="Professeur">
-                                        <span class="schedule-teacher">
-                                            <span class="schedule-teacher-avatar"><i class="bi bi-person"></i></span>
-                                            {{ optional($schedule->prof)->name ?: '-' }}
-                                        </span>
+                                        <small class="schedule-cell-muted">{{ optional($schedule->level)->name ?: optional(optional($schedule->classRoom)->level)->name ?: '-' }} → {{ optional($schedule->classRoom)->name ?: '-' }} @if($schedule->slot_code) → {{ $schedule->slot_code }} @endif</small>
+                                        <small class="schedule-cell-muted" style="display:block;margin-top:3px;"><i class="bi bi-diagram-3"></i> Matière → Niveau → Classe → Créneau</small>
                                     </td>
                                     <td data-label="Répétition">
                                         @if(($schedule->recurrence ?: 'once') === 'weekly')
@@ -404,6 +429,119 @@
 </div>
 @endsection
 
+<style>
+.schedule-slot-presets {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px;
+    margin-bottom: 14px;
+    border: 1px solid rgba(96, 165, 250, .13);
+    border-radius: 12px;
+    background: rgba(37, 99, 235, .05);
+}
+.schedule-slot-presets-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.schedule-slot-presets-copy strong {
+    color: #e2e8f0;
+    font-size: .72rem;
+}
+.schedule-slot-presets-copy small {
+    color: #64748b;
+    font-size: .58rem;
+}
+.schedule-slot-presets-actions {
+    display: flex;
+    gap: 7px;
+}
+.schedule-slot-preset {
+    display: flex;
+    min-width: 128px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 10px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 9px;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, .025);
+    cursor: pointer;
+    transition: .18s ease;
+}
+.schedule-slot-preset span {
+    color: #60a5fa;
+    font-size: .52rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+.schedule-slot-preset strong {
+    font-size: .64rem;
+}
+.schedule-slot-preset:hover,
+.schedule-slot-preset.is-active {
+    border-color: rgba(96, 165, 250, .35);
+    background: rgba(37, 99, 235, .12);
+    transform: translateY(-1px);
+}
+@media (max-width: 820px) {
+    .schedule-slot-presets {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .schedule-slot-presets-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .schedule-slot-preset {
+        min-width: 0;
+    }
+}
+
+
+.schedule-slot-choice-field {
+    grid-column: span 2;
+    padding: 12px;
+    border: 1px solid rgba(96,165,250,.14);
+    border-radius: 12px;
+    background: rgba(37,99,235,.035);
+}
+
+.schedule-slot-choice-field .adm-form-select:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+    .schedule-slot-choice-field {
+        grid-column: auto;
+    }
+}
+
+
+
+.schedule-slot-code {
+    display: inline-flex;
+    min-width: 30px;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    padding: 2px 7px;
+    color: #DBEAFE;
+    border: 1px solid rgba(96,165,250,.22);
+    border-radius: 7px;
+    background: rgba(37,99,235,.12);
+    font-size: .58rem;
+    font-weight: 850;
+    letter-spacing: .04em;
+}
+
+</style>
+
 @push('scripts')
 <script>
 (function () {
@@ -418,9 +556,11 @@
     const subjectSelect = document.getElementById('planningSubject');
     const levelSelect = document.getElementById('planningLevel');
     const classSelect = document.getElementById('planningClass');
+    const slotCodeSelect = document.getElementById('planningSlotCode');
     const filterSubjectSelect = document.getElementById('scheduleFilterSubject');
     const filterLevelSelect = document.getElementById('scheduleFilterLevel');
     const filterClassSelect = document.getElementById('scheduleFilterClass');
+    const daySelect = document.getElementById('planningDay');
     const startTimeInput = document.getElementById('planningStartTime');
     const endTimeInput = document.getElementById('planningEndTime');
     const durationInfo = document.getElementById('planningDurationInfo');
@@ -485,8 +625,15 @@
             + ' (' + startTimeInput.value + ' – ' + endTimeInput.value + ').';
     }
 
-    startTimeInput.addEventListener('input', updateDurationPreview);
-    endTimeInput.addEventListener('input', updateDurationPreview);
+    startTimeInput.addEventListener('input', function () {
+        updateDurationPreview();
+        updatePath();
+    });
+    endTimeInput.addEventListener('input', function () {
+        updateDurationPreview();
+        updatePath();
+    });
+    daySelect.addEventListener('change', updatePath);
 
     function selectedText(select, fallback) {
         return select && select.selectedIndex > 0
@@ -498,6 +645,11 @@
         document.getElementById('pathSubject').textContent = selectedText(subjectSelect, 'Matière');
         document.getElementById('pathLevel').textContent = selectedText(levelSelect, 'Niveau');
         document.getElementById('pathClass').textContent = selectedText(classSelect, 'Classe');
+
+        document.getElementById('pathSlot').textContent =
+            slotCodeSelect && slotCodeSelect.value
+                ? slotCodeSelect.value
+                : 'Créneau';
     }
 
     function findSubject(id) {
@@ -513,10 +665,24 @@
         levelSelect.disabled = !subject;
         classSelect.disabled = true;
 
+        slotCodeSelect.innerHTML =
+            '<option value="">Choisissez d’abord la classe</option>';
+        slotCodeSelect.disabled = true;
+
         if (!subject) {
             updatePath();
             return;
         }
+
+        if (!subject.levels || subject.levels.length === 0) {
+            levelSelect.innerHTML =
+                '<option value="">Aucun niveau configuré pour cette matière</option>';
+            levelSelect.disabled = true;
+            updatePath();
+            return;
+        }
+
+        levelSelect.disabled = false;
 
         subject.levels.forEach(function (level) {
             const option = new Option(level.name, level.id);
@@ -543,11 +709,68 @@
         classSelect.disabled = !level;
 
         if (level) {
+            if (!level.classes || level.classes.length === 0) {
+                classSelect.innerHTML =
+                    '<option value="">Aucune classe configurée pour ce niveau</option>';
+                classSelect.disabled = true;
+                updatePath();
+                return;
+            }
+
             level.classes.forEach(function (classRoom) {
                 const option = new Option(classRoom.name, classRoom.id);
                 option.selected = String(classRoom.id) === String(selectedClassId || '');
                 classSelect.add(option);
             });
+        }
+
+        updatePath();
+    }
+
+    function findClass(subjectId, levelId, classId) {
+        const subject = findSubject(subjectId);
+
+        const level = subject
+            ? subject.levels.find(function (item) {
+                return String(item.id) === String(levelId);
+            })
+            : null;
+
+        return level
+            ? level.classes.find(function (item) {
+                return String(item.id) === String(classId);
+            })
+            : null;
+    }
+
+    function fillSlotCodes(selectedSlotCode) {
+        const classRoom = findClass(
+            subjectSelect.value,
+            levelSelect.value,
+            classSelect.value
+        );
+
+        slotCodeSelect.innerHTML =
+            '<option value="">Choisir un créneau</option>';
+
+        slotCodeSelect.disabled = !classRoom;
+
+        if (!classRoom) {
+            slotCodeSelect.innerHTML =
+                '<option value="">Choisissez d’abord la classe</option>';
+            updatePath();
+            return;
+        }
+
+        (classRoom.slot_codes || []).forEach(function (code) {
+            const option = new Option(code, code);
+            option.selected =
+                String(code) === String(selectedSlotCode || '');
+            slotCodeSelect.add(option);
+        });
+
+        if (selectedSlotCode) {
+            slotCodeSelect.value = String(selectedSlotCode);
         }
 
         updatePath();
@@ -621,7 +844,15 @@
         fillClasses(subjectSelect.value, levelSelect.value);
     });
 
-    classSelect.addEventListener('change', updatePath);
+    classSelect.addEventListener('change', function () {
+        fillSlotCodes();
+        updatePath();
+    });
+
+    slotCodeSelect.addEventListener(
+        'change',
+        updatePath
+    );
 
     window.editPlanning = function (id) {
         const data = schedules[id];
@@ -637,10 +868,17 @@
 
         subjectSelect.value = data.subject_id || '';
         fillLevels(data.subject_id, data.level_id, data.class_id);
-        document.getElementById('planningProfessor').value = data.prof_id || '';
-        document.getElementById('planningDay').value = data.day_of_week || 1;
-        startTimeInput.value = data.start_time || '13:00';
-        endTimeInput.value = data.end_time || '14:00';
+        fillSlotCodes(data.slot_code || '');
+
+        document.getElementById('planningDay').value =
+            data.day_of_week || 7;
+
+        startTimeInput.value =
+            data.start_time || '09:00';
+
+        endTimeInput.value =
+            data.end_time || '10:30';
+
         updateDurationPreview();
         document.getElementById('planningRecurrence').value = data.recurrence || 'weekly';
         document.getElementById('planningValidFrom').value = data.valid_from || '';
@@ -660,9 +898,14 @@
         classSelect.innerHTML = '<option value="">Choisir le niveau</option>';
         levelSelect.disabled = true;
         classSelect.disabled = true;
+
+        slotCodeSelect.innerHTML =
+            '<option value="">Choisissez d’abord la classe</option>';
+        slotCodeSelect.disabled = true;
+
         document.getElementById('planningRecurrence').value = 'weekly';
-        startTimeInput.value = '13:00';
-        endTimeInput.value = '14:00';
+        startTimeInput.value = '09:00';
+        endTimeInput.value = '10:30';
         updateDurationPreview();
         document.getElementById('planningValidFrom').value = new Date().toISOString().slice(0, 10);
         document.getElementById('planningStatus').value = 'active';
@@ -691,10 +934,15 @@
     const oldSubject = @json(old('subject_id'));
     const oldLevel = @json(old('level_id'));
     const oldClass = @json(old('class_id'));
+    const oldSlotCode = @json(old('slot_code'));
 
     if (oldSubject) {
         subjectSelect.value = oldSubject;
         fillLevels(oldSubject, oldLevel, oldClass);
+
+        if (oldClass) {
+            fillSlotCodes(oldSlotCode);
+        }
     } else {
         updatePath();
     }

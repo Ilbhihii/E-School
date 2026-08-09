@@ -19,6 +19,7 @@ class Live extends Model
     protected $fillable = [
         'title',
         'class_id',
+        'class_slot_id',
         'stream_url',
         'provider',
         'admin_id',
@@ -96,6 +97,15 @@ class Live extends Model
             'class_id'
         );
     }
+
+    public function classSlot()
+    {
+        return $this->belongsTo(
+            ClassSlot::class,
+            'class_slot_id'
+        );
+    }
+
 
     public function user()
     {

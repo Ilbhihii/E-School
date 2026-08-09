@@ -9,7 +9,7 @@
 <div class="adm-page-header">
     <div>
         <h1><i class="bi bi-camera-video me-2" style="color:var(--adm-danger);"></i> Lives</h1>
-        <div class="subtitle">Parcourez la hiérarchie : Matière → Niveau → Classe → Lives</div>
+        <div class="subtitle">Parcourez la hiérarchie : Matière → Niveau → Classe → Créneau → Lives</div>
     </div>
     <div class="page-actions">
         <a href="{{ route('admin.lives.create') }}" class="adm-btn adm-btn-danger">
@@ -121,7 +121,7 @@
                 <thead>
                     <tr>
                         <th>Titre</th>
-                        <th>Classe</th>
+                        <th>Parcours</th>
                         <th>Lien</th>
                         <th>Date</th>
                         <th style="text-align:right;">Actions</th>
@@ -132,11 +132,21 @@
                     <tr>
                         <td><span style="font-weight:500;">{{ $live->title }}</span></td>
                         <td>
-                            @if($live->classRoom && $live->classRoom->level)
+                            @if($live->classSlot)
+                                <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;max-width:440px;">
+                                    <span class="adm-badge adm-badge-primary">{{ $live->classSlot->subject?->name ?? '—' }}</span>
+                                    <span style="color:#64748B;">→</span>
+                                    <span class="adm-badge">{{ $live->classSlot->level?->name ?? '—' }}</span>
+                                    <span style="color:#64748B;">→</span>
+                                    <span class="adm-badge adm-badge-danger">{{ $live->classSlot->classRoom?->name ?? '—' }}</span>
+                                    <span style="color:#64748B;">→</span>
+                                    <span class="adm-badge adm-badge-warning">{{ $live->classSlot->code }}</span>
+                                </div>
+                            @elseif($live->classRoom)
                                 <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name ?? '-' }}</span>
-                                <span style="color:var(--adm-text-muted);font-size:0.7rem;margin-left:4px;">({{ $live->classRoom->level->name ?? '' }})</span>
+                                <small style="display:block;color:#64748B;margin-top:4px;">Ancien live sans créneau</small>
                             @else
-                                <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name ?? '-' }}</span>
+                                <span style="color:var(--adm-text-muted);">—</span>
                             @endif
                         </td>
                         <td>

@@ -473,51 +473,22 @@ body.admin-portal *::-webkit-scrollbar-thumb {
 
 .admin-site-link {
     display: inline-flex;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
     min-height: 44px;
-    flex: 0 0 44px;
     align-items: center;
-    justify-content: center;
-    padding: 0;
+    gap: 8px;
+    padding: 0 14px;
     color: #cbd5e1;
     border: 1px solid var(--ap-border);
     border-radius: 13px;
     background: rgba(255, 255, 255, 0.04);
-    font-size: 1.08rem;
-    line-height: 1;
-    text-decoration: none;
-    transition:
-        color 0.2s ease,
-        border-color 0.2s ease,
-        background 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.admin-site-link i {
-    display: block;
-    line-height: 1;
+    font-size: 0.78rem;
+    font-weight: 700;
+    transition: 0.2s ease;
 }
 
 .admin-site-link:hover {
     color: #fff;
-    border-color: rgba(96, 165, 250, 0.42);
-    background: rgba(96, 165, 250, 0.12);
-    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.16);
-    transform: translateY(-1px);
-}
-
-.admin-site-link:focus-visible {
-    color: #fff;
-    border-color: rgba(96, 165, 250, 0.65);
-    outline: 3px solid rgba(96, 165, 250, 0.22);
-    outline-offset: 2px;
-}
-
-.admin-site-link:active {
-    transform: translateY(0);
+    border-color: rgba(96, 165, 250, 0.3);
 }
 
 .admin-user-menu-wrap {
@@ -883,124 +854,6 @@ body.admin-portal .conversation-send-button {
     border-color: transparent !important;
     background: linear-gradient(135deg, #2563eb, #6366f1) !important;
     box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25) !important;
-}
-
-
-/* =========================================================
-   Bouton premium : Nouveau professeur
-   ========================================================= */
-
-body.admin-portal .professor-create-button {
-    position: relative;
-    display: inline-flex;
-    min-height: 50px;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 8px 17px 8px 9px;
-    overflow: hidden;
-    color: #ffffff !important;
-    border: 1px solid rgba(147, 197, 253, 0.32) !important;
-    border-radius: 15px;
-    background:
-        linear-gradient(135deg, #2563eb 0%, #4f46e5 54%, #6d5dfc 100%) !important;
-    box-shadow:
-        0 10px 28px rgba(37, 99, 235, 0.26),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
-    font-size: 0.86rem;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: -0.01em;
-    text-decoration: none !important;
-    white-space: nowrap;
-    isolation: isolate;
-    transition:
-        transform 0.2s ease,
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        filter 0.2s ease;
-}
-
-body.admin-portal .professor-create-button::before {
-    position: absolute;
-    top: -65%;
-    left: -35%;
-    z-index: -1;
-    width: 72%;
-    height: 220%;
-    content: "";
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.17),
-        transparent
-    );
-    transform: rotate(20deg) translateX(-160%);
-    transition: transform 0.55s ease;
-}
-
-body.admin-portal .professor-create-button__icon {
-    display: inline-grid;
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    font-size: 0.95rem;
-}
-
-body.admin-portal .professor-create-button__icon i {
-    display: block;
-    line-height: 1;
-}
-
-body.admin-portal .professor-create-button__label {
-    position: relative;
-    z-index: 1;
-}
-
-body.admin-portal .professor-create-button__arrow {
-    position: relative;
-    z-index: 1;
-    margin-left: 1px;
-    opacity: 0.72;
-    font-size: 0.82rem;
-    transition:
-        transform 0.2s ease,
-        opacity 0.2s ease;
-}
-
-body.admin-portal .professor-create-button:hover {
-    color: #ffffff !important;
-    border-color: rgba(147, 197, 253, 0.68) !important;
-    box-shadow:
-        0 14px 34px rgba(37, 99, 235, 0.34),
-        0 0 22px rgba(99, 102, 241, 0.13),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
-    filter: brightness(1.04);
-    transform: translateY(-2px);
-}
-
-body.admin-portal .professor-create-button:hover::before {
-    transform: rotate(20deg) translateX(290%);
-}
-
-body.admin-portal .professor-create-button:hover .professor-create-button__arrow {
-    opacity: 1;
-    transform: translateX(3px);
-}
-
-body.admin-portal .professor-create-button:focus-visible {
-    outline: 3px solid rgba(96, 165, 250, 0.3);
-    outline-offset: 3px;
-}
-
-body.admin-portal .professor-create-button:active {
-    filter: brightness(0.98);
-    transform: translateY(0);
 }
 
 body.admin-portal .adm-btn-success {
@@ -2202,6 +2055,7 @@ html.light-mode body.admin-portal .adm-btn-ghost {
 
     .admin-page-kicker,
     .admin-breadcrumb,
+    .admin-site-link span,
     .admin-user-copy {
         display: none;
     }
@@ -2224,11 +2078,6 @@ html.light-mode body.admin-portal .adm-btn-ghost {
         align-items: flex-start;
         flex-direction: column;
         padding: 21px;
-    }
-
-    body.admin-portal .professor-create-button {
-        width: 100%;
-        min-height: 48px;
     }
 
     body.admin-portal .analysis-grid,

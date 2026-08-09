@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\ClassRoom;
+use App\Models\ClassSlot;
 use App\Models\Level;
 use App\Models\Subject;
 use App\Models\Test;
 use App\Models\Result;
 use App\Models\ProfAssignment;
+use App\Models\Schedule;
 use App\Mail\AccountActivatedMailable;
+use App\Services\ClassSlotService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class UserController extends Controller
@@ -22,8 +26,10 @@ class UserController extends Controller
     /**
      * Affiche la page d'assignation des professeurs.
      *
-     * Hiérarchie :
-     * Matière → Niveau → Classe.
+     * Structure :
+     * Professeur + Matière → Niveau → Classe → Créneau.
+     *
+     * Les créneaux proviennent exclusivement de /admin/schedule.
      */
     public function profAssignments()
     {
@@ -33,7 +39,7 @@ class UserController extends Controller
             ->get();
 
         $assignmentHierarchy =
-            $this->buildAssignmentHierarchy();
+            $this->buildProfAssignmentHierarchy();
 
         $subjects = collect($assignmentHierarchy)
             ->map(
@@ -51,6 +57,7 @@ class UserController extends Controller
                 'level',
                 'classRoom',
                 'subject',
+                'schedule',
             ])
             ->latest()
             ->get();
@@ -67,7 +74,7 @@ class UserController extends Controller
     }
 
     /**
-     * Enregistrer une nouvelle assignation de professeur
+     * Affecter un professeur à un créneau officiel de l'emploi du temps.
      */
     public function storeProfAssignment(
         Request $request
@@ -93,19 +100,10 @@ class UserController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'day_of_week' => [
+            'schedule_id' => [
                 'required',
                 'integer',
-                'between:1,7',
-            ],
-            'start_time' => [
-                'required',
-                'date_format:H:i',
-            ],
-            'end_time' => [
-                'required',
-                'date_format:H:i',
-                'after:start_time',
+                'exists:schedules,id',
             ],
         ], [
             'prof_id.required' =>
@@ -116,21 +114,8 @@ class UserController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
-            'day_of_week.required' =>
-                'Veuillez sélectionner le jour du cours.',
-            'day_of_week.between' =>
-                'Le jour sélectionné est invalide.',
-            'start_time.required' =>
-                'Veuillez sélectionner l’heure de début.',
-            'start_time.date_format' =>
-                'L’heure de début est invalide.',
-            'end_time.required' =>
-                'Veuillez sélectionner l’heure de fin.',
-            'end_time.date_format' =>
-                'L’heure de fin est invalide.',
-            'end_time.after' =>
-                'L’heure de fin doit être après '
-                . 'l’heure de début.',
+            'schedule_id.required' =>
+                'Veuillez sélectionner un créneau.',
         ]);
 
         $professor = User::query()
@@ -148,212 +133,264 @@ class UserController extends Controller
                 ]);
         }
 
-        $level = Level::query()
-            ->whereKey($validated['level_id'])
-            ->where(
-                'subject_id',
-                $validated['subject_id']
-            )
-            ->first();
-
-        if (!$level) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'level_id' =>
-                        'Ce niveau n’appartient pas '
-                        . 'à la matière sélectionnée.',
-                ]);
-        }
-
-        $classRoom = ClassRoom::query()
-            ->whereKey($validated['class_id'])
-            ->where('level_id', $level->id)
-            ->whereHas(
-                'subjects',
-                fn ($query) =>
-                    $query->where(
-                        'subjects.id',
-                        $validated['subject_id']
-                    )
-            )
-            ->first();
-
-        if (!$classRoom) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'class_id' =>
-                        'Cette classe n’appartient pas '
-                        . 'au niveau et à la matière '
-                        . 'sélectionnés.',
-                ]);
-        }
-
-        $assignment = ProfAssignment::query()
-            ->where([
-                'prof_id' =>
-                    $professor->id,
-                'level_id' =>
-                    $level->id,
-                'class_id' =>
-                    $classRoom->id,
-                'subject_id' =>
-                    $validated['subject_id'],
+        $schedule = Schedule::query()
+            ->active()
+            ->with([
+                'subjectModel',
+                'level',
+                'classRoom',
+                'prof',
             ])
+            ->whereKey($validated['schedule_id'])
+            ->where('subject_id', $validated['subject_id'])
+            ->where('level_id', $validated['level_id'])
+            ->where('class_id', $validated['class_id'])
             ->first();
 
-        $ignoreAssignmentId =
-            $assignment?->id;
+        if (!$schedule) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'schedule_id' =>
+                        'Ce créneau n’appartient pas au parcours '
+                        . 'Matière → Niveau → Classe sélectionné.',
+                ]);
+        }
 
-        $professorConflict =
-            ProfAssignment::query()
-                ->where(
-                    'prof_id',
-                    $professor->id
-                )
-                ->where(
-                    'day_of_week',
-                    $validated['day_of_week']
-                )
-                ->when(
-                    $ignoreAssignmentId,
-                    fn ($query) =>
-                        $query->whereKeyNot(
-                            $ignoreAssignmentId
-                        )
-                )
-                ->whereNotNull('start_time')
-                ->whereNotNull('end_time')
-                ->where(
-                    'start_time',
-                    '<',
-                    $validated['end_time']
-                )
-                ->where(
-                    'end_time',
-                    '>',
-                    $validated['start_time']
-                )
-                ->exists();
+        /*
+         * Un professeur ne peut pas être présent dans deux créneaux
+         * qui se chevauchent le même jour.
+         */
+        $professorConflict = Schedule::query()
+            ->active()
+            ->where('prof_id', $professor->id)
+            ->where('id', '<>', $schedule->id)
+            ->where('day_of_week', $schedule->day_of_week)
+            ->whereNotNull('start_time')
+            ->whereNotNull('end_time')
+            ->where('start_time', '<', $schedule->end_time)
+            ->where('end_time', '>', $schedule->start_time)
+            ->exists();
 
         if ($professorConflict) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'start_time' =>
-                        'Ce professeur possède déjà '
-                        . 'un cours pendant cet horaire.',
+                    'schedule_id' =>
+                        'Ce professeur possède déjà un cours '
+                        . 'pendant cet horaire.',
                 ]);
         }
 
-        $classConflict =
-            ProfAssignment::query()
-                ->where(
-                    'class_id',
-                    $classRoom->id
-                )
-                ->where(
-                    'day_of_week',
-                    $validated['day_of_week']
-                )
-                ->when(
-                    $ignoreAssignmentId,
-                    fn ($query) =>
-                        $query->whereKeyNot(
-                            $ignoreAssignmentId
-                        )
-                )
-                ->whereNotNull('start_time')
-                ->whereNotNull('end_time')
-                ->where(
-                    'start_time',
-                    '<',
-                    $validated['end_time']
-                )
-                ->where(
-                    'end_time',
-                    '>',
-                    $validated['start_time']
-                )
-                ->exists();
 
-        if ($classConflict) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'start_time' =>
-                        'Cette classe possède déjà '
-                        . 'un autre cours pendant '
-                        . 'cet horaire.',
-                ]);
+        /*
+         * schedules est la source officielle du planning.
+         */
+        $schedule->update([
+            'prof_id' => $professor->id,
+        ]);
+
+        /*
+         * Si ce créneau était déjà synchronisé dans prof_assignments,
+         * on remplace simplement son professeur.
+         */
+        $assignment = ProfAssignment::query()
+            ->where('schedule_id', $schedule->id)
+            ->first();
+
+        /*
+         * Compatibilité avec les anciennes assignations :
+         * si une ligne de même parcours/prof existe sans schedule_id,
+         * on la rattache au créneau au lieu de créer un doublon.
+         */
+        if (!$assignment) {
+            $assignment = ProfAssignment::query()
+                ->whereNull('schedule_id')
+                ->where('prof_id', $professor->id)
+                ->where('subject_id', $schedule->subject_id)
+                ->where('level_id', $schedule->level_id)
+                ->where('class_id', $schedule->class_id)
+                ->first();
         }
 
-        $scheduleData = [
-            'day_of_week' =>
-                $validated['day_of_week'],
-            'start_time' =>
-                $validated['start_time'],
-            'end_time' =>
-                $validated['end_time'],
+        $assignmentData = [
+            'prof_id' => $professor->id,
+            'subject_id' => $schedule->subject_id,
+            'level_id' => $schedule->level_id,
+            'class_id' => $schedule->class_id,
+            'schedule_id' => $schedule->id,
+            'day_of_week' => $schedule->day_of_week,
+            'start_time' => $schedule->start_time,
+            'end_time' => $schedule->end_time,
         ];
 
         if ($assignment) {
-            $assignment->update(
-                $scheduleData
-            );
-
-            return back()->with(
-                'success',
-                'L’horaire de cette assignation '
-                . 'a été mis à jour avec succès.'
-            );
+            $assignment->update($assignmentData);
+        } else {
+            ProfAssignment::create($assignmentData);
         }
-
-        ProfAssignment::create([
-            'prof_id' => $professor->id,
-            'subject_id' =>
-                $validated['subject_id'],
-            'level_id' => $level->id,
-            'class_id' => $classRoom->id,
-            ...$scheduleData,
-        ]);
 
         return back()->with(
             'success',
-            'Assignation et horaire du professeur '
-            . 'enregistrés avec succès.'
+            'Le professeur a été affecté au créneau '
+            . $schedule->slot_label
+            . ' avec succès.'
         );
     }
 
     /**
-     * Supprimer une assignation de professeur
+     * Supprimer l'affectation du professeur au créneau.
      */
     public function destroyProfAssignment($id)
     {
-        ProfAssignment::findOrFail($id)->delete();
+        $assignment = ProfAssignment::query()
+            ->with('schedule')
+            ->findOrFail($id);
 
-        return back()->with('success', 'Assignation supprimée avec succès.');
+        if (
+            $assignment->schedule
+            && (int) $assignment->schedule->prof_id
+                === (int) $assignment->prof_id
+        ) {
+            $assignment->schedule->update([
+                'prof_id' => null,
+            ]);
+        }
+
+        $assignment->delete();
+
+        return back()->with(
+            'success',
+            'Assignation du professeur supprimée avec succès.'
+        );
     }
 
     public function index()
     {
-        // 👇 Seulement les students
-        $users = User::where('role', 'student')->withCount('results')->get();
+        $users = User::query()
+            ->where('role', 'student')
+            ->withCount('results')
+            ->get();
 
-        $totalUsers = User::where('role', 'student')->count();
+        $totalUsers = User::query()
+            ->where('role', 'student')
+            ->count();
 
-        $recentUsers = User::where('role', 'student')
+        $recentUsers = User::query()
+            ->where('role', 'student')
             ->latest()
             ->take(5)
             ->get();
 
+        /*
+         * Parcours affiché dans /admin/users :
+         * Matière → Niveau → Classe → Créneau.
+         *
+         * class_user définit l'affectation pédagogique et schedules
+         * fournit les créneaux officiels de la classe.
+         */
+        $studentIds = $users->pluck('id');
+
+        $assignmentRows = $studentIds->isEmpty()
+            ? collect()
+            : DB::table('class_user')
+                ->join(
+                    'class_rooms',
+                    'class_user.class_id',
+                    '=',
+                    'class_rooms.id'
+                )
+                ->join(
+                    'levels',
+                    'class_rooms.level_id',
+                    '=',
+                    'levels.id'
+                )
+                ->leftJoin(
+                    'subjects',
+                    'class_user.subject_id',
+                    '=',
+                    'subjects.id'
+                )
+                ->whereIn('class_user.user_id', $studentIds)
+                ->whereNotNull('class_user.subject_id')
+                ->select([
+                    'class_user.user_id',
+                    'class_user.subject_id',
+                    'class_user.class_id',
+                    'class_rooms.level_id',
+                    'class_rooms.name as class_name',
+                    'levels.name as level_name',
+                    'subjects.name as subject_name',
+                ])
+                ->orderBy('subjects.name')
+                ->orderBy('levels.order')
+                ->orderBy('class_rooms.name')
+                ->get()
+                ->unique(
+                    fn ($row) =>
+                        $row->user_id
+                        . ':' . $row->subject_id
+                        . ':' . $row->class_id
+                )
+                ->values();
+
+        $scheduleGroups = Schedule::query()
+            ->active()
+            ->whereIn(
+                'class_id',
+                $assignmentRows->pluck('class_id')->unique()
+            )
+            ->whereIn(
+                'subject_id',
+                $assignmentRows->pluck('subject_id')->unique()
+            )
+            ->orderByRaw('COALESCE(day_of_week, 8) asc')
+            ->orderByRaw('TIME(start_time) asc')
+            ->get()
+            ->groupBy(
+                fn (Schedule $schedule) =>
+                    (int) $schedule->subject_id
+                    . ':'
+                    . (int) $schedule->class_id
+            );
+
+        $studentPaths = $assignmentRows
+            ->groupBy('user_id')
+            ->map(function ($rows) use ($scheduleGroups) {
+                return $rows
+                    ->map(function ($row) use ($scheduleGroups) {
+                        $key = (int) $row->subject_id
+                            . ':'
+                            . (int) $row->class_id;
+
+                        $slots = $scheduleGroups
+                            ->get($key, collect())
+                            ->map(fn (Schedule $schedule) => [
+                                'id' => (int) $schedule->id,
+                                'label' => $schedule->slot_label,
+                            ])
+                            ->values()
+                            ->all();
+
+                        return [
+                            'subject' => $row->subject_name ?: 'Matière',
+                            'level' => $row->level_name ?: 'Niveau',
+                            'class' => $row->class_name ?: 'Classe',
+                            'slots' => $slots,
+                        ];
+                    })
+                    ->values();
+            });
+
         return view('admin.users.index', compact(
             'users',
             'totalUsers',
-            'recentUsers'
+            'recentUsers',
+            'studentPaths'
         ));
     }
+
 
 
     public function update(Request $request, User $user)
@@ -514,14 +551,94 @@ class UserController extends Controller
     /**
      * Show edit form for class assignment
      */
-    public function edit(User $user)
-    {
+    public function edit(
+        Request $request,
+        User $user
+    ) {
         if ($user->role !== 'student') {
             abort(404, 'Not a student');
         }
 
-        $classRooms = ClassRoom::all();
-        return view('admin.users.edit', compact('user', 'classRooms'));
+        $assignmentHierarchy =
+            $this->buildAssignmentHierarchy();
+
+        $assignments = DB::table('class_user')
+            ->join(
+                'class_rooms',
+                'class_user.class_id',
+                '=',
+                'class_rooms.id'
+            )
+            ->leftJoin(
+                'levels',
+                'class_rooms.level_id',
+                '=',
+                'levels.id'
+            )
+            ->leftJoin(
+                'subjects',
+                'class_user.subject_id',
+                '=',
+                'subjects.id'
+            )
+            ->leftJoin(
+                'class_slots',
+                'class_user.class_slot_id',
+                '=',
+                'class_slots.id'
+            )
+            ->where(
+                'class_user.user_id',
+                $user->id
+            )
+            ->select([
+                'class_user.id as pivot_id',
+                'class_user.user_id',
+                'class_user.subject_id',
+                'class_rooms.level_id',
+                'class_user.class_id',
+                'class_user.class_slot_id',
+                'subjects.name as subject_name',
+                'levels.name as level_name',
+                'class_rooms.name as class_name',
+                'class_slots.code as slot_code',
+            ])
+            ->orderBy('subjects.name')
+            ->orderBy('levels.name')
+            ->orderBy('class_rooms.name')
+            ->orderBy('class_slots.position')
+            ->get();
+
+        $selectedAssignment = null;
+
+        $requestedPivot =
+            (int) $request->query(
+                'assignment_id',
+                0
+            );
+
+        if ($requestedPivot) {
+            $selectedAssignment =
+                $assignments->firstWhere(
+                    'pivot_id',
+                    $requestedPivot
+                );
+
+            abort_unless(
+                $selectedAssignment,
+                404
+            );
+        }
+
+        return view(
+            'admin.users.edit',
+            compact(
+                'user',
+                'assignments',
+                'selectedAssignment',
+                'assignmentHierarchy'
+            )
+        );
     }
 
     /**
@@ -537,6 +654,12 @@ class UserController extends Controller
             ->orderBy('name')
             ->get();
 
+        /*
+         * Les créneaux viennent de la structure pédagogique
+         * Matière → Niveau → Classe → Créneau.
+         *
+         * Ils ne dépendent plus de /admin/schedule.
+         */
         $assignmentHierarchy =
             $this->buildAssignmentHierarchy();
 
@@ -575,16 +698,24 @@ class UserController extends Controller
                 '=',
                 'subjects.id'
             )
+            ->leftJoin(
+                'class_slots',
+                'class_user.class_slot_id',
+                '=',
+                'class_slots.id'
+            )
             ->select([
                 'class_user.id as pivot_id',
                 'class_user.user_id',
                 'class_user.class_id',
                 'class_user.subject_id',
+                'class_user.class_slot_id',
                 'class_rooms.level_id',
                 'users.name as student_name',
                 'class_rooms.name as class_name',
                 'levels.name as level_name',
                 'subjects.name as subject_name',
+                'class_slots.code as slot_code',
             ])
             ->orderByDesc('class_user.id')
             ->get();
@@ -603,133 +734,362 @@ class UserController extends Controller
     /**
      * Store new student assignment following Subject -> Level -> Class.
      */
-    public function storeAssignment(Request $request)
-    {
+    public function storeAssignment(
+        Request $request,
+        ClassSlotService $classSlotService
+    ) {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:class_rooms,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'level_id' => 'required|exists:levels,id',
+            'user_id' => [
+                'required',
+                'exists:users,id',
+            ],
+            'subject_id' => [
+                'required',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'exists:class_slots,id',
+            ],
+        ], [
+            'class_slot_id.required' =>
+                'Veuillez choisir un créneau.',
         ]);
 
-        $level = Level::whereKey($request->level_id)
-            ->where('subject_id', $request->subject_id)->first();
-        if (! $level) {
-            return back()->withInput()->withErrors(['level_id' => 'Ce niveau n’appartient pas à la matière sélectionnée.']);
-        }
-        $class = ClassRoom::whereKey($request->class_id)
-            ->where('level_id', $level->id)
+        $student = User::query()
+            ->whereKey($request->user_id)
+            ->where('role', 'student')
             ->first();
-        if (! $class) {
-            return back()->withInput()->withErrors(['class_id' => 'Cette classe n’appartient pas au niveau et à la matière sélectionnés.']);
+
+        if (!$student) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'user_id' =>
+                        'L’utilisateur sélectionné n’est pas un étudiant.',
+                ]);
         }
 
-        if (!User::whereKey($request->user_id)->where('role', 'student')->exists()) {
-            return back()->withInput()->withErrors(['user_id' => 'L’utilisateur sélectionné n’est pas un étudiant.']);
+        $subject = Subject::findOrFail(
+            $request->subject_id
+        );
+
+        $level = Level::query()
+            ->whereKey($request->level_id)
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->first();
+
+        if (!$level) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'level_id' =>
+                        'Ce niveau n’appartient pas à la matière sélectionnée.',
+                ]);
         }
 
-        $classHasSubject = ClassRoom::whereKey($request->class_id)
-            ->whereHas('subjects', fn ($query) => $query->where('subjects.id', $request->subject_id))
-            ->exists();
+        $class = ClassRoom::query()
+            ->whereKey($request->class_id)
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->whereHas(
+                'subjects',
+                fn ($query) =>
+                    $query->where(
+                        'subjects.id',
+                        $subject->id
+                    )
+            )
+            ->first();
 
-        if (!$classHasSubject) {
-            return back()->withInput()->withErrors([
-                'class_id' => 'La classe sélectionnée n’est pas liée à cette matière.',
-            ]);
+        if (!$class) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'class_id' =>
+                        'Cette classe n’appartient pas au parcours sélectionné.',
+                ]);
+        }
+
+        $classSlotService->syncForPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        $slot =
+            $classSlotService->slotForPath(
+                (int) $request->class_slot_id,
+                (int) $subject->id,
+                (int) $level->id,
+                (int) $class->id
+            );
+
+        if (!$slot) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'class_slot_id' =>
+                        'Ce créneau n’appartient pas à la matière, au niveau et à la classe sélectionnés.',
+                ]);
         }
 
         $exists = DB::table('class_user')
-            ->where('user_id', $request->user_id)
-            ->where('subject_id', $request->subject_id)
+            ->where(
+                'user_id',
+                $student->id
+            )
+            ->where(
+                'subject_id',
+                $subject->id
+            )
             ->exists();
 
         if ($exists) {
-            return redirect()->back()->withInput()
-                ->with('info', 'Cette matière est déjà assignée à cet étudiant.');
+            return back()
+                ->withInput()
+                ->with(
+                    'info',
+                    'Cette matière est déjà assignée à cet étudiant. Utilisez Modifier pour changer sa classe ou son créneau.'
+                );
         }
 
-        DB::table('class_user')->insert([
-            'user_id' => $request->user_id,
-            'class_id' => $request->class_id,
-            'subject_id' => $request->subject_id,
+        $values = [
+            'user_id' => $student->id,
+            'class_id' => $class->id,
+            'subject_id' => $subject->id,
+            'class_slot_id' => $slot->id,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
 
-        // 🔥 Synchroniser users.class_id pour que $user->classRoom() fonctionne
-        $this->syncStudentClass((int) $request->user_id);
+        /*
+         * Compatibilité avec l'ancien système :
+         * schedule_id peut encore exister en base, mais
+         * l'assignation étudiant ne dépend plus d'une séance.
+         */
+        if (
+            Schema::hasColumn(
+                'class_user',
+                'schedule_id'
+            )
+        ) {
+            $values['schedule_id'] = null;
+        }
 
-        return redirect()->back()->with('success', 'Matière assignée avec succès !');
+        DB::table('class_user')
+            ->insert($values);
+
+        $this->syncStudentClass(
+            (int) $student->id
+        );
+
+        return back()->with(
+            'success',
+            'Étudiant assigné au créneau '
+            . $slot->code
+            . ' avec succès.'
+        );
     }
 
     /**
      * Update student-class assignment
      */
-    public function updateAssignment(Request $request, $pivotId)
-    {
-        $assignment = DB::table('class_user')->where('id', $pivotId)->first();
+    public function updateAssignment(
+        Request $request,
+        $pivotId,
+        ClassSlotService $classSlotService
+    ) {
+        $assignment = DB::table('class_user')
+            ->where('id', $pivotId)
+            ->first();
+
         abort_unless($assignment, 404);
 
         $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'class_id' => 'required|exists:class_rooms,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'level_id' => 'required|exists:levels,id',
+            'user_id' => [
+                'required',
+                'exists:users,id',
+            ],
+            'subject_id' => [
+                'required',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'exists:class_slots,id',
+            ],
         ]);
 
-        $level = Level::whereKey($request->level_id)
-            ->where('subject_id', $request->subject_id)
+        $student = User::query()
+            ->whereKey($request->user_id)
+            ->where('role', 'student')
             ->first();
-        if (! $level) {
-            return back()->withInput()->withErrors(['level_id' => 'Ce niveau n’appartient pas à la matière sélectionnée.']);
+
+        if (!$student) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'user_id' =>
+                        'L’utilisateur sélectionné n’est pas un étudiant.',
+                ]);
         }
 
-        if (! ClassRoom::whereKey($request->class_id)->where('level_id', $level->id)->exists()) {
-            return back()->withInput()->withErrors(['class_id' => 'Cette classe n’appartient pas au niveau sélectionné.']);
+        $subject = Subject::findOrFail(
+            $request->subject_id
+        );
+
+        $level = Level::query()
+            ->whereKey($request->level_id)
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->first();
+
+        if (!$level) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'level_id' =>
+                        'Ce niveau n’appartient pas à la matière sélectionnée.',
+                ]);
         }
 
-        if (!User::whereKey($request->user_id)->where('role', 'student')->exists()) {
-            return back()->withInput()->withErrors(['user_id' => 'L’utilisateur sélectionné n’est pas un étudiant.']);
+        $class = ClassRoom::query()
+            ->whereKey($request->class_id)
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->whereHas(
+                'subjects',
+                fn ($query) =>
+                    $query->where(
+                        'subjects.id',
+                        $subject->id
+                    )
+            )
+            ->first();
+
+        if (!$class) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'class_id' =>
+                        'Cette classe n’appartient pas au parcours sélectionné.',
+                ]);
         }
 
-        $classHasSubject = ClassRoom::whereKey($request->class_id)
-            ->whereHas('subjects', fn ($query) => $query->where('subjects.id', $request->subject_id))
-            ->exists();
+        $classSlotService->syncForPath(
+            $subject,
+            $level,
+            $class
+        );
 
-        if (!$classHasSubject) {
-            return back()->withInput()->withErrors([
-                'class_id' => 'La classe sélectionnée n’est pas liée à cette matière.',
-            ]);
+        $slot =
+            $classSlotService->slotForPath(
+                (int) $request->class_slot_id,
+                (int) $subject->id,
+                (int) $level->id,
+                (int) $class->id
+            );
+
+        if (!$slot) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'class_slot_id' =>
+                        'Ce créneau n’appartient pas au parcours sélectionné.',
+                ]);
         }
 
         $duplicateExists = DB::table('class_user')
-            ->where('user_id', $request->user_id)
-            ->where('subject_id', $request->subject_id)
-            ->where('id', '!=', $pivotId)
+            ->where(
+                'user_id',
+                $student->id
+            )
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->where(
+                'id',
+                '!=',
+                $pivotId
+            )
             ->exists();
 
         if ($duplicateExists) {
-            return back()->withInput()->withErrors([
-                'subject_id' => 'Cette matière est déjà assignée à cet étudiant.',
-            ]);
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'subject_id' =>
+                        'Cette matière est déjà assignée à cet étudiant.',
+                ]);
+        }
+
+        $values = [
+            'user_id' => $student->id,
+            'class_id' => $class->id,
+            'subject_id' => $subject->id,
+            'class_slot_id' => $slot->id,
+            'updated_at' => now(),
+        ];
+
+        if (
+            Schema::hasColumn(
+                'class_user',
+                'schedule_id'
+            )
+        ) {
+            $values['schedule_id'] = null;
         }
 
         DB::table('class_user')
             ->where('id', $pivotId)
-            ->update([
-                'user_id' => $request->user_id,
-                'class_id' => $request->class_id,
-                'subject_id' => $request->subject_id,
-                'updated_at' => now()
-            ]);
+            ->update($values);
 
-        // Synchroniser l'ancien étudiant et le nouveau si l'assignation a été transférée.
-        $this->syncStudentClass((int) $assignment->user_id);
-        if ((int) $assignment->user_id !== (int) $request->user_id) {
-            $this->syncStudentClass((int) $request->user_id);
+        $this->syncStudentClass(
+            (int) $assignment->user_id
+        );
+
+        if (
+            (int) $assignment->user_id
+            !== (int) $student->id
+        ) {
+            $this->syncStudentClass(
+                (int) $student->id
+            );
         }
 
-        return redirect()->back()->with('success', 'Assignation modifiée avec succès!');
+        return back()->with(
+            'success',
+            'Assignation modifiée : créneau '
+            . $slot->code
+            . '.'
+        );
     }
 
     /**
@@ -751,6 +1111,163 @@ class UserController extends Controller
     }
 
     /**
+     * Hiérarchie de la page /admin/prof-assignments.
+     *
+     * Source unique des créneaux : schedules.
+     * Une classe n'affiche donc que les créneaux réellement créés dans
+     * /admin/schedule, avec leur code (D1, I2...), jour et horaire.
+     */
+    private function buildProfAssignmentHierarchy(): array
+    {
+        $schedules = Schedule::query()
+            ->active()
+            ->with([
+                'subjectModel',
+                'level',
+                'classRoom',
+                'prof',
+            ])
+            ->whereNotNull('subject_id')
+            ->whereNotNull('level_id')
+            ->whereNotNull('class_id')
+            ->orderByRaw('COALESCE(day_of_week, 8) asc')
+            ->orderByRaw('TIME(start_time) asc')
+            ->get();
+
+        return $schedules
+            ->groupBy('subject_id')
+            ->map(function ($subjectSchedules) {
+                $firstSubject = $subjectSchedules->first();
+                $subject = $firstSubject?->subjectModel;
+
+                if (!$subject) {
+                    return null;
+                }
+
+                /*
+                 * Même périmètre que /admin/schedule :
+                 * Arabe, Coran et Soutien Lycée uniquement.
+                 */
+                if (!in_array(
+                    $this->normalizePathName($subject->name),
+                    [
+                        'arabe',
+                        'coran',
+                        'soutien lycee',
+                        'soutient lycee',
+                    ],
+                    true
+                )) {
+                    return null;
+                }
+
+                $allowedLevelNames =
+                    $this->allowedLevelNamesForSubject(
+                        $subject
+                    );
+
+                $levels = $subjectSchedules
+                    ->groupBy('level_id')
+                    ->map(function ($levelSchedules) use (
+                        $allowedLevelNames
+                    ) {
+                        $firstLevel = $levelSchedules->first();
+                        $level = $firstLevel?->level;
+
+                        if (!$level) {
+                            return null;
+                        }
+
+                        if (
+                            $allowedLevelNames !== null
+                            && !in_array(
+                                $this->normalizePathName(
+                                    $level->name
+                                ),
+                                $allowedLevelNames,
+                                true
+                            )
+                        ) {
+                            return null;
+                        }
+
+                        $classes = $levelSchedules
+                            ->groupBy('class_id')
+                            ->map(function ($classSchedules) {
+                                $firstClass = $classSchedules->first();
+                                $classRoom = $firstClass?->classRoom;
+
+                                if (!$classRoom) {
+                                    return null;
+                                }
+
+                                $slots = $classSchedules
+                                    ->map(function (Schedule $schedule) {
+                                        return [
+                                            'id' => (int) $schedule->id,
+                                            'code' =>
+                                                trim((string) $schedule->slot_code)
+                                                ?: 'Créneau',
+                                            'day' => $schedule->day_label,
+                                            'time' => $schedule->time_range_label,
+                                            'label' => $schedule->slot_label,
+                                            'professor' =>
+                                                optional($schedule->prof)->name,
+                                            'has_professor' =>
+                                                !empty($schedule->prof_id),
+                                        ];
+                                    })
+                                    ->values()
+                                    ->all();
+
+                                return [
+                                    'id' => (int) $classRoom->id,
+                                    'name' => $classRoom->name,
+                                    'slots' => $slots,
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
+
+                        if (empty($classes)) {
+                            return null;
+                        }
+
+                        return [
+                            'id' => (int) $level->id,
+                            'name' => $level->name,
+                            'classes' => $classes,
+                        ];
+                    })
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if (empty($levels)) {
+                    return null;
+                }
+
+                return [
+                    'id' => (int) $subject->id,
+                    'name' => $subject->name,
+                    'levels' => $levels,
+                ];
+            })
+            ->filter()
+            ->sortBy(function (array $subject) {
+                return match ($this->normalizePathName($subject['name'])) {
+                    'arabe' => 1,
+                    'coran' => 2,
+                    'soutien lycee', 'soutient lycee' => 3,
+                    default => 99,
+                };
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
      * Construit la structure active utilisée par les formulaires :
      *
      * Matière
@@ -759,17 +1276,39 @@ class UserController extends Controller
      */
     private function buildAssignmentHierarchy(): array
     {
+        $subjectOrder = [
+            'arabe' => 1,
+            'coran' => 2,
+            'soutien lycee' => 3,
+            'soutient lycee' => 3,
+        ];
+
         $subjects = Subject::query()
-            ->orderByRaw(
-                "CASE
-                    WHEN LOWER(name) = 'arabe' THEN 1
-                    WHEN LOWER(name) = 'coran' THEN 2
-                    WHEN LOWER(name) = 'soutien lycée' THEN 3
-                    ELSE 4
-                END"
+            ->get()
+            ->filter(
+                function (
+                    Subject $subject
+                ) use ($subjectOrder) {
+                    return array_key_exists(
+                        $this->normalizePathName(
+                            $subject->name
+                        ),
+                        $subjectOrder
+                    );
+                }
             )
-            ->orderBy('name')
-            ->get();
+            ->sortBy(
+                function (
+                    Subject $subject
+                ) use ($subjectOrder) {
+                    return $subjectOrder[
+                        $this->normalizePathName(
+                            $subject->name
+                        )
+                    ] ?? PHP_INT_MAX;
+                }
+            )
+            ->values();
 
         $levels = Level::query()
             ->with([
@@ -779,22 +1318,23 @@ class UserController extends Controller
             ->orderBy('name')
             ->get();
 
+        $slotService =
+            app(ClassSlotService::class);
+
         return $subjects
             ->map(
                 function (
                     Subject $subject
-                ) use ($levels) {
+                ) use (
+                    $levels,
+                    $slotService
+                ) {
                     $subjectLevels = $levels
                         ->where(
                             'subject_id',
                             $subject->id
                         );
 
-                    /*
-                     * La base contient encore d'anciens parcours.
-                     * Les formulaires d'assignation doivent afficher
-                     * uniquement les parcours officiels.
-                     */
                     $allowedLevelNames =
                         $this->allowedLevelNamesForSubject(
                             $subject
@@ -811,12 +1351,28 @@ class UserController extends Controller
                                         $allowedLevelNames,
                                         true
                                     )
+                            )
+                            ->sortBy(
+                                function (
+                                    Level $level
+                                ) use (
+                                    $allowedLevelNames
+                                ) {
+                                    $position = array_search(
+                                        $this->normalizePathName(
+                                            $level->name
+                                        ),
+                                        $allowedLevelNames,
+                                        true
+                                    );
+
+                                    return $position === false
+                                        ? PHP_INT_MAX
+                                        : $position;
+                                }
                             );
                     }
 
-                    /*
-                     * Évite les doublons de niveaux portant le même nom.
-                     */
                     $subjectLevels = $subjectLevels
                         ->unique(
                             fn (Level $level) =>
@@ -828,7 +1384,10 @@ class UserController extends Controller
                         ->map(
                             function (
                                 Level $level
-                            ) use ($subject) {
+                            ) use (
+                                $subject,
+                                $slotService
+                            ) {
                                 $classes = $level
                                     ->classes
                                     ->filter(
@@ -846,14 +1405,49 @@ class UserController extends Controller
                                     ->unique('id')
                                     ->values()
                                     ->map(
-                                        fn (
+                                        function (
                                             ClassRoom $classRoom
-                                        ) => [
-                                            'id' =>
-                                                $classRoom->id,
-                                            'name' =>
-                                                $classRoom->name,
-                                        ]
+                                        ) use (
+                                            $subject,
+                                            $level,
+                                            $slotService
+                                        ) {
+                                            /*
+                                             * Génération automatique des
+                                             * 4 créneaux structurels.
+                                             * Aucun emploi du temps requis.
+                                             */
+                                            $slots =
+                                                $slotService
+                                                    ->syncForPath(
+                                                        $subject,
+                                                        $level,
+                                                        $classRoom
+                                                    )
+                                                    ->map(
+                                                        fn (
+                                                            ClassSlot $slot
+                                                        ) => [
+                                                            'id' =>
+                                                                $slot->id,
+                                                            'code' =>
+                                                                $slot->code,
+                                                            'name' =>
+                                                                $slot->code,
+                                                        ]
+                                                    )
+                                                    ->values()
+                                                    ->all();
+
+                                            return [
+                                                'id' =>
+                                                    $classRoom->id,
+                                                'name' =>
+                                                    $classRoom->name,
+                                                'slots' =>
+                                                    $slots,
+                                            ];
+                                        }
                                     )
                                     ->all();
 
@@ -899,8 +1493,8 @@ class UserController extends Controller
             $this->normalizePathName($subject->name)
         ) {
             'arabe' => [
-                'lecture & ecriture',
                 'communication',
+                'lecture & ecriture',
             ],
             'coran' => [
                 'apprentissage & tajwid',

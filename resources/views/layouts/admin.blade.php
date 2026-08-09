@@ -249,11 +249,9 @@
                 </div>
 
                 <div class="admin-topbar-actions">
-                    <a href="{{ route('home') }}"
-                       class="admin-site-link"
-                       title="Voir le site public"
-                       aria-label="Voir le site public">
-                        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                    <a href="{{ route('home') }}" class="admin-site-link" title="Voir le site public">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        <span>Voir le site</span>
                     </a>
 
                     @auth

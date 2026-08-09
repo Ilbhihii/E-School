@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
+use App\Models\ClassSlot;
 use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\Assignment;
@@ -15,9 +16,12 @@ use App\Models\Subject;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\LearningPathService;
+use App\Services\ClassScheduleDisplayService;
+use Carbon\Carbon;
 use App\Models\HighSchoolTestSubmission;
 use App\Models\VocalTestPrompt;
 
@@ -143,161 +147,135 @@ class StudentController extends Controller
 
 
     public function lives(
-        Request $request
+        Request $request,
+        ClassScheduleDisplayService $scheduleService
     ) {
         $user = auth()->user();
 
-        /*
-         * Conserver les assignations class_user ainsi que
-         * l'éventuelle classe principale historique.
-         */
         $assignmentRows = $this->paths
-            ->studentAssignmentRows($user->id);
-
-        $assignedClassIds = $assignmentRows
-            ->pluck('class_id')
-            ->push($user->class_id)
-            ->filter()
-            ->map(
-                function ($classId) {
-                    return (int) $classId;
-                }
-            )
-            ->unique()
-            ->values();
-
-        $assignedClasses = ClassRoom::query()
-            ->whereIn('id', $assignedClassIds)
-            ->with('level')
-            ->orderBy('name')
-            ->get()
+            ->studentAssignmentRows($user->id)
             ->filter(
-                function ($classRoom) {
-                    return $classRoom->level !== null;
-                }
+                fn ($row) =>
+                    !empty($row->class_slot_id)
+                    && !empty($row->slot_code)
             )
             ->values();
 
-        $assignedLevels = Level::query()
-            ->whereIn(
-                'id',
-                $assignedClasses
-                    ->pluck('level_id')
-                    ->unique()
-            )
+        $subjectsModels = Subject::query()
+            ->whereIn('id', $assignmentRows->pluck('subject_id'))
+            ->orderBy('name')
+            ->get();
+
+        $levelsModels = Level::query()
+            ->whereIn('id', $assignmentRows->pluck('level_id'))
             ->orderBy('order')
             ->orderBy('name')
             ->get();
 
-        /*
-         * Sans level_id :
-         * afficher tous les lives des classes assignées.
-         */
-        $requestedLevelId = $request->query(
-            'level_id'
+        $classesModels = ClassRoom::query()
+            ->whereIn('id', $assignmentRows->pluck('class_id'))
+            ->orderBy('name')
+            ->get();
+
+        $slotsModels = ClassSlot::query()
+            ->whereIn(
+                'id',
+                $assignmentRows->pluck('class_slot_id')->filter()
+            )
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->orderBy('code')
+            ->get();
+
+        $subjectsById = $subjectsModels->keyBy('id');
+        $levelsById = $levelsModels->keyBy('id');
+        $classesById = $classesModels->keyBy('id');
+        $slotsById = $slotsModels->keyBy('id');
+
+        $paths = $assignmentRows
+            ->map(function ($row) use (
+                $subjectsById,
+                $levelsById,
+                $classesById,
+                $slotsById
+            ) {
+                $subject = $subjectsById->get((int) $row->subject_id);
+                $level = $levelsById->get((int) $row->level_id);
+                $classRoom = $classesById->get((int) $row->class_id);
+                $slot = $slotsById->get((int) $row->class_slot_id);
+
+                if (!$subject || !$level || !$classRoom || !$slot) {
+                    return null;
+                }
+
+                return (object) [
+                    'subject_id' => (int) $subject->id,
+                    'level_id' => (int) $level->id,
+                    'class_id' => (int) $classRoom->id,
+                    'class_slot_id' => (int) $slot->id,
+                    'slot_code' => $slot->code,
+                    'subject' => $subject,
+                    'level' => $level,
+                    'classRoom' => $classRoom,
+                    'classSlot' => $slot,
+                ];
+            })
+            ->filter()
+            ->unique(fn ($path) => implode(':', [
+                $path->subject_id,
+                $path->level_id,
+                $path->class_id,
+                $path->class_slot_id,
+            ]))
+            ->values();
+
+        [
+            $selectedSubjectId,
+            $selectedLevelId,
+            $selectedClassId,
+            $selectedSlotId,
+        ] = $this->resolveStudentPathFilters($request, $paths);
+
+        $visiblePaths = $this->filterStudentPaths(
+            $paths,
+            $selectedSubjectId,
+            $selectedLevelId,
+            $selectedClassId,
+            $selectedSlotId
         );
 
-        $selectedLevel = null;
+        $visibleSlotIds = $visiblePaths
+            ->pluck('class_slot_id')
+            ->filter()
+            ->unique()
+            ->values();
 
-        if (
-            $requestedLevelId !== null
-            && $requestedLevelId !== ''
-        ) {
-            $selectedLevel = $assignedLevels
-                ->firstWhere(
-                    'id',
-                    (int) $requestedLevelId
-                );
-        }
+        $selectedSlot = $selectedSlotId
+            ? $slotsModels->firstWhere('id', $selectedSlotId)
+            : null;
 
-        $classesForSelectedLevel = collect();
-        $selectedClass = null;
-
-        if ($selectedLevel) {
-            $classesForSelectedLevel =
-                $assignedClasses
-                    ->filter(
-                        function ($classRoom) use (
-                            $selectedLevel
-                        ) {
-                            return
-                                (int) $classRoom->level_id
-                                === (int) $selectedLevel->id;
-                        }
-                    )
-                    ->sortBy('name')
-                    ->values();
-
-            $requestedClassId = $request->query(
-                'class_id'
-            );
-
-            if (
-                $requestedClassId !== null
-                && $requestedClassId !== ''
-            ) {
-                $selectedClass =
-                    $classesForSelectedLevel
-                        ->firstWhere(
-                            'id',
-                            (int) $requestedClassId
-                        );
-            }
-
-            /*
-             * Si seul le niveau est choisi, sélectionner
-             * automatiquement la première classe assignée.
-             */
-            if (!$selectedClass) {
-                $selectedClass =
-                    $classesForSelectedLevel
-                        ->first();
-            }
-        }
-
-        if ($selectedClass) {
-            $visibleClassIds = collect([
-                (int) $selectedClass->id,
-            ]);
-        } elseif ($selectedLevel) {
-            $visibleClassIds =
-                $classesForSelectedLevel
-                    ->pluck('id')
-                    ->map(
-                        function ($classId) {
-                            return (int) $classId;
-                        }
-                    )
-                    ->values();
-        } else {
-            $visibleClassIds =
-                $assignedClasses
-                    ->pluck('id')
-                    ->map(
-                        function ($classId) {
-                            return (int) $classId;
-                        }
-                    )
-                    ->values();
-        }
+        $scheduleFilters = array_filter([
+            'subject_id' => $selectedSubjectId,
+            'level_id' => $selectedLevelId,
+            'class_id' => $selectedClassId,
+            'slot_code' => $selectedSlot?->code,
+        ]);
 
         $lives = Live::query()
             ->with([
                 'classRoom.level',
+                'classSlot.subject',
+                'classSlot.level',
+                'classSlot.classRoom',
             ])
             ->when(
-                $visibleClassIds->isNotEmpty(),
-                function ($query) use (
-                    $visibleClassIds
-                ) {
-                    $query->whereIn(
-                        'class_id',
-                        $visibleClassIds
-                    );
-                },
-                function ($query) {
-                    $query->whereRaw('1 = 0');
-                }
+                Schema::hasColumn('lives', 'class_slot_id')
+                && $visibleSlotIds->isNotEmpty(),
+                fn ($query) => $query->whereIn(
+                    'class_slot_id',
+                    $visibleSlotIds
+                ),
+                fn ($query) => $query->whereRaw('1 = 0')
             )
             ->orderByDesc('live_date')
             ->orderByDesc('start_time')
@@ -305,68 +283,175 @@ class StudentController extends Controller
             ->get();
 
         /*
-         * Données utilisées par JavaScript pour remplir
-         * automatiquement les classes du niveau choisi.
+         * Le calendrier est chargé pour une large fenêtre afin que les vues
+         * semaine / mois puissent être parcourues sans seconde interface.
          */
-        $classOptionsByLevel = $assignedLevels
-            ->mapWithKeys(
-                function ($level) use (
-                    $assignedClasses
-                ) {
-                    $options = $assignedClasses
-                        ->filter(
-                            function (
-                                $classRoom
-                            ) use ($level) {
-                                return
-                                    (int) $classRoom->level_id
-                                    === (int) $level->id;
-                            }
-                        )
-                        ->sortBy('name')
-                        ->values()
-                        ->map(
-                            function ($classRoom) {
-                                return [
-                                    'id' =>
-                                        (int) $classRoom->id,
-                                    'name' =>
-                                        $classRoom->name,
-                                ];
-                            }
-                        )
-                        ->all();
+        $calendarStart = now()->subMonth()->startOfMonth();
 
-                    return [
-                        (string) $level->id =>
-                            $options,
-                    ];
-                }
+        $scheduleOccurrences = $scheduleService->forStudent(
+            $user,
+            $calendarStart,
+            400,
+            null,
+            $scheduleFilters
+        );
+
+        $todayKey = now()->toDateString();
+
+        $todayOccurrences = $scheduleOccurrences
+            ->where('date_key', $todayKey)
+            ->values();
+
+        $todayLives = $lives
+            ->filter(
+                fn (Live $live) =>
+                    $live->start_date_time
+                    && $live->start_date_time->toDateString() === $todayKey
             )
-            ->all();
+            ->sortBy(
+                fn (Live $live) =>
+                    $live->start_date_time?->timestamp
+                    ?? PHP_INT_MAX
+            )
+            ->values();
 
-        $hasActiveFilter =
-            $selectedLevel !== null;
+        $pathByScheduleKey = $visiblePaths->keyBy(
+            fn ($path) =>
+                (int) $path->subject_id
+                . ':' . (int) $path->level_id
+                . ':' . (int) $path->class_id
+                . ':' . strtoupper(trim((string) $path->slot_code))
+        );
 
-        $visibleClassCount =
-            $visibleClassIds->count();
+        $todayOccurrences = $todayOccurrences
+            ->map(function (array $occurrence) use (
+                $pathByScheduleKey,
+                $todayLives
+            ) {
+                $key =
+                    (int) ($occurrence['subject_id'] ?? 0)
+                    . ':' . (int) ($occurrence['level_id'] ?? 0)
+                    . ':' . (int) ($occurrence['class_id'] ?? 0)
+                    . ':' . strtoupper(
+                        trim((string) ($occurrence['slot_code'] ?? ''))
+                    );
+
+                $path = $pathByScheduleKey->get($key);
+
+                $occurrence['linked_live'] = $path
+                    ? $todayLives->first(
+                        fn (Live $live) =>
+                            (int) $live->class_slot_id
+                            === (int) $path->class_slot_id
+                    )
+                    : null;
+
+                return $occurrence;
+            })
+            ->values();
+
+        $calendarEvents = $scheduleOccurrences
+            ->map(function (array $occurrence) {
+                $slotCode = trim(
+                    (string) ($occurrence['slot_code'] ?? '')
+                );
+
+                return [
+                    'id' => 'course-'
+                        . $occurrence['schedule_id']
+                        . '-' . $occurrence['date_key'],
+                    'title' => collect([
+                        'Cours',
+                        $slotCode ?: null,
+                        $occurrence['subject'],
+                    ])->filter()->implode(' · '),
+                    'start' => $occurrence['start']->toIso8601String(),
+                    'end' => $occurrence['end']->toIso8601String(),
+                    'allDay' => false,
+                    'classNames' => ['student-calendar-course'],
+                    'extendedProps' => [
+                        'type' => 'course',
+                        'path' => $occurrence['path'],
+                    ],
+                ];
+            })
+            ->values();
+
+        $liveCalendarEvents = $lives
+            ->map(function (Live $live) {
+                $start = $live->start_date_time;
+                $end = $live->end_date_time;
+
+                if (!$start || !$end) {
+                    return null;
+                }
+
+                return [
+                    'id' => 'live-' . $live->id,
+                    'title' => collect([
+                        'LIVE',
+                        $live->classSlot?->code,
+                        $live->title,
+                    ])->filter()->implode(' · '),
+                    'start' => $start->toIso8601String(),
+                    'end' => $end->toIso8601String(),
+                    'allDay' => false,
+                    'url' => $live->stream_url
+                        ? route('live.access.request', $live)
+                        : null,
+                    'classNames' => [
+                        'student-calendar-live',
+                        'student-calendar-live-' . $live->schedule_status,
+                    ],
+                    'extendedProps' => [
+                        'type' => 'live',
+                    ],
+                ];
+            })
+            ->filter()
+            ->values();
+
+        $calendarEvents = $calendarEvents
+            ->concat($liveCalendarEvents)
+            ->sortBy('start')
+            ->values();
+
+        $filterData = $this->studentPathFilterData($paths);
 
         return view(
             'student.lives',
-            compact(
-                'lives',
-                'assignedLevels',
-                'assignedClasses',
-                'selectedLevel',
-                'selectedClass',
-                'classesForSelectedLevel',
-                'classOptionsByLevel',
-                'hasActiveFilter',
-                'visibleClassCount'
+            array_merge(
+                compact(
+                    'lives',
+                    'paths',
+                    'visiblePaths',
+                    'todayOccurrences',
+                    'todayLives',
+                    'calendarEvents'
+                ),
+                $filterData,
+                [
+                    'selectedSubjectId' => $selectedSubjectId,
+                    'selectedLevelId' => $selectedLevelId,
+                    'selectedClassId' => $selectedClassId,
+                    'selectedSlotId' => $selectedSlotId,
+                    'hasActiveFilter' => (bool) (
+                        $selectedSubjectId
+                        || $selectedLevelId
+                        || $selectedClassId
+                        || $selectedSlotId
+                    ),
+                    'liveNowCount' => $lives
+                        ->where('schedule_status', 'live')
+                        ->count(),
+                    'upcomingCount' => $lives
+                        ->where('schedule_status', 'upcoming')
+                        ->count(),
+                    'todayScheduleCount' => $todayOccurrences->count(),
+                ]
             )
         );
     }
-
 
     public function classCourses($id)
     {
@@ -425,6 +510,27 @@ class StudentController extends Controller
             ),
             403
         );
+
+        if (
+            Schema::hasColumn('courses', 'slot_code')
+            && trim((string) $course->slot_code) !== ''
+        ) {
+            $allowedSlot = $this->paths
+                ->studentAssignmentRows(auth()->id())
+                ->contains(
+                    fn ($row) =>
+                        (int) $row->subject_id === (int) $course->subject_id
+                        && (int) $row->level_id === (int) (
+                            $course->level_id
+                            ?: $course->classRoom?->level_id
+                        )
+                        && (int) $row->class_id === (int) $course->class_id
+                        && strtoupper(trim((string) ($row->slot_code ?? '')))
+                            === strtoupper(trim((string) $course->slot_code))
+                );
+
+            abort_unless($allowedSlot, 403);
+        }
 
         $courseLevel =
             $course->level
@@ -489,266 +595,213 @@ class StudentController extends Controller
     {
         $user = auth()->user();
 
-        /*
-         * Parcours exacts assignés à l'étudiant :
-         * Matière → Niveau → Classe.
-         */
         $assignmentRows = $this->paths
-            ->studentAssignmentRows($user->id);
+            ->studentAssignmentRows($user->id)
+            ->filter(
+                fn ($row) =>
+                    !empty($row->class_slot_id)
+                    && !empty($row->slot_code)
+            )
+            ->values();
 
         $subjects = Subject::query()
-            ->whereIn(
-                'id',
-                $assignmentRows->pluck('subject_id')
-            )
+            ->whereIn('id', $assignmentRows->pluck('subject_id'))
             ->orderBy('name')
             ->get();
 
         $levels = Level::query()
-            ->whereIn(
-                'id',
-                $assignmentRows->pluck('level_id')
-            )
+            ->whereIn('id', $assignmentRows->pluck('level_id'))
             ->orderBy('order')
             ->orderBy('name')
             ->get();
 
         $classes = ClassRoom::query()
+            ->whereIn('id', $assignmentRows->pluck('class_id'))
+            ->orderBy('name')
+            ->get();
+
+        $slots = ClassSlot::query()
             ->whereIn(
                 'id',
-                $assignmentRows->pluck('class_id')
+                $assignmentRows->pluck('class_slot_id')->filter()
             )
-            ->with('level')
-            ->orderBy('name')
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->orderBy('code')
             ->get();
 
         $subjectsById = $subjects->keyBy('id');
         $levelsById = $levels->keyBy('id');
         $classesById = $classes->keyBy('id');
+        $slotsById = $slots->keyBy('id');
 
         $assignmentPaths = $assignmentRows
-            ->map(
-                function ($row) use (
-                    $subjectsById,
-                    $levelsById,
-                    $classesById
-                ) {
-                    $subject = $subjectsById->get(
-                        (int) $row->subject_id
-                    );
+            ->map(function ($row) use (
+                $subjectsById,
+                $levelsById,
+                $classesById,
+                $slotsById
+            ) {
+                $subject = $subjectsById->get((int) $row->subject_id);
+                $level = $levelsById->get((int) $row->level_id);
+                $classRoom = $classesById->get((int) $row->class_id);
+                $slot = $slotsById->get((int) $row->class_slot_id);
 
-                    $level = $levelsById->get(
-                        (int) $row->level_id
-                    );
-
-                    $classRoom = $classesById->get(
-                        (int) $row->class_id
-                    );
-
-                    if (
-                        !$subject
-                        || !$level
-                        || !$classRoom
-                    ) {
-                        return null;
-                    }
-
-                    return (object) [
-                        'subject_id' =>
-                            (int) $subject->id,
-                        'level_id' =>
-                            (int) $level->id,
-                        'class_id' =>
-                            (int) $classRoom->id,
-                        'subject' => $subject,
-                        'level' => $level,
-                        'classRoom' => $classRoom,
-                    ];
+                if (!$subject || !$level || !$classRoom || !$slot) {
+                    return null;
                 }
-            )
+
+                return (object) [
+                    'subject_id' => (int) $subject->id,
+                    'level_id' => (int) $level->id,
+                    'class_id' => (int) $classRoom->id,
+                    'class_slot_id' => (int) $slot->id,
+                    'slot_code' => $slot->code,
+                    'subject' => $subject,
+                    'level' => $level,
+                    'classRoom' => $classRoom,
+                    'classSlot' => $slot,
+                ];
+            })
             ->filter()
-            ->sortBy(
-                function ($path) {
-                    return sprintf(
-                        '%s|%06d|%s|%s',
-                        mb_strtolower(
-                            $path->subject->name
-                        ),
-                        (int) (
-                            $path->level->order
-                            ?? 999999
-                        ),
-                        mb_strtolower(
-                            $path->level->name
-                        ),
-                        mb_strtolower(
-                            $path->classRoom->name
-                        )
-                    );
-                }
-            )
+            ->sortBy(fn ($path) => sprintf(
+                '%s|%06d|%s|%s|%s',
+                mb_strtolower($path->subject->name),
+                (int) ($path->level->order ?? 999999),
+                mb_strtolower($path->level->name),
+                mb_strtolower($path->classRoom->name),
+                mb_strtolower($path->slot_code)
+            ))
             ->values();
 
+        $filterData = $this->studentPathFilterData($assignmentPaths);
+
         /*
-         * Données des listes dépendantes du formulaire :
-         * matière → niveaux → classes.
+         * Cette page utilise déjà $subjects comme collection Eloquent
+         * pour le formulaire d'envoi. La clé "subjects" générée par
+         * studentPathFilterData() est destinée aux filtres des autres
+         * pages et ne doit pas écraser cette collection.
          */
-        $levelsBySubject = $assignmentPaths
-            ->groupBy('subject_id')
-            ->mapWithKeys(
-                function (
-                    $subjectPaths,
-                    $subjectId
-                ) {
-                    $options = $subjectPaths
-                        ->unique('level_id')
-                        ->sortBy(
-                            function ($path) {
-                                return sprintf(
-                                    '%06d|%s',
-                                    (int) (
-                                        $path->level->order
-                                        ?? 999999
-                                    ),
-                                    mb_strtolower(
-                                        $path->level->name
-                                    )
-                                );
-                            }
-                        )
-                        ->values()
-                        ->map(
-                            function ($path) {
-                                return [
-                                    'id' =>
-                                        (int) $path->level_id,
-                                    'name' =>
-                                        $path->level->name,
-                                ];
-                            }
-                        )
-                        ->all();
-
-                    return [
-                        (string) $subjectId =>
-                            $options,
-                    ];
-                }
-            )
-            ->all();
-
-        $classesBySubjectLevel = $assignmentPaths
-            ->groupBy('subject_id')
-            ->mapWithKeys(
-                function (
-                    $subjectPaths,
-                    $subjectId
-                ) {
-                    $levels = $subjectPaths
-                        ->groupBy('level_id')
-                        ->mapWithKeys(
-                            function (
-                                $levelPaths,
-                                $levelId
-                            ) {
-                                $options = $levelPaths
-                                    ->unique('class_id')
-                                    ->sortBy(
-                                        fn ($path) =>
-                                            mb_strtolower(
-                                                $path
-                                                    ->classRoom
-                                                    ->name
-                                            )
-                                    )
-                                    ->values()
-                                    ->map(
-                                        function ($path) {
-                                            return [
-                                                'id' =>
-                                                    (int) $path
-                                                        ->class_id,
-                                                'name' =>
-                                                    $path
-                                                        ->classRoom
-                                                        ->name,
-                                            ];
-                                        }
-                                    )
-                                    ->all();
-
-                                return [
-                                    (string) $levelId =>
-                                        $options,
-                                ];
-                            }
-                        )
-                        ->all();
-
-                    return [
-                        (string) $subjectId =>
-                            $levels,
-                    ];
-                }
-            )
-            ->all();
+        unset($filterData['subjects']);
 
         $assignments = Assignment::query()
             ->where('user_id', $user->id)
             ->with([
                 'subject',
                 'course.subject',
+                'course.level',
+                'course.classRoom',
+                'classSlot',
             ])
             ->latest()
             ->get();
 
-        /*
-         * Afficher les devoirs des professeurs pour tous les
-         * parcours assignés à l'étudiant, et non uniquement
-         * sa première classe.
-         */
         $profAssignments = collect();
 
-        if ($assignmentRows->isNotEmpty()) {
+        if ($assignmentPaths->isNotEmpty()) {
+            $pathPairs = $assignmentPaths
+                ->map(fn ($path) => [
+                    'subject_id' => $path->subject_id,
+                    'class_id' => $path->class_id,
+                ])
+                ->unique(fn ($pair) =>
+                    $pair['subject_id'] . ':' . $pair['class_id']
+                )
+                ->values();
+
             $profAssignments = Assignment::query()
                 ->whereHas(
                     'user',
-                    fn ($query) =>
-                        $query->where('role', 'prof')
+                    fn ($query) => $query->where('role', 'prof')
                 )
-                ->where(
-                    function ($query) use (
-                        $assignmentRows
-                    ) {
-                        foreach (
-                            $assignmentRows
-                            as $row
-                        ) {
-                            $query->orWhere(
-                                function ($pathQuery) use (
-                                    $row
-                                ) {
-                                    $pathQuery
-                                        ->where(
-                                            'subject_id',
-                                            $row->subject_id
-                                        )
-                                        ->where(
-                                            'class_room_id',
-                                            $row->class_id
-                                        );
-                                }
-                            );
-                        }
+                ->where(function ($query) use ($pathPairs) {
+                    foreach ($pathPairs as $pair) {
+                        $query->orWhere(function ($pathQuery) use ($pair) {
+                            $pathQuery
+                                ->where('subject_id', $pair['subject_id'])
+                                ->where('class_room_id', $pair['class_id']);
+                        });
                     }
-                )
+                })
                 ->with([
                     'user',
                     'subject',
-                    'course',
+                    'course.subject',
+                    'course.level',
+                    'course.classRoom',
+                    'classSlot',
                 ])
                 ->latest()
-                ->get();
+                ->get()
+                ->filter(function ($profAssignment) use ($assignmentPaths) {
+                    $subjectId = (int) (
+                        $profAssignment->subject_id
+                        ?: $profAssignment->course?->subject_id
+                    );
+
+                    $classId = (int) (
+                        $profAssignment->class_room_id
+                        ?: $profAssignment->course?->class_id
+                    );
+
+                    if (!$subjectId || !$classId) {
+                        return false;
+                    }
+
+                    $candidatePaths = $assignmentPaths
+                        ->where('subject_id', $subjectId)
+                        ->where('class_id', $classId)
+                        ->values();
+
+                    if ($candidatePaths->isEmpty()) {
+                        return false;
+                    }
+
+                    $resolved = null;
+
+                    if (!empty($profAssignment->class_slot_id)) {
+                        $resolved = $candidatePaths->firstWhere(
+                            'class_slot_id',
+                            (int) $profAssignment->class_slot_id
+                        );
+                    }
+
+                    if (!$resolved && !empty($profAssignment->course?->slot_code)) {
+                        $courseSlot = strtoupper(trim(
+                            (string) $profAssignment->course->slot_code
+                        ));
+
+                        $resolved = $candidatePaths->first(
+                            fn ($path) =>
+                                strtoupper(trim((string) $path->slot_code))
+                                === $courseSlot
+                        );
+                    }
+
+                    /*
+                     * Ancien devoir sans créneau : on le montre uniquement
+                     * si l'étudiant n'a qu'un seul groupe dans ce parcours.
+                     */
+                    if (!$resolved && $candidatePaths->count() === 1) {
+                        $resolved = $candidatePaths->first();
+                    }
+
+                    if (!$resolved) {
+                        return false;
+                    }
+
+                    $profAssignment->resolved_class_slot_id =
+                        (int) $resolved->class_slot_id;
+                    $profAssignment->resolved_slot_code =
+                        $resolved->slot_code;
+                    $profAssignment->resolved_level_name =
+                        $resolved->level->name;
+                    $profAssignment->resolved_class_name =
+                        $resolved->classRoom->name;
+
+                    return true;
+                })
+                ->values();
 
             $now = now();
 
@@ -757,116 +810,77 @@ class StudentController extends Controller
                     $now,
                     $assignments
                 ) {
-                    $dueDate =
-                        $profAssignment->due_date
-                            ? \Carbon\Carbon::parse(
-                                $profAssignment->due_date
-                            )
-                            : null;
+                    $dueDate = $profAssignment->due_date
+                        ? \Carbon\Carbon::parse($profAssignment->due_date)
+                        : null;
 
-                    $isOverdue =
-                        $dueDate
-                        && $now->gt($dueDate);
+                    $isOverdue = $dueDate && $now->gt($dueDate);
 
-                    $studentSubmission =
-                        $assignments->first(
-                            function (
-                                $submission
-                            ) use (
-                                $profAssignment
+                    $studentSubmission = $assignments->first(
+                        function ($submission) use ($profAssignment) {
+                            if (
+                                !empty($submission->class_slot_id)
+                                && !empty($profAssignment->resolved_class_slot_id)
+                                && (int) $submission->class_slot_id
+                                    !== (int) $profAssignment->resolved_class_slot_id
                             ) {
-                                if (
-                                    $submission->course_id
-                                    && $profAssignment->course_id
-                                    && (int) $submission
-                                        ->course_id
-                                        === (int) $profAssignment
-                                            ->course_id
-                                ) {
-                                    return true;
-                                }
+                                return false;
+                            }
 
-                                if (
-                                    (int) $submission
-                                        ->subject_id
-                                    !== (int) $profAssignment
-                                        ->subject_id
-                                ) {
-                                    return false;
-                                }
+                            if (
+                                $submission->course_id
+                                && $profAssignment->course_id
+                                && (int) $submission->course_id
+                                    === (int) $profAssignment->course_id
+                            ) {
+                                return true;
+                            }
 
-                                if (
-                                    $submission->class_room_id
-                                    && $profAssignment
-                                        ->class_room_id
-                                    && (int) $submission
-                                        ->class_room_id
-                                        !== (int) $profAssignment
-                                            ->class_room_id
-                                ) {
-                                    return false;
-                                }
+                            if (
+                                (int) $submission->subject_id
+                                !== (int) $profAssignment->subject_id
+                            ) {
+                                return false;
+                            }
 
-                                $profTitle = trim(
-                                    (string) $profAssignment
-                                        ->title
-                                );
+                            if (
+                                $submission->class_room_id
+                                && $profAssignment->class_room_id
+                                && (int) $submission->class_room_id
+                                    !== (int) $profAssignment->class_room_id
+                            ) {
+                                return false;
+                            }
 
-                                if ($profTitle === '') {
-                                    return false;
-                                }
+                            $profTitle = trim((string) $profAssignment->title);
 
-                                return mb_stripos(
-                                    (string) $submission
-                                        ->title,
+                            return $profTitle !== ''
+                                && mb_stripos(
+                                    (string) $submission->title,
                                     $profTitle
                                 ) !== false;
-                            }
-                        );
+                        }
+                    );
 
-                    $profAssignment->has_file =
-                        !empty(
-                            $profAssignment->file
-                        );
-
+                    $profAssignment->has_file = !empty($profAssignment->file);
                     $profAssignment->is_locked =
-                        $isOverdue
-                        || !$profAssignment->has_file;
+                        $isOverdue || !$profAssignment->has_file;
 
                     if ($studentSubmission) {
-                        $profAssignment
-                            ->student_submitted = true;
-
-                        $profAssignment
-                            ->student_grade =
-                                $studentSubmission
-                                    ->grade;
-
-                        if (
-                            $studentSubmission
-                                ->grade !== null
-                        ) {
-                            $profAssignment
-                                ->student_grade_status =
-                                    $studentSubmission
-                                        ->grade >= 10
-                                            ? 'acqui'
-                                            : 'non_acquis';
-                        } else {
-                            $profAssignment
-                                ->student_grade_status =
-                                    'en_cours';
-                        }
+                        $profAssignment->student_submitted = true;
+                        $profAssignment->student_grade = $studentSubmission->grade;
+                        $profAssignment->student_grade_status =
+                            $studentSubmission->grade === null
+                                ? 'en_cours'
+                                : (
+                                    $studentSubmission->grade >= 10
+                                        ? 'acqui'
+                                        : 'non_acquis'
+                                );
                     } else {
-                        $profAssignment
-                            ->student_submitted = false;
-
-                        $profAssignment
-                            ->student_grade = null;
-
-                        $profAssignment
-                            ->student_grade_status =
-                                'non_acquis';
+                        $profAssignment->student_submitted = false;
+                        $profAssignment->student_grade = null;
+                        $profAssignment->student_grade_status = 'non_acquis';
                     }
                 }
             );
@@ -874,13 +888,14 @@ class StudentController extends Controller
 
         return view(
             'student.assignments',
-            compact(
-                'assignments',
-                'subjects',
-                'assignmentPaths',
-                'levelsBySubject',
-                'classesBySubjectLevel',
-                'profAssignments'
+            array_merge(
+                compact(
+                    'assignments',
+                    'subjects',
+                    'assignmentPaths',
+                    'profAssignments'
+                ),
+                $filterData
             )
         );
     }
@@ -892,38 +907,29 @@ class StudentController extends Controller
         $user = auth()->user();
 
         $assignmentRows = $this->paths
-            ->studentAssignmentRows($user->id);
+            ->studentAssignmentRows($user->id)
+            ->filter(
+                fn ($row) =>
+                    !empty($row->class_slot_id)
+                    && !empty($row->slot_code)
+            )
+            ->values();
 
         if ($assignmentRows->isEmpty()) {
             return back()
                 ->withInput()
                 ->with(
                     'error',
-                    'Aucun parcours pédagogique n’est assigné à votre compte.'
+                    'Aucun parcours Matière → Niveau → Classe → Créneau n’est assigné à votre compte.'
                 );
         }
 
         $validated = $request->validate([
-            'title' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'subject_id' => [
-                'nullable',
-                'integer',
-                'exists:subjects,id',
-            ],
-            'level_id' => [
-                'nullable',
-                'integer',
-                'exists:levels,id',
-            ],
-            'class_id' => [
-                'nullable',
-                'integer',
-                'exists:class_rooms,id',
-            ],
+            'title' => ['required', 'string', 'max:255'],
+            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
+            'level_id' => ['required', 'integer', 'exists:levels,id'],
+            'class_id' => ['required', 'integer', 'exists:class_rooms,id'],
+            'class_slot_id' => ['required', 'integer', 'exists:class_slots,id'],
             'file' => [
                 'required',
                 'file',
@@ -932,151 +938,41 @@ class StudentController extends Controller
             ],
         ]);
 
-        /*
-         * Le serveur complète automatiquement une valeur
-         * lorsqu’un seul choix est possible.
-         */
-        $subjectId = isset(
-            $validated['subject_id']
-        )
-            ? (int) $validated['subject_id']
-            : null;
-
-        $availableSubjectIds = $assignmentRows
-            ->pluck('subject_id')
-            ->map(
-                fn ($id) => (int) $id
-            )
-            ->unique()
-            ->values();
-
-        if (!$subjectId) {
-            if ($availableSubjectIds->count() === 1) {
-                $subjectId =
-                    (int) $availableSubjectIds->first();
-            } else {
-                throw ValidationException::withMessages([
-                    'subject_id' =>
-                        'Veuillez choisir une matière.',
-                ]);
-            }
-        }
-
-        $subjectRows = $assignmentRows
-            ->filter(
-                fn ($row) =>
-                    (int) $row->subject_id
-                    === $subjectId
-            )
-            ->values();
-
-        if ($subjectRows->isEmpty()) {
-            throw ValidationException::withMessages([
-                'subject_id' =>
-                    'Cette matière ne vous est pas assignée.',
-            ]);
-        }
-
-        $levelId = isset(
-            $validated['level_id']
-        )
-            ? (int) $validated['level_id']
-            : null;
-
-        $availableLevelIds = $subjectRows
-            ->pluck('level_id')
-            ->map(
-                fn ($id) => (int) $id
-            )
-            ->unique()
-            ->values();
-
-        if (!$levelId) {
-            if ($availableLevelIds->count() === 1) {
-                $levelId =
-                    (int) $availableLevelIds->first();
-            } else {
-                throw ValidationException::withMessages([
-                    'level_id' =>
-                        'Veuillez choisir un niveau.',
-                ]);
-            }
-        }
-
-        $levelRows = $subjectRows
-            ->filter(
-                fn ($row) =>
-                    (int) $row->level_id
-                    === $levelId
-            )
-            ->values();
-
-        if ($levelRows->isEmpty()) {
-            throw ValidationException::withMessages([
-                'level_id' =>
-                    'Ce niveau ne correspond pas à la matière sélectionnée.',
-            ]);
-        }
-
-        $classId = isset(
-            $validated['class_id']
-        )
-            ? (int) $validated['class_id']
-            : null;
-
-        $availableClassIds = $levelRows
-            ->pluck('class_id')
-            ->map(
-                fn ($id) => (int) $id
-            )
-            ->unique()
-            ->values();
-
-        if (!$classId) {
-            if ($availableClassIds->count() === 1) {
-                $classId =
-                    (int) $availableClassIds->first();
-            } else {
-                throw ValidationException::withMessages([
-                    'class_id' =>
-                        'Veuillez choisir une classe.',
-                ]);
-            }
-        }
-
-        $selectedPath = $levelRows->first(
+        $selectedPath = $assignmentRows->first(
             fn ($row) =>
-                (int) $row->class_id
-                === $classId
+                (int) $row->subject_id === (int) $validated['subject_id']
+                && (int) $row->level_id === (int) $validated['level_id']
+                && (int) $row->class_id === (int) $validated['class_id']
+                && (int) $row->class_slot_id === (int) $validated['class_slot_id']
         );
 
         if (!$selectedPath) {
             throw ValidationException::withMessages([
-                'class_id' =>
-                    'Cette classe ne fait pas partie du parcours sélectionné.',
+                'class_slot_id' =>
+                    'Ce créneau ne fait pas partie de votre parcours pédagogique.',
             ]);
         }
 
-        /*
-         * La classe détermine déjà son niveau. On accepte
-         * également les anciens cours dont level_id est NULL.
-         */
+        $slotCode = strtoupper(trim((string) $selectedPath->slot_code));
+
         $course = Course::query()
-            ->where('subject_id', $subjectId)
-            ->where('class_id', $classId)
-            ->where(
-                function ($query) use ($levelId) {
-                    $query
-                        ->where(
-                            'level_id',
-                            $levelId
-                        )
-                        ->orWhereNull('level_id');
-                }
+            ->where('subject_id', (int) $validated['subject_id'])
+            ->where('class_id', (int) $validated['class_id'])
+            ->where(function ($query) use ($validated) {
+                $query
+                    ->where('level_id', (int) $validated['level_id'])
+                    ->orWhereNull('level_id');
+            })
+            ->when(
+                Schema::hasColumn('courses', 'slot_code'),
+                fn ($query) => $query->whereRaw(
+                    'UPPER(TRIM(slot_code)) = ?',
+                    [$slotCode]
+                )
             )
             ->orderByRaw(
                 'CASE WHEN level_id = ? THEN 0 ELSE 1 END',
-                [$levelId]
+                [(int) $validated['level_id']]
             )
             ->orderBy('order')
             ->orderBy('id')
@@ -1087,33 +983,29 @@ class StudentController extends Controller
                 ->withInput()
                 ->with(
                     'error',
-                    'Aucun cours n’est disponible pour la matière, le niveau et la classe sélectionnés.'
+                    'Aucun cours n’est disponible pour ce créneau ' . $slotCode . '.'
                 );
         }
 
         $file = $request
             ->file('file')
-            ->store(
-                'assignments',
-                'public'
-            );
+            ->store('assignments', 'public');
 
         Assignment::create([
             'user_id' => $user->id,
             'title' => $validated['title'],
             'file' => $file,
             'course_id' => $course->id,
-            'subject_id' => $subjectId,
-            'class_room_id' => $classId,
+            'subject_id' => (int) $validated['subject_id'],
+            'class_room_id' => (int) $validated['class_id'],
+            'class_slot_id' => (int) $validated['class_slot_id'],
         ]);
 
         return back()->with(
             'success',
-            'Devoir envoyé avec succès !'
+            'Devoir envoyé avec succès pour le créneau ' . $slotCode . ' !'
         );
     }
-
-
 
 
     public function profile()
@@ -1258,39 +1150,160 @@ class StudentController extends Controller
         return view('student.settings');
     }
 
-    public function absences()
+    public function absences(Request $request)
     {
-        $absences = Absence::where('user_id', auth()->id())
-                    ->where('present', false)
-                    ->latest()
-                    ->get();
+        $user = auth()->user();
 
-        $totalAbsences = $absences->count();
+        $assignmentRows = $this->paths
+            ->studentAssignmentRows($user->id)
+            ->filter(
+                fn ($row) =>
+                    !empty($row->class_slot_id)
+                    && !empty($row->slot_code)
+            )
+            ->values();
 
-        // La colonne 'justified' n'existe pas dans la table
+        $subjects = Subject::query()
+            ->whereIn('id', $assignmentRows->pluck('subject_id'))
+            ->orderBy('name')
+            ->get();
+
+        $levels = Level::query()
+            ->whereIn('id', $assignmentRows->pluck('level_id'))
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        $classes = ClassRoom::query()
+            ->whereIn('id', $assignmentRows->pluck('class_id'))
+            ->orderBy('name')
+            ->get();
+
+        $slots = ClassSlot::query()
+            ->whereIn(
+                'id',
+                $assignmentRows->pluck('class_slot_id')->filter()
+            )
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->get();
+
+        $subjectsById = $subjects->keyBy('id');
+        $levelsById = $levels->keyBy('id');
+        $classesById = $classes->keyBy('id');
+        $slotsById = $slots->keyBy('id');
+
+        $paths = $assignmentRows
+            ->map(function ($row) use (
+                $subjectsById,
+                $levelsById,
+                $classesById,
+                $slotsById
+            ) {
+                $subject = $subjectsById->get((int) $row->subject_id);
+                $level = $levelsById->get((int) $row->level_id);
+                $classRoom = $classesById->get((int) $row->class_id);
+                $slot = $slotsById->get((int) $row->class_slot_id);
+
+                if (!$subject || !$level || !$classRoom || !$slot) {
+                    return null;
+                }
+
+                return (object) [
+                    'subject_id' => (int) $subject->id,
+                    'level_id' => (int) $level->id,
+                    'class_id' => (int) $classRoom->id,
+                    'class_slot_id' => (int) $slot->id,
+                    'slot_code' => $slot->code,
+                    'subject' => $subject,
+                    'level' => $level,
+                    'classRoom' => $classRoom,
+                    'classSlot' => $slot,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        [$selectedSubjectId, $selectedLevelId, $selectedClassId, $selectedSlotId] =
+            $this->resolveStudentPathFilters($request, $paths);
+
+        $baseQuery = Absence::query()
+            ->where('user_id', $user->id)
+            ->where('present', false)
+            ->with([
+                'subject',
+                'level',
+                'classRoom',
+                'classSlot',
+            ]);
+
+        $allAbsences = (clone $baseQuery)
+            ->latest('date')
+            ->get();
+
+        $absences = (clone $baseQuery)
+            ->when(
+                $selectedSubjectId,
+                fn ($query) => $query->where('subject_id', $selectedSubjectId)
+            )
+            ->when(
+                $selectedLevelId,
+                fn ($query) => $query->where('level_id', $selectedLevelId)
+            )
+            ->when(
+                $selectedClassId,
+                fn ($query) => $query->where('class_id', $selectedClassId)
+            )
+            ->when(
+                $selectedSlotId
+                && Schema::hasColumn('absences', 'class_slot_id'),
+                fn ($query) => $query->where('class_slot_id', $selectedSlotId)
+            )
+            ->latest('date')
+            ->get();
+
+        $totalAbsences = $allAbsences->count();
         $justifiedCount = 0;
 
-        // situation étudiant
         if ($totalAbsences <= 2) {
-            $situation = "Situation normale";
-            $color = "success";
-        } 
-        elseif ($totalAbsences <= 4) {
-            $situation = "Avertissement oral";
-            $color = "warning";
-        } 
-        else {
-            $situation = "Avertissement écrit (message ou appel parents)";
-            $color = "danger";
+            $situation = 'Situation normale';
+            $color = 'success';
+        } elseif ($totalAbsences <= 4) {
+            $situation = 'Avertissement oral';
+            $color = 'warning';
+        } else {
+            $situation = 'Avertissement écrit (message ou appel parents)';
+            $color = 'danger';
         }
 
-        return view('student.absences', compact(
-            'absences',
-            'totalAbsences',
-            'justifiedCount',
-            'situation',
-            'color'
-        ));
+        $filterData = $this->studentPathFilterData($paths);
+
+        return view(
+            'student.absences',
+            array_merge(
+                compact(
+                    'absences',
+                    'totalAbsences',
+                    'justifiedCount',
+                    'situation',
+                    'color',
+                    'paths'
+                ),
+                $filterData,
+                [
+                    'selectedSubjectId' => $selectedSubjectId,
+                    'selectedLevelId' => $selectedLevelId,
+                    'selectedClassId' => $selectedClassId,
+                    'selectedSlotId' => $selectedSlotId,
+                    'hasActiveFilter' => (bool) (
+                        $selectedSubjectId
+                        || $selectedLevelId
+                        || $selectedClassId
+                        || $selectedSlotId
+                    ),
+                ]
+            )
+        );
     }
 
     public function updateProfile(Request $request)
@@ -1369,286 +1382,119 @@ class StudentController extends Controller
         $user = auth()->user();
 
         $rows = $this->paths
-            ->studentAssignmentRows($user->id);
-
-        $assignedLevels = Level::query()
-            ->whereIn(
-                'id',
-                $rows->pluck('level_id')
+            ->studentAssignmentRows($user->id)
+            ->filter(
+                fn ($row) =>
+                    !empty($row->class_slot_id)
+                    && !empty($row->slot_code)
             )
+            ->values();
+
+        $subjects = Subject::query()
+            ->whereIn('id', $rows->pluck('subject_id'))
+            ->orderBy('name')
+            ->get();
+
+        $levels = Level::query()
+            ->whereIn('id', $rows->pluck('level_id'))
             ->orderBy('order')
             ->orderBy('name')
             ->get();
 
-        $assignedClasses = ClassRoom::query()
-            ->whereIn(
-                'id',
-                $rows->pluck('class_id')
-            )
-            ->with('level')
+        $classes = ClassRoom::query()
+            ->whereIn('id', $rows->pluck('class_id'))
             ->orderBy('name')
             ->get();
 
-        $assignedSubjects = Subject::query()
+        $slots = ClassSlot::query()
             ->whereIn(
                 'id',
-                $rows->pluck('subject_id')
+                $rows->pluck('class_slot_id')->filter()
             )
-            ->orderBy('name')
+            ->where('is_active', true)
+            ->orderBy('position')
+            ->orderBy('code')
             ->get();
 
-        $levelsById =
-            $assignedLevels->keyBy('id');
+        $subjectsById = $subjects->keyBy('id');
+        $levelsById = $levels->keyBy('id');
+        $classesById = $classes->keyBy('id');
+        $slotsById = $slots->keyBy('id');
 
-        $classesById =
-            $assignedClasses->keyBy('id');
-
-        $subjectsById =
-            $assignedSubjects->keyBy('id');
-
-        /*
-         * Une carte correspond à un parcours exact :
-         * matière + niveau + classe.
-         *
-         * Cela évite de mélanger les matières de plusieurs
-         * niveaux lorsque l'étudiant possède plusieurs
-         * assignations.
-         */
         $assignments = $rows
-            ->map(
-                function ($row) use (
-                    $levelsById,
-                    $classesById,
-                    $subjectsById
-                ) {
-                    $level = $levelsById->get(
-                        (int) $row->level_id
-                    );
+            ->map(function ($row) use (
+                $subjectsById,
+                $levelsById,
+                $classesById,
+                $slotsById
+            ) {
+                $subject = $subjectsById->get((int) $row->subject_id);
+                $level = $levelsById->get((int) $row->level_id);
+                $classRoom = $classesById->get((int) $row->class_id);
+                $slot = $slotsById->get((int) $row->class_slot_id);
 
-                    $classRoom = $classesById->get(
-                        (int) $row->class_id
-                    );
-
-                    $subject = $subjectsById->get(
-                        (int) $row->subject_id
-                    );
-
-                    if (
-                        !$level
-                        || !$classRoom
-                        || !$subject
-                    ) {
-                        return null;
-                    }
-
-                    return (object) [
-                        'subject_id' =>
-                            (int) $subject->id,
-                        'level_id' =>
-                            (int) $level->id,
-                        'class_id' =>
-                            (int) $classRoom->id,
-                        'subject' => $subject,
-                        'level' => $level,
-                        'classRoom' => $classRoom,
-                    ];
+                if (!$subject || !$level || !$classRoom || !$slot) {
+                    return null;
                 }
-            )
+
+                return (object) [
+                    'subject_id' => (int) $subject->id,
+                    'level_id' => (int) $level->id,
+                    'class_id' => (int) $classRoom->id,
+                    'class_slot_id' => (int) $slot->id,
+                    'slot_code' => $slot->code,
+                    'subject' => $subject,
+                    'level' => $level,
+                    'classRoom' => $classRoom,
+                    'classSlot' => $slot,
+                ];
+            })
             ->filter()
-            ->sortBy(
-                function ($assignment) {
-                    return sprintf(
-                        '%06d|%s|%s|%s',
-                        (int) (
-                            $assignment
-                                ->level
-                                ->order
-                            ?? 999999
-                        ),
-                        mb_strtolower(
-                            $assignment->level->name
-                        ),
-                        mb_strtolower(
-                            $assignment
-                                ->classRoom
-                                ->name
-                        ),
-                        mb_strtolower(
-                            $assignment
-                                ->subject
-                                ->name
-                        )
-                    );
-                }
-            )
+            ->sortBy(fn ($assignment) => sprintf(
+                '%s|%06d|%s|%s|%s',
+                mb_strtolower($assignment->subject->name),
+                (int) ($assignment->level->order ?? 999999),
+                mb_strtolower($assignment->level->name),
+                mb_strtolower($assignment->classRoom->name),
+                mb_strtolower($assignment->slot_code)
+            ))
             ->values();
 
-        /*
-         * Le filtre est facultatif.
-         * Sans level_id, toutes les assignations sont
-         * affichées.
-         */
-        $requestedLevelId = $request->query(
-            'level_id'
+        [$selectedSubjectId, $selectedLevelId, $selectedClassId, $selectedSlotId] =
+            $this->resolveStudentPathFilters($request, $assignments);
+
+        $visibleAssignments = $this->filterStudentPaths(
+            $assignments,
+            $selectedSubjectId,
+            $selectedLevelId,
+            $selectedClassId,
+            $selectedSlotId
         );
 
-        $selectedLevel = null;
-
-        if (
-            $requestedLevelId !== null
-            && $requestedLevelId !== ''
-        ) {
-            $selectedLevel =
-                $assignedLevels->firstWhere(
-                    'id',
-                    (int) $requestedLevelId
-                );
-        }
-
-        $classesForSelectedLevel = collect();
-        $selectedClass = null;
-
-        if ($selectedLevel) {
-            $classesForSelectedLevel =
-                $assignedClasses
-                    ->filter(
-                        function ($classRoom) use (
-                            $selectedLevel
-                        ) {
-                            return
-                                (int) $classRoom
-                                    ->level_id
-                                === (int) $selectedLevel
-                                    ->id;
-                        }
-                    )
-                    ->sortBy('name')
-                    ->values();
-
-            $requestedClassId =
-                $request->query('class_id');
-
-            if (
-                $requestedClassId !== null
-                && $requestedClassId !== ''
-            ) {
-                $selectedClass =
-                    $classesForSelectedLevel
-                        ->firstWhere(
-                            'id',
-                            (int) $requestedClassId
-                        );
-            }
-
-            /*
-             * Lorsqu'un niveau est choisi sans classe,
-             * sélectionner automatiquement la première
-             * classe assignée dans ce niveau.
-             */
-            if (!$selectedClass) {
-                $selectedClass =
-                    $classesForSelectedLevel
-                        ->first();
-            }
-        }
-
-        $visibleAssignments = $assignments;
-
-        if ($selectedLevel) {
-            $visibleAssignments =
-                $visibleAssignments->where(
-                    'level_id',
-                    (int) $selectedLevel->id
-                );
-        }
-
-        if ($selectedClass) {
-            $visibleAssignments =
-                $visibleAssignments->where(
-                    'class_id',
-                    (int) $selectedClass->id
-                );
-        }
-
-        $visibleAssignments =
-            $visibleAssignments->values();
-
-        /*
-         * Données utilisées par JavaScript pour remplir
-         * automatiquement le sélecteur des classes.
-         */
-        $classOptionsByLevel =
-            $assignedLevels
-                ->mapWithKeys(
-                    function ($level) use (
-                        $assignedClasses
-                    ) {
-                        $options =
-                            $assignedClasses
-                                ->filter(
-                                    function (
-                                        $classRoom
-                                    ) use ($level) {
-                                        return
-                                            (int) $classRoom
-                                                ->level_id
-                                            === (int) $level
-                                                ->id;
-                                    }
-                                )
-                                ->sortBy('name')
-                                ->values()
-                                ->map(
-                                    function (
-                                        $classRoom
-                                    ) {
-                                        return [
-                                            'id' =>
-                                                (int) $classRoom
-                                                    ->id,
-                                            'name' =>
-                                                $classRoom
-                                                    ->name,
-                                        ];
-                                    }
-                                )
-                                ->all();
-
-                        return [
-                            (string) $level->id =>
-                                $options,
-                        ];
-                    }
-                )
-                ->all();
-
-        $hasActiveFilter =
-            $selectedLevel !== null;
-
-        $visibleSubjectCount =
-            $visibleAssignments
-                ->pluck('subject_id')
-                ->unique()
-                ->count();
+        $filterData = $this->studentPathFilterData($assignments);
 
         return view(
             'student.subjects.index',
-            compact(
-                'assignedLevels',
-                'assignedClasses',
-                'assignments',
-                'visibleAssignments',
-                'selectedLevel',
-                'selectedClass',
-                'classesForSelectedLevel',
-                'classOptionsByLevel',
-                'hasActiveFilter',
-                'visibleSubjectCount'
+            array_merge(
+                compact('assignments', 'visibleAssignments', 'subjects'),
+                $filterData,
+                [
+                    'selectedSubjectId' => $selectedSubjectId,
+                    'selectedLevelId' => $selectedLevelId,
+                    'selectedClassId' => $selectedClassId,
+                    'selectedSlotId' => $selectedSlotId,
+                    'hasActiveFilter' => (bool) (
+                        $selectedSubjectId
+                        || $selectedLevelId
+                        || $selectedClassId
+                        || $selectedSlotId
+                    ),
+                ]
             )
         );
     }
 
-// ═══ Navigation hiérarchique : Matières → Niveaux → Classes → Cours ═══
+// ═══ Navigation hiérarchique// ═══ Navigation hiérarchique : Matières → Niveaux → Classes → Cours ═══
 
 public function subjectLevels(Subject $subject)
 {
@@ -1674,17 +1520,30 @@ public function subjectClasses(Subject $subject, Level $level)
 public function subjectCourses(
     Subject $subject,
     Level $level,
-    ClassRoom $class
+    ClassRoom $class,
+    Request $request
 ) {
-    abort_unless(
-        $this->paths->studentCanAccessPath(
-            auth()->user(),
-            $subject->id,
-            $level->id,
-            $class->id
-        ),
-        403
-    );
+    $slotId = (int) $request->query('class_slot_id');
+
+    $assignment = $this->paths
+        ->studentAssignmentRows(auth()->id())
+        ->first(
+            fn ($row) =>
+                (int) $row->subject_id === (int) $subject->id
+                && (int) $row->level_id === (int) $level->id
+                && (int) $row->class_id === (int) $class->id
+                && (int) ($row->class_slot_id ?? 0) === $slotId
+        );
+
+    abort_unless($assignment && $slotId, 403);
+
+    $classSlot = ClassSlot::query()
+        ->whereKey($slotId)
+        ->where('subject_id', $subject->id)
+        ->where('level_id', $level->id)
+        ->where('class_id', $class->id)
+        ->where('is_active', true)
+        ->firstOrFail();
 
     $this->ensureHighSchoolTestApproved(
         $subject,
@@ -1692,17 +1551,16 @@ public function subjectCourses(
         $class
     );
 
-    $courses = Course::where(
-            'subject_id',
-            $subject->id
-        )
-        ->where(
-            'level_id',
-            $level->id
-        )
-        ->where(
-            'class_id',
-            $class->id
+    $courses = Course::query()
+        ->where('subject_id', $subject->id)
+        ->where('level_id', $level->id)
+        ->where('class_id', $class->id)
+        ->when(
+            Schema::hasColumn('courses', 'slot_code'),
+            fn ($query) => $query->whereRaw(
+                'UPPER(TRIM(slot_code)) = ?',
+                [strtoupper(trim((string) $classSlot->code))]
+            )
         )
         ->withCount('devoirs')
         ->get();
@@ -1713,6 +1571,7 @@ public function subjectCourses(
             'subject',
             'level',
             'class',
+            'classSlot',
             'courses'
         )
     );
@@ -1792,6 +1651,192 @@ public function courses(Subject $subject, ClassRoom $class)
 
     return redirect()->route('student.subjects.courses', [$subject, $level, $class]);
 }
+
+    /**
+     * Construit les listes dépendantes communes aux pages étudiant.
+     * Chaque entrée suit : Matière → Niveau → Classe → Créneau.
+     */
+    private function studentPathFilterData($paths): array
+    {
+        $subjects = $paths
+            ->unique('subject_id')
+            ->sortBy(fn ($path) => mb_strtolower($path->subject->name))
+            ->values()
+            ->map(fn ($path) => [
+                'id' => $path->subject_id,
+                'name' => $path->subject->name,
+            ])
+            ->all();
+
+        $levelsBySubject = $paths
+            ->groupBy('subject_id')
+            ->mapWithKeys(function ($subjectPaths, $subjectId) {
+                return [
+                    (string) $subjectId => $subjectPaths
+                        ->unique('level_id')
+                        ->sortBy(fn ($path) => sprintf(
+                            '%06d|%s',
+                            (int) ($path->level->order ?? 999999),
+                            mb_strtolower($path->level->name)
+                        ))
+                        ->values()
+                        ->map(fn ($path) => [
+                            'id' => $path->level_id,
+                            'name' => $path->level->name,
+                        ])
+                        ->all(),
+                ];
+            })
+            ->all();
+
+        $classesBySubjectLevel = [];
+        $slotsByPath = [];
+
+        foreach ($paths as $path) {
+            $subjectKey = (string) $path->subject_id;
+            $levelKey = (string) $path->level_id;
+            $classKey = (string) $path->class_id;
+
+            $classesBySubjectLevel[$subjectKey][$levelKey][$classKey] = [
+                'id' => $path->class_id,
+                'name' => $path->classRoom->name,
+            ];
+
+            $slotsByPath[$subjectKey][$levelKey][$classKey][
+                (string) $path->class_slot_id
+            ] = [
+                'id' => $path->class_slot_id,
+                'code' => $path->slot_code,
+            ];
+        }
+
+        foreach ($classesBySubjectLevel as $subjectId => $levels) {
+            foreach ($levels as $levelId => $classes) {
+                $classesBySubjectLevel[$subjectId][$levelId] =
+                    array_values($classes);
+            }
+        }
+
+        foreach ($slotsByPath as $subjectId => $levels) {
+            foreach ($levels as $levelId => $classes) {
+                foreach ($classes as $classId => $slotOptions) {
+                    $slotsByPath[$subjectId][$levelId][$classId] =
+                        array_values($slotOptions);
+                }
+            }
+        }
+
+        return compact(
+            'subjects',
+            'levelsBySubject',
+            'classesBySubjectLevel',
+            'slotsByPath'
+        );
+    }
+
+    private function resolveStudentPathFilters(
+        Request $request,
+        $paths
+    ): array {
+        $subjectId = $request->filled('subject_id')
+            ? (int) $request->query('subject_id')
+            : null;
+
+        if (
+            $subjectId
+            && !$paths->contains('subject_id', $subjectId)
+        ) {
+            $subjectId = null;
+        }
+
+        $levelId = $request->filled('level_id')
+            ? (int) $request->query('level_id')
+            : null;
+
+        if (
+            !$subjectId
+            || (
+                $levelId
+                && !$paths
+                    ->where('subject_id', $subjectId)
+                    ->contains('level_id', $levelId)
+            )
+        ) {
+            $levelId = null;
+        }
+
+        $classId = $request->filled('class_id')
+            ? (int) $request->query('class_id')
+            : null;
+
+        if (
+            !$subjectId
+            || !$levelId
+            || (
+                $classId
+                && !$paths
+                    ->where('subject_id', $subjectId)
+                    ->where('level_id', $levelId)
+                    ->contains('class_id', $classId)
+            )
+        ) {
+            $classId = null;
+        }
+
+        $slotId = $request->filled('class_slot_id')
+            ? (int) $request->query('class_slot_id')
+            : null;
+
+        if (
+            !$subjectId
+            || !$levelId
+            || !$classId
+            || (
+                $slotId
+                && !$paths
+                    ->where('subject_id', $subjectId)
+                    ->where('level_id', $levelId)
+                    ->where('class_id', $classId)
+                    ->contains('class_slot_id', $slotId)
+            )
+        ) {
+            $slotId = null;
+        }
+
+        return [
+            $subjectId,
+            $levelId,
+            $classId,
+            $slotId,
+        ];
+    }
+
+    private function filterStudentPaths(
+        $paths,
+        ?int $subjectId,
+        ?int $levelId,
+        ?int $classId,
+        ?int $slotId
+    ) {
+        return $paths
+            ->when(
+                $subjectId,
+                fn ($items) => $items->where('subject_id', $subjectId)
+            )
+            ->when(
+                $levelId,
+                fn ($items) => $items->where('level_id', $levelId)
+            )
+            ->when(
+                $classId,
+                fn ($items) => $items->where('class_id', $classId)
+            )
+            ->when(
+                $slotId,
+                fn ($items) => $items->where('class_slot_id', $slotId)
+            )
+            ->values();
+    }
 
     private function ensureHighSchoolTestApproved(
         Subject $subject,

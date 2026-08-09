@@ -44,5 +44,12 @@ class Subject extends Model
         );
     }
 
+    public function classSlots()
+    {
+        return $this->hasMany(
+            ClassSlot::class
+        );
+    }
+
 }
 

@@ -50,4 +50,12 @@ protected $fillable = ['name', 'level_id'];
         return $this->belongsTo(Level::class);
     }
 
+    public function classSlots()
+    {
+        return $this->hasMany(
+            ClassSlot::class,
+            'class_id'
+        );
+    }
+
 }

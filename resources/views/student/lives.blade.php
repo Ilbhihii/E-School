@@ -2,16 +2,19 @@
 
 @section('title', 'Lives')
 @section('page_title', 'Lives')
-@section('breadcrumb', 'Lives')
+@section(
+    'breadcrumb',
+    'Matière → Niveau → Classe → Créneau'
+)
 
 @push('head')
-<link
-    href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css"
-    rel="stylesheet"
->
-<script
-    src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"
-></script>
+    <link
+        href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css"
+        rel="stylesheet"
+    >
+    <script
+        src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"
+    ></script>
 @endpush
 
 @push('styles')
@@ -19,79 +22,106 @@
         rel="stylesheet"
         href="{{ asset('css/student-pages-v6.css') }}"
     >
+    <link
+        rel="stylesheet"
+        href="{{ asset('css/student-live-hub-v2.css') }}"
+    >
 @endpush
 
 @section('content')
 @php
-    $liveNowCount = $lives
-        ->where('schedule_status', 'live')
-        ->count();
+    $todayTotal =
+        $todayOccurrences->count()
+        + $todayLives->filter(
+            fn ($live) =>
+                !$todayOccurrences->contains(
+                    fn ($occurrence) =>
+                        !empty($occurrence['linked_live'])
+                        && (int) $occurrence['linked_live']->id
+                            === (int) $live->id
+                )
+        )->count();
 
-    $upcomingCount = $lives
-        ->where('schedule_status', 'upcoming')
-        ->count();
-
-    $endedCount = $lives
-        ->where('schedule_status', 'ended')
-        ->count();
+    $futureLives = $lives
+        ->filter(
+            fn ($live) =>
+                in_array(
+                    $live->schedule_status,
+                    ['live', 'upcoming'],
+                    true
+                )
+        )
+        ->values();
 @endphp
 
-<div class="sp-page sp-lives-page">
-
-    <section class="sp-hero sp-hero-live">
-        <div class="sp-hero-icon">
-            <i class="bi bi-broadcast-pin"></i>
-        </div>
-
-        <div class="sp-hero-copy">
-            <span class="sp-kicker">
-                Sessions en direct
+<div class="slh-page">
+    {{-- HERO --}}
+    <section class="slh-hero">
+        <div class="slh-hero-main">
+            <span class="slh-hero-icon">
+                <i class="bi bi-broadcast-pin"></i>
             </span>
 
-            <h2>Mes lives</h2>
+            <div class="slh-hero-copy">
+                <span class="slh-eyebrow">
+                    Mon espace de cours
+                </span>
 
-            <p>
-                Consultez les sessions programmées pour votre
-                niveau et votre classe, puis rejoignez-les
-                depuis un accès sécurisé.
-            </p>
+                <h2>Planning & Lives</h2>
+
+                <p>
+                    Votre programme, vos séances et vos accès live
+                    réunis dans une seule interface.
+                </p>
+            </div>
         </div>
 
-        <div class="sp-live-indicator">
-            <span class="{{ $liveNowCount > 0 ? 'active' : '' }}"></span>
+        <div class="slh-live-status">
+            <span
+                class="slh-live-dot {{
+                    $liveNowCount > 0
+                        ? 'is-live'
+                        : ''
+                }}"
+            ></span>
 
             <div>
                 <strong>{{ $liveNowCount }}</strong>
-                <small>en direct</small>
+                <small>
+                    {{
+                        $liveNowCount > 0
+                            ? 'en direct'
+                            : 'live en cours'
+                    }}
+                </small>
             </div>
         </div>
     </section>
 
-    @if(
-        $assignedLevels->count() > 1
-        || $assignedClasses->count() > 1
-    )
-        <section class="sp-filter-card">
-            <div class="sp-card-heading">
-                <div class="sp-card-heading-icon red">
-                    <i class="bi bi-funnel-fill"></i>
-                </div>
+    {{-- FILTRES --}}
+    @if($paths->isNotEmpty())
+        <section class="slh-card slh-filter-card">
+            <div class="slh-section-title">
+                <div class="slh-title-left">
+                    <span class="slh-title-icon">
+                        <i class="bi bi-funnel-fill"></i>
+                    </span>
 
-                <div>
-                    <h3>Filtrer les lives</h3>
-
-                    <p>
-                        Sélectionnez votre niveau et votre classe.
-                    </p>
+                    <div>
+                        <h3>Filtrer mon programme</h3>
+                        <p>
+                            Matière → Niveau → Classe → Créneau
+                        </p>
+                    </div>
                 </div>
 
                 @if($hasActiveFilter)
                     <a
                         href="{{ route('student.lives') }}"
-                        class="sp-reset-link"
+                        class="slh-reset"
                     >
                         <i class="bi bi-arrow-counterclockwise"></i>
-                        Tout afficher
+                        Réinitialiser
                     </a>
                 @endif
             </div>
@@ -99,86 +129,96 @@
             <form
                 method="GET"
                 action="{{ route('student.lives') }}"
-                id="studentLiveFilterForm"
-                class="sp-filter-grid"
+                class="slh-filter-grid"
             >
-                <div class="sp-field">
-                    <label for="studentLiveLevel">
-                        Niveau
-                    </label>
+                <label class="slh-field">
+                    <span>Matière</span>
 
-                    <div class="sp-select-wrap">
-                        <i class="bi bi-mortarboard-fill"></i>
+                    <div class="slh-select">
+                        <i class="bi bi-journal-bookmark-fill"></i>
 
                         <select
-                            name="level_id"
-                            id="studentLiveLevel"
+                            name="subject_id"
+                            id="liveSubject"
                         >
                             <option value="">
-                                Tous les niveaux
+                                Toutes les matières
                             </option>
 
-                            @foreach($assignedLevels as $levelOption)
+                            @foreach($subjects as $item)
                                 <option
-                                    value="{{ $levelOption->id }}"
+                                    value="{{ $item['id'] }}"
                                     {{
-                                        $selectedLevel
-                                        && (int) $selectedLevel->id
-                                            === (int) $levelOption->id
+                                        (string) $selectedSubjectId
+                                        === (string) $item['id']
                                             ? 'selected'
                                             : ''
                                     }}
                                 >
-                                    {{ $levelOption->name }}
+                                    {{ $item['name'] }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
-                </div>
+                </label>
 
-                <div class="sp-field">
-                    <label for="studentLiveClass">
-                        Classe
-                    </label>
+                <label class="slh-field">
+                    <span>Niveau</span>
 
-                    <div class="sp-select-wrap">
+                    <div class="slh-select">
+                        <i class="bi bi-layers-fill"></i>
+
+                        <select
+                            name="level_id"
+                            id="liveLevel"
+                            disabled
+                        >
+                            <option value="">
+                                Tous les niveaux
+                            </option>
+                        </select>
+                    </div>
+                </label>
+
+                <label class="slh-field">
+                    <span>Classe</span>
+
+                    <div class="slh-select">
                         <i class="bi bi-building-fill"></i>
 
                         <select
                             name="class_id"
-                            id="studentLiveClass"
-                            {{ !$selectedLevel ? 'disabled' : '' }}
+                            id="liveClass"
+                            disabled
                         >
-                            @if(!$selectedLevel)
-                                <option value="">
-                                    Choisissez d’abord un niveau
-                                </option>
-                            @else
-                                @foreach(
-                                    $classesForSelectedLevel
-                                    as $classOption
-                                )
-                                    <option
-                                        value="{{ $classOption->id }}"
-                                        {{
-                                            $selectedClass
-                                            && (int) $selectedClass->id
-                                                === (int) $classOption->id
-                                                ? 'selected'
-                                                : ''
-                                        }}
-                                    >
-                                        {{ $classOption->name }}
-                                    </option>
-                                @endforeach
-                            @endif
+                            <option value="">
+                                Toutes les classes
+                            </option>
                         </select>
                     </div>
-                </div>
+                </label>
+
+                <label class="slh-field">
+                    <span>Créneau</span>
+
+                    <div class="slh-select">
+                        <i class="bi bi-clock-fill"></i>
+
+                        <select
+                            name="class_slot_id"
+                            id="liveSlot"
+                            disabled
+                        >
+                            <option value="">
+                                Tous les créneaux
+                            </option>
+                        </select>
+                    </div>
+                </label>
 
                 <button
                     type="submit"
-                    class="sp-primary-button red"
+                    class="slh-filter-button"
                 >
                     <i class="bi bi-search"></i>
                     Afficher
@@ -187,9 +227,10 @@
         </section>
     @endif
 
-    <section class="sp-metrics sp-metrics-four">
-        <article class="sp-metric-card">
-            <span class="sp-metric-icon red">
+    {{-- KPI --}}
+    <section class="slh-stats">
+        <article class="slh-stat red">
+            <span>
                 <i class="bi bi-broadcast-pin"></i>
             </span>
 
@@ -199,253 +240,487 @@
             </div>
         </article>
 
-        <article class="sp-metric-card">
-            <span class="sp-metric-icon blue">
-                <i class="bi bi-calendar-event-fill"></i>
+        <article class="slh-stat blue">
+            <span>
+                <i class="bi bi-calendar2-check-fill"></i>
             </span>
 
             <div>
-                <small>À venir</small>
+                <small>Cours aujourd’hui</small>
+                <strong>{{ $todayScheduleCount }}</strong>
+            </div>
+        </article>
+
+        <article class="slh-stat green">
+            <span>
+                <i class="bi bi-camera-video-fill"></i>
+            </span>
+
+            <div>
+                <small>Lives à venir</small>
                 <strong>{{ $upcomingCount }}</strong>
             </div>
         </article>
 
-        <article class="sp-metric-card">
-            <span class="sp-metric-icon green">
-                <i class="bi bi-check-circle-fill"></i>
-            </span>
-
-            <div>
-                <small>Terminés</small>
-                <strong>{{ $endedCount }}</strong>
-            </div>
-        </article>
-
-        <article class="sp-metric-card">
-            <span class="sp-metric-icon violet">
-                <i class="bi bi-building-fill"></i>
-            </span>
-
-            <div>
-                <small>Classes affichées</small>
-                <strong>{{ $visibleClassCount }}</strong>
-            </div>
-        </article>
-    </section>
-
-    <section class="sp-current-filter">
-        <div>
-            <span class="sp-current-filter-icon red">
+        <article class="slh-stat violet">
+            <span>
                 <i class="bi bi-diagram-3-fill"></i>
             </span>
 
             <div>
-                <small>Parcours affiché</small>
-
+                <small>Mes créneaux</small>
                 <strong>
                     {{
-                        $selectedLevel
-                            ? $selectedLevel->name
-                            : 'Tous les niveaux'
-                    }}
-                    <i class="bi bi-chevron-right"></i>
-                    {{
-                        $selectedClass
-                            ? $selectedClass->name
-                            : 'Toutes les classes'
+                        $visiblePaths
+                            ->pluck('class_slot_id')
+                            ->unique()
+                            ->count()
                     }}
                 </strong>
             </div>
-        </div>
-
-        <span class="sp-soft-badge">
-            {{ $lives->count() }}
-            session{{ $lives->count() > 1 ? 's' : '' }}
-        </span>
+        </article>
     </section>
 
-    @if($lives->isNotEmpty())
-        <section class="sp-calendar-card">
-            <header class="sp-section-header">
-                <div>
-                    <span class="sp-section-icon red">
-                        <i class="bi bi-calendar3"></i>
-                    </span>
-
-                    <div>
-                        <h3>Calendrier des lives</h3>
-
-                        <p>
-                            Cliquez sur une session pour ouvrir
-                            son accès sécurisé.
-                        </p>
-                    </div>
-                </div>
-
-                <span class="sp-status-badge red">
-                    <i class="bi bi-shield-lock-fill"></i>
-                    Accès protégé
+    {{-- PROGRAMME DU JOUR --}}
+    <section class="slh-card slh-today-card">
+        <header class="slh-card-header">
+            <div class="slh-title-left">
+                <span class="slh-title-icon blue">
+                    <i class="bi bi-calendar-event-fill"></i>
                 </span>
-            </header>
 
-            <div class="sp-calendar-body">
-                <div id="livesCalendar"></div>
+                <div>
+                    <span class="slh-eyebrow">Aujourd’hui</span>
+                    <h3>Programme du jour</h3>
+                    <p>
+                        Cours planifiés et accès live de la journée.
+                    </p>
+                </div>
             </div>
-        </section>
 
-        <section>
-            <header class="sp-list-header">
-                <div>
-                    <span class="sp-kicker">
-                        Sessions disponibles
-                    </span>
+            <span class="slh-count-badge">
+                {{ $todayTotal }}
+                élément{{ $todayTotal > 1 ? 's' : '' }}
+            </span>
+        </header>
 
-                    <h3>Liste des lives</h3>
-                </div>
-
-                <span class="sp-soft-badge">
-                    {{ $lives->count() }}
-                    résultat{{ $lives->count() > 1 ? 's' : '' }}
+        @if(
+            $todayOccurrences->isEmpty()
+            && $todayLives->isEmpty()
+        )
+            <div class="slh-empty slh-empty-today">
+                <span>
+                    <i class="bi bi-calendar2-check"></i>
                 </span>
-            </header>
 
-            <div class="sp-live-grid">
-                @foreach($lives as $live)
+                <div>
+                    <strong>Aucune séance aujourd’hui</strong>
+                    <small>
+                        Consultez le calendrier pour voir
+                        votre prochain cours.
+                    </small>
+                </div>
+            </div>
+        @else
+            <div class="slh-today-list">
+                @foreach($todayOccurrences as $occurrence)
                     @php
-                        $status = $live->schedule_status;
-
-                        $statusClass = match ($status) {
-                            'live' => 'live',
-                            'upcoming' => 'upcoming',
-                            'ended' => 'ended',
-                            default => 'unscheduled',
-                        };
-
-                        $statusLabel = match ($status) {
-                            'live' => 'En direct',
-                            'upcoming' => 'À venir',
-                            'ended' => 'Terminée',
-                            default => 'À programmer',
-                        };
-
-                        $meetingHost = strtolower(
-                            (string) parse_url(
-                                $live->stream_url,
-                                PHP_URL_HOST
-                            )
-                        );
-
-                        $isTeams =
-                            $live->provider === 'teams'
-                            || in_array(
-                                $meetingHost,
-                                [
-                                    'teams.microsoft.com',
-                                    'teams.live.com',
-                                ],
-                                true
-                            );
-
-                        $providerName = $isTeams
-                            ? 'Microsoft Teams'
-                            : 'Google Meet';
-
-                        $providerIcon = $isTeams
-                            ? 'microsoft-teams'
-                            : 'camera-video-fill';
+                        $linkedLive =
+                            $occurrence['linked_live']
+                            ?? null;
                     @endphp
 
-                    <article class="sp-live-card {{ $statusClass }}">
-                        <div class="sp-live-card-cover">
-                            <span class="sp-live-card-status">
-                                <i class="bi bi-circle-fill"></i>
-                                {{ $statusLabel }}
+                    <article class="slh-session">
+                        <div class="slh-session-time">
+                            <span>
+                                <i class="bi bi-clock-fill"></i>
                             </span>
 
-                            <span class="sp-live-card-icon">
+                            <div>
+                                <strong>
+                                    {{ $occurrence['time_label'] }}
+                                </strong>
+
+                                <small>
+                                    {{ $occurrence['duration_label'] }}
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="slh-session-main">
+                            <span class="slh-subject">
+                                {{ $occurrence['subject'] }}
+                            </span>
+
+                            <h4>
+                                {{ $occurrence['level'] }}
+
+                                <i class="bi bi-chevron-right"></i>
+
+                                {{ $occurrence['class_name'] }}
+
+                                @if(
+                                    !empty(
+                                        $occurrence['slot_code']
+                                    )
+                                )
+                                    <i class="bi bi-chevron-right"></i>
+
+                                    <span class="slh-slot">
+                                        {{
+                                            $occurrence[
+                                                'slot_code'
+                                            ]
+                                        }}
+                                    </span>
+                                @endif
+                            </h4>
+
+                            <p>
+                                <i class="bi bi-diagram-3"></i>
+                                {{ $occurrence['path'] }}
+                            </p>
+                        </div>
+
+                        <div class="slh-session-meta">
+                            <span>
+                                <i class="bi bi-person-video3"></i>
+                                {{ $occurrence['teacher'] }}
+                            </span>
+
+                            <span>
+                                <i class="bi bi-door-open-fill"></i>
+                                {{ $occurrence['room'] }}
+                            </span>
+                        </div>
+
+                        <div class="slh-session-action">
+                            @if(
+                                $linkedLive
+                                && $linkedLive->stream_url
+                                && $linkedLive
+                                    ->schedule_status
+                                    !== 'ended'
+                            )
+                                <a
+                                    href="{{
+                                        route(
+                                            'live.access.request',
+                                            $linkedLive
+                                        )
+                                    }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="slh-live-button"
+                                >
+                                    <i class="bi bi-broadcast-pin"></i>
+
+                                    {{
+                                        $linkedLive
+                                            ->schedule_status
+                                        === 'live'
+                                            ? 'Rejoindre'
+                                            : 'Accès live'
+                                    }}
+                                </a>
+                            @elseif(
+                                $linkedLive
+                                && $linkedLive
+                                    ->schedule_status
+                                    === 'ended'
+                            )
+                                <span class="slh-muted-action">
+                                    <i class="bi bi-check-circle"></i>
+                                    Live terminé
+                                </span>
+                            @else
+                                <span class="slh-course-badge">
+                                    <i class="bi bi-calendar-check"></i>
+                                    Cours planifié
+                                </span>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+
+                @foreach($todayLives as $live)
+                    @php
+                        $alreadyLinked =
+                            $todayOccurrences
+                            ->contains(
+                                fn ($occurrence) =>
+                                    !empty(
+                                        $occurrence[
+                                            'linked_live'
+                                        ]
+                                    )
+                                    && (int) $occurrence[
+                                        'linked_live'
+                                    ]->id
+                                    === (int) $live->id
+                            );
+                    @endphp
+
+                    @if(!$alreadyLinked)
+                        <article class="slh-session is-live-row">
+                            <div class="slh-session-time">
+                                <span class="live">
+                                    <i class="bi bi-broadcast-pin"></i>
+                                </span>
+
+                                <div>
+                                    <strong>
+                                        {{
+                                            $live
+                                                ->start_date_time
+                                                ?->format('H:i')
+                                            ?? '--:--'
+                                        }}
+                                    </strong>
+
+                                    <small>Live</small>
+                                </div>
+                            </div>
+
+                            <div class="slh-session-main">
+                                <span class="slh-subject live">
+                                    Session live
+                                </span>
+
+                                <h4>
+                                    {{ $live->title }}
+                                </h4>
+
+                                <p>
+                                    <i class="bi bi-diagram-3"></i>
+
+                                    {{
+                                        collect([
+                                            $live
+                                                ->classSlot
+                                                ?->subject
+                                                ?->name,
+                                            $live
+                                                ->classSlot
+                                                ?->level
+                                                ?->name,
+                                            $live
+                                                ->classSlot
+                                                ?->classRoom
+                                                ?->name,
+                                            $live
+                                                ->classSlot
+                                                ?->code,
+                                        ])
+                                            ->filter()
+                                            ->implode(' → ')
+                                    }}
+                                </p>
+                            </div>
+
+                            <div class="slh-session-meta">
+                                <span>
+                                    <i class="bi bi-camera-video-fill"></i>
+
+                                    {{
+                                        $live
+                                            ->schedule_status
+                                        === 'live'
+                                            ? 'En direct'
+                                            : 'Session programmée'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="slh-session-action">
+                                @if(
+                                    $live->stream_url
+                                    && $live
+                                        ->schedule_status
+                                        !== 'ended'
+                                )
+                                    <a
+                                        href="{{
+                                            route(
+                                                'live.access.request',
+                                                $live
+                                            )
+                                        }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="slh-live-button"
+                                    >
+                                        <i class="bi bi-broadcast-pin"></i>
+
+                                        {{
+                                            $live
+                                                ->schedule_status
+                                            === 'live'
+                                                ? 'Rejoindre'
+                                                : 'Accès live'
+                                        }}
+                                    </a>
+                                @else
+                                    <span class="slh-muted-action">
+                                        <i class="bi bi-clock"></i>
+
+                                        {{
+                                            $live
+                                                ->schedule_status
+                                            === 'ended'
+                                                ? 'Terminé'
+                                                : 'Lien à confirmer'
+                                        }}
+                                    </span>
+                                @endif
+                            </div>
+                        </article>
+                    @endif
+                @endforeach
+            </div>
+        @endif
+    </section>
+
+    {{-- MES LIVES --}}
+    <section class="slh-card slh-lives-card">
+        <header class="slh-card-header">
+            <div class="slh-title-left">
+                <span class="slh-title-icon red">
+                    <i class="bi bi-camera-video-fill"></i>
+                </span>
+
+                <div>
+                    <span class="slh-eyebrow">Cours en direct</span>
+                    <h3>Mes lives</h3>
+                    <p>
+                        Sessions correspondant exactement
+                        à vos groupes.
+                    </p>
+                </div>
+            </div>
+
+            <span class="slh-count-badge red">
+                {{ $futureLives->count() }}
+                session{{
+                    $futureLives->count() > 1
+                        ? 's'
+                        : ''
+                }}
+            </span>
+        </header>
+
+        @if($futureLives->isNotEmpty())
+            <div class="slh-live-grid">
+                @foreach($futureLives as $live)
+                    @php
+                        $status =
+                            $live->schedule_status;
+
+                        $isLive =
+                            $status === 'live';
+                    @endphp
+
+                    <article
+                        class="
+                            slh-live-card
+                            {{ $isLive ? 'is-live' : '' }}
+                        "
+                    >
+                        <div class="slh-live-card-top">
+                            <span
+                                class="
+                                    slh-live-state
+                                    {{ $isLive ? 'is-live' : '' }}
+                                "
+                            >
+                                <i class="bi bi-circle-fill"></i>
+
+                                {{
+                                    $isLive
+                                        ? 'En direct'
+                                        : 'À venir'
+                                }}
+                            </span>
+
+                            <span class="slh-slot slh-slot-large">
+                                {{
+                                    $live->classSlot?->code
+                                    ?? '—'
+                                }}
+                            </span>
+                        </div>
+
+                        <div class="slh-live-card-body">
+                            <span class="slh-live-icon">
                                 <i class="bi bi-camera-video-fill"></i>
                             </span>
 
-                            <span class="sp-live-provider">
-                                <i class="bi bi-{{ $providerIcon }}"></i>
-                                {{ $providerName }}
+                            <div>
+                                <h4>{{ $live->title }}</h4>
+
+                                <p>
+                                    {{
+                                        collect([
+                                            $live
+                                                ->classSlot
+                                                ?->subject
+                                                ?->name,
+                                            $live
+                                                ->classSlot
+                                                ?->level
+                                                ?->name,
+                                            $live
+                                                ->classSlot
+                                                ?->classRoom
+                                                ?->name,
+                                            $live
+                                                ->classSlot
+                                                ?->code,
+                                        ])
+                                            ->filter()
+                                            ->implode(' → ')
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="slh-live-card-meta">
+                            <span>
+                                <i class="bi bi-calendar3"></i>
+
+                                {{
+                                    $live->start_date_time
+                                        ? $live
+                                            ->start_date_time
+                                            ->format('d/m/Y')
+                                        : 'Date à confirmer'
+                                }}
+                            </span>
+
+                            <span>
+                                <i class="bi bi-clock"></i>
+
+                                {{
+                                    $live->start_date_time
+                                        ? $live
+                                            ->start_date_time
+                                            ->format('H:i')
+                                        : '--:--'
+                                }}
+
+                                @if($live->end_date_time)
+                                    –
+                                    {{
+                                        $live
+                                            ->end_date_time
+                                            ->format('H:i')
+                                    }}
+                                @endif
                             </span>
                         </div>
 
-                        <div class="sp-live-card-body">
-                            <h4>{{ $live->title }}</h4>
-
-                            @if($live->description)
-                                <p>
-                                    {{
-                                        \Illuminate\Support\Str::limit(
-                                            $live->description,
-                                            115
-                                        )
-                                    }}
-                                </p>
-                            @else
-                                <p>
-                                    Session en direct programmée pour
-                                    votre parcours pédagogique.
-                                </p>
-                            @endif
-
-                            <div class="sp-live-path">
-                                <span>
-                                    <i class="bi bi-mortarboard-fill"></i>
-                                    {{
-                                        $live->classRoom?->level?->name
-                                        ?? 'Niveau à confirmer'
-                                    }}
-                                </span>
-
-                                <span>
-                                    <i class="bi bi-building-fill"></i>
-                                    {{
-                                        $live->classRoom?->name
-                                        ?? 'Classe à confirmer'
-                                    }}
-                                </span>
-                            </div>
-
-                            <div class="sp-live-date">
-                                <span>
-                                    <i class="bi bi-calendar3"></i>
-                                    {{
-                                        $live->start_date_time
-                                            ? $live->start_date_time
-                                                ->format('d/m/Y')
-                                            : 'Date à confirmer'
-                                    }}
-                                </span>
-
-                                <span>
-                                    <i class="bi bi-clock"></i>
-                                    {{
-                                        $live->start_date_time
-                                            ? $live->start_date_time
-                                                ->format('H:i')
-                                            : '--:--'
-                                    }}
-                                    @if($live->end_date_time)
-                                        –
-                                        {{
-                                            $live->end_date_time
-                                                ->format('H:i')
-                                        }}
-                                    @endif
-                                </span>
-                            </div>
-                        </div>
-
-                        <footer class="sp-live-card-footer">
-                            @if($status === 'ended')
-                                <span class="sp-disabled-button">
-                                    <i class="bi bi-check-circle"></i>
-                                    Session terminée
-                                </span>
-                            @elseif($live->stream_url)
+                        <footer class="slh-live-card-footer">
+                            @if($live->stream_url)
                                 <a
                                     href="{{
                                         route(
@@ -455,17 +730,18 @@
                                     }}"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="sp-primary-button red"
+                                    class="slh-live-button full"
                                 >
                                     <i class="bi bi-shield-lock-fill"></i>
+
                                     {{
-                                        $status === 'live'
+                                        $isLive
                                             ? 'Rejoindre maintenant'
-                                            : 'Accès sécurisé'
+                                            : 'Accès au live'
                                     }}
                                 </a>
                             @else
-                                <span class="sp-disabled-button">
+                                <span class="slh-muted-action full">
                                     <i class="bi bi-clock"></i>
                                     Lien à confirmer
                                 </span>
@@ -474,203 +750,362 @@
                     </article>
                 @endforeach
             </div>
-        </section>
-    @else
-        <section class="sp-empty-state">
-            <span class="sp-empty-icon red">
-                <i class="bi bi-camera-video-off-fill"></i>
-            </span>
+        @else
+            <div class="slh-empty slh-empty-live">
+                <span>
+                    <i class="bi bi-camera-video-off-fill"></i>
+                </span>
 
-            <h3>Aucun live disponible</h3>
+                <div>
+                    <strong>Aucun live programmé</strong>
+                    <small>
+                        Vos cours restent visibles dans
+                        le calendrier ci-dessous.
+                    </small>
+                </div>
+            </div>
+        @endif
+    </section>
 
-            <p>
-                Les sessions apparaîtront ici dès qu’elles seront
-                programmées pour votre parcours.
-            </p>
-        </section>
-    @endif
+    {{-- CALENDRIER --}}
+    <section class="slh-card slh-calendar-card">
+        <header class="slh-card-header slh-calendar-head">
+            <div class="slh-title-left">
+                <span class="slh-title-icon violet">
+                    <i class="bi bi-calendar3"></i>
+                </span>
+
+                <div>
+                    <span class="slh-eyebrow">Vue globale</span>
+                    <h3>Calendrier des cours & lives</h3>
+                    <p>
+                        Consultez votre programme
+                        par semaine ou par mois.
+                    </p>
+                </div>
+            </div>
+
+            <div class="slh-legend">
+                <span>
+                    <i class="course"></i>
+                    Cours
+                </span>
+
+                <span>
+                    <i class="live"></i>
+                    Live
+                </span>
+            </div>
+        </header>
+
+        <div class="slh-calendar-body">
+            <div id="livePlanningCalendar"></div>
+        </div>
+    </section>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const filterForm = document.getElementById(
-        'studentLiveFilterForm'
-    );
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        const subject =
+            document.getElementById('liveSubject');
 
-    const levelSelect = document.getElementById(
-        'studentLiveLevel'
-    );
+        const level =
+            document.getElementById('liveLevel');
 
-    const classSelect = document.getElementById(
-        'studentLiveClass'
-    );
+        const classroom =
+            document.getElementById('liveClass');
 
-    const classesByLevel = @json($classOptionsByLevel);
+        const slot =
+            document.getElementById('liveSlot');
 
-    if (filterForm && levelSelect && classSelect) {
-        function appendClassOption(
+        if (
+            !subject
+            || !level
+            || !classroom
+            || !slot
+        ) {
+            return;
+        }
+
+        const levelsBySubject =
+            @json($levelsBySubject);
+
+        const classesBySubjectLevel =
+            @json($classesBySubjectLevel);
+
+        const slotsByPath =
+            @json($slotsByPath);
+
+        const selectedLevelId =
+            @json(
+                (string) (
+                    $selectedLevelId
+                    ?? ''
+                )
+            );
+
+        const selectedClassId =
+            @json(
+                (string) (
+                    $selectedClassId
+                    ?? ''
+                )
+            );
+
+        const selectedSlotId =
+            @json(
+                (string) (
+                    $selectedSlotId
+                    ?? ''
+                )
+            );
+
+        function addOption(
+            select,
             value,
             label,
             selected = false
         ) {
-            const option = document.createElement('option');
+            const option =
+                document.createElement('option');
 
-            option.value = value;
+            option.value = String(value);
             option.textContent = label;
             option.selected = selected;
 
-            classSelect.appendChild(option);
+            select.appendChild(option);
         }
 
-        levelSelect.addEventListener('change', function () {
-            const levelId = levelSelect.value;
+        function fillSlots(wanted = '') {
+            slot.innerHTML = '';
 
-            classSelect.innerHTML = '';
+            addOption(
+                slot,
+                '',
+                'Tous les créneaux'
+            );
 
-            if (!levelId) {
-                classSelect.disabled = true;
+            const options =
+                (
+                    (
+                        slotsByPath[
+                            String(subject.value)
+                        ]
+                        || {}
+                    )[
+                        String(level.value)
+                    ]
+                    || {}
+                )[
+                    String(classroom.value)
+                ]
+                || [];
 
-                appendClassOption(
-                    '',
-                    'Choisissez d’abord un niveau',
-                    true
-                );
-
-                filterForm.submit();
-                return;
-            }
-
-            const options = classesByLevel[levelId] || [];
-
-            classSelect.disabled = false;
-
-            if (options.length === 0) {
-                appendClassOption(
-                    '',
-                    'Aucune classe assignée',
-                    true
-                );
-
-                filterForm.submit();
-                return;
-            }
-
-            options.forEach(function (classRoom, index) {
-                appendClassOption(
-                    classRoom.id,
-                    classRoom.name,
-                    index === 0
+            options.forEach(item => {
+                addOption(
+                    slot,
+                    item.id,
+                    item.code,
+                    String(item.id)
+                    === String(wanted)
                 );
             });
 
-            filterForm.submit();
-        });
-
-        classSelect.addEventListener('change', function () {
-            filterForm.submit();
-        });
-    }
-
-    const calendarElement = document.getElementById(
-        'livesCalendar'
-    );
-
-    if (!calendarElement || typeof FullCalendar === 'undefined') {
-        return;
-    }
-
-    const calendar = new FullCalendar.Calendar(
-        calendarElement,
-        {
-            initialView:
-                window.innerWidth < 768
-                    ? 'listMonth'
-                    : 'dayGridMonth',
-
-            locale: 'fr',
-            firstDay: 1,
-            height: 'auto',
-            expandRows: true,
-            dayMaxEvents: 3,
-            navLinks: true,
-            nowIndicator: true,
-
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,listMonth'
-            },
-
-            buttonText: {
-                today: "Aujourd’hui",
-                month: 'Mois',
-                week: 'Semaine',
-                list: 'Liste'
-            },
-
-            eventTimeFormat: {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            },
-
-            events: [
-                @foreach($lives as $live)
-                    @if($live->start_date_time)
-                        {
-                            id: '{{ $live->id }}',
-                            title: @json(
-                                \Illuminate\Support\Str::limit(
-                                    $live->title,
-                                    30
-                                )
-                            ),
-                            start: '{{
-                                $live->start_date_time
-                                    ->format('Y-m-d\TH:i:s')
-                            }}',
-                            end: '{{
-                                $live->end_date_time
-                                    ->format('Y-m-d\TH:i:s')
-                            }}',
-                            url: @json(
-                                $live->stream_url
-                                    ? route(
-                                        'live.access.request',
-                                        $live
-                                    )
-                                    : ''
-                            ),
-                            backgroundColor:
-                                '{{ $live->schedule_status === "live"
-                                    ? "#dc3545"
-                                    : ($live->schedule_status === "upcoming"
-                                        ? "#4169f5"
-                                        : "#475569") }}',
-                            borderColor: 'transparent',
-                            textColor: '#ffffff'
-                        },
-                    @endif
-                @endforeach
-            ],
-
-            eventClick: function (info) {
-                if (info.event.url) {
-                    info.jsEvent.preventDefault();
-
-                    window.open(
-                        info.event.url,
-                        '_blank',
-                        'noopener'
-                    );
-                }
-            }
+            slot.disabled =
+                !subject.value
+                || !level.value
+                || !classroom.value;
         }
-    );
 
-    calendar.render();
-});
+        function fillClasses(
+            wanted = '',
+            wantedSlot = ''
+        ) {
+            classroom.innerHTML = '';
+
+            addOption(
+                classroom,
+                '',
+                'Toutes les classes'
+            );
+
+            const options =
+                (
+                    classesBySubjectLevel[
+                        String(subject.value)
+                    ]
+                    || {}
+                )[
+                    String(level.value)
+                ]
+                || [];
+
+            options.forEach(item => {
+                addOption(
+                    classroom,
+                    item.id,
+                    item.name,
+                    String(item.id)
+                    === String(wanted)
+                );
+            });
+
+            classroom.disabled =
+                !subject.value
+                || !level.value;
+
+            fillSlots(wantedSlot);
+        }
+
+        function fillLevels(
+            wanted = '',
+            wantedClass = '',
+            wantedSlot = ''
+        ) {
+            level.innerHTML = '';
+
+            addOption(
+                level,
+                '',
+                'Tous les niveaux'
+            );
+
+            const options =
+                levelsBySubject[
+                    String(subject.value)
+                ]
+                || [];
+
+            options.forEach(item => {
+                addOption(
+                    level,
+                    item.id,
+                    item.name,
+                    String(item.id)
+                    === String(wanted)
+                );
+            });
+
+            level.disabled =
+                !subject.value;
+
+            fillClasses(
+                wantedClass,
+                wantedSlot
+            );
+        }
+
+        subject.addEventListener(
+            'change',
+            () => fillLevels()
+        );
+
+        level.addEventListener(
+            'change',
+            () => fillClasses()
+        );
+
+        classroom.addEventListener(
+            'change',
+            () => fillSlots()
+        );
+
+        fillLevels(
+            selectedLevelId,
+            selectedClassId,
+            selectedSlotId
+        );
+    }
+);
+</script>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        const element =
+            document.getElementById(
+                'livePlanningCalendar'
+            );
+
+        if (
+            !element
+            || typeof FullCalendar === 'undefined'
+        ) {
+            return;
+        }
+
+        const events =
+            @json($calendarEvents);
+
+        const calendar =
+            new FullCalendar.Calendar(
+                element,
+                {
+                    initialView:
+                        window.innerWidth < 768
+                            ? 'listWeek'
+                            : 'timeGridWeek',
+
+                    locale: 'fr',
+                    firstDay: 1,
+                    height: 620,
+                    contentHeight: 560,
+                    expandRows: false,
+                    nowIndicator: true,
+                    allDaySlot: false,
+                    slotMinTime: '08:00:00',
+                    slotMaxTime: '20:00:00',
+                    scrollTime: '08:00:00',
+                    slotDuration: '00:30:00',
+
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right:
+                            'timeGridWeek,dayGridMonth',
+                    },
+
+                    buttonText: {
+                        today: 'Aujourd’hui',
+                        week: 'Semaine',
+                        month: 'Mois',
+                    },
+
+                    eventTimeFormat: {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                    },
+
+                    events: events,
+
+                    eventClick: function (info) {
+                        if (
+                            info.event
+                                .extendedProps
+                                .type
+                            === 'live'
+                            && info.event.url
+                        ) {
+                            info.jsEvent.preventDefault();
+
+                            window.open(
+                                info.event.url,
+                                '_blank',
+                                'noopener'
+                            );
+                        }
+                    },
+                }
+            );
+
+        calendar.render();
+    }
+);
 </script>
 @endpush

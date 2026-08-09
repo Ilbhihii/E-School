@@ -2,7 +2,7 @@
 
 @section('title', 'Cours - ' . $subject->name)
 @section('page_title', $subject->name . ' — ' . $class->name)
-@section('breadcrumb', 'Matières → Niveaux → Classes → Cours')
+@section('breadcrumb', 'Matières → Niveaux → Classes → Créneaux → Cours')
 
 @section('content')
 
@@ -72,6 +72,7 @@
                 <thead>
                     <tr>
                         <th>Titre</th>
+                        <th>Créneau</th>
                         <th>Description</th>
                         <th>Média</th>
                         <th>Date</th>
@@ -82,6 +83,16 @@
                     @foreach($courses as $course)
                     <tr>
                         <td><span style="font-weight:500;">{{ $course->title }}</span></td>
+                        <td>
+                            @if($course->slot_code)
+                                <span class="adm-badge adm-badge-primary">
+                                    <i class="bi bi-clock"></i>
+                                    {{ $course->slot_code }}
+                                </span>
+                            @else
+                                <span style="color:var(--adm-text-muted);font-size:0.75rem;">Ancien cours</span>
+                            @endif
+                        </td>
                         <td style="color:var(--adm-text-muted);font-size:0.82rem;max-width:250px;">
                             <span class="text-truncate">{{ Str::limit($course->description, 60) }}</span>
                         </td>

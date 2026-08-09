@@ -1975,3 +1975,287 @@
         justify-content: flex-start;
     }
 }
+
+/* =========================================================
+   Student schedule — month / week calendar
+   ========================================================= */
+.sp-schedule-calendar-card {
+    margin-top: 16px;
+    border: 1px solid var(--sp-border);
+    border-radius: 18px;
+    background: var(--sp-panel);
+}
+
+.sp-schedule-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.sp-schedule-calendar-head > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.sp-schedule-calendar-head h3,
+.sp-schedule-list-heading h3 {
+    margin: 0;
+    color: var(--sp-text);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.86rem;
+    font-weight: 750;
+}
+
+.sp-schedule-calendar-head p,
+.sp-schedule-list-heading p {
+    margin: 3px 0 0;
+    color: var(--sp-muted);
+    font-size: 0.65rem;
+    line-height: 1.55;
+}
+
+.sp-schedule-calendar-head p strong {
+    color: var(--sp-soft);
+}
+
+.sp-calendar-loading {
+    display: inline-flex;
+    min-height: 31px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 9px;
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.13);
+    border-radius: 9px;
+    background: rgba(34, 197, 94, 0.06);
+    font-size: 0.61rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.sp-calendar-loading.is-loading {
+    color: #c4b5fd;
+    border-color: rgba(139, 92, 246, 0.16);
+    background: rgba(124, 58, 237, 0.07);
+}
+
+.sp-calendar-loading.is-loading i {
+    animation: sp-calendar-spin 850ms linear infinite;
+}
+
+@keyframes sp-calendar-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#scheduleCalendar {
+    min-height: 620px;
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-slot {
+    height: 2.35em;
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-slot-label-cushion {
+    color: var(--sp-muted);
+    font-size: 0.61rem;
+    font-weight: 700;
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-axis-cushion {
+    color: var(--sp-muted);
+    font-size: 0.6rem;
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-col {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-col.fc-day-today {
+    background: rgba(65, 105, 245, 0.055) !important;
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-now-indicator-line {
+    border-color: #f97316;
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-now-indicator-arrow {
+    border-color: #f97316;
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+}
+
+.sp-schedule-calendar-card .fc .fc-event {
+    cursor: pointer;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: linear-gradient(135deg, #4169f5, #7c3aed) !important;
+    box-shadow: 0 7px 18px rgba(65, 105, 245, 0.18);
+}
+
+.sp-schedule-calendar-card .fc .fc-timegrid-event {
+    overflow: hidden;
+    padding: 2px 4px;
+}
+
+.sp-schedule-calendar-card .fc .fc-event-main {
+    color: #fff;
+}
+
+.sp-schedule-calendar-card .fc .fc-event-time {
+    font-size: 0.58rem;
+    font-weight: 800;
+}
+
+.sp-schedule-calendar-card .fc .fc-event-title {
+    font-size: 0.61rem;
+    font-weight: 800;
+}
+
+.sp-schedule-calendar-card .fc .fc-daygrid-event {
+    color: #fff !important;
+    border: 0 !important;
+    background: linear-gradient(135deg, #4169f5, #7c3aed) !important;
+}
+
+.sp-schedule-calendar-card .fc .fc-daygrid-more-link {
+    color: #a5b4fc;
+    font-size: 0.61rem;
+    font-weight: 800;
+}
+
+.sp-calendar-detail {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    margin: 0 18px 18px;
+    padding: 13px 14px;
+    border: 1px solid rgba(99, 102, 241, 0.13);
+    border-radius: 13px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(65, 105, 245, 0.055),
+            rgba(124, 58, 237, 0.035)
+        );
+}
+
+.sp-calendar-detail-icon {
+    display: grid;
+    width: 37px;
+    height: 37px;
+    place-items: center;
+    color: #c4b5fd;
+    border: 1px solid rgba(139, 92, 246, 0.14);
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.sp-calendar-detail-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sp-calendar-detail-copy small {
+    color: #818cf8;
+    font-size: 0.56rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.sp-calendar-detail-copy strong {
+    overflow: hidden;
+    color: var(--sp-text);
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-calendar-detail-copy span {
+    overflow: hidden;
+    color: var(--sp-muted);
+    font-size: 0.62rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-calendar-detail-meta {
+    display: flex;
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sp-calendar-detail-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--sp-muted);
+    font-size: 0.59rem;
+    white-space: nowrap;
+}
+
+.sp-schedule-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 0 2px;
+}
+
+@media (max-width: 767.98px) {
+    #scheduleCalendar {
+        min-height: 500px;
+    }
+
+    .sp-schedule-calendar-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .sp-calendar-loading {
+        align-self: stretch;
+        justify-content: center;
+    }
+
+    .sp-schedule-calendar-card .fc .fc-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sp-schedule-calendar-card .fc .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+    }
+
+    .sp-schedule-calendar-card .fc-toolbar-title {
+        text-align: center;
+    }
+
+    .sp-calendar-detail {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .sp-calendar-detail-meta {
+        grid-column: 1 / -1;
+        align-items: flex-start;
+        padding-left: 50px;
+    }
+
+    .sp-schedule-list-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+
+/* ===== Interface unique étudiant : Lives + planning ===== */
+.sp-live-hub-page{padding-bottom:32px}.sp-live-hub-hero{background:radial-gradient(circle at 88% 10%,rgba(239,68,68,.13),transparent 30%),linear-gradient(135deg,rgba(30,41,59,.98),rgba(15,23,42,.98))}.sp-live-hub-section-head{margin-top:22px}.sp-live-hub-section-head p{margin:5px 0 0;color:#64748b;font-size:.78rem}.sp-live-today-card{overflow:hidden;border:1px solid rgba(148,163,184,.14);border-radius:18px;background:rgba(15,23,42,.72)}.sp-live-today-list{display:flex;flex-direction:column}.sp-live-today-row{display:grid;grid-template-columns:minmax(118px,.7fr) minmax(260px,2fr) minmax(180px,1fr) auto;align-items:center;gap:18px;padding:17px 18px;border-bottom:1px solid rgba(148,163,184,.10)}.sp-live-today-row:last-child{border-bottom:0}.sp-live-today-row-direct{background:rgba(239,68,68,.025)}.sp-live-today-time{display:flex;align-items:center;gap:10px}.sp-live-today-time>span{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;color:#fde68a;background:rgba(245,158,11,.12)}.sp-live-today-time>span.live{color:#fecaca;background:rgba(239,68,68,.12)}.sp-live-today-time strong,.sp-live-today-time small{display:block}.sp-live-today-time strong{color:#f8fafc;font-size:.78rem}.sp-live-today-time small{margin-top:2px;color:#64748b;font-size:.62rem}.sp-live-today-main{min-width:0}.sp-live-today-subject{display:block;margin-bottom:4px;color:#818cf8;font-size:.61rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.sp-live-today-subject.live{color:#fb7185}.sp-live-today-main h4{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:0;color:#f8fafc;font-size:.82rem}.sp-live-today-main h4 i{color:#475569;font-size:.55rem}.sp-live-today-main p{margin:5px 0 0;color:#64748b;font-size:.63rem}.sp-live-today-meta{display:flex;flex-direction:column;gap:5px;color:#94a3b8;font-size:.64rem}.sp-live-today-meta span{display:flex;align-items:center;gap:6px}.sp-live-today-action{display:flex;justify-content:flex-end}.sp-class-only-badge{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid rgba(99,102,241,.14);border-radius:10px;color:#c7d2fe;background:rgba(99,102,241,.08);font-size:.65rem;font-weight:750;white-space:nowrap}.sp-live-compact-empty{display:flex;align-items:center;gap:13px;padding:18px;border:1px dashed rgba(148,163,184,.18);border-radius:16px;color:#64748b;background:rgba(15,23,42,.48)}.sp-live-compact-empty>span{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border-radius:12px;color:#fb7185;background:rgba(239,68,68,.09)}.sp-live-compact-empty strong,.sp-live-compact-empty small{display:block}.sp-live-compact-empty strong{color:#e2e8f0;font-size:.78rem}.sp-live-compact-empty small{margin-top:3px;color:#64748b;font-size:.66rem}.sp-live-empty-inline{margin-bottom:18px}.sp-live-hub-calendar{margin-top:24px}.sp-calendar-legend{display:flex;flex-wrap:wrap;align-items:center;gap:12px;color:#94a3b8;font-size:.66rem;font-weight:750}.sp-calendar-legend span{display:inline-flex;align-items:center;gap:6px}.sp-calendar-legend .course i{color:#6366f1}.sp-calendar-legend .live i{color:#ef4444}.sp-live-hub-calendar .fc .student-calendar-course{border-color:transparent!important;background:#4f46e5!important;color:#fff!important}.sp-live-hub-calendar .fc .student-calendar-live{border-color:transparent!important;background:#dc2626!important;color:#fff!important;font-weight:750}.sp-live-hub-calendar .fc .student-calendar-live-ended{background:#475569!important}.sp-live-hub-calendar .fc .student-calendar-live-upcoming{background:#e11d48!important}.student-slot-pill{display:inline-flex;padding:4px 9px;border:1px solid rgba(139,92,246,.18);border-radius:8px;color:#ddd6fe;background:rgba(124,58,237,.12);font-weight:800}@media(max-width:960px){.sp-live-today-row{grid-template-columns:120px minmax(0,1fr)}.sp-live-today-meta,.sp-live-today-action{grid-column:2}.sp-live-today-action{justify-content:flex-start}}@media(max-width:640px){.sp-live-today-row{grid-template-columns:1fr}.sp-live-today-meta,.sp-live-today-action{grid-column:1}.sp-live-today-action{justify-content:stretch}.sp-live-today-action .sp-primary-button,.sp-live-today-action .sp-disabled-button{width:100%;justify-content:center}.sp-calendar-legend{margin-top:10px}}

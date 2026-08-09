@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class VocalTestSubmission extends Model
@@ -247,22 +246,6 @@ class VocalTestSubmission extends Model
     public function classRoom(): BelongsTo
     {
         return $this->belongsTo(ClassRoom::class, 'class_id');
-    }
-
-
-    /**
-     * Professeurs autorisés par l'administrateur à consulter cette soumission.
-     */
-    public function professors(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            User::class,
-            'vocal_test_submission_professor',
-            'vocal_test_submission_id',
-            'prof_id'
-        )
-            ->withPivot('assigned_by')
-            ->withTimestamps();
     }
 
     public function appointment(): HasOne

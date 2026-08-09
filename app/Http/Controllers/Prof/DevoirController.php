@@ -7,230 +7,705 @@ use App\Models\Assignment;
 use App\Models\ClassRoom;
 use App\Models\Course;
 use App\Models\ProfAssignment;
+use App\Services\ProfessorPathService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class DevoirController extends Controller
 {
+    private ProfessorPathService $profPaths;
+
+    public function __construct(
+        ProfessorPathService $profPaths
+    ) {
+        $this->profPaths = $profPaths;
+    }
+
     public function index(Request $request)
     {
-        $course_id = $request->course_id;
-        $course = null;
-        $query = Assignment::where('user_id', auth()->id());
+        $profHierarchy =
+            $this->profPaths->hierarchy(
+                auth()->id()
+            );
 
-        if ($course_id) {
-            $query->where('course_id', $course_id);
-            $course = Course::where('user_id', auth()->id())->findOrFail($course_id);
+        $visibleScope =
+            $this->profPaths
+                ->filteredAssignments(
+                    auth()->id(),
+                    $request
+                );
+
+        $slotIds = $visibleScope
+            ->pluck('class_slot_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $courseId =
+            (int) $request->query(
+                'course_id',
+                0
+            );
+
+        $course = null;
+
+        $query = Assignment::query()
+            ->with([
+                'subject',
+                'classSlot.subject',
+                'classSlot.level',
+                'classSlot.classRoom',
+                'course',
+            ])
+            ->where(
+                'user_id',
+                auth()->id()
+            )
+            ->when(
+                $slotIds->isNotEmpty(),
+                fn ($query) =>
+                    $query->whereIn(
+                        'class_slot_id',
+                        $slotIds
+                    ),
+                fn ($query) =>
+                    $query->whereRaw('1 = 0')
+            );
+
+        if ($courseId) {
+            $course = Course::query()
+                ->where(
+                    'user_id',
+                    auth()->id()
+                )
+                ->findOrFail($courseId);
+
+            $query->where(
+                'course_id',
+                $course->id
+            );
         }
 
-        $devoirs = $query->orderBy('created_at', 'desc')->paginate(10);
-        $courses = Course::where('user_id', auth()->id())->orderBy('title')->get();
+        $devoirs = $query
+            ->latest()
+            ->paginate(10)
+            ->appends(
+                $request->query()
+            );
 
-        return view('prof.devoir.index', compact('devoirs', 'course_id', 'course', 'courses'));
+        $courses = Course::query()
+            ->where(
+                'user_id',
+                auth()->id()
+            )
+            ->orderBy('title')
+            ->get();
+
+        $filters =
+            $this->profPaths
+                ->selectedFilters($request);
+
+        return view(
+            'prof.devoir.index',
+            array_merge(
+                compact(
+                    'devoirs',
+                    'courseId',
+                    'course',
+                    'courses',
+                    'profHierarchy'
+                ),
+                $filters
+            )
+        );
     }
 
     public function create(Request $request)
     {
-        $course_id = $request->course_id;
-        $course = $course_id
-            ? Course::with(['subject', 'classRoom.level'])
-                ->where('user_id', auth()->id())
-                ->findOrFail($course_id)
+        $profHierarchy =
+            $this->profPaths->hierarchy(
+                auth()->id()
+            );
+
+        $profAssignments =
+            $this->profPaths->assignments(
+                auth()->id()
+            );
+
+        $courseId =
+            (int) $request->query(
+                'course_id',
+                0
+            );
+
+        $course = $courseId
+            ? Course::query()
+                ->where(
+                    'user_id',
+                    auth()->id()
+                )
+                ->findOrFail($courseId)
             : null;
 
-        $profAssignments = ProfAssignment::query()
-            ->with(['subject', 'level', 'classRoom'])
-            ->where('prof_id', auth()->id())
-            ->orderBy('subject_id')
-            ->orderBy('level_id')
-            ->orderBy('class_id')
-            ->get();
+        $defaultAssignment = null;
 
-        $teachingPaths = $profAssignments
-            ->filter(fn ($assignment) => $assignment->subject && $assignment->level && $assignment->classRoom)
-            ->map(fn ($assignment) => [
-                'subject_id' => (int) $assignment->subject_id,
-                'subject_name' => $assignment->subject->name,
-                'level_id' => (int) $assignment->level_id,
-                'level_name' => $assignment->level->name,
-                'class_id' => (int) $assignment->class_id,
-                'class_name' => $assignment->classRoom->name,
-            ])
-            ->values();
+        if ($course) {
+            $defaultAssignment =
+                $profAssignments->first(
+                    function (
+                        ProfAssignment $assignment
+                    ) use ($course) {
+                        return
+                            (int) $assignment->subject_id
+                                === (int) $course->subject_id
+                            && (int) $assignment->level_id
+                                === (int) $course->level_id
+                            && (int) $assignment->class_id
+                                === (int) $course->class_id
+                            && strtoupper(
+                                trim(
+                                    (string)
+                                    $assignment
+                                        ->classSlot
+                                        ?->code
+                                )
+                            )
+                                === strtoupper(
+                                    trim(
+                                        (string)
+                                        $course->slot_code
+                                    )
+                                );
+                    }
+                );
+        }
 
         $courses = Course::query()
-            ->with('classRoom')
-            ->where('user_id', auth()->id())
+            ->where(
+                'user_id',
+                auth()->id()
+            )
             ->orderBy('title')
             ->get();
 
-        $courseOptions = $courses->map(function ($courseOption) {
-            return [
-                'id' => (int) $courseOption->id,
-                'title' => $courseOption->title,
-                'subject_id' => (int) $courseOption->subject_id,
-                'level_id' => (int) ($courseOption->level_id ?: optional($courseOption->classRoom)->level_id),
-                'class_id' => (int) $courseOption->class_id,
-            ];
-        })->values();
-
-        $selectedSubjectId = old('subject_id', $course?->subject_id);
-        $selectedLevelId = old('level_id', $course?->level_id ?: $course?->classRoom?->level_id);
-        $selectedClassId = old('class_room_id', $course?->class_id);
-        $selectedCourseId = old('course_id', $course_id);
-
-        return view('prof.devoir.create', compact(
-            'course',
-            'courses',
-            'course_id',
-            'teachingPaths',
-            'courseOptions',
-            'selectedSubjectId',
-            'selectedLevelId',
-            'selectedClassId',
-            'selectedCourseId'
-        ));
+        return view(
+            'prof.devoir.create',
+            [
+                'course' => $course,
+                'courses' => $courses,
+                'courseId' => $courseId ?: null,
+                'profHierarchy' =>
+                    $profHierarchy,
+                'selectedSubjectId' =>
+                    old(
+                        'subject_id',
+                        $request->query(
+                            'subject_id',
+                            $defaultAssignment
+                                ?->subject_id
+                        )
+                    ),
+                'selectedLevelId' =>
+                    old(
+                        'level_id',
+                        $request->query(
+                            'level_id',
+                            $defaultAssignment
+                                ?->level_id
+                        )
+                    ),
+                'selectedClassId' =>
+                    old(
+                        'class_id',
+                        $request->query(
+                            'class_id',
+                            $defaultAssignment
+                                ?->class_id
+                        )
+                    ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $request->query(
+                            'class_slot_id',
+                            $defaultAssignment
+                                ?->class_slot_id
+                        )
+                    ),
+            ]
+        );
     }
 
     public function store(Request $request)
     {
-        if (!in_array(auth()->user()->role, ['admin', 'prof'])) {
-            abort(403);
-        }
+        abort_unless(
+            in_array(
+                auth()->user()->role,
+                ['admin', 'prof'],
+                true
+            ),
+            403
+        );
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'subject_id' => 'required|integer|exists:subjects,id',
-            'level_id' => 'required|integer|exists:levels,id',
-            'class_room_id' => 'required|integer|exists:class_rooms,id',
-            'course_id' => 'nullable|integer|exists:courses,id',
-            'due_date' => 'required|date|after:today',
-            'file' => 'nullable|file|mimes:pdf|max:5120',
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
+            'course_id' => [
+                'nullable',
+                'integer',
+                'exists:courses,id',
+            ],
+            'due_date' => [
+                'required',
+                'date',
+                'after:now',
+            ],
+            'file' => [
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:5120',
+            ],
         ]);
 
-        $scope = ProfAssignment::query()
-            ->where('prof_id', auth()->id())
-            ->where('subject_id', $validated['subject_id'])
-            ->where('level_id', $validated['level_id'])
-            ->where('class_id', $validated['class_room_id'])
-            ->first();
+        $scope =
+            $this->profPaths
+                ->findExactAssignment(
+                    auth()->id(),
+                    (int) $validated[
+                        'subject_id'
+                    ],
+                    (int) $validated[
+                        'level_id'
+                    ],
+                    (int) $validated[
+                        'class_id'
+                    ],
+                    (int) $validated[
+                        'class_slot_id'
+                    ]
+                );
 
         abort_unless($scope, 403);
 
-        $class = ClassRoom::findOrFail($validated['class_room_id']);
-        abort_unless((int) $class->level_id === (int) $validated['level_id'], 422);
-
         $course = null;
+
         if (!empty($validated['course_id'])) {
             $course = Course::query()
-                ->with('classRoom')
-                ->where('user_id', auth()->id())
-                ->findOrFail($validated['course_id']);
+                ->where(
+                    'user_id',
+                    auth()->id()
+                )
+                ->findOrFail(
+                    $validated['course_id']
+                );
 
-            $courseLevelId = (int) ($course->level_id ?: optional($course->classRoom)->level_id);
-            abort_unless(
-                (int) $course->subject_id === (int) $validated['subject_id']
-                && $courseLevelId === (int) $validated['level_id']
-                && (int) $course->class_id === (int) $validated['class_room_id'],
-                422
-            );
+            $courseMatchesPath =
+                (int) $course->subject_id
+                    === (int) $scope->subject_id
+                && (int) $course->level_id
+                    === (int) $scope->level_id
+                && (int) $course->class_id
+                    === (int) $scope->class_id
+                && strtoupper(
+                    trim(
+                        (string)
+                        $course->slot_code
+                    )
+                )
+                    === strtoupper(
+                        trim(
+                            (string)
+                            $scope->classSlot?->code
+                        )
+                    );
+
+            if (!$courseMatchesPath) {
+                throw ValidationException::withMessages([
+                    'course_id' =>
+                        'Le cours sélectionné ne correspond pas '
+                        . 'au créneau pédagogique choisi.',
+                ]);
+            }
         }
 
         $filePath = null;
+
         if ($request->hasFile('file')) {
-            $filePath = $request->file('file')->store('assignments', 'public');
+            $filePath =
+                $request->file('file')
+                    ->store(
+                        'assignments',
+                        'public'
+                    );
         }
 
         Assignment::create([
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'file' => $filePath,
-            'due_date' => $validated['due_date'],
-            'course_id' => $course?->id,
-            'subject_id' => (int) $validated['subject_id'],
-            'class_room_id' => (int) $validated['class_room_id'],
-            'user_id' => auth()->id(),
+            'title' =>
+                $validated['title'],
+            'description' =>
+                $validated['description']
+                ?? null,
+            'file' =>
+                $filePath,
+            'due_date' =>
+                $validated['due_date'],
+            'course_id' =>
+                $course?->id,
+            'subject_id' =>
+                $scope->subject_id,
+            'class_room_id' =>
+                $scope->class_id,
+            'class_slot_id' =>
+                $scope->class_slot_id,
+            'user_id' =>
+                auth()->id(),
         ]);
 
-        $redirectRoute = $course
-            ? route('prof.devoir.index', ['course_id' => $course->id])
-            : route('prof.devoir.index');
-
-        return redirect($redirectRoute)->with('success', 'Devoir créé avec succès !');
+        return redirect()
+            ->route(
+                'prof.devoir.index',
+                [
+                    'subject_id' =>
+                        $scope->subject_id,
+                    'level_id' =>
+                        $scope->level_id,
+                    'class_id' =>
+                        $scope->class_id,
+                    'class_slot_id' =>
+                        $scope->class_slot_id,
+                ]
+            )
+            ->with(
+                'success',
+                'Devoir créé pour le créneau '
+                . ($scope->classSlot?->code ?? '')
+                . ' avec succès.'
+            );
     }
 
     public function edit(Assignment $devoir)
     {
-        if ($devoir->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        $classIds = ProfAssignment::where('prof_id', auth()->id())->pluck('class_id');
-        $classes = ClassRoom::whereIn('id', $classIds)->orderBy('name')->get();
-
-        return view('prof.devoir.edit', compact('devoir', 'classes'));
-    }
-
-    public function update(Request $request, Assignment $devoir)
-    {
-        if ($devoir->user_id !== auth()->id()) {
-            abort(403);
-        }
-
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'class_room_id' => 'required|exists:class_rooms,id',
-            'due_date' => 'required|date',
-            'file' => 'nullable|file|mimes:pdf|max:5120',
-        ]);
-
         abort_unless(
-            ProfAssignment::where('prof_id', auth()->id())
-                ->where('class_id', $request->class_room_id)
-                ->exists(),
+            (int) $devoir->user_id
+                === (int) auth()->id(),
             403
         );
 
-        if ($request->hasFile('file')) {
-            if ($devoir->file) {
-                Storage::disk('public')->delete($devoir->file);
-            }
-            $devoir->file = $request->file('file')->store('assignments', 'public');
-        }
+        abort_unless(
+            !$devoir->class_slot_id
+            || $this->profPaths->ownsSlot(
+                auth()->id(),
+                (int) $devoir->class_slot_id
+            ),
+            403
+        );
 
-        $devoir->update([
-            'title' => $request->title,
-            'description' => $request->description,
-            'due_date' => $request->due_date,
-            'class_room_id' => $request->class_room_id,
+        $devoir->load([
+            'course',
+            'classSlot.subject',
+            'classSlot.level',
+            'classSlot.classRoom',
         ]);
 
-        $redirectRoute = $devoir->course_id
-            ? route('prof.devoir.index', ['course_id' => $devoir->course_id])
-            : route('prof.devoir.index');
+        $profHierarchy =
+            $this->profPaths->hierarchy(
+                auth()->id()
+            );
 
-        return redirect($redirectRoute)->with('success', 'Devoir mis à jour !');
+        $courses = Course::query()
+            ->where(
+                'user_id',
+                auth()->id()
+            )
+            ->whereNotNull('slot_code')
+            ->where('slot_code', '!=', '')
+            ->orderBy('title')
+            ->get();
+
+        return view(
+            'prof.devoir.edit',
+            [
+                'devoir' => $devoir,
+                'courses' => $courses,
+                'profHierarchy' =>
+                    $profHierarchy,
+                'selectedSubjectId' =>
+                    old(
+                        'subject_id',
+                        $devoir
+                            ->classSlot
+                            ?->subject_id
+                        ?? $devoir
+                            ->course
+                            ?->subject_id
+                    ),
+                'selectedLevelId' =>
+                    old(
+                        'level_id',
+                        $devoir
+                            ->classSlot
+                            ?->level_id
+                        ?? $devoir
+                            ->course
+                            ?->level_id
+                    ),
+                'selectedClassId' =>
+                    old(
+                        'class_id',
+                        $devoir
+                            ->classSlot
+                            ?->class_id
+                        ?? $devoir
+                            ->course
+                            ?->class_id
+                    ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $devoir->class_slot_id
+                    ),
+            ]
+        );
     }
 
-    public function destroy(Assignment $devoir)
-    {
-        if ($devoir->user_id !== auth()->id()) {
-            abort(403);
+    public function update(
+        Request $request,
+        Assignment $devoir
+    ) {
+        abort_unless(
+            (int) $devoir->user_id
+                === (int) auth()->id(),
+            403
+        );
+
+        $validated = $request->validate([
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+            ],
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
+            'course_id' => [
+                'nullable',
+                'integer',
+                'exists:courses,id',
+            ],
+            'due_date' => [
+                'required',
+                'date',
+            ],
+            'file' => [
+                'nullable',
+                'file',
+                'mimes:pdf',
+                'max:5120',
+            ],
+        ]);
+
+        $scope =
+            $this->profPaths
+                ->findExactAssignment(
+                    auth()->id(),
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
+                );
+
+        abort_unless(
+            $scope,
+            403,
+            'Ce créneau ne fait pas partie de vos affectations.'
+        );
+
+        $course = null;
+
+        if (!empty($validated['course_id'])) {
+            $course = Course::query()
+                ->where(
+                    'user_id',
+                    auth()->id()
+                )
+                ->findOrFail(
+                    (int) $validated['course_id']
+                );
+
+            $courseMatchesPath =
+                (int) $course->subject_id
+                    === (int) $scope->subject_id
+                && (int) $course->level_id
+                    === (int) $scope->level_id
+                && (int) $course->class_id
+                    === (int) $scope->class_id
+                && strtoupper(
+                    trim(
+                        (string) $course->slot_code
+                    )
+                )
+                    === strtoupper(
+                        trim(
+                            (string)
+                            $scope->classSlot?->code
+                        )
+                    );
+
+            if (!$courseMatchesPath) {
+                throw ValidationException::withMessages([
+                    'course_id' =>
+                        'Le cours sélectionné ne correspond pas '
+                        . 'au créneau '
+                        . ($scope->classSlot?->code ?? '')
+                        . '.',
+                ]);
+            }
         }
+
+        if ($request->hasFile('file')) {
+            if ($devoir->file) {
+                Storage::disk('public')
+                    ->delete(
+                        $devoir->file
+                    );
+            }
+
+            $devoir->file =
+                $request->file('file')
+                    ->store(
+                        'assignments',
+                        'public'
+                    );
+        }
+
+        $devoir->title =
+            $validated['title'];
+
+        $devoir->description =
+            $validated['description']
+            ?? null;
+
+        $devoir->due_date =
+            $validated['due_date'];
+
+        $devoir->subject_id =
+            $scope->subject_id;
+
+        $devoir->class_room_id =
+            $scope->class_id;
+
+        $devoir->class_slot_id =
+            $scope->class_slot_id;
+
+        $devoir->course_id =
+            $course?->id;
+
+        $devoir->save();
+
+        return redirect()
+            ->route(
+                'prof.devoir.index',
+                [
+                    'subject_id' =>
+                        $scope->subject_id,
+                    'level_id' =>
+                        $scope->level_id,
+                    'class_id' =>
+                        $scope->class_id,
+                    'class_slot_id' =>
+                        $scope->class_slot_id,
+                ]
+            )
+            ->with(
+                'success',
+                'Devoir mis à jour pour le créneau '
+                . ($scope->classSlot?->code ?? '')
+                . '.'
+            );
+    }
+
+    public function destroy(
+        Assignment $devoir
+    ) {
+        abort_unless(
+            (int) $devoir->user_id
+                === (int) auth()->id(),
+            403
+        );
+
+        abort_unless(
+            !$devoir->class_slot_id
+            || $this->profPaths->ownsSlot(
+                auth()->id(),
+                (int) $devoir->class_slot_id
+            ),
+            403
+        );
 
         if ($devoir->file) {
-            Storage::disk('public')->delete($devoir->file);
+            Storage::disk('public')
+                ->delete(
+                    $devoir->file
+                );
         }
 
-        $course_id = $devoir->course_id;
         $devoir->delete();
 
-        $redirectRoute = $course_id
-            ? route('prof.devoir.index', ['course_id' => $course_id])
-            : route('prof.devoir.index');
-
-        return redirect($redirectRoute)->with('success', 'Devoir supprimé !');
+        return redirect()
+            ->route('prof.devoir.index')
+            ->with(
+                'success',
+                'Devoir supprimé !'
+            );
     }
 }

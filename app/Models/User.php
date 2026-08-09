@@ -146,22 +146,6 @@ public function results()
     }
 
     /**
-     * Tests vocaux que l'administrateur a explicitement partagés
-     * avec ce professeur.
-     */
-    public function assignedVocalTestSubmissions()
-    {
-        return $this->belongsToMany(
-            \App\Models\VocalTestSubmission::class,
-            'vocal_test_submission_professor',
-            'prof_id',
-            'vocal_test_submission_id'
-        )
-            ->withPivot('assigned_by')
-            ->withTimestamps();
-    }
-
-    /**
      * Tokens de notification push FCM
      */
     public function deviceTokens()

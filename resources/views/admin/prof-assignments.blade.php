@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation professeurs')
 @section(
     'breadcrumb',
-    'Professeurs → Parcours → Jour → Horaire'
+    'Professeur → Matière → Niveau → Classe → Créneau'
 )
 
 @section('content')
@@ -21,8 +21,8 @@
         </h1>
 
         <div class="subtitle">
-            Choisissez le parcours du professeur,
-            puis définissez son jour et son horaire hebdomadaire.
+            Affectez directement le professeur à un groupe pédagogique
+            D1, D2, I1, A1… sans créer d’abord une séance dans l’emploi du temps.
         </div>
     </div>
 </div>
@@ -61,7 +61,7 @@
                     </h4>
 
                     <p class="prof-assignment-subtitle">
-                        Parcours pédagogique + horaire
+                        Matière → Niveau → Classe → Créneau
                     </p>
                 </div>
             </div>
@@ -134,6 +134,12 @@
 
                             <span id="profPathClass">
                                 Classe
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                            <span id="profPathSlot">
+                                Créneau
                             </span>
                         </div>
 
@@ -273,137 +279,62 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="prof-assignment-step">
+                            <span class="prof-step-number">
+                                4
+                            </span>
+
+                            <div class="adm-form-group mb-0">
+                                <label
+                                    class="adm-form-label"
+                                    for="prof_assignment_class_slot_id"
+                                >
+                                    Créneau / groupe
+                                    <span class="assignment-required">*</span>
+                                </label>
+
+                                <select
+                                    name="class_slot_id"
+                                    id="prof_assignment_class_slot_id"
+                                    class="adm-form-select
+                                        @error('class_slot_id') error @enderror"
+                                    disabled
+                                    required
+                                >
+                                    <option value="">
+                                        Choisissez d’abord une classe
+                                    </option>
+                                </select>
+
+                                <small class="assignment-help">
+                                    Les créneaux D1/D2/D3/D4, I1… et A1…
+                                    viennent directement de la structure pédagogique.
+                                    Aucun emploi du temps n’est requis.
+                                </small>
+
+                                @error('class_slot_id')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
 
 
-                    <div class="prof-assignment-schedule">
-                        <div class="prof-schedule-heading">
-                            <span class="prof-schedule-icon">
-                                <i class="bi bi-calendar-week-fill"></i>
-                            </span>
+                    <div class="prof-structural-slot-note">
+                        <i class="bi bi-diagram-3-fill"></i>
 
-                            <div>
-                                <strong>
-                                    Horaire du professeur
-                                </strong>
-
-                                <small>
-                                    Cet horaire apparaîtra uniquement
-                                    dans l’espace professeur.
-                                </small>
-                            </div>
-                        </div>
-
-                        <div class="adm-form-group">
-                            <label
-                                class="adm-form-label"
-                                for="prof_assignment_day_of_week"
-                            >
-                                Jour
-                                <span class="assignment-required">*</span>
-                            </label>
-
-                            <select
-                                name="day_of_week"
-                                id="prof_assignment_day_of_week"
-                                class="adm-form-select
-                                    @error('day_of_week')
-                                        error
-                                    @enderror"
-                                required
-                            >
-                                <option value="">
-                                    Sélectionner un jour
-                                </option>
-
-                                @foreach(
-                                    \App\Models\ProfAssignment::DAYS
-                                    as $dayNumber => $dayLabel
-                                )
-                                    <option
-                                        value="{{ $dayNumber }}"
-                                        @selected(
-                                            (string) old('day_of_week')
-                                            === (string) $dayNumber
-                                        )
-                                    >
-                                        {{ $dayLabel }}
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            @error('day_of_week')
-                                <div class="adm-form-error">
-                                    {{ $message }}
-                                </div>
-                            @enderror
-                        </div>
-
-                        <div class="prof-time-grid">
-                            <div class="adm-form-group mb-0">
-                                <label
-                                    class="adm-form-label"
-                                    for="prof_assignment_start_time"
-                                >
-                                    Heure de début
-                                    <span class="assignment-required">*</span>
-                                </label>
-
-                                <input
-                                    type="time"
-                                    name="start_time"
-                                    id="prof_assignment_start_time"
-                                    value="{{ old('start_time') }}"
-                                    class="adm-form-input
-                                        @error('start_time')
-                                            error
-                                        @enderror"
-                                    required
-                                >
-
-                                @error('start_time')
-                                    <div class="adm-form-error">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                            </div>
-
-                            <div class="adm-form-group mb-0">
-                                <label
-                                    class="adm-form-label"
-                                    for="prof_assignment_end_time"
-                                >
-                                    Heure de fin
-                                    <span class="assignment-required">*</span>
-                                </label>
-
-                                <input
-                                    type="time"
-                                    name="end_time"
-                                    id="prof_assignment_end_time"
-                                    value="{{ old('end_time') }}"
-                                    class="adm-form-input
-                                        @error('end_time')
-                                            error
-                                        @enderror"
-                                    required
-                                >
-
-                                @error('end_time')
-                                    <div class="adm-form-error">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="prof-schedule-note">
-                            <i class="bi bi-info-circle-fill"></i>
+                        <div>
+                            <strong>
+                                Assignation indépendante de l’emploi du temps
+                            </strong>
 
                             <span>
-                                Si cette assignation existe déjà,
-                                le nouvel horaire remplacera
-                                l’ancien horaire.
+                                Vous pouvez affecter un professeur à D1, D2, I1…
+                                immédiatement. Le jour et les heures pourront être
+                                ajoutés ensuite dans l’emploi du temps.
                             </span>
                         </div>
                     </div>
@@ -453,7 +384,7 @@
                                     <th>Matière</th>
                                     <th>Niveau</th>
                                     <th>Classe</th>
-                                    <th>Jour</th>
+                                    <th>Créneau</th>
                                     <th>Horaire</th>
                                     <th style="text-align:right;">
                                         Action
@@ -538,55 +469,56 @@
                                         </td>
 
                                         <td>
-                                            @if(
-                                                $assignment
-                                                    ->has_schedule
-                                            )
-                                                <span
-                                                    class="prof-day-badge"
-                                                >
-                                                    <i
-                                                        class="bi
-                                                            bi-calendar3"
-                                                    ></i>
-
-                                                    {{
-                                                        $assignment
-                                                            ->day_label
-                                                    }}
+                                            @if($assignment->classSlot)
+                                                <span class="prof-slot-badge">
+                                                    {{ $assignment->classSlot->code }}
                                                 </span>
                                             @else
-                                                <span
-                                                    class="prof-no-schedule"
-                                                >
-                                                    Non défini
+                                                <span class="prof-no-schedule">
+                                                    Ancienne assignation
                                                 </span>
                                             @endif
                                         </td>
 
                                         <td>
-                                            @if(
-                                                $assignment
-                                                    ->has_schedule
-                                            )
-                                                <span
-                                                    class="prof-time-badge"
-                                                >
-                                                    <i
-                                                        class="bi
-                                                            bi-clock-fill"
-                                                    ></i>
+                                            @php
+                                                $scheduleKey =
+                                                    (int) $assignment->subject_id
+                                                    . ':'
+                                                    . (int) $assignment->level_id
+                                                    . ':'
+                                                    . (int) $assignment->class_id
+                                                    . ':'
+                                                    . strtoupper(
+                                                        trim(
+                                                            (string) optional(
+                                                                $assignment->classSlot
+                                                            )->code
+                                                        )
+                                                    );
 
-                                                    {{
-                                                        $assignment
-                                                            ->time_range_label
-                                                    }}
-                                                </span>
+                                                $linkedSchedule =
+                                                    $assignment->classSlot
+                                                        ? $scheduleMap->get($scheduleKey)
+                                                        : null;
+                                            @endphp
+
+                                            @if($linkedSchedule)
+                                                <div class="prof-linked-schedule">
+                                                    <span class="prof-day-badge">
+                                                        <i class="bi bi-calendar3"></i>
+                                                        {{ $linkedSchedule->day_label }}
+                                                    </span>
+
+                                                    <span class="prof-time-badge">
+                                                        <i class="bi bi-clock"></i>
+                                                        {{ $linkedSchedule->time_range_label }}
+                                                    </span>
+                                                </div>
                                             @else
-                                                <span
-                                                    class="prof-no-schedule"
-                                                >
-                                                    Non défini
+                                                <span class="prof-no-schedule">
+                                                    <i class="bi bi-calendar-plus"></i>
+                                                    Horaire à définir
                                                 </span>
                                             @endif
                                         </td>
@@ -854,6 +786,63 @@
     }
 }
 
+
+.prof-structural-slot-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 1rem;
+    padding: 12px;
+    color: #94A3B8;
+    border: 1px solid rgba(34,197,94,0.13);
+    border-radius: 13px;
+    background: rgba(34,197,94,0.045);
+}
+
+.prof-structural-slot-note > i {
+    margin-top: 1px;
+    color: #4ADE80;
+    font-size: 1rem;
+}
+
+.prof-structural-slot-note > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.prof-structural-slot-note strong {
+    color: #DCFCE7;
+    font-size: 0.68rem;
+}
+
+.prof-structural-slot-note span {
+    font-size: 0.6rem;
+    line-height: 1.5;
+}
+
+.prof-slot-badge {
+    display: inline-flex;
+    min-width: 38px;
+    min-height: 29px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    color: #DDD6FE;
+    border: 1px solid rgba(139,92,246,0.18);
+    border-radius: 9px;
+    background: rgba(124,58,237,0.10);
+    font-size: 0.65rem;
+    font-weight: 850;
+}
+
+.prof-linked-schedule {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
 </style>
 
 <script>
@@ -861,34 +850,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const hierarchy = @json($assignmentHierarchy);
 
     const subjectSelect =
-        document.getElementById(
-            'prof_assignment_subject_id'
-        );
+        document.getElementById('prof_assignment_subject_id');
 
     const levelSelect =
-        document.getElementById(
-            'prof_assignment_level_id'
-        );
+        document.getElementById('prof_assignment_level_id');
 
     const classSelect =
-        document.getElementById(
-            'prof_assignment_class_id'
-        );
+        document.getElementById('prof_assignment_class_id');
+
+    const slotSelect =
+        document.getElementById('prof_assignment_class_slot_id');
 
     const pathSubject =
-        document.getElementById(
-            'profPathSubject'
-        );
+        document.getElementById('profPathSubject');
 
     const pathLevel =
-        document.getElementById(
-            'profPathLevel'
-        );
+        document.getElementById('profPathLevel');
 
     const pathClass =
-        document.getElementById(
-            'profPathClass'
-        );
+        document.getElementById('profPathClass');
+
+    const pathSlot =
+        document.getElementById('profPathSlot');
 
     const createOption = (
         value,
@@ -901,32 +884,9 @@ document.addEventListener('DOMContentLoaded', () => {
         option.value = String(value);
         option.textContent = label;
         option.selected =
-            String(value)
-            === String(selectedValue);
+            String(value) === String(selectedValue);
 
         return option;
-    };
-
-    const findSubject = subjectId =>
-        hierarchy.find(
-            subject =>
-                String(subject.id)
-                === String(subjectId)
-        );
-
-    const findLevel = (
-        subject,
-        levelId
-    ) => {
-        if (!subject) {
-            return null;
-        }
-
-        return subject.levels.find(
-            level =>
-                String(level.id)
-                === String(levelId)
-        );
     };
 
     const resetSelect = (
@@ -941,11 +901,47 @@ document.addEventListener('DOMContentLoaded', () => {
         select.disabled = disabled;
     };
 
+    const findSubject = subjectId =>
+        hierarchy.find(
+            subject =>
+                String(subject.id) === String(subjectId)
+        );
+
+    const findLevel = (
+        subject,
+        levelId
+    ) => {
+        if (!subject) {
+            return null;
+        }
+
+        return subject.levels.find(
+            level =>
+                String(level.id) === String(levelId)
+        );
+    };
+
+    const findClass = (
+        subject,
+        level,
+        classId
+    ) => {
+        if (!subject || !level) {
+            return null;
+        }
+
+        return level.classes.find(
+            classRoom =>
+                String(classRoom.id) === String(classId)
+        );
+    };
+
     const updatePath = () => {
         const items = [
             [subjectSelect, pathSubject, 'Matière'],
             [levelSelect, pathLevel, 'Niveau'],
             [classSelect, pathClass, 'Classe'],
+            [slotSelect, pathSlot, 'Créneau'],
         ];
 
         items.forEach(
@@ -965,17 +961,64 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     };
 
-    const fillClasses = (
-        selectedClassId = ''
+    const fillSlots = (
+        selectedSlotId = ''
     ) => {
-        const subject = findSubject(
-            subjectSelect.value
+        const subject =
+            findSubject(subjectSelect.value);
+
+        const level =
+            findLevel(subject, levelSelect.value);
+
+        const classRoom =
+            findClass(
+                subject,
+                level,
+                classSelect.value
+            );
+
+        resetSelect(
+            slotSelect,
+            classRoom
+                ? 'Sélectionner un créneau'
+                : 'Choisissez d’abord une classe',
+            !classRoom
         );
 
-        const level = findLevel(
-            subject,
-            levelSelect.value
-        );
+        if (!classRoom) {
+            updatePath();
+            return;
+        }
+
+        (classRoom.slots || []).forEach(slot => {
+            slotSelect.appendChild(
+                createOption(
+                    slot.id,
+                    slot.code || slot.name,
+                    selectedSlotId
+                )
+            );
+        });
+
+        slotSelect.disabled = false;
+
+        if (selectedSlotId) {
+            slotSelect.value =
+                String(selectedSlotId);
+        }
+
+        updatePath();
+    };
+
+    const fillClasses = (
+        selectedClassId = '',
+        selectedSlotId = ''
+    ) => {
+        const subject =
+            findSubject(subjectSelect.value);
+
+        const level =
+            findLevel(subject, levelSelect.value);
 
         resetSelect(
             classSelect,
@@ -983,6 +1026,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? 'Sélectionner une classe'
                 : 'Choisissez d’abord un niveau',
             !level
+        );
+
+        resetSelect(
+            slotSelect,
+            'Choisissez d’abord une classe',
+            true
         );
 
         if (!level) {
@@ -1005,6 +1054,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedClassId) {
             classSelect.value =
                 String(selectedClassId);
+
+            fillSlots(selectedSlotId);
         }
 
         updatePath();
@@ -1012,11 +1063,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fillLevels = (
         selectedLevelId = '',
-        selectedClassId = ''
+        selectedClassId = '',
+        selectedSlotId = ''
     ) => {
-        const subject = findSubject(
-            subjectSelect.value
-        );
+        const subject =
+            findSubject(subjectSelect.value);
 
         resetSelect(
             levelSelect,
@@ -1029,6 +1080,12 @@ document.addEventListener('DOMContentLoaded', () => {
         resetSelect(
             classSelect,
             'Choisissez d’abord un niveau',
+            true
+        );
+
+        resetSelect(
+            slotSelect,
+            'Choisissez d’abord une classe',
             true
         );
 
@@ -1053,7 +1110,10 @@ document.addEventListener('DOMContentLoaded', () => {
             levelSelect.value =
                 String(selectedLevelId);
 
-            fillClasses(selectedClassId);
+            fillClasses(
+                selectedClassId,
+                selectedSlotId
+            );
         }
 
         updatePath();
@@ -1071,6 +1131,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     classSelect.addEventListener(
         'change',
+        () => fillSlots()
+    );
+
+    slotSelect.addEventListener(
+        'change',
         updatePath
     );
 
@@ -1086,13 +1151,18 @@ document.addEventListener('DOMContentLoaded', () => {
         (string) old('class_id', '')
     );
 
+    const oldSlotId = @json(
+        (string) old('class_slot_id', '')
+    );
+
     if (oldSubjectId) {
         subjectSelect.value =
             oldSubjectId;
 
         fillLevels(
             oldLevelId,
-            oldClassId
+            oldClassId,
+            oldSlotId
         );
     } else {
         fillLevels();

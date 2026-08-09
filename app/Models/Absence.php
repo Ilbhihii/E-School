@@ -11,11 +11,13 @@ class Absence extends Model
         'subject_id',
         'level_id',
         'class_id',
+        'class_slot_id',
         'date',
         'present',
     ];
 
     protected $casts = [
+        'class_slot_id' => 'integer',
         'date' => 'date',
         'present' => 'boolean',
     ];
@@ -38,5 +40,13 @@ class Absence extends Model
     public function classRoom()
     {
         return $this->belongsTo(ClassRoom::class, 'class_id');
+    }
+
+    public function classSlot()
+    {
+        return $this->belongsTo(
+            ClassSlot::class,
+            'class_slot_id'
+        );
     }
 }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\VocalTestSubmission;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -19,7 +18,6 @@ class VocalTestSubmissionController extends Controller
             'classRoom',
             'prompt',
             'appointment',
-            'professors',
         ])->orderByDesc('created_at');
 
         if ($request->filled('status') && $request->status !== 'all') {
@@ -34,32 +32,9 @@ class VocalTestSubmissionController extends Controller
             $query->where('test_mode', $request->test_mode);
         }
 
-        if ($request->filled('prof_id') && $request->prof_id !== 'all') {
-            if ($request->prof_id === 'unassigned') {
-                $query->whereDoesntHave('professors');
-            } else {
-                $query->whereHas(
-                    'professors',
-                    fn ($profQuery) =>
-                        $profQuery->where(
-                            'users.id',
-                            (int) $request->prof_id
-                        )
-                );
-            }
-        }
-
         $submissions = $query->paginate(20)->withQueryString();
 
-        $professors = User::query()
-            ->where('role', User::ROLE_PROF)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
-
-        return view(
-            'admin.vocal-tests.submissions.index',
-            compact('submissions', 'professors')
-        );
+        return view('admin.vocal-tests.submissions.index', compact('submissions'));
     }
 
     public function show(VocalTestSubmission $submission)
@@ -71,13 +46,7 @@ class VocalTestSubmissionController extends Controller
             'classRoom',
             'prompt',
             'appointment',
-            'professors',
         ]);
-
-        $professors = User::query()
-            ->where('role', User::ROLE_PROF)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
 
         $isCompletionSubmission =
             $submission->isCompletionSubmission();
@@ -164,65 +133,7 @@ class VocalTestSubmissionController extends Controller
             'audioSize' => $audioState['size'],
             'audioMimeType' => $audioState['mime_type'],
             'audioError' => $audioState['error'],
-            'professors' => $professors,
         ]);
-    }
-
-
-    /**
-     * Affecte optionnellement un ou plusieurs professeurs à une soumission.
-     * Une liste vide retire toutes les affectations.
-     */
-    public function assignProfessors(
-        Request $request,
-        VocalTestSubmission $submission
-    ) {
-        $validated = $request->validate([
-            'prof_ids' => 'nullable|array',
-            'prof_ids.*' => 'integer|distinct|exists:users,id',
-        ]);
-
-        $profIds = collect($validated['prof_ids'] ?? [])
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
-
-        if ($profIds->isNotEmpty()) {
-            $validProfIds = User::query()
-                ->where('role', User::ROLE_PROF)
-                ->whereIn('id', $profIds)
-                ->pluck('id');
-
-            if ($validProfIds->count() !== $profIds->count()) {
-                return back()->withErrors([
-                    'prof_ids' =>
-                        'Un ou plusieurs comptes sélectionnés '
-                        . 'ne sont pas des professeurs.',
-                ]);
-            }
-        }
-
-        $syncData = $profIds
-            ->mapWithKeys(
-                fn ($profId) => [
-                    $profId => [
-                        'assigned_by' => auth()->id(),
-                    ],
-                ]
-            )
-            ->all();
-
-        $submission->professors()->sync($syncData);
-
-        $count = count($syncData);
-
-        return back()->with(
-            'success',
-            $count > 0
-                ? $count
-                    . ' professeur(s) ont accès à ce test.'
-                : 'Aucun professeur n’est affecté à ce test.'
-        );
     }
 
     public function review(Request $request, VocalTestSubmission $submission)

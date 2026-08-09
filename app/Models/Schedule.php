@@ -19,6 +19,7 @@ class Schedule extends Model
     protected $fillable = [
         'prof_id',
         'class_id',
+        'slot_code',
         'subject_id',
         'level_id',
         'room_id',
@@ -139,6 +140,41 @@ class Schedule extends Model
         $class = $this->classRoom?->name;
 
         return collect([$subject, $level, $class])
+            ->filter()
+            ->implode(' → ');
+    }
+
+    /**
+     * Le créneau est la partie horaire du parcours pédagogique.
+     * Exemple : Dimanche · 09:00 – 10:30.
+     */
+    public function getSlotLabelAttribute(): string
+    {
+        $code = trim((string) $this->slot_code);
+        $day = $this->day_label;
+        $time = $this->time_range_label;
+
+        $parts = collect([
+            $code !== '' ? $code : null,
+            $day !== '-' ? $day : null,
+            $time !== '-' ? $time : null,
+        ])->filter();
+
+        return $parts->isEmpty()
+            ? 'Créneau non défini'
+            : $parts->implode(' · ');
+    }
+
+    /**
+     * Parcours complet utilisé dans l'admin, le professeur,
+     * l'étudiant et le front public.
+     */
+    public function getFullPathLabelAttribute(): string
+    {
+        return collect([
+            $this->path_label,
+            $this->slot_label,
+        ])
             ->filter()
             ->implode(' → ');
     }

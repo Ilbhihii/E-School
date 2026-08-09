@@ -2,51 +2,261 @@
 
 @section('title', 'Modifier absence')
 @section('page_title', 'Modifier absence')
-@section('breadcrumb', 'Modifier une absence')
+@section(
+    'breadcrumb',
+    'Matière → Niveau → Classe → Créneau → Modifier'
+)
 
 @section('content')
 <div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="adm-card">
-            <div class="adm-card-header">
-                <h4><i class="bi bi-pencil" style="color:rgba(255,255,255,0.35);"></i> Modifier l'absence</h4>
+    <div class="col-xl-10">
+        <div class="adm-page-header">
+            <div>
+                <h1>Modifier l’absence</h1>
+
+                <div class="subtitle">
+                    Étudiant :
+                    <strong>
+                        {{ $absence->user?->name ?? 'Étudiant' }}
+                    </strong>
+                </div>
             </div>
-            <div class="adm-card-body">
-                <form method="POST" action="{{ route('admin.absences.update', $absence->id) }}">
-                    @csrf @method('PUT')
+        </div>
 
-                    <div class="adm-form-group">
-                        <label class="adm-form-label">Date</label>
-                        <input type="date" name="date" value="{{ $absence->date }}" class="adm-form-control @error('date') error @enderror" required>
-                        @error('date') <div class="adm-form-error">{{ $message }}</div> @enderror
-                    </div>
+        @if($errors->any())
+            <div class="adm-alert adm-alert-danger mb-4">
+                <strong>
+                    La modification n’a pas été enregistrée.
+                </strong>
 
-                    <div class="adm-form-group">
-                        <label class="adm-form-label">Statut de présence</label>
-                        <select name="present" class="adm-form-select @error('present') error @enderror" required>
-                            <option value="1" {{ $absence->present ? 'selected' : '' }}>✅ Présent</option>
-                            <option value="0" {{ !$absence->present ? 'selected' : '' }}>❌ Absent</option>
-                        </select>
-                        @error('present') <div class="adm-form-error">{{ $message }}</div> @enderror
-                    </div>
+                <ul class="mb-0 mt-2">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-                    <div class="adm-card" style="background:rgba(0,58,143,0.08);border-color:rgba(0,58,143,0.15);margin-bottom:1.25rem;">
-                        <div class="adm-card-body" style="padding:1rem;font-size:0.85rem;color:var(--adm-text-secondary);">
-                            <i class="bi bi-info-circle"></i> Vérifiez bien la date et le statut avant d'enregistrer.
+        <form
+            method="POST"
+            action="{{
+                route(
+                    'admin.absences.update',
+                    $absence
+                )
+            }}"
+        >
+            @csrf
+            @method('PUT')
+
+            @include(
+                'components.pedagogical-path-edit',
+                [
+                    'hierarchy' => $editHierarchy,
+                    'prefix' => 'adminAbsenceEdit',
+                    'selectedSubject' =>
+                        $selectedSubjectId,
+                    'selectedLevel' =>
+                        $selectedLevelId,
+                    'selectedClass' =>
+                        $selectedClassId,
+                    'selectedSlot' =>
+                        $selectedSlotId,
+                ]
+            )
+
+            <div class="adm-card mb-4">
+                <div class="adm-card-header">
+                    <h4>
+                        <i class="bi bi-person-check-fill"></i>
+                        Présence
+                    </h4>
+                </div>
+
+                <div class="adm-card-body">
+                    <div
+                        class="adm-card mb-4"
+                        style="
+                            background:rgba(99,102,241,.05);
+                            border-color:rgba(99,102,241,.12);
+                        "
+                    >
+                        <div
+                            class="adm-card-body"
+                            style="padding:1rem;"
+                        >
+                            <div
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    gap:10px;
+                                "
+                            >
+                                <span
+                                    class="adm-avatar"
+                                    style="
+                                        background:
+                                            var(--adm-gradient-primary);
+                                    "
+                                >
+                                    {{
+                                        mb_strtoupper(
+                                            mb_substr(
+                                                $absence
+                                                    ->user
+                                                    ?->name
+                                                ?? 'E',
+                                                0,
+                                                1
+                                            )
+                                        )
+                                    }}
+                                </span>
+
+                                <div>
+                                    <strong>
+                                        {{
+                                            $absence
+                                                ->user
+                                                ?->name
+                                            ?? 'Étudiant'
+                                        }}
+                                    </strong>
+
+                                    @if(
+                                        $absence
+                                            ->user
+                                            ?->email
+                                    )
+                                        <small
+                                            style="
+                                                display:block;
+                                                color:
+                                                var(--adm-text-muted);
+                                            "
+                                        >
+                                            {{
+                                                $absence
+                                                    ->user
+                                                    ->email
+                                            }}
+                                        </small>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="d-flex gap-3">
-                        <a href="{{ route('admin.absences.show', $absence->id) }}" class="adm-btn adm-btn-ghost flex-fill text-center">
-                            <i class="bi bi-x"></i> Annuler
-                        </a>
-                        <button type="submit" class="adm-btn adm-btn-primary flex-fill">
-                            <i class="bi bi-save"></i> Enregistrer
-                        </button>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">
+                                    Date
+                                </label>
+
+                                <input
+                                    type="date"
+                                    name="date"
+                                    value="{{
+                                        old(
+                                            'date',
+                                            optional(
+                                                $absence->date
+                                            )->format('Y-m-d')
+                                        )
+                                    }}"
+                                    class="adm-form-control
+                                        @error('date') error @enderror"
+                                    required
+                                >
+
+                                @error('date')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="adm-form-group">
+                                <label class="adm-form-label">
+                                    Statut
+                                </label>
+
+                                <select
+                                    name="present"
+                                    class="adm-form-select
+                                        @error('present') error @enderror"
+                                    required
+                                >
+                                    <option
+                                        value="1"
+                                        {{
+                                            (string) old(
+                                                'present',
+                                                $absence->present
+                                                    ? '1'
+                                                    : '0'
+                                            ) === '1'
+                                                ? 'selected'
+                                                : ''
+                                        }}
+                                    >
+                                        Présent
+                                    </option>
+
+                                    <option
+                                        value="0"
+                                        {{
+                                            (string) old(
+                                                'present',
+                                                $absence->present
+                                                    ? '1'
+                                                    : '0'
+                                            ) === '0'
+                                                ? 'selected'
+                                                : ''
+                                        }}
+                                    >
+                                        Absent
+                                    </option>
+                                </select>
+
+                                @error('present')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            <div class="d-flex gap-3">
+                <a
+                    href="{{
+                        route(
+                            'admin.absences.show',
+                            $absence
+                        )
+                    }}"
+                    class="adm-btn adm-btn-ghost flex-fill text-center"
+                >
+                    <i class="bi bi-arrow-left"></i>
+                    Annuler
+                </a>
+
+                <button
+                    type="submit"
+                    class="adm-btn adm-btn-primary flex-fill"
+                >
+                    <i class="bi bi-save"></i>
+                    Enregistrer
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection
