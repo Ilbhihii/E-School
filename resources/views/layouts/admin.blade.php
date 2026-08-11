@@ -175,6 +175,15 @@
                 <div class="admin-nav-section">
                     <div class="admin-nav-heading">Communication</div>
 
+                    <a href="{{ route('admin.contacts.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.contacts*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-person-lines-fill"></i></span>
+                        <span class="nav-label">
+                            Contacts / Prospects
+                            <small>Formulaire public</small>
+                        </span>
+                    </a>
+
                     <a href="{{ route('admin.appointments.index') }}"
                        class="admin-nav-link {{ request()->routeIs('admin.appointments*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="bi bi-calendar-check-fill"></i></span>

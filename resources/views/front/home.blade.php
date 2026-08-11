@@ -146,6 +146,307 @@
         );
     }
 
+
+    /* Prise de contact — Hero */
+    .home-contact-wrap {
+        max-width: 1180px;
+        margin: 0 auto 3.25rem;
+        text-align: left;
+    }
+
+    .home-contact-card {
+        position: relative;
+        overflow: hidden;
+        padding: 1.35rem 1.4rem;
+        border: 1px solid rgba(140, 167, 255, 0.20);
+        border-radius: 22px;
+        background:
+            radial-gradient(
+                circle at 8% 0%,
+                rgba(79, 111, 245, 0.16),
+                transparent 34%
+            ),
+            linear-gradient(
+                145deg,
+                rgba(19, 32, 54, 0.96),
+                rgba(12, 21, 37, 0.96)
+            );
+        box-shadow:
+            0 22px 55px rgba(0, 0, 0, 0.24),
+            inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    }
+
+    .home-contact-card::after {
+        position: absolute;
+        top: -70px;
+        right: -50px;
+        width: 190px;
+        height: 190px;
+        content: "";
+        pointer-events: none;
+        border-radius: 50%;
+        background: rgba(118, 83, 234, 0.10);
+        filter: blur(2px);
+    }
+
+    .home-contact-head {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .home-contact-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.35rem;
+        color: #9fb3ff;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+    }
+
+    .home-contact-title {
+        margin: 0;
+        color: #f8fafc;
+        font-size: clamp(1.25rem, 2vw, 1.6rem);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .home-contact-subtitle {
+        margin: 0.3rem 0 0;
+        color: #91a0b7;
+        font-size: 0.85rem;
+        line-height: 1.55;
+    }
+
+    .home-contact-form {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr))
+            auto;
+        gap: 0.75rem;
+        align-items: end;
+    }
+
+    .home-contact-field label {
+        display: block;
+        margin-bottom: 0.42rem;
+        color: #d9e2f1;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+
+    .home-contact-input {
+        width: 100%;
+        height: 48px;
+        padding: 0 0.85rem;
+        color: #f8fafc;
+        font-size: 0.84rem;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 12px;
+        outline: 0;
+        background: rgba(7, 13, 24, 0.62);
+        transition:
+            border-color 180ms ease,
+            box-shadow 180ms ease,
+            background 180ms ease;
+    }
+
+    .home-contact-input::placeholder {
+        color: #64748b;
+    }
+
+    .home-contact-input:focus {
+        border-color: rgba(124, 145, 255, 0.70);
+        background: rgba(9, 17, 31, 0.92);
+        box-shadow: 0 0 0 3px rgba(79, 111, 245, 0.12);
+    }
+
+    .home-contact-input.is-invalid {
+        border-color: rgba(248, 113, 113, 0.70);
+    }
+
+    .home-contact-field-full {
+        grid-column: 1 / -1;
+    }
+
+    .home-contact-textarea {
+        width: 100%;
+        min-height: 105px;
+        padding: 0.85rem;
+        color: #f8fafc;
+        font-size: 0.84rem;
+        line-height: 1.55;
+        resize: vertical;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 12px;
+        outline: 0;
+        background: rgba(7, 13, 24, 0.62);
+        transition:
+            border-color 180ms ease,
+            box-shadow 180ms ease,
+            background 180ms ease;
+    }
+
+    .home-contact-textarea::placeholder {
+        color: #64748b;
+    }
+
+    .home-contact-textarea:focus {
+        border-color: rgba(124, 145, 255, 0.70);
+        background: rgba(9, 17, 31, 0.92);
+        box-shadow: 0 0 0 3px rgba(79, 111, 245, 0.12);
+    }
+
+    .home-contact-textarea.is-invalid {
+        border-color: rgba(248, 113, 113, 0.70);
+    }
+
+    .home-contact-consent {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 12px;
+        background: rgba(7, 13, 24, 0.42);
+    }
+
+    .home-contact-consent input {
+        width: 17px;
+        height: 17px;
+        margin-top: 2px;
+        flex: 0 0 auto;
+        accent-color: #7c91ff;
+    }
+
+    .home-contact-consent label {
+        margin: 0;
+        color: #aebbd0;
+        font-size: 0.74rem;
+        line-height: 1.55;
+        cursor: pointer;
+    }
+
+    .home-contact-consent strong {
+        color: #e2e8f0;
+    }
+
+    .home-contact-submit {
+        min-width: 155px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.48rem;
+        padding: 0 1rem;
+        color: #ffffff;
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: nowrap;
+        border: 0;
+        border-radius: 12px;
+        background: linear-gradient(
+            110deg,
+            #4f6ff5,
+            #7653ea
+        );
+        box-shadow: 0 12px 25px rgba(79, 111, 245, 0.22);
+        transition:
+            transform 180ms ease,
+            box-shadow 180ms ease;
+    }
+
+    .home-contact-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 15px 30px rgba(79, 111, 245, 0.30);
+    }
+
+    .home-contact-alert {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+        padding: 0.8rem 0.95rem;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        border-radius: 12px;
+    }
+
+    .home-contact-alert.success {
+        color: #bbf7d0;
+        border: 1px solid rgba(34, 197, 94, 0.22);
+        background: rgba(34, 197, 94, 0.09);
+    }
+
+    .home-contact-alert.error {
+        color: #fecaca;
+        border: 1px solid rgba(248, 113, 113, 0.22);
+        background: rgba(127, 29, 29, 0.16);
+    }
+
+    .home-contact-errors {
+        margin: 0.4rem 0 0;
+        padding-left: 1rem;
+        color: #fecaca;
+        font-size: 0.7rem;
+    }
+
+    .home-contact-honeypot {
+        position: absolute !important;
+        left: -10000px !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    @media (max-width: 1199.98px) {
+        .home-contact-form {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .home-contact-action {
+            grid-column: 1 / -1;
+        }
+
+        .home-contact-submit {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .home-contact-wrap {
+            margin-bottom: 2.4rem;
+        }
+
+        .home-contact-card {
+            padding: 1.15rem;
+            border-radius: 18px;
+        }
+
+        .home-contact-form {
+            grid-template-columns: 1fr;
+        }
+
+        .home-contact-action {
+            grid-column: auto;
+        }
+    }
+
     /* HERO */
     .hero-3d {
         position: relative;
@@ -758,8 +1059,188 @@
 <!-- ══════════════════════════════════════════════════════
      HERO SECTION
      ══════════════════════════════════════════════════════ -->
-<section class="hero-3d text-center" style="padding: 140px 0 100px;">
+<section class="hero-3d text-center" style="padding: 90px 0 100px;">
     <div class="container hero-3d-content">
+
+        <div id="prise-de-contact" class="home-contact-wrap">
+            <div class="home-contact-card">
+                <div class="home-contact-head">
+                    <div>
+                        <span class="home-contact-eyebrow">
+                            <i class="bi bi-headset"></i>
+                            Prise de contact
+                        </span>
+
+                        <h2 class="home-contact-title">
+                            Vous souhaitez en savoir plus ?
+                        </h2>
+
+                        <p class="home-contact-subtitle">
+                            Laissez vos coordonnées. Notre équipe vous recontactera rapidement.
+                        </p>
+                    </div>
+                </div>
+
+                @if(session('contact_success'))
+                    <div class="home-contact-alert success" role="alert">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>{{ session('contact_success') }}</span>
+                    </div>
+                @endif
+
+                @if(session('contact_error'))
+                    <div class="home-contact-alert error" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span>{{ session('contact_error') }}</span>
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="home-contact-alert error" role="alert">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <div>
+                            <strong>Veuillez vérifier les informations saisies.</strong>
+                            <ul class="home-contact-errors">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                <form
+                    method="POST"
+                    action="{{ route('contact.store') }}"
+                    class="home-contact-form"
+                    autocomplete="on"
+                >
+                    @csrf
+
+                    <div class="home-contact-field">
+                        <label for="contact_last_name">Nom</label>
+                        <input
+                            id="contact_last_name"
+                            type="text"
+                            name="last_name"
+                            value="{{ old('last_name') }}"
+                            class="home-contact-input @error('last_name') is-invalid @enderror"
+                            placeholder="Votre nom"
+                            autocomplete="family-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_first_name">Prénom</label>
+                        <input
+                            id="contact_first_name"
+                            type="text"
+                            name="first_name"
+                            value="{{ old('first_name') }}"
+                            class="home-contact-input @error('first_name') is-invalid @enderror"
+                            placeholder="Votre prénom"
+                            autocomplete="given-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_email">E-mail</label>
+                        <input
+                            id="contact_email"
+                            type="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            class="home-contact-input @error('email') is-invalid @enderror"
+                            placeholder="nom@email.com"
+                            autocomplete="email"
+                            maxlength="190"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_phone">Téléphone</label>
+                        <input
+                            id="contact_phone"
+                            type="tel"
+                            name="phone"
+                            value="{{ old('phone') }}"
+                            class="home-contact-input @error('phone') is-invalid @enderror"
+                            placeholder="06 00 00 00 00"
+                            autocomplete="tel"
+                            maxlength="30"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field home-contact-field-full">
+                        <label for="contact_reason">
+                            Commentaire / Raison
+                        </label>
+
+                        <textarea
+                            id="contact_reason"
+                            name="reason"
+                            class="home-contact-textarea @error('reason') is-invalid @enderror"
+                            rows="4"
+                            maxlength="1500"
+                            placeholder="Exemple : Je souhaite avoir plus d’informations sur les cours, les tarifs ou les horaires..."
+                            required
+                        >{{ old('reason') }}</textarea>
+
+                        @error('reason')
+                            <small style="
+                                display:block;
+                                margin-top:.35rem;
+                                color:#fca5a5;
+                                font-size:.7rem;
+                            ">
+                                {{ $message }}
+                            </small>
+                        @enderror
+                    </div>
+
+                    <div class="home-contact-consent">
+                        <input
+                            id="contact_marketing_consent"
+                            type="checkbox"
+                            name="marketing_consent"
+                            value="1"
+                            {{ old('marketing_consent') ? 'checked' : '' }}
+                        >
+
+                        <label for="contact_marketing_consent">
+                            <strong>Informations et offres :</strong>
+                            j’accepte de recevoir les actualités et offres
+                            de Smart School Academy par e-mail.
+                        </label>
+                    </div>
+
+                    <div class="home-contact-honeypot" aria-hidden="true">
+                        <label for="contact_website">Site web</label>
+                        <input
+                            id="contact_website"
+                            type="text"
+                            name="website"
+                            value=""
+                            tabindex="-1"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="home-contact-action">
+                        <button type="submit" class="home-contact-submit">
+                            <i class="bi bi-send-fill"></i>
+                            Être contacté
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <h1 class="hero-3d-title mb-4 mx-auto" style="max-width: 850px;">
             La plateforme intelligente<br>

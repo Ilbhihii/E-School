@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Live;
 use App\Services\LiveAccessService;
+use App\Services\ContentAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
@@ -13,7 +14,8 @@ class LiveAccessController extends Controller
     public function requestAccess(
         Request $request,
         Live $live,
-        LiveAccessService $accessService
+        LiveAccessService $accessService,
+        ContentAccessService $contentAccess
     ): RedirectResponse {
         $decision = $accessService->evaluate(
             $request->user(),
@@ -28,6 +30,31 @@ class LiveAccessController extends Controller
             );
 
             return $this->deny($decision);
+        }
+
+        if (
+            $request->user()
+            && $request->user()->isStudent()
+        ) {
+            $contentDecision =
+                $contentAccess->acquireLive(
+                    $request,
+                    $live
+                );
+
+            if (
+                !$contentDecision['allowed']
+            ) {
+                $accessService->record(
+                    $request,
+                    $live,
+                    $contentDecision
+                );
+
+                return $this->deny(
+                    $contentDecision
+                );
+            }
         }
 
         $signedUrl = URL::temporarySignedRoute(
@@ -50,12 +77,32 @@ class LiveAccessController extends Controller
     public function join(
         Request $request,
         Live $live,
-        LiveAccessService $accessService
+        LiveAccessService $accessService,
+        ContentAccessService $contentAccess
     ): RedirectResponse {
         $decision = $accessService->evaluate(
             $request->user(),
             $live
         );
+
+        if (
+            $decision['allowed']
+            && $request->user()
+            && $request->user()->isStudent()
+        ) {
+            $contentDecision =
+                $contentAccess->acquireLive(
+                    $request,
+                    $live
+                );
+
+            if (
+                !$contentDecision['allowed']
+            ) {
+                $decision =
+                    $contentDecision;
+            }
+        }
 
         $accessService->record(
             $request,

@@ -36,58 +36,26 @@ class Live extends Model
         'deleted_at' => 'datetime',
     ];
 
+    /**
+     * Les lives terminés restent conservés dans l'historique.
+     * Aucun masquage automatique après la fin.
+     */
     protected static function booted(): void
     {
-        /*
-         * Masquer immédiatement les lives arrivés à leur
-         * date de suppression, même si le cron du serveur
-         * n'a pas encore exécuté la commande de nettoyage.
-         */
-        if (
-            Schema::hasColumn(
-                'lives',
-                'auto_delete_at'
-            )
-        ) {
-            static::addGlobalScope(
-                'within_live_retention',
-                function (Builder $builder) {
-                    $builder->where(
-                        function (Builder $query) {
-                            $query
-                                ->whereNull(
-                                    'auto_delete_at'
-                                )
-                                ->orWhere(
-                                    'auto_delete_at',
-                                    '>',
-                                    now()
-                                );
-                        }
-                    );
-                }
-            );
-
+        static::saving(function (Live $live) {
             /*
-             * Recalculer automatiquement la date de
-             * suppression à chaque création/modification.
+             * Compatibilité avec l'ancienne colonne auto_delete_at.
+             * Elle reste en base mais n'est plus utilisée.
              */
-            static::saving(
-                function (Live $live) {
-                    $endDateTime =
-                        $live->end_date_time;
-
-                    $live->auto_delete_at =
-                        $endDateTime
-                            ? $endDateTime
-                                ->copy()
-                                ->addHours(
-                                    self::RETENTION_HOURS
-                                )
-                            : null;
-                }
-            );
-        }
+            if (
+                Schema::hasColumn(
+                    'lives',
+                    'auto_delete_at'
+                )
+            ) {
+                $live->auto_delete_at = null;
+            }
+        });
     }
 
     public function classRoom()
@@ -228,19 +196,12 @@ class Live extends Model
 
     public function getStatusLabelAttribute()
     {
-        switch ($this->schedule_status) {
-            case 'live':
-                return '🔴 EN DIRECT';
-
-            case 'upcoming':
-                return '⏳ À VENIR';
-
-            case 'ended':
-                return '✅ SESSION TERMINÉE';
-
-            default:
-                return '📅 À PROGRAMMER';
-        }
+        return match ($this->schedule_status) {
+            'live' => 'En direct',
+            'upcoming' => 'À venir',
+            'ended' => 'Terminé',
+            default => 'À programmer',
+        };
     }
 
     /**

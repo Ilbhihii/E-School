@@ -105,10 +105,10 @@ html.light-mode .course-description p {
                     </span>
                 </div>
 
-                <!-- Premium alert -->
+                <!-- Information d'accès -->
                 @if(!$course->is_free)
                     <div class="alert mb-4" style="background: rgba(255,209,102,0.12); color: #FFD166; border: 1px solid rgba(255,209,102,0.2); border-radius: 12px;">
-                        <i class="bi bi-lock-fill me-2"></i> Contenu Premium — Abonnez-vous pour accéder à ce cours
+                        <i class="bi bi-lock-fill me-2"></i> Accès réservé — Un abonnement actif est nécessaire pour accéder à ce cours
                     </div>
                 @endif
                 <!-- Ressources sécurisées -->
@@ -265,4 +265,47 @@ html.light-mode .course-description p {
     href="{{ asset('css/front-design-v12.css?v=12.0') }}"
 >
 @endpush
+
+
+@auth
+    @if(
+        auth()->user()->isStudent()
+    )
+        @push('scripts')
+            <script>
+                window.SSAContentAccess = {
+                    heartbeatUrl:
+                        @json(
+                            route(
+                                'student.content-session.course.heartbeat',
+                                $course
+                            )
+                        ),
+                    redirectUrl:
+                        @json(
+                            route('student.dashboard')
+                        ),
+                    loginUrl:
+                        @json(
+                            route('login')
+                        ),
+                    csrfToken:
+                        @json(csrf_token()),
+                    heartbeatSeconds:
+                        {{ max(
+                            15,
+                            (int) config(
+                                'content_access.heartbeat_seconds',
+                                30
+                            )
+                        ) }}
+                };
+            </script>
+
+            <script
+                src="{{ asset('js/content-access-lock-v1.js?v=1.0') }}"
+            ></script>
+        @endpush
+    @endif
+@endauth
 

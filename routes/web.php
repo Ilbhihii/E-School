@@ -12,7 +12,9 @@ use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\PublicScheduleController;
 use App\Http\Controllers\Student\StudentScheduleController;
 use App\Http\Controllers\Student\StudentController;
+use App\Http\Controllers\Student\ContentSessionController;
 use App\Http\Controllers\Front\HomeController;
+use App\Http\Controllers\Front\ContactController;
 
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\VocalTestController;
 use App\Http\Controllers\HighSchoolTestController;
 use App\Http\Controllers\Admin\HighSchoolTestReviewController;
+use App\Http\Controllers\Admin\ContactLeadController;
 use App\Http\Controllers\Student\HighSchoolTestHistoryController;
 use App\Http\Controllers\CourseResourceController;
 /*
@@ -47,6 +50,14 @@ use App\Http\Controllers\CourseResourceController;
 |--------------------------------------------------------------------------
 */
 Route::get('/', [HomeController::class,'index'])->name('home');
+
+// Prise de contact depuis la page d'accueil
+Route::post(
+    '/prise-de-contact',
+    [ContactController::class, 'store']
+)
+    ->middleware('throttle:5,1')
+    ->name('contact.store');
 
 // Planning public des classes
 Route::get('/planning-des-classes', [PublicScheduleController::class, 'index'])
@@ -407,6 +418,22 @@ Route::middleware(['auth','isAdmin'])
             )->name('report');
         });
 
+    // Contacts / prospects issus du formulaire public
+    Route::get(
+        '/contacts',
+        [ContactLeadController::class, 'index']
+    )->name('contacts.index');
+
+    Route::get(
+        '/contacts/export/csv',
+        [ContactLeadController::class, 'exportCsv']
+    )->name('contacts.export');
+
+    Route::get(
+        '/contacts/{contact}',
+        [ContactLeadController::class, 'show']
+    )->name('contacts.show');
+
     // Rendez-vous
     Route::get('/appointments', [\App\Http\Controllers\AppointmentController::class, 'index'])->name('appointments.index');
     Route::patch('/appointments/{appointment}/confirm', [\App\Http\Controllers\AppointmentController::class, 'confirm'])->name('appointments.confirm');
@@ -618,6 +645,32 @@ Route::middleware(['auth', 'active'])
     Route::get('/course/{id}', [StudentController::class, 'showCourse'])
         ->middleware('paid')
         ->name('course.show');
+
+    /*
+     * Protection anti-partage :
+     * le compte peut rester connecté sur plusieurs appareils,
+     * mais un seul appareil peut consommer les contenus sensibles.
+     */
+    Route::post(
+        '/content-session/courses/{course}/heartbeat',
+        [ContentSessionController::class, 'heartbeat']
+    )
+        ->middleware('throttle:120,1')
+        ->name('content-session.course.heartbeat');
+
+    Route::post(
+        '/content-session/courses/{course}/release',
+        [ContentSessionController::class, 'release']
+    )
+        ->middleware('throttle:30,1')
+        ->name('content-session.course.release');
+
+    Route::post(
+        '/content-session/release-device',
+        [ContentSessionController::class, 'releaseDevice']
+    )
+        ->middleware('throttle:10,1')
+        ->name('content-session.release-device');
 
     // Chats
     Route::get('/chats', [ChatController::class, 'subjects'])->name('chats');

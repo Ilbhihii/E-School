@@ -16,16 +16,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         /*
-         * Un live reste visible avec le statut « Terminé »
-         * pendant 24 heures après son heure de fin.
-         *
-         * Ensuite, il est supprimé logiquement de toutes
-         * les interfaces.
+         * Aucun nettoyage automatique des lives.
+         * Un live terminé reste visible avec le statut « Terminé ».
          */
-        $schedule
-            ->command('lives:cleanup-expired')
-            ->everyMinute()
-            ->withoutOverlapping();
     }
 
     /**
