@@ -33,6 +33,26 @@
         <div class="stat-value">{{ isset($recentLives) ? $recentLives->count() : 0 }}</div>
         <div class="stat-label">Lives récents</div>
     </div>
+
+    <div class="adm-stat green">
+        <div class="stat-top">
+            <div class="stat-icon"><i class="bi bi-broadcast"></i></div>
+        </div>
+        <div class="stat-value">
+            {{ $allLives->filter(fn ($live) => $live->is_live)->count() }}
+        </div>
+        <div class="stat-label">En direct</div>
+    </div>
+
+    <div class="adm-stat">
+        <div class="stat-top">
+            <div class="stat-icon"><i class="bi bi-check2-circle"></i></div>
+        </div>
+        <div class="stat-value">
+            {{ $allLives->filter(fn ($live) => $live->is_ended)->count() }}
+        </div>
+        <div class="stat-label">Terminés</div>
+    </div>
 </div>
 
 <div class="adm-card">
@@ -124,6 +144,7 @@
                         <th>Parcours</th>
                         <th>Lien</th>
                         <th>Date</th>
+                        <th>Statut</th>
                         <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
@@ -150,28 +171,94 @@
                             @endif
                         </td>
                         <td>
-                            @if($live->stream_url)
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                <a href="{{ $live->stream_url }}" target="_blank" rel="noopener noreferrer" class="adm-btn adm-btn-ghost adm-btn-sm">
-                                    <i class="bi bi-globe2"></i> Web
-                                </a>
-                                @if($live->teams_app_url)
-                                <a href="{{ $live->teams_app_url }}" class="adm-btn adm-btn-primary adm-btn-sm" title="Contourner un problème du navigateur en ouvrant directement Microsoft Teams">
-                                    <i class="bi bi-microsoft-teams"></i> Application Teams
-                                </a>
-                                @endif
-                            </div>
+                            @if($live->is_ended)
+                                <span
+                                    class="adm-btn adm-btn-ghost adm-btn-sm"
+                                    style="opacity:.55;cursor:not-allowed;"
+                                >
+                                    <i class="bi bi-lock-fill"></i>
+                                    Live terminé
+                                </span>
+                            @elseif($live->stream_url)
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    <a
+                                        href="{{ $live->stream_url }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="adm-btn adm-btn-ghost adm-btn-sm"
+                                    >
+                                        <i class="bi bi-globe2"></i>
+                                        Web
+                                    </a>
+
+                                    @if($live->teams_app_url)
+                                        <a
+                                            href="{{ $live->teams_app_url }}"
+                                            class="adm-btn adm-btn-primary adm-btn-sm"
+                                        >
+                                            <i class="bi bi-microsoft-teams"></i>
+                                            Application Teams
+                                        </a>
+                                    @endif
+                                </div>
                             @else
-                            <span style="color:var(--adm-text-muted);font-size:0.75rem;">—</span>
+                                <span style="color:var(--adm-text-muted);font-size:0.75rem;">
+                                    —
+                                </span>
                             @endif
                         </td>
                         <td style="color:var(--adm-text-muted);font-size:0.8rem;">
                             @if($live->live_date)
                                 {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
+
+                                @if($live->start_time && $live->end_time)
+                                    <small
+                                        style="
+                                            display:block;
+                                            margin-top:3px;
+                                            color:#64748B;
+                                        "
+                                    >
+                                        {{ substr((string) $live->start_time, 0, 5) }}
+                                        →
+                                        {{ substr((string) $live->end_time, 0, 5) }}
+                                    </small>
+                                @endif
                             @else
                                 {{ $live->created_at->format('d/m/Y') }}
                             @endif
                         </td>
+
+                        <td>
+                            @if($live->is_live)
+                                <span class="adm-badge adm-badge-danger">
+                                    <i class="bi bi-broadcast me-1"></i>
+                                    En direct
+                                </span>
+                            @elseif($live->is_ended)
+                                <span
+                                    class="adm-badge"
+                                    style="
+                                        color:#CBD5E1;
+                                        background:rgba(100,116,139,.15);
+                                        border:1px solid rgba(148,163,184,.12);
+                                    "
+                                >
+                                    <i class="bi bi-check2-circle me-1"></i>
+                                    Terminé
+                                </span>
+                            @elseif($live->is_upcoming)
+                                <span class="adm-badge adm-badge-warning">
+                                    <i class="bi bi-clock me-1"></i>
+                                    À venir
+                                </span>
+                            @else
+                                <span class="adm-badge">
+                                    À programmer
+                                </span>
+                            @endif
+                        </td>
+
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
                                 <a href="{{ route('admin.lives.edit', $live) }}" class="adm-btn adm-btn-warning adm-btn-sm">
@@ -188,7 +275,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5">
+                        <td colspan="6">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-camera-video"></i></div>
                                 <h5>Aucun live</h5>
@@ -275,21 +362,39 @@ document.addEventListener('DOMContentLoaded', function () {
                 title: '{{ \Illuminate\Support\Str::limit($live->title, 30) }}',
                 start: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->start_time ?? '00:00' }}',
                 end: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->end_time ?? date('H:i', strtotime(($live->start_time ?? '00:00') . ' +1 hour')) }}',
-                url: '{{ $live->stream_url ?? '#' }}',
-                backgroundColor: '#DC2626',
-                borderColor: '#EF4444',
+                url: '{{ $live->is_ended ? '#' : ($live->stream_url ?? '#') }}',
+                backgroundColor: '{{ $live->is_ended ? '#475569' : ($live->is_live ? '#DC2626' : '#4F46E5') }}',
+                borderColor: '{{ $live->is_ended ? '#64748B' : ($live->is_live ? '#EF4444' : '#6366F1') }}',
                 textColor: '#FFF',
                 extendedProps: {
                     class: '{{ $live->classRoom?->name ?? "-" }}',
-                    stream: '{{ $live->stream_url ?? "" }}'
+                    stream: '{{ $live->stream_url ?? "" }}',
+                    status: '{{ $live->schedule_status }}'
                 }
             },
             @endif
             @endforeach
         ],
         eventClick: function(info) {
-            if (info.event.url && info.event.url !== '#') {
-                window.open(info.event.url, '_blank');
+            if (
+                info.event.extendedProps.status
+                === 'ended'
+            ) {
+                info.jsEvent.preventDefault();
+                alert('Ce live est terminé.');
+                return;
+            }
+
+            if (
+                info.event.url
+                && info.event.url !== '#'
+            ) {
+                info.jsEvent.preventDefault();
+                window.open(
+                    info.event.url,
+                    '_blank',
+                    'noopener'
+                );
             }
         }
     });

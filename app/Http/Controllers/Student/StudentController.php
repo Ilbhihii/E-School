@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\LearningPathService;
+use App\Services\ContentAccessService;
 use App\Services\ClassScheduleDisplayService;
 use Carbon\Carbon;
 use App\Models\HighSchoolTestSubmission;
@@ -28,10 +29,14 @@ use App\Models\VocalTestPrompt;
 class StudentController extends Controller
 {
     private LearningPathService $paths;
+    private ContentAccessService $contentAccess;
 
-    public function __construct(LearningPathService $paths)
-    {
+    public function __construct(
+        LearningPathService $paths,
+        ContentAccessService $contentAccess
+    ) {
         $this->paths = $paths;
+        $this->contentAccess = $contentAccess;
     }
 
     // dashboard étudiant
@@ -493,7 +498,7 @@ class StudentController extends Controller
     }
 
 
-    public function showCourse($id)
+    public function showCourse(Request $request, $id)
     {
         $course = Course::approved()->with([
                 'subject',
@@ -548,6 +553,30 @@ class StudentController extends Controller
             $courseLevel,
             $course->classRoom
         );
+
+        {
+            $contentDecision =
+                $this->contentAccess
+                    ->acquireCourse(
+                        $request,
+                        $course
+                    );
+
+            if (
+                !$contentDecision['allowed']
+            ) {
+                return redirect()
+                    ->route(
+                        'student.dashboard'
+                    )
+                    ->with(
+                        'error',
+                        $contentDecision[
+                            'message'
+                        ]
+                    );
+            }
+        }
 
         $resourceUrls = [];
 

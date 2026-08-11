@@ -295,3 +295,40 @@
 </div>
 
 @endsection
+
+
+@push('scripts')
+<script>
+    window.SSAContentAccess = {
+        heartbeatUrl:
+            @json(
+                route(
+                    'student.content-session.course.heartbeat',
+                    $course
+                )
+            ),
+        redirectUrl:
+            @json(
+                route('student.dashboard')
+            ),
+        loginUrl:
+            @json(
+                route('login')
+            ),
+        csrfToken:
+            @json(csrf_token()),
+        heartbeatSeconds:
+            {{ max(
+                15,
+                (int) config(
+                    'content_access.heartbeat_seconds',
+                    30
+                )
+            ) }}
+    };
+</script>
+
+<script
+    src="{{ asset('js/content-access-lock-v1.js?v=1.0') }}"
+></script>
+@endpush
