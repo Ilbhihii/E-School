@@ -50,6 +50,11 @@ class ContactLeadController extends Controller
                             $like
                         )
                         ->orWhere(
+                            'country',
+                            'like',
+                            $like
+                        )
+                        ->orWhere(
                             'latest_reason',
                             'like',
                             $like
@@ -198,6 +203,7 @@ class ContactLeadController extends Controller
                         'Prénom',
                         'E-mail',
                         'Téléphone',
+                        'Pays',
                         'Raison récente',
                         'Nombre de remplissages',
                         'Première demande',
@@ -219,6 +225,7 @@ class ContactLeadController extends Controller
                             $contact->first_name,
                             $contact->email,
                             $contact->phone,
+                            $contact->country,
                             $contact->latest_reason,
                             $contact
                                 ->submissions_count,

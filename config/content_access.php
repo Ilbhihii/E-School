@@ -8,7 +8,7 @@ return [
 
     'course_ttl_seconds' => (int) env(
         'SENSITIVE_CONTENT_COURSE_TTL_SECONDS',
-        120
+        60
     ),
 
     'heartbeat_seconds' => (int) env(
@@ -18,7 +18,7 @@ return [
 
     'live_grace_minutes' => (int) env(
         'SENSITIVE_CONTENT_LIVE_GRACE_MINUTES',
-        2
+        1
     ),
 
     'device_cookie' => env(

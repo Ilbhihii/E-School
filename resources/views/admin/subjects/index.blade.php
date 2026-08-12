@@ -419,6 +419,49 @@
     font-weight: 800;
 }
 
+
+.subject-card-admin-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 11px;
+}
+
+.subject-admin-btn {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 9px;
+    color: #cbd5e1;
+    background: rgba(148,163,184,.055);
+    font-size: .66rem;
+    font-weight: 760;
+    text-decoration: none;
+}
+
+.subject-admin-btn:hover {
+    color: #fff;
+    text-decoration: none;
+    border-color: rgba(99,102,241,.34);
+    background: rgba(99,102,241,.10);
+}
+
+.subject-admin-btn.is-danger {
+    color: #fda4af;
+    border-color: rgba(244,63,94,.20);
+    background: rgba(244,63,94,.07);
+}
+
+.subject-admin-btn.is-danger:hover {
+    color: #fecdd3;
+    border-color: rgba(244,63,94,.35);
+    background: rgba(244,63,94,.12);
+}
+
 .subject-card-action i {
     transition: transform .2s ease;
 }
@@ -624,6 +667,55 @@ textarea.subject-form-control {
     box-shadow: 0 0 0 4px rgba(99, 102, 241, .1);
 }
 
+.subject-status-help {
+    display: block;
+    margin-top: 7px;
+    color: var(--adm-text-muted, #94a3b8);
+    font-size: .66rem;
+    line-height: 1.45;
+}
+
+.subject-status-preview,
+.subject-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: .59rem;
+    font-weight: 800;
+}
+
+.subject-status-preview {
+    margin-top: 6px;
+}
+
+.subject-card-status {
+    margin-top: 8px;
+}
+
+.subject-status-preview.is-active,
+.subject-card-status.is-active {
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, .22);
+    background: rgba(34, 197, 94, .08);
+}
+
+.subject-status-preview.is-coming-soon,
+.subject-card-status.is-coming-soon {
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, .24);
+    background: rgba(245, 158, 11, .08);
+}
+
+.subject-status-preview.is-inactive,
+.subject-card-status.is-inactive {
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, .20);
+    background: rgba(148, 163, 184, .07);
+}
+
 .subject-level-list {
     display: flex;
     flex-direction: column;
@@ -755,6 +847,44 @@ textarea.subject-form-control {
 
 .subject-class-row .subject-form-control {
     min-width: 0;
+}
+
+.subject-class-entry {
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid rgba(148, 163, 184, .10);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, .32);
+}
+
+.subject-generated-slots {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.subject-generated-slots-label {
+    margin-right: 2px;
+    color: var(--adm-text-muted, #94a3b8);
+    font-size: .6rem;
+    font-weight: 700;
+}
+
+.subject-generated-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 29px;
+    height: 24px;
+    padding: 0 7px;
+    border: 1px solid rgba(129, 140, 248, .24);
+    border-radius: 7px;
+    color: #c7d2fe;
+    background: rgba(99, 102, 241, .08);
+    font-size: .61rem;
+    font-weight: 800;
 }
 
 .subject-builder-errors {
@@ -1183,8 +1313,7 @@ body.subject-builder-open {
                 $classCount = (int) ($subject->validated_class_count ?? 0);
             @endphp
 
-            <a
-                href="{{ route('admin.subjects.levels', $subject) }}"
+            <article
                 class="subject-card"
                 data-subject-card
                 data-subject-name="{{ \Illuminate\Support\Str::lower($subject->name) }}"
@@ -1198,12 +1327,52 @@ body.subject-builder-open {
                     <span class="subject-type">
                         {{ $subject->type === 'religieux' ? 'Religieux' : 'Scolaire' }}
                     </span>
+
+                    @php
+                        $subjectStatus =
+                            $subject->status
+                            ?? 'active';
+
+                        $subjectStatusLabel =
+                            match ($subjectStatus) {
+                                'coming_soon' =>
+                                    'Bientôt disponible',
+                                'inactive' =>
+                                    'Inactive',
+                                default =>
+                                    'Active',
+                            };
+
+                        $subjectStatusClass =
+                            match ($subjectStatus) {
+                                'coming_soon' =>
+                                    'is-coming-soon',
+                                'inactive' =>
+                                    'is-inactive',
+                                default =>
+                                    'is-active',
+                            };
+                    @endphp
                 </div>
 
                 <div class="subject-card-body">
                     <h2 class="subject-card-title">
                         {{ $subject->name }}
                     </h2>
+
+                    <span
+                        class="subject-card-status {{ $subjectStatusClass }}"
+                    >
+                        @if($subjectStatus === 'active')
+                            <i class="bi bi-check-circle-fill"></i>
+                        @elseif($subjectStatus === 'coming_soon')
+                            <i class="bi bi-clock-fill"></i>
+                        @else
+                            <i class="bi bi-pause-circle-fill"></i>
+                        @endif
+
+                        {{ $subjectStatusLabel }}
+                    </span>
 
                     <p class="subject-card-description">
                         {{ $subject->description ?: 'Structure pédagogique organisée par niveaux et classes.' }}
@@ -1221,17 +1390,47 @@ body.subject-builder-open {
                         </div>
                     </div>
 
-                    <span class="subject-card-action">
+                    <a
+                        href="{{ route('admin.subjects.levels', $subject) }}"
+                        class="subject-card-action"
+                    >
                         Voir la structure
                         <i class="bi bi-arrow-right"></i>
-                    </span>
+                    </a>
+
+                    <div class="subject-card-admin-actions">
+                        <a
+                            href="{{ route('admin.subjects.edit', $subject) }}"
+                            class="subject-admin-btn"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                            Modifier
+                        </a>
+
+                        <form
+                            method="POST"
+                            action="{{ route('admin.subjects.destroy', $subject) }}"
+                            onsubmit="return confirm('Supprimer définitivement la matière {{ addslashes($subject->name) }} ? Cette opération est autorisée seulement si la matière n’est plus utilisée.');"
+                        >
+                            @csrf
+                            @method('DELETE')
+
+                            <button
+                                type="submit"
+                                class="subject-admin-btn is-danger"
+                            >
+                                <i class="bi bi-trash3"></i>
+                                Supprimer
+                            </button>
+                        </form>
+                    </div>
                 </div>
-            </a>
+            </article>
         @empty
             <div class="subjects-empty">
                 <i class="bi bi-journal-plus"></i>
-                <h3>Aucune matière officielle enregistrée</h3>
-                <p>Configurez Arabe, Coran ou Soutien Lycée avec ses niveaux et ses classes.</p>
+                <h3>Aucune matière enregistrée</h3>
+                <p>Ajoutez une matière avec ses niveaux, ses classes et ses 4 créneaux automatiques.</p>
             </div>
         @endforelse
 
@@ -1262,7 +1461,7 @@ body.subject-builder-open {
                     <i class="bi bi-diagram-3"></i>
                     Configuration de la matière
                 </h2>
-                <p>Sélectionnez Arabe, Coran ou Soutien Lycée, puis organisez ses niveaux et ses classes.</p>
+                <p>Écrivez le nom de la matière, puis organisez ses niveaux, ses classes et ses créneaux.</p>
             </div>
 
             <button
@@ -1292,9 +1491,9 @@ body.subject-builder-open {
                     <div class="subject-builder-section-title">
                         <h3>
                             <i class="bi bi-book"></i>
-                            1. Matière officielle
+                            1. Matière
                         </h3>
-                        <span>3 choix autorisés</span>
+                        <span>Nom libre</span>
                     </div>
 
                     <div class="subject-form-grid">
@@ -1302,24 +1501,19 @@ body.subject-builder-open {
                             <label class="subject-form-label" for="subjectName">
                                 Matière <span class="subject-required">*</span>
                             </label>
-                            <select
+                            <input
+                                type="text"
                                 class="subject-form-control"
                                 id="subjectName"
                                 name="name"
+                                value="{{ old('name') }}"
+                                maxlength="120"
+                                placeholder="Ex. Mathématiques"
+                                autocomplete="off"
                                 required
                             >
-                                <option value="Arabe" @selected(old('name', 'Arabe') === 'Arabe')>
-                                    Arabe
-                                </option>
-                                <option value="Coran" @selected(old('name') === 'Coran')>
-                                    Coran
-                                </option>
-                                <option value="Soutien Lycée" @selected(old('name') === 'Soutien Lycée')>
-                                    Soutien Lycée
-                                </option>
-                            </select>
                             <small style="display:block;margin-top:7px;color:var(--adm-text-muted,#94a3b8);font-size:.66rem;">
-                                Aucune autre matière ne peut être ajoutée depuis cette page.
+                                Écrivez librement le nom de la matière.
                             </small>
                         </div>
 
@@ -1337,7 +1531,58 @@ body.subject-builder-open {
                                 <option value="religieux">Religieux</option>
                             </select>
                             <small style="display:block;margin-top:7px;color:var(--adm-text-muted,#94a3b8);font-size:.66rem;">
-                                Le type est défini automatiquement selon la matière.
+                                Coran est classé Religieux. Les autres matières sont classées Scolaire par défaut.
+                            </small>
+                        </div>
+
+                        <div class="subject-form-group">
+                            <label
+                                class="subject-form-label"
+                                for="subjectStatus"
+                            >
+                                Statut
+                                <span class="subject-required">*</span>
+                            </label>
+
+                            <select
+                                class="subject-form-control"
+                                id="subjectStatus"
+                                name="status"
+                                required
+                            >
+                                <option
+                                    value="active"
+                                    @selected(
+                                        old('status', 'active')
+                                        === 'active'
+                                    )
+                                >
+                                    Active
+                                </option>
+
+                                <option
+                                    value="coming_soon"
+                                    @selected(
+                                        old('status')
+                                        === 'coming_soon'
+                                    )
+                                >
+                                    Bientôt disponible
+                                </option>
+
+                                <option
+                                    value="inactive"
+                                    @selected(
+                                        old('status')
+                                        === 'inactive'
+                                    )
+                                >
+                                    Inactive
+                                </option>
+                            </select>
+
+                            <small class="subject-status-help">
+                                Choisissez l'état de la matière.
                             </small>
                         </div>
 
@@ -1423,14 +1668,69 @@ document.addEventListener('DOMContentLoaded', function () {
     const preview = document.getElementById('subjectStructurePreview');
     const subjectNameInput = document.getElementById('subjectName');
     const subjectTypeInput = document.getElementById('subjectType');
+    const subjectStatusInput =
+        document.getElementById('subjectStatus');
     const searchInput = document.getElementById('subjectSearch');
     const noResult = document.getElementById('subjectsNoResult');
     const initialLevels = @json($oldLevels);
-    const subjectTypes = {
-        'Arabe': 'scolaire',
-        'Coran': 'religieux',
-        'Soutien Lycée': 'scolaire'
-    };
+    function normalizeBuilderValue(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function inferSubjectType(value) {
+        return normalizeBuilderValue(value) === 'coran'
+            ? 'religieux'
+            : 'scolaire';
+    }
+
+    function slotPrefixForClass(className) {
+        const normalized = normalizeBuilderValue(className);
+
+        if (normalized.includes('debutant')) {
+            return 'D';
+        }
+
+        if (normalized.includes('intermediaire')) {
+            return 'I';
+        }
+
+        if (normalized.includes('avance')) {
+            return 'A';
+        }
+
+        return 'G';
+    }
+
+    function slotCodesForClass(className) {
+        const prefix = slotPrefixForClass(className);
+
+        return [1, 2, 3, 4].map(function (number) {
+            return prefix + number;
+        });
+    }
+
+    function slotsMarkup(className) {
+        return `
+            <div class="subject-generated-slots">
+                <span class="subject-generated-slots-label">
+                    4 créneaux :
+                </span>
+                ${slotCodesForClass(className)
+                    .map(function (code) {
+                        return `
+                            <span class="subject-generated-slot">
+                                ${escapeHtml(code)}
+                            </span>
+                        `;
+                    })
+                    .join('')}
+            </div>
+        `;
+    }
 
     let levels = Array.isArray(initialLevels) && initialLevels.length
         ? initialLevels.map(function (level) {
@@ -1477,31 +1777,35 @@ document.addEventListener('DOMContentLoaded', function () {
         levelList.innerHTML = levels.map(function (level, levelIndex) {
             const classRows = level.classes.map(function (classItem, classIndex) {
                 return `
-                    <div class="subject-class-row">
-                        <input
-                            type="text"
-                            class="subject-form-control"
-                            name="levels[${levelIndex}][classes][${classIndex}][name]"
-                            value="${escapeHtml(classItem.name)}"
-                            placeholder="Ex. Classe A"
-                            maxlength="120"
-                            required
-                            data-level-index="${levelIndex}"
-                            data-class-index="${classIndex}"
-                            data-field="class-name"
-                        >
+                    <div class="subject-class-entry">
+                        <div class="subject-class-row">
+                            <input
+                                type="text"
+                                class="subject-form-control"
+                                name="levels[${levelIndex}][classes][${classIndex}][name]"
+                                value="${escapeHtml(classItem.name)}"
+                                placeholder="Ex. Débutant"
+                                maxlength="120"
+                                required
+                                data-level-index="${levelIndex}"
+                                data-class-index="${classIndex}"
+                                data-field="class-name"
+                            >
 
-                        <button
-                            type="button"
-                            class="subject-icon-btn is-danger"
-                            title="Supprimer cette classe"
-                            data-action="remove-class"
-                            data-level-index="${levelIndex}"
-                            data-class-index="${classIndex}"
-                            ${level.classes.length === 1 ? 'disabled style="opacity:.45;cursor:not-allowed;"' : ''}
-                        >
-                            <i class="bi bi-trash3"></i>
-                        </button>
+                            <button
+                                type="button"
+                                class="subject-icon-btn is-danger"
+                                title="Supprimer cette classe"
+                                data-action="remove-class"
+                                data-level-index="${levelIndex}"
+                                data-class-index="${classIndex}"
+                                ${level.classes.length === 1 ? 'disabled style="opacity:.45;cursor:not-allowed;"' : ''}
+                            >
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+
+                        ${slotsMarkup(classItem.name)}
                     </div>
                 `;
             }).join('');
@@ -1591,14 +1895,47 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function syncSubjectType() {
-        subjectTypeInput.value = subjectTypes[subjectNameInput.value] || 'scolaire';
+        subjectTypeInput.value =
+            inferSubjectType(
+                subjectNameInput.value
+            );
+    }
+
+    function subjectStatusMeta(value) {
+        if (value === 'coming_soon') {
+            return {
+                label: 'Bientôt disponible',
+                className: 'is-coming-soon',
+                icon: 'bi-clock-fill',
+            };
+        }
+
+        if (value === 'inactive') {
+            return {
+                label: 'Inactive',
+                className: 'is-inactive',
+                icon: 'bi-pause-circle-fill',
+            };
+        }
+
+        return {
+            label: 'Active',
+            className: 'is-active',
+            icon: 'bi-check-circle-fill',
+        };
     }
 
     function renderPreview() {
         syncSubjectType();
 
-        const subjectName = subjectNameInput.value.trim() || 'Arabe';
+        const subjectName = subjectNameInput.value.trim() || 'Nouvelle matière';
         const typeLabel = subjectTypeInput.value === 'religieux' ? 'Religieux' : 'Scolaire';
+        const statusMeta =
+            subjectStatusMeta(
+                subjectStatusInput
+                    ? subjectStatusInput.value
+                    : 'active'
+            );
 
         const validLevels = levels.filter(function (level) {
             return level.name.trim() || level.classes.some(function (classItem) {
@@ -1610,7 +1947,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const classMarkup = level.classes
                 .filter(function (classItem) { return classItem.name.trim(); })
                 .map(function (classItem) {
-                    return `<span class="subject-preview-class">${escapeHtml(classItem.name)}</span>`;
+                    const codes = slotCodesForClass(classItem.name);
+
+                    return `
+                        <span class="subject-preview-class">
+                            ${escapeHtml(classItem.name)}
+                            <span style="margin-left:6px;color:#a5b4fc;">
+                                ${codes.map(escapeHtml).join(' · ')}
+                            </span>
+                        </span>
+                    `;
                 })
                 .join('');
 
@@ -1632,6 +1978,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div style="min-width:0;">
                     <strong>${escapeHtml(subjectName)}</strong>
                     <span style="display:block;margin-top:2px;color:var(--adm-text-muted,#94a3b8);font-size:.61rem;">${typeLabel}</span>
+                    <span
+                        class="subject-status-preview ${statusMeta.className}"
+                    >
+                        <i class="bi ${statusMeta.icon}"></i>
+                        ${statusMeta.label}
+                    </span>
                 </div>
             </div>
             ${levelMarkup
@@ -1718,7 +2070,22 @@ document.addEventListener('DOMContentLoaded', function () {
         renderPreview();
     });
 
-    subjectNameInput.addEventListener('change', renderPreview);
+    subjectNameInput.addEventListener(
+        'input',
+        renderPreview
+    );
+
+    subjectNameInput.addEventListener(
+        'change',
+        renderPreview
+    );
+
+    if (subjectStatusInput) {
+        subjectStatusInput.addEventListener(
+            'change',
+            renderPreview
+        );
+    }
 
     if (searchInput) {
         searchInput.addEventListener('input', function () {

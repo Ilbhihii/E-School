@@ -290,6 +290,33 @@
                 "
             >
                 <div class="subject-class-cover">
+                    <div class="subject-class-admin-actions">
+                        <a
+                            href="{{ route('admin.subjects.classes.edit', [$subject, $level, $class]) }}"
+                            class="subject-class-admin-btn"
+                            title="Modifier {{ $class->name }}"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        <form
+                            method="POST"
+                            action="{{ route('admin.subjects.classes.destroy', [$subject, $level, $class]) }}"
+                            onsubmit="return confirm('Supprimer la classe {{ addslashes($class->name) }} ? La suppression est bloquée si elle contient encore des cours, lives, étudiants ou autres données.');"
+                        >
+                            @csrf
+                            @method('DELETE')
+
+                            <button
+                                type="submit"
+                                class="subject-class-admin-btn is-danger"
+                                title="Supprimer {{ $class->name }}"
+                            >
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+
                     <div class="subject-class-cover-orb orb-one"></div>
                     <div class="subject-class-cover-orb orb-two"></div>
 
@@ -504,6 +531,44 @@
     border-color: var(--class-accent);
     box-shadow:
         0 26px 58px rgba(0,0,0,0.3);
+}
+
+
+.subject-class-admin-actions {
+    position: absolute;
+    z-index: 6;
+    top: 14px;
+    left: 14px;
+    display: flex;
+    gap: 7px;
+}
+
+.subject-class-admin-btn {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    background: rgba(8,15,30,.35);
+    backdrop-filter: blur(8px);
+    text-decoration: none;
+}
+
+.subject-class-admin-btn:hover {
+    color: #fff;
+    background: rgba(8,15,30,.60);
+}
+
+.subject-class-admin-btn.is-danger {
+    color: #fecdd3;
+    border-color: rgba(244,63,94,.30);
+}
+
+.subject-class-admin-actions form {
+    margin: 0;
 }
 
 .subject-class-cover {

@@ -97,6 +97,7 @@
                     <div style="margin-top:9px;color:var(--adm-text-muted);font-size:.68rem;">
                         E-mail utilisé : {{ $requestItem->email }}
                         · Téléphone : {{ $requestItem->phone }}
+                        · Pays : {{ $requestItem->country ?: '—' }}
                         · Mailing :
                         {{ $requestItem->marketing_consent ? 'Oui' : 'Non' }}
                     </div>
@@ -141,6 +142,11 @@
                     {{ $contact->phone }}
                 </a>
             </strong>
+        </div>
+
+        <div class="contact-kv">
+            <span>Pays</span>
+            <strong>{{ $contact->country ?: '—' }}</strong>
         </div>
 
         <div class="contact-kv">

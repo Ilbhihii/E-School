@@ -36,6 +36,7 @@ class ContactRequestTest extends TestCase
                 'last_name' => 'Alaoui',
                 'email' => 'mohamed@example.com',
                 'phone' => '06 12 34 56 78',
+                'country' => 'Maroc',
                 'reason' =>
                     'Je souhaite connaître les tarifs.',
                 'marketing_consent' => '1',
@@ -83,6 +84,7 @@ class ContactRequestTest extends TestCase
                 'last_name' => 'Alaoui',
                 'email' => 'Mohamed@Example.com',
                 'phone' => '06 12 34 56 78',
+                'country' => 'Maroc',
                 'reason' => 'Première demande',
                 'website' => '',
             ]
@@ -95,6 +97,7 @@ class ContactRequestTest extends TestCase
                 'last_name' => 'Alaoui',
                 'email' => 'mohamed@example.com',
                 'phone' => '+212 6 12 34 56 78',
+                'country' => 'Maroc',
                 'reason' => 'Deuxième demande',
                 'website' => '',
             ]
@@ -132,6 +135,7 @@ class ContactRequestTest extends TestCase
                 'last_name' => 'Benali',
                 'email' => 'sara1@example.com',
                 'phone' => '0611223344',
+                'country' => 'Maroc',
                 'reason' => 'Information',
                 'website' => '',
             ]
@@ -144,6 +148,7 @@ class ContactRequestTest extends TestCase
                 'last_name' => 'Benali',
                 'email' => 'sara2@example.com',
                 'phone' => '+212611223344',
+                'country' => 'Maroc',
                 'reason' => 'Horaires',
                 'website' => '',
             ]
@@ -180,6 +185,7 @@ class ContactRequestTest extends TestCase
             'last_name',
             'email',
             'phone',
+            'country',
             'reason',
         ]);
     }

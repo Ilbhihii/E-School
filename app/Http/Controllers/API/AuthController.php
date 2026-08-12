@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Services\ContentAccessService;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -87,8 +88,20 @@ class AuthController extends Controller
      * Déconnexion
      * POST /api/logout
      */
-    public function logout(Request $request)
+    public function logout(
+        Request $request,
+        ContentAccessService $contentAccess
+    )
     {
+        if (
+            $request->user()
+            && $request->user()->isStudent()
+        ) {
+            $contentAccess->releaseCurrentDevice(
+                $request
+            );
+        }
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

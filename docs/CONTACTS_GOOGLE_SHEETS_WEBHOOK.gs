@@ -41,7 +41,7 @@ function setupContactSheet() {
     .getActiveSpreadsheet()
     .setActiveSheet(sheet);
 
-  sheet.autoResizeColumns(1, 11);
+  sheet.autoResizeColumns(1, 12);
 }
 
 function doPost(e) {
@@ -83,6 +83,7 @@ function doPost(e) {
       String(body.first_name || ''),
       String(body.email || ''),
       String(body.phone || ''),
+      String(body.country || ''),
       String(body.reason || ''),
       Number(
         body.submissions_count || 1
@@ -168,6 +169,7 @@ function ensureContactSheet_() {
     'Prénom',
     'E-mail',
     'Téléphone',
+    'Pays',
     'Raison / commentaire récent',
     'Nombre de remplissages',
     'Première demande',
@@ -211,7 +213,7 @@ function findExistingContactRow_(
         2,
         1,
         lastRow - 1,
-        11
+        12
       )
       .getValues();
 

@@ -17,8 +17,16 @@ class ClassSlotService
     public function codesForClass(
         ClassRoom $classRoom
     ): array {
-        $prefix = $this->prefixForClass(
+        return $this->codesForClassName(
             $classRoom->name
+        );
+    }
+
+    public function codesForClassName(
+        string $className
+    ): array {
+        $prefix = $this->prefixForClass(
+            $className
         );
 
         return collect(
@@ -45,6 +53,33 @@ class ClassSlotService
         $codes = $this->codesForClass(
             $classRoom
         );
+
+        /*
+         * Si la classe a été renommée et que son préfixe change
+         * (ex. Débutant D1-D4 → Avancé A1-A4), les anciens
+         * créneaux sont conservés pour l'historique mais désactivés.
+         * Il reste donc exactement 4 créneaux ACTIFS.
+         */
+        ClassSlot::query()
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->where(
+                'class_id',
+                $classRoom->id
+            )
+            ->whereNotIn(
+                'code',
+                $codes
+            )
+            ->update([
+                'is_active' => false,
+            ]);
 
         foreach ($codes as $index => $code) {
             ClassSlot::query()->updateOrCreate(

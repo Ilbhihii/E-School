@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
+use App\Services\ContentAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -59,8 +60,26 @@ class AuthenticatedSessionController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(Request $request)
+    public function destroy(
+        Request $request,
+        ContentAccessService $contentAccess
+    )
     {
+        /*
+         * Si l'utilisateur est un étudiant, libérer immédiatement
+         * le verrou Live/Cours de CET appareil avant la déconnexion.
+         *
+         * Admin et professeur : aucune restriction.
+         */
+        if (
+            $request->user()
+            && $request->user()->isStudent()
+        ) {
+            $contentAccess->releaseCurrentDevice(
+                $request
+            );
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

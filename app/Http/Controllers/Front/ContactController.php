@@ -57,6 +57,11 @@ class ContactController extends Controller
                 'max:30',
                 'regex:/^[0-9+().\s-]{6,30}$/',
             ],
+            'country' => [
+                'required',
+                'string',
+                'max:100',
+            ],
             'reason' => [
                 'required',
                 'string',
@@ -87,6 +92,10 @@ class ContactController extends Controller
                 'Le numéro de téléphone est obligatoire.',
             'phone.regex' =>
                 'Veuillez saisir un numéro de téléphone valide.',
+            'country.required' =>
+                'Le pays est obligatoire.',
+            'country.max' =>
+                'Le pays ne doit pas dépasser 100 caractères.',
             'reason.required' =>
                 'Le commentaire ou la raison est obligatoire.',
             'reason.max' =>
@@ -149,6 +158,8 @@ class ContactController extends Controller
                 $validated['email'],
             'phone' =>
                 $validated['phone'],
+            'country' =>
+                $validated['country'],
             'reason' =>
                 $validated['reason'],
             'marketing_consent' =>

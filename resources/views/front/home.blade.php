@@ -149,7 +149,7 @@
 
     /* Prise de contact — Hero */
     .home-contact-wrap {
-        max-width: 1180px;
+        max-width: 760px;
         margin: 0 auto 3.25rem;
         text-align: left;
     }
@@ -157,7 +157,7 @@
     .home-contact-card {
         position: relative;
         overflow: hidden;
-        padding: 1.35rem 1.4rem;
+        padding: 1.6rem;
         border: 1px solid rgba(140, 167, 255, 0.20);
         border-radius: 22px;
         background:
@@ -229,12 +229,15 @@
     .home-contact-form {
         position: relative;
         z-index: 1;
-        display: grid;
-        grid-template-columns:
-            repeat(4, minmax(0, 1fr))
-            auto;
-        gap: 0.75rem;
-        align-items: end;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        align-items: stretch;
+    }
+
+    .home-contact-field,
+    .home-contact-action {
+        width: 100%;
     }
 
     .home-contact-field label {
@@ -276,7 +279,7 @@
     }
 
     .home-contact-field-full {
-        grid-column: 1 / -1;
+        width: 100%;
     }
 
     .home-contact-textarea {
@@ -343,8 +346,9 @@
     }
 
     .home-contact-submit {
+        width: 100%;
         min-width: 155px;
-        height: 48px;
+        height: 50px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -414,36 +418,15 @@
         pointer-events: none !important;
     }
 
-    @media (max-width: 1199.98px) {
-        .home-contact-form {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .home-contact-action {
-            grid-column: 1 / -1;
-        }
-
-        .home-contact-submit {
-            width: 100%;
-        }
-    }
-
     @media (max-width: 767.98px) {
         .home-contact-wrap {
+            max-width: 100%;
             margin-bottom: 2.4rem;
         }
 
         .home-contact-card {
             padding: 1.15rem;
             border-radius: 18px;
-        }
-
-        .home-contact-form {
-            grid-template-columns: 1fr;
-        }
-
-        .home-contact-action {
-            grid-column: auto;
         }
     }
 
@@ -1173,6 +1156,21 @@
                             placeholder="06 00 00 00 00"
                             autocomplete="tel"
                             maxlength="30"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_country">Pays</label>
+                        <input
+                            id="contact_country"
+                            type="text"
+                            name="country"
+                            value="{{ old('country') }}"
+                            class="home-contact-input @error('country') is-invalid @enderror"
+                            placeholder="Ex. Maroc"
+                            autocomplete="country-name"
+                            maxlength="100"
                             required
                         >
                     </div>

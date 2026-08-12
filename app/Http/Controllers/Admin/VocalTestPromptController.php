@@ -108,7 +108,24 @@ class VocalTestPromptController extends Controller
 
     public function edit(VocalTestPrompt $prompt)
     {
-        $subjects = Subject::whereIn('name', ['Arabe', 'Coran'])->orderBy('name')->get();
+        $subjects = Subject::query()
+            ->where(
+                'status',
+                'active'
+            )
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    WHEN LOWER(name) IN (
+                        'soutien lycée',
+                        'soutient lycée'
+                    ) THEN 3
+                    ELSE 4
+                END"
+            )
+            ->orderBy('name')
+            ->get();
         $levels = Level::orderBy('name')->get();
         $classes = ClassRoom::orderBy('name')->get();
 
@@ -177,17 +194,22 @@ class VocalTestPromptController extends Controller
     private function buildPromptHierarchy(): array
     {
         $subjects = Subject::query()
-            ->whereIn(
-                'name',
-                ['Arabe', 'Coran']
+            ->where(
+                'status',
+                'active'
             )
             ->orderByRaw(
                 "CASE
                     WHEN LOWER(name) = 'arabe' THEN 1
                     WHEN LOWER(name) = 'coran' THEN 2
-                    ELSE 3
+                    WHEN LOWER(name) IN (
+                        'soutien lycée',
+                        'soutient lycée'
+                    ) THEN 3
+                    ELSE 4
                 END"
             )
+            ->orderBy('name')
             ->get();
 
         $levels = Level::query()
@@ -315,7 +337,20 @@ class VocalTestPromptController extends Controller
      */
     private function validateCoherence(int $subjectId, int $levelId, int $classId): void
     {
-        $subject = Subject::findOrFail($subjectId);
+        $subject = Subject::query()
+            ->whereKey($subjectId)
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        abort_unless(
+            $subject,
+            422,
+            'Cette matière n’est pas active.'
+        );
+
         $level   = Level::findOrFail($levelId);
         $class   = ClassRoom::findOrFail($classId);
 

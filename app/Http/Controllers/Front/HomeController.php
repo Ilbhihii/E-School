@@ -86,90 +86,197 @@ class HomeController extends Controller
 
     public function classes()
     {
+        /*
+         * La page publique /classes affiche uniquement
+         * les matières dont le statut administratif est "active".
+         *
+         * - active      => visible
+         * - coming_soon => masquée
+         * - inactive    => masquée
+         *
+         * On ne supprime aucune donnée : le filtrage est uniquement
+         * appliqué à l'affichage public.
+         */
         $subjects = Subject::query()
             ->with([
                 'levels.classes.subjects',
             ])
-            ->whereIn('name', self::ACTIVE_SUBJECTS)
+            ->where('status', 'active')
+            /*
+             * "Administration" est une matière interne.
+             * Elle ne doit jamais apparaître sur la page publique
+             * /classes, même si elle est marquée Active.
+             */
+            ->whereRaw(
+                "LOWER(TRIM(name)) <> ?",
+                ['administration']
+            )
             ->orderByRaw(
                 "CASE
                     WHEN LOWER(name) = 'arabe' THEN 1
                     WHEN LOWER(name) = 'coran' THEN 2
-                    WHEN LOWER(name) = 'soutien lycée' THEN 3
+                    WHEN LOWER(name) IN (
+                        'soutien lycée',
+                        'soutient lycée'
+                    ) THEN 3
                     ELSE 4
                 END"
             )
+            ->orderBy('name')
             ->get();
 
         $subjects->each(function (Subject $subject) {
-            $allowedLevelNames =
-                $this->levelNamesForSubject($subject);
+            $normalizedSubjectName =
+                VocalTestPrompt::normalizePathName(
+                    $subject->name
+                );
 
-            $allowedItemNames =
-                $this->itemNamesForSubject($subject);
+            /*
+             * Pour les matières officielles déjà structurées,
+             * on conserve les règles pédagogiques existantes.
+             *
+             * Pour toute nouvelle matière créée depuis l'input
+             * libre (Français, Mathématiques, etc.), on affiche
+             * simplement ses niveaux/classes réellement liés.
+             */
+            $usesOfficialPathRules = in_array(
+                $normalizedSubjectName,
+                [
+                    'arabe',
+                    'coran',
+                    'soutien lycee',
+                    'soutient lycee',
+                ],
+                true
+            );
 
-            $subject->available_levels = $subject->levels
-                ->filter(
-                    fn ($level) => in_array(
-                        VocalTestPrompt::normalizePathName(
-                            $level->name
-                        ),
-                        array_map(
-                            [
-                                VocalTestPrompt::class,
-                                'normalizePathName',
-                            ],
-                            $allowedLevelNames
-                        ),
-                        true
-                    )
-                )
-                ->sortBy('order')
-                ->unique(
-                    fn ($level) =>
-                        VocalTestPrompt::normalizePathName(
-                            $level->name
-                        )
-                )
-                ->values();
+            if ($usesOfficialPathRules) {
+                $allowedLevelNames =
+                    $this->levelNamesForSubject(
+                        $subject
+                    );
 
-            $availableItems = $subject->available_levels
-                ->flatMap(fn ($level) => $level->classes)
-                ->filter(
-                    function ($classRoom) use (
-                        $subject,
+                $allowedItemNames =
+                    $this->itemNamesForSubject(
+                        $subject
+                    );
+
+                $normalizedAllowedLevels =
+                    array_map(
+                        [
+                            VocalTestPrompt::class,
+                            'normalizePathName',
+                        ],
+                        $allowedLevelNames
+                    );
+
+                $normalizedAllowedItems =
+                    array_map(
+                        [
+                            VocalTestPrompt::class,
+                            'normalizePathName',
+                        ],
                         $allowedItemNames
-                    ) {
-                        $belongsToSubject =
-                            $classRoom->subjects->contains(
-                                'id',
-                                $subject->id
-                            );
+                    );
 
-                        $isAllowed = in_array(
-                            VocalTestPrompt::normalizePathName(
-                                $classRoom->name
-                            ),
-                            array_map(
-                                [
-                                    VocalTestPrompt::class,
-                                    'normalizePathName',
-                                ],
-                                $allowedItemNames
-                            ),
-                            true
-                        );
-
-                        return $belongsToSubject && $isAllowed;
-                    }
-                )
-                ->unique(
-                    fn ($classRoom) =>
-                        VocalTestPrompt::normalizePathName(
-                            $classRoom->name
+                $subject->available_levels =
+                    $subject->levels
+                        ->filter(
+                            fn ($level) =>
+                                in_array(
+                                    VocalTestPrompt::normalizePathName(
+                                        $level->name
+                                    ),
+                                    $normalizedAllowedLevels,
+                                    true
+                                )
                         )
-                )
-                ->values();
+                        ->sortBy('order')
+                        ->unique(
+                            fn ($level) =>
+                                VocalTestPrompt::normalizePathName(
+                                    $level->name
+                                )
+                        )
+                        ->values();
+
+                $availableItems =
+                    $subject->available_levels
+                        ->flatMap(
+                            fn ($level) =>
+                                $level->classes
+                        )
+                        ->filter(
+                            function (
+                                $classRoom
+                            ) use (
+                                $subject,
+                                $normalizedAllowedItems
+                            ) {
+                                $belongsToSubject =
+                                    $classRoom
+                                        ->subjects
+                                        ->contains(
+                                            'id',
+                                            $subject->id
+                                        );
+
+                                $isAllowed =
+                                    in_array(
+                                        VocalTestPrompt::normalizePathName(
+                                            $classRoom->name
+                                        ),
+                                        $normalizedAllowedItems,
+                                        true
+                                    );
+
+                                return
+                                    $belongsToSubject
+                                    && $isAllowed;
+                            }
+                        )
+                        ->unique(
+                            fn ($classRoom) =>
+                                VocalTestPrompt::normalizePathName(
+                                    $classRoom->name
+                                )
+                        )
+                        ->values();
+            } else {
+                /*
+                 * Nouvelle matière libre :
+                 * tous ses niveaux et toutes ses classes liées
+                 * sont considérés comme disponibles.
+                 */
+                $subject->available_levels =
+                    $subject->levels
+                        ->sortBy('order')
+                        ->unique(
+                            fn ($level) =>
+                                VocalTestPrompt::normalizePathName(
+                                    $level->name
+                                )
+                        )
+                        ->values();
+
+                $availableItems =
+                    $subject->available_levels
+                        ->flatMap(
+                            fn ($level) =>
+                                $level->classes
+                        )
+                        ->filter(
+                            fn ($classRoom) =>
+                                $classRoom
+                                    ->subjects
+                                    ->contains(
+                                        'id',
+                                        $subject->id
+                                    )
+                        )
+                        ->unique('id')
+                        ->values();
+            }
 
             $subject->setAttribute(
                 'classes_count',
@@ -178,44 +285,26 @@ class HomeController extends Controller
 
             $subject->setAttribute(
                 'is_high_school_support',
-                $this->isHighSchoolSupport($subject)
+                $this->isHighSchoolSupport(
+                    $subject
+                )
             );
 
-            $hasLevels =
-                $subject->available_levels->isNotEmpty();
-
-            $hasItems =
-                $availableItems->isNotEmpty();
-
-            if ($hasLevels && $hasItems) {
-                $subject->status_label = 'Disponible';
-                $subject->status_icon =
-                    'bi-check-circle-fill';
-                $subject->status_color = '#4ADE80';
-                $subject->status_bg =
-                    'rgba(34,197,94,0.15)';
-                $subject->status_border =
-                    'rgba(34,197,94,0.2)';
-            } elseif ($hasLevels) {
-                $subject->status_label = 'En cours';
-                $subject->status_icon =
-                    'bi-hourglass-split';
-                $subject->status_color = '#FB923C';
-                $subject->status_bg =
-                    'rgba(251,146,60,0.15)';
-                $subject->status_border =
-                    'rgba(251,146,60,0.2)';
-            } else {
-                $subject->status_label =
-                    'Non disponible';
-                $subject->status_icon =
-                    'bi-x-circle-fill';
-                $subject->status_color = '#FCA5A5';
-                $subject->status_bg =
-                    'rgba(239,68,68,0.15)';
-                $subject->status_border =
-                    'rgba(239,68,68,0.2)';
-            }
+            /*
+             * Si la matière arrive jusqu'ici, son statut BDD
+             * est obligatoirement "active". Le visiteur voit
+             * donc le badge "Disponible".
+             */
+            $subject->status_label =
+                'Disponible';
+            $subject->status_icon =
+                'bi-check-circle-fill';
+            $subject->status_color =
+                '#4ADE80';
+            $subject->status_bg =
+                'rgba(34,197,94,0.15)';
+            $subject->status_border =
+                'rgba(34,197,94,0.2)';
         });
 
         return view(
@@ -347,8 +436,15 @@ class HomeController extends Controller
     private function isHighSchoolSupport(
         Subject $subject
     ): bool {
-        return VocalTestPrompt::normalizePathName(
-            $subject->name
-        ) === 'soutien lycee';
+        return in_array(
+            VocalTestPrompt::normalizePathName(
+                $subject->name
+            ),
+            [
+                'soutien lycee',
+                'soutient lycee',
+            ],
+            true
+        );
     }
 }

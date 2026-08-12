@@ -65,6 +65,15 @@
                                 </tr>
 
                                 <tr>
+                                    <td style="padding:0 0 9px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.7px;">Pays</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0 0 26px;font-size:16px;font-weight:700;">
+                                        {{ $contact['country'] }}
+                                    </td>
+                                </tr>
+
+                                <tr>
                                     <td style="padding:0 0 9px;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.7px;">
                                         Commentaire / Raison
                                     </td>

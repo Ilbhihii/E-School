@@ -10,20 +10,15 @@ use App\Models\ClassRoom;
 use App\Models\VocalTestPrompt;
 use App\Models\HighSchoolTestSubmission;
 use App\Services\LearningPathService;
-use App\Services\ContentAccessService;
 use Illuminate\Support\Facades\URL;
 
 class FrontController extends Controller
 {
     private LearningPathService $paths;
-    private ContentAccessService $contentAccess;
 
-    public function __construct(
-        LearningPathService $paths,
-        ContentAccessService $contentAccess
-    ) {
+    public function __construct(LearningPathService $paths)
+    {
         $this->paths = $paths;
-        $this->contentAccess = $contentAccess;
     }
     public function subjects()
     {
@@ -497,7 +492,7 @@ class FrontController extends Controller
     /**
      * Détail d’un cours public ou autorisé.
      */
-    public function showCourse(Request $request, $id)
+    public function showCourse($id)
     {
         $course = Course::approved()->with([
             'subject',
@@ -513,7 +508,7 @@ class FrontController extends Controller
             if (!$user) {
                 session()->put('url.intended', request()->fullUrl());
                 return redirect()->route('login')
-                    ->with('info', 'Connectez-vous pour accéder à ce cours.');
+                    ->with('info', 'Connectez-vous pour accéder à ce cours premium.');
             }
 
             if ($user->isStudent() && !$user->is_active) {
@@ -526,33 +521,6 @@ class FrontController extends Controller
             }
 
             abort(403, 'Ce cours ne fait pas partie de votre parcours.');
-        }
-
-        if (
-            $user
-            && $user->isStudent()
-        ) {
-            $contentDecision =
-                $this->contentAccess
-                    ->acquireCourse(
-                        $request,
-                        $course
-                    );
-
-            if (
-                !$contentDecision['allowed']
-            ) {
-                return redirect()
-                    ->route(
-                        'student.dashboard'
-                    )
-                    ->with(
-                        'error',
-                        $contentDecision[
-                            'message'
-                        ]
-                    );
-            }
         }
 
         $sameFamilySubjects = $course->subject

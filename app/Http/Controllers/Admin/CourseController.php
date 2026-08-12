@@ -241,9 +241,22 @@ class CourseController extends Controller
                 'Veuillez sélectionner un créneau.',
         ]);
 
-        $subject = Subject::findOrFail(
-            $validated['subject_id']
-        );
+        $subject = Subject::query()
+            ->whereKey(
+                $validated['subject_id']
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        if (!$subject) {
+            throw ValidationException::withMessages([
+                'subject_id' =>
+                    'Cette matière n’est pas active.',
+            ]);
+        }
 
         $level = Level::findOrFail(
             $validated['level_id']
@@ -869,9 +882,25 @@ class CourseController extends Controller
     // ================= AJAX : matières par classe =================
     public function getClassSubjects($classId)
     {
-        $subjects = Subject::whereHas('classes', function($q) use ($classId) {
-            $q->where('class_room_id', $classId);
-        })->orderBy('name')->get(['id', 'name']);
+        $subjects = Subject::query()
+            ->where(
+                'status',
+                'active'
+            )
+            ->whereHas(
+                'classes',
+                function ($query) use ($classId) {
+                    $query->where(
+                        'class_room_id',
+                        $classId
+                    );
+                }
+            )
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+            ]);
 
         return response()->json($subjects->values());
     }
@@ -913,6 +942,10 @@ class CourseController extends Controller
     {
         if (auth()->user()->isAdmin()) {
             $subjects = Subject::query()
+                ->where(
+                    'status',
+                    'active'
+                )
                 ->orderBy('name')
                 ->get();
 
@@ -1089,6 +1122,10 @@ class CourseController extends Controller
             ->get();
 
         $subjects = Subject::query()
+            ->where(
+                'status',
+                'active'
+            )
             ->whereIn(
                 'id',
                 $assignments->pluck('subject_id')

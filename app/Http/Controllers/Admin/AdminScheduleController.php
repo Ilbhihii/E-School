@@ -21,6 +21,14 @@ class AdminScheduleController extends Controller
     public function index(Request $request)
     {
         $query = Schedule::query()
+            ->whereHas(
+                'subjectModel',
+                fn ($query) =>
+                    $query->where(
+                        'status',
+                        'active'
+                    )
+            )
             ->with([
                 'classRoom.level',
                 'subjectModel',
@@ -79,6 +87,14 @@ class AdminScheduleController extends Controller
 
         $query = Schedule::query()
             ->active()
+            ->whereHas(
+                'subjectModel',
+                fn ($query) =>
+                    $query->where(
+                        'status',
+                        'active'
+                    )
+            )
             ->with([
                 'classRoom.level',
                 'subjectModel',
@@ -278,7 +294,23 @@ class AdminScheduleController extends Controller
             'valid_from.required' => 'Veuillez sélectionner la date de début.',
         ]);
 
-        $subject = Subject::findOrFail($validated['subject_id']);
+        $subject = Subject::query()
+            ->whereKey(
+                $validated['subject_id']
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        if (!$subject) {
+            throw ValidationException::withMessages([
+                'subject_id' =>
+                    'Cette matière n’est pas active.',
+            ]);
+        }
+
         $level = Level::findOrFail($validated['level_id']);
         $classRoom = ClassRoom::query()
             ->with('subjects')
@@ -753,17 +785,30 @@ class AdminScheduleController extends Controller
         ];
 
         $subjects = Subject::query()
+            ->where(
+                'status',
+                'active'
+            )
             ->get()
-            ->filter(function (Subject $subject) use ($subjectOrder) {
-                return array_key_exists(
-                    $this->normalizePathName($subject->name),
-                    $subjectOrder
-                );
-            })
             ->sortBy(function (Subject $subject) use ($subjectOrder) {
-                return $subjectOrder[
-                    $this->normalizePathName($subject->name)
-                ] ?? PHP_INT_MAX;
+                $normalized =
+                    $this->normalizePathName(
+                        $subject->name
+                    );
+
+                if (
+                    isset(
+                        $subjectOrder[$normalized]
+                    )
+                ) {
+                    return sprintf(
+                        '0-%02d-%s',
+                        $subjectOrder[$normalized],
+                        $normalized
+                    );
+                }
+
+                return '1-99-' . $normalized;
             })
             ->values();
 

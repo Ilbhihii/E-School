@@ -187,7 +187,7 @@
                     type="search"
                     name="q"
                     value="{{ $search }}"
-                    placeholder="Nom, e-mail, téléphone, raison..."
+                    placeholder="Nom, e-mail, téléphone, pays, raison..."
                 >
             </div>
 
@@ -237,6 +237,7 @@
                 <tr>
                     <th>Contact</th>
                     <th>Téléphone</th>
+                    <th>Pays</th>
                     <th>Raison récente</th>
                     <th>Remplissages</th>
                     <th>Mailing</th>
@@ -277,6 +278,10 @@
                             >
                                 {{ $contact->phone }}
                             </a>
+                        </td>
+
+                        <td>
+                            {{ $contact->country ?: '—' }}
                         </td>
 
                         <td style="max-width:300px;">

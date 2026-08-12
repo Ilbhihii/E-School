@@ -15,6 +15,7 @@ Crée un tableau nommé `Contacts` avec ces colonnes :
 - Prénom
 - Email
 - Telephone
+- Pays
 - Raison
 - NombreRemplissages
 - PremiereDemande
@@ -31,6 +32,7 @@ Crée un tableau nommé `Contacts` avec ces colonnes :
   "first_name": "Mohamed",
   "email": "mohamed@example.com",
   "phone": "0612345678",
+  "country": "Maroc",
   "reason": "Je souhaite connaître les tarifs.",
   "submissions_count": 3,
   "first_contact_at": "2026-08-01T10:00:00+01:00",

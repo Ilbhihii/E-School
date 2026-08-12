@@ -189,6 +189,48 @@
     gap: 20px;
 }
 
+
+.level-card-wrapper {
+    position: relative;
+}
+
+.level-card-admin-actions {
+    position: absolute;
+    z-index: 6;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 7px;
+}
+
+.level-card-admin-btn {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    background: rgba(8,15,30,.35);
+    backdrop-filter: blur(8px);
+    text-decoration: none;
+}
+
+.level-card-admin-btn:hover {
+    color: #fff;
+    background: rgba(8,15,30,.60);
+}
+
+.level-card-admin-btn.is-danger {
+    color: #fecdd3;
+    border-color: rgba(244,63,94,.28);
+}
+
+.level-card-admin-actions form {
+    margin: 0;
+}
+
 .level-card-wrapper {
     min-width: 0;
     height: 100%;
@@ -569,6 +611,33 @@
             @endphp
 
             <div class="level-card-wrapper">
+                <div class="level-card-admin-actions">
+                    <a
+                        href="{{ route('admin.subjects.levels.edit', [$subject, $level]) }}"
+                        class="level-card-admin-btn"
+                        title="Modifier {{ $level->name }}"
+                    >
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+
+                    <form
+                        method="POST"
+                        action="{{ route('admin.subjects.levels.destroy', [$subject, $level]) }}"
+                        onsubmit="return confirm('Supprimer le niveau {{ addslashes($level->name) }} ? Supprimez d’abord ses classes s’il en contient.');"
+                    >
+                        @csrf
+                        @method('DELETE')
+
+                        <button
+                            type="submit"
+                            class="level-card-admin-btn is-danger"
+                            title="Supprimer {{ $level->name }}"
+                        >
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </form>
+                </div>
+
                 <a
                     href="{{
                         route(

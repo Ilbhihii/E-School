@@ -52,10 +52,7 @@
                                         @foreach($subjects as $subject)
                                             <option
                                                 value="{{ $subject->id }}"
-                                                @selected(
-                                                    (string) old('subject_id')
-                                                    === (string) $subject->id
-                                                )
+                                                {{ (string) old('subject_id') === (string) $subject->id ? 'selected' : '' }}
                                             >
                                                 {{ $subject->name }}
                                             </option>
@@ -223,10 +220,7 @@
                                         @foreach($subjects as $subject)
                                             <option
                                                 value="{{ $subject->id }}"
-                                                @selected(
-                                                    (string) old('subject_id')
-                                                    === (string) $subject->id
-                                                )
+                                                {{ (string) old('subject_id') === (string) $subject->id ? 'selected' : '' }}
                                             >
                                                 {{ $subject->name }}
                                             </option>

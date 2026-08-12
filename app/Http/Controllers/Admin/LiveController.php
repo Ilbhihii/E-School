@@ -289,9 +289,22 @@ class LiveController extends Controller
                 . 'l’heure de début.',
         ]);
 
-        $subject = Subject::findOrFail(
-            $validated['subject_id']
-        );
+        $subject = Subject::query()
+            ->whereKey(
+                $validated['subject_id']
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        if (!$subject) {
+            throw ValidationException::withMessages([
+                'subject_id' =>
+                    'Cette matière n’est pas active.',
+            ]);
+        }
 
         $level = Level::findOrFail(
             $validated['level_id']
@@ -476,6 +489,10 @@ class LiveController extends Controller
     private function buildLiveHierarchy(): array
     {
         $subjects = Subject::query()
+            ->where(
+                'status',
+                'active'
+            )
             ->orderByRaw(
                 "CASE
                     WHEN LOWER(name) = 'arabe' THEN 1

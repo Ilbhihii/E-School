@@ -26,7 +26,14 @@ class ChatController extends Controller
         $subjectIds = $this->assignedStudentSubjectIds($user->id);
 
         $subjects = Subject::query()
-            ->whereIn('id', $subjectIds)
+            ->whereIn(
+                'id',
+                $subjectIds
+            )
+            ->where(
+                'status',
+                'active'
+            )
             ->orderBy('name')
             ->get();
 
@@ -50,9 +57,14 @@ class ChatController extends Controller
 
         abort_unless(
             $isAdministration
-            || $assignedSubjectIds->contains((int) $subject->id),
+            || (
+                $subject->status === 'active'
+                && $assignedSubjectIds->contains(
+                    (int) $subject->id
+                )
+            ),
             403,
-            'Cette matière ne fait pas partie de votre programme.'
+            'Cette matière n’est pas disponible pour la discussion.'
         );
 
         $messages = Message::where('subject_id', $subject_id)
@@ -95,8 +107,14 @@ class ChatController extends Controller
 
         abort_unless(
             $isAdministration
-            || $assignedSubjectIds->contains((int) $subject->id),
-            403
+            || (
+                $subject->status === 'active'
+                && $assignedSubjectIds->contains(
+                    (int) $subject->id
+                )
+            ),
+            403,
+            'Cette matière n’est pas disponible pour la discussion.'
         );
 
         Message::create([
@@ -168,18 +186,52 @@ class ChatController extends Controller
          */
         $chatSpaces = collect();
 
+        /*
+         * Une discussion pédagogique est disponible pour toute
+         * matière dont le statut est Active.
+         *
+         * La matière technique « Administration » est exclue de
+         * cette liste car elle conserve ses deux espaces privés :
+         * Étudiants et Professeurs.
+         */
         $groupSubjects = Subject::query()
-            ->whereIn('name', ['Arabe', 'Coran'])
-            ->get()
-            ->unique('name')
-            ->sortBy(
-                fn (Subject $subject) =>
-                    array_search(
-                        $subject->name,
-                        ['Arabe', 'Coran'],
-                        true
-                    )
+            ->where(
+                'status',
+                'active'
             )
+            ->whereRaw(
+                'LOWER(TRIM(name)) <> ?',
+                ['administration']
+            )
+            ->get()
+            ->unique('id')
+            ->sortBy(function (Subject $subject) {
+                $normalized =
+                    mb_strtolower(
+                        trim($subject->name)
+                    );
+
+                $officialOrder = [
+                    'arabe' => 1,
+                    'coran' => 2,
+                    'soutien lycée' => 3,
+                    'soutient lycée' => 3,
+                ];
+
+                if (
+                    isset(
+                        $officialOrder[$normalized]
+                    )
+                ) {
+                    return sprintf(
+                        '0-%02d-%s',
+                        $officialOrder[$normalized],
+                        $normalized
+                    );
+                }
+
+                return '1-99-' . $normalized;
+            })
             ->values();
 
         foreach ($groupSubjects as $subject) {
@@ -272,16 +324,12 @@ class ChatController extends Controller
         $subject = Subject::findOrFail($subject);
 
         abort_unless(
-            in_array(
-                $subject->name,
-                [
-                    'Arabe',
-                    'Coran',
-                    'Administration',
-                ],
-                true
-            ),
-            404
+            $this->isAdministrationSubject(
+                $subject
+            )
+            || $subject->status === 'active',
+            404,
+            'Cette matière n’est pas active pour les discussions.'
         );
 
         $isAdministration =
@@ -506,7 +554,19 @@ class ChatController extends Controller
             'conversation_user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        $subject = Subject::findOrFail($validated['subject_id']);
+        $subject = Subject::findOrFail(
+            $validated['subject_id']
+        );
+
+        abort_unless(
+            $this->isAdministrationSubject(
+                $subject
+            )
+            || $subject->status === 'active',
+            422,
+            'Cette matière n’est pas active pour les discussions.'
+        );
+
         $conversationUserId = null;
         if ($this->isAdministrationSubject($subject)) {
             $request->validate(['conversation_user_id' => ['required', 'integer']]);
@@ -580,8 +640,24 @@ class ChatController extends Controller
     // Liste matières professeur
     public function profSubjects()
     {
-        $subjectIds = ProfAssignment::where('prof_id', auth()->id())->pluck('subject_id');
-        $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        $subjectIds = ProfAssignment::query()
+            ->where(
+                'prof_id',
+                auth()->id()
+            )
+            ->pluck('subject_id');
+
+        $subjects = Subject::query()
+            ->whereIn(
+                'id',
+                $subjectIds
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->orderBy('name')
+            ->get();
         $administration = Subject::where('name', 'Administration')->first();
         if ($administration) {
             $subjects = $subjects->push($administration)->unique('id')->values();
@@ -771,11 +847,29 @@ class ChatController extends Controller
         ];
     }
 
-    private function authorizeProfSubject(Subject $subject): void
-    {
-        abort_unless($this->isAdministrationSubject($subject)
-            || ProfAssignment::where('prof_id', auth()->id())
-                ->where('subject_id', $subject->id)->exists(), 403);
+    private function authorizeProfSubject(
+        Subject $subject
+    ): void {
+        abort_unless(
+            $this->isAdministrationSubject(
+                $subject
+            )
+            || (
+                $subject->status === 'active'
+                && ProfAssignment::query()
+                    ->where(
+                        'prof_id',
+                        auth()->id()
+                    )
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->exists()
+            ),
+            403,
+            'Cette matière n’est pas disponible pour la discussion.'
+        );
     }
 }
 

@@ -29,10 +29,7 @@ class UserController extends Controller
      * Structure :
      * Professeur + Matière → Niveau → Classe → Créneau.
      *
-     * IMPORTANT :
-     * les créneaux D1/D2/D3/D4, I1... A1...
-     * viennent de class_slots, donc de la structure pédagogique.
-     * Ils ne dépendent PAS de /admin/schedule.
+     * Les créneaux proviennent exclusivement de /admin/schedule.
      */
     public function profAssignments()
     {
@@ -42,23 +39,71 @@ class UserController extends Controller
             ->get();
 
         /*
-         * Même structure que /admin/assign-class.
-         * Elle génère automatiquement les 4 créneaux
-         * structurels de chaque classe.
+         * Les affectations professeur utilisent exactement la même
+         * structure que /admin/assign-class :
+         *
+         * Matière → Niveau → Classe → Créneau structurel.
+         *
+         * IMPORTANT :
+         * les créneaux viennent de class_slots et ne dépendent PAS
+         * de l'existence d'une ligne dans schedules.
+         *
+         * buildAssignmentHierarchy() filtre déjà uniquement
+         * les matières dont subjects.status = active.
          */
         $assignmentHierarchy =
             $this->buildAssignmentHierarchy();
 
-        $subjects = collect($assignmentHierarchy)
-            ->map(
-                fn (array $subject) =>
-                    (object) [
-                        'id' => $subject['id'],
-                        'name' => $subject['name'],
-                    ]
+        /*
+         * IMPORTANT :
+         * le select "Matière" doit afficher TOUTES les matières
+         * dont subjects.status = active, même si leur structure
+         * Niveau → Classe → Créneau n'est pas encore complète.
+         *
+         * Avant, la liste était reconstruite depuis
+         * $assignmentHierarchy. Donc une matière Active sans
+         * structure complète disparaissait du select.
+         */
+        $subjects = Subject::query()
+            ->where(
+                'status',
+                'active'
             )
+            ->get()
+            ->sortBy(function (Subject $subject) {
+                $normalized =
+                    $this->normalizePathName(
+                        $subject->name
+                    );
+
+                $officialOrder = [
+                    'arabe' => 1,
+                    'coran' => 2,
+                    'soutien lycee' => 3,
+                    'soutient lycee' => 3,
+                ];
+
+                if (
+                    isset(
+                        $officialOrder[$normalized]
+                    )
+                ) {
+                    return sprintf(
+                        '0-%02d-%s',
+                        $officialOrder[$normalized],
+                        $normalized
+                    );
+                }
+
+                return '1-99-' . $normalized;
+            })
             ->values();
 
+        /*
+         * Les anciennes affectations d'une matière devenue
+         * Inactive / Bientôt disponible restent en base,
+         * mais ne sont pas affichées sur cette page.
+         */
         $assignments = ProfAssignment::query()
             ->with([
                 'prof',
@@ -67,16 +112,35 @@ class UserController extends Controller
                 'subject',
                 'classSlot',
             ])
+            ->whereHas(
+                'subject',
+                fn ($query) =>
+                    $query->where(
+                        'status',
+                        'active'
+                    )
+            )
             ->latest()
             ->get();
 
         /*
-         * L'horaire est informatif seulement.
-         * S'il existe déjà une séance D1/D2/... dans /admin/schedule,
-         * on l'affiche, mais il n'est jamais requis pour l'assignation.
+         * L'emploi du temps est seulement informatif.
+         *
+         * Si une séance D1/D2/I1... existe déjà dans schedules,
+         * on affiche son jour et son horaire dans le tableau.
+         * Une affectation professeur peut néanmoins exister
+         * sans aucune séance planifiée.
          */
         $scheduleMap = Schedule::query()
             ->active()
+            ->whereHas(
+                'subjectModel',
+                fn ($query) =>
+                    $query->where(
+                        'status',
+                        'active'
+                    )
+            )
             ->whereNotNull('slot_code')
             ->get()
             ->keyBy(
@@ -107,9 +171,7 @@ class UserController extends Controller
     }
 
     /**
-     * Affecter un professeur à un créneau structurel.
-     *
-     * Aucun emploi du temps n'est requis.
+     * Affecter un professeur à un créneau officiel de l'emploi du temps.
      */
     public function storeProfAssignment(
         Request $request
@@ -168,12 +230,39 @@ class UserController extends Controller
                 ]);
         }
 
+        /*
+         * Même si quelqu'un modifie manuellement la requête,
+         * une matière non active ne peut pas être assignée.
+         */
+        $subject = Subject::query()
+            ->whereKey(
+                $validated['subject_id']
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        if (!$subject) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'subject_id' =>
+                        'Cette matière n’est pas active.',
+                ]);
+        }
+
         $slotService =
             app(ClassSlotService::class);
 
+        /*
+         * Vérifie que le créneau appartient réellement au chemin :
+         * Matière → Niveau → Classe.
+         */
         $slot = $slotService->slotForPath(
             (int) $validated['class_slot_id'],
-            (int) $validated['subject_id'],
+            (int) $subject->id,
             (int) $validated['level_id'],
             (int) $validated['class_id']
         );
@@ -190,8 +279,7 @@ class UserController extends Controller
 
         /*
          * Un seul professeur principal par créneau structurel.
-         * Si D1 était déjà attribué à un autre professeur,
-         * on remplace cette affectation au lieu de créer deux responsables.
+         * Si D1 est déjà affecté, l'assignation est mise à jour.
          */
         $assignment = ProfAssignment::query()
             ->where(
@@ -200,8 +288,21 @@ class UserController extends Controller
             )
             ->first();
 
+        /*
+         * Une séance dans /admin/schedule est optionnelle.
+         * On la cherche uniquement pour synchroniser éventuellement
+         * le professeur et recopier l'horaire.
+         */
         $schedule = Schedule::query()
             ->active()
+            ->whereHas(
+                'subjectModel',
+                fn ($query) =>
+                    $query->where(
+                        'status',
+                        'active'
+                    )
+            )
             ->where(
                 'subject_id',
                 $slot->subject_id
@@ -218,24 +319,25 @@ class UserController extends Controller
                 'UPPER(TRIM(slot_code)) = ?',
                 [
                     strtoupper(
-                        trim((string) $slot->code)
+                        trim(
+                            (string) $slot->code
+                        )
                     ),
                 ]
             )
             ->first();
 
         $assignmentData = [
-            'prof_id' => $professor->id,
-            'subject_id' => $slot->subject_id,
-            'level_id' => $slot->level_id,
-            'class_id' => $slot->class_id,
-            'class_slot_id' => $slot->id,
-
-            /*
-             * Compatibilité avec l'ancien modèle :
-             * si l'horaire existe déjà, on le recopie.
-             * Sinon il reste NULL et pourra être défini plus tard.
-             */
+            'prof_id' =>
+                $professor->id,
+            'subject_id' =>
+                $slot->subject_id,
+            'level_id' =>
+                $slot->level_id,
+            'class_id' =>
+                $slot->class_id,
+            'class_slot_id' =>
+                $slot->id,
             'day_of_week' =>
                 $schedule?->day_of_week,
             'start_time' =>
@@ -255,12 +357,13 @@ class UserController extends Controller
         }
 
         /*
-         * Si la séance existe déjà, on synchronise aussi son professeur.
-         * Mais l'absence de séance n'empêche jamais l'assignation.
+         * Si la séance existe déjà, elle récupère aussi le professeur.
+         * Sans séance, l'affectation reste parfaitement valide.
          */
         if ($schedule) {
             $schedule->update([
-                'prof_id' => $professor->id,
+                'prof_id' =>
+                    $professor->id,
             ]);
         }
 
@@ -275,14 +378,22 @@ class UserController extends Controller
     }
 
     /**
-     * Supprimer l'affectation d'un professeur à un créneau structurel.
+     * Supprimer l'affectation du professeur au créneau.
      */
     public function destroyProfAssignment($id)
     {
+        /*
+         * ProfAssignment n'a volontairement PAS de relation "schedule".
+         * Le lien principal est classSlot.
+         */
         $assignment = ProfAssignment::query()
             ->with('classSlot')
             ->findOrFail($id);
 
+        /*
+         * Si une séance correspondant au même créneau structurel
+         * existe, on retire aussi le professeur de cette séance.
+         */
         if ($assignment->classSlot) {
             $schedule = Schedule::query()
                 ->active()
@@ -770,6 +881,10 @@ class UserController extends Controller
                 '=',
                 'class_slots.id'
             )
+            ->where(
+                'subjects.status',
+                'active'
+            )
             ->select([
                 'class_user.id as pivot_id',
                 'class_user.user_id',
@@ -844,9 +959,24 @@ class UserController extends Controller
                 ]);
         }
 
-        $subject = Subject::findOrFail(
-            $request->subject_id
-        );
+        $subject = Subject::query()
+            ->whereKey(
+                $request->subject_id
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        if (!$subject) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'subject_id' =>
+                        'Cette matière n’est pas active.',
+                ]);
+        }
 
         $level = Level::query()
             ->whereKey($request->level_id)
@@ -1022,9 +1152,24 @@ class UserController extends Controller
                 ]);
         }
 
-        $subject = Subject::findOrFail(
-            $request->subject_id
-        );
+        $subject = Subject::query()
+            ->whereKey(
+                $request->subject_id
+            )
+            ->where(
+                'status',
+                'active'
+            )
+            ->first();
+
+        if (!$subject) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'subject_id' =>
+                        'Cette matière n’est pas active.',
+                ]);
+        }
 
         $level = Level::query()
             ->whereKey($request->level_id)
@@ -1177,14 +1322,23 @@ class UserController extends Controller
     }
 
     /**
-     * Même source structurelle que /admin/assign-class :
-     * Matière → Niveau → Classe → Créneau.
+     * Hiérarchie de la page /admin/prof-assignments.
      *
-     * Les créneaux viennent de class_slots et ne dépendent
-     * pas de l'existence d'une ligne dans schedules.
+     * Source unique des créneaux : schedules.
+     * Une classe n'affiche donc que les créneaux réellement créés dans
+     * /admin/schedule, avec leur code (D1, I2...), jour et horaire.
      */
     private function buildProfAssignmentHierarchy(): array
     {
+        /*
+         * Même source que /admin/assign-class.
+         *
+         * buildAssignmentHierarchy() :
+         * - utilise class_slots ;
+         * - génère/synchronise les 4 créneaux ;
+         * - ne dépend pas de schedules ;
+         * - affiche uniquement les matières Active.
+         */
         return $this->buildAssignmentHierarchy();
     }
 
@@ -1205,28 +1359,33 @@ class UserController extends Controller
         ];
 
         $subjects = Subject::query()
-            ->get()
-            ->filter(
-                function (
-                    Subject $subject
-                ) use ($subjectOrder) {
-                    return array_key_exists(
-                        $this->normalizePathName(
-                            $subject->name
-                        ),
-                        $subjectOrder
-                    );
-                }
+            ->where(
+                'status',
+                'active'
             )
+            ->get()
             ->sortBy(
                 function (
                     Subject $subject
                 ) use ($subjectOrder) {
-                    return $subjectOrder[
+                    $normalized =
                         $this->normalizePathName(
                             $subject->name
+                        );
+
+                    if (
+                        isset(
+                            $subjectOrder[$normalized]
                         )
-                    ] ?? PHP_INT_MAX;
+                    ) {
+                        return sprintf(
+                            '0-%02d-%s',
+                            $subjectOrder[$normalized],
+                            $normalized
+                        );
+                    }
+
+                    return '1-99-' . $normalized;
                 }
             )
             ->values();
@@ -1387,10 +1546,15 @@ class UserController extends Controller
                         ->values()
                         ->all();
 
-                    if (empty($subjectLevels)) {
-                        return null;
-                    }
-
+                    /*
+                     * Ne pas supprimer une matière Active de la
+                     * hiérarchie lorsqu'elle n'a pas encore de
+                     * niveau/classe exploitable.
+                     *
+                     * Elle reste visible dans le select Matière.
+                     * Si sa structure n'est pas complète, le select
+                     * Niveau restera simplement vide.
+                     */
                     return [
                         'id' => $subject->id,
                         'name' => $subject->name,
@@ -1398,7 +1562,6 @@ class UserController extends Controller
                     ];
                 }
             )
-            ->filter()
             ->values()
             ->all();
     }

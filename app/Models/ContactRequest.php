@@ -12,6 +12,7 @@ class ContactRequest extends Model
         'last_name',
         'email',
         'phone',
+        'country',
         'reason',
         'marketing_consent',
         'source',

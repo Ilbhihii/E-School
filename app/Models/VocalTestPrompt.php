@@ -54,9 +54,13 @@ class VocalTestPrompt extends Model
     /**
      * Retourne les parcours autorisés par matière selon la structure validée.
      */
-    public static function pathNamesForSubject(Subject $subject): array
-    {
-        $subjectName = self::normalizePathName($subject->name);
+    public static function pathNamesForSubject(
+        Subject $subject
+    ): array {
+        $subjectName =
+            self::normalizePathName(
+                $subject->name
+            );
 
         if ($subjectName === 'arabe') {
             return [
@@ -65,13 +69,38 @@ class VocalTestPrompt extends Model
             ];
         }
 
-        if (in_array($subjectName, ['coran', 'quran', 'القران'], true)) {
+        if (
+            in_array(
+                $subjectName,
+                [
+                    'coran',
+                    'quran',
+                    'القران',
+                ],
+                true
+            )
+        ) {
             return [
                 self::QURAN_LEARNING_TAJWID,
             ];
         }
 
-        return [];
+        /*
+         * Pour une matière créée librement
+         * (Français, Mathématiques, Anglais, etc.),
+         * tous ses niveaux réels sont compatibles avec
+         * le formulaire de test vocal.
+         */
+        return Level::query()
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->orderBy('order')
+            ->orderBy('name')
+            ->pluck('name')
+            ->values()
+            ->all();
     }
 
     /**
@@ -109,24 +138,78 @@ class VocalTestPrompt extends Model
         Level $level,
         ClassRoom $classRoom
     ): bool {
-        if (!self::isSupportedLevel($subject, $level)) {
+        if (
+            !self::isSupportedLevel(
+                $subject,
+                $level
+            )
+        ) {
             return false;
         }
 
-        if ((int) $classRoom->level_id !== (int) $level->id) {
+        if (
+            (int) $classRoom->level_id
+            !== (int) $level->id
+        ) {
             return false;
         }
 
-        $allowedClasses = array_map(
-            [self::class, 'normalizePathName'],
-            self::allowedClassNames()
-        );
+        if (
+            !$classRoom
+                ->subjects()
+                ->where(
+                    'subjects.id',
+                    $subject->id
+                )
+                ->exists()
+        ) {
+            return false;
+        }
 
-        return in_array(
-            self::normalizePathName($classRoom->name),
-            $allowedClasses,
-            true
-        );
+        $subjectName =
+            self::normalizePathName(
+                $subject->name
+            );
+
+        /*
+         * Arabe et Coran conservent la structure officielle
+         * Débutant / Intermédiaire / Avancé.
+         */
+        if (
+            in_array(
+                $subjectName,
+                [
+                    'arabe',
+                    'coran',
+                    'quran',
+                    'القران',
+                ],
+                true
+            )
+        ) {
+            $allowedClasses = array_map(
+                [
+                    self::class,
+                    'normalizePathName',
+                ],
+                self::allowedClassNames()
+            );
+
+            return in_array(
+                self::normalizePathName(
+                    $classRoom->name
+                ),
+                $allowedClasses,
+                true
+            );
+        }
+
+        /*
+         * Pour les autres matières Active :
+         * toute classe réellement liée au niveau et à la matière
+         * peut recevoir un test vocal.
+         */
+        return true;
     }
 
     /**

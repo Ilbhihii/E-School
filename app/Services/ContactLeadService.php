@@ -23,7 +23,10 @@ class ContactLeadService
             $this->normalizeEmail($data['email']);
 
         $phoneNormalized =
-            $this->normalizePhone($data['phone']);
+            $this->normalizePhone(
+                $data['phone'],
+                $data['country'] ?? null
+            );
 
         try {
             return $this->persist(
@@ -96,6 +99,10 @@ class ContactLeadService
 
                 $lead->last_name = trim(
                     $data['last_name']
+                );
+
+                $lead->country = trim(
+                    $data['country']
                 );
 
                 /*
@@ -171,6 +178,9 @@ class ContactLeadService
                     ),
                     'phone_normalized' =>
                         $phoneNormalized,
+                    'country' => trim(
+                        $data['country']
+                    ),
                     'latest_reason' => trim(
                         $data['reason']
                     ),
@@ -198,6 +208,9 @@ class ContactLeadService
                 ),
                 'phone' => trim(
                     $data['phone']
+                ),
+                'country' => trim(
+                    $data['country']
                 ),
                 'reason' => trim(
                     $data['reason']
@@ -228,8 +241,10 @@ class ContactLeadService
         );
     }
 
-    public function normalizePhone($phone)
-    {
+    public function normalizePhone(
+        $phone,
+        $country = null
+    ) {
         $digits = preg_replace(
             '/\D+/',
             '',
@@ -243,30 +258,48 @@ class ContactLeadService
             );
         }
 
-        $countryCode = preg_replace(
-            '/\D+/',
-            '',
-            (string) config(
-                'contact.default_country_code',
-                '212'
-            )
+        $countryNormalized = Str::lower(
+            trim((string) $country)
+        );
+
+        $isMorocco = in_array(
+            $countryNormalized,
+            [
+                '',
+                'maroc',
+                'morocco',
+                'المغرب',
+            ],
+            true
         );
 
         /*
-         * Exemple Maroc :
-         * 0612345678 et +212612345678 deviennent 212612345678.
+         * On ne préfixe automatiquement le code +212
+         * que pour le Maroc. Pour les autres pays, le visiteur
+         * peut saisir son indicatif international.
          */
-        if (
-            $countryCode
-            && strlen($digits) === 10
-            && strpos($digits, '0') === 0
-        ) {
-            $digits =
+        if ($isMorocco) {
+            $countryCode = preg_replace(
+                '/\D+/',
+                '',
+                (string) config(
+                    'contact.default_country_code',
+                    '212'
+                )
+            );
+
+            if (
                 $countryCode
-                . substr(
-                    $digits,
-                    1
-                );
+                && strlen($digits) === 10
+                && strpos($digits, '0') === 0
+            ) {
+                $digits =
+                    $countryCode
+                    . substr(
+                        $digits,
+                        1
+                    );
+            }
         }
 
         return $digits;

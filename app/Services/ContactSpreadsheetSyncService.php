@@ -60,6 +60,8 @@ class ContactSpreadsheetSyncService
                             $lead->email,
                         'phone' =>
                             $lead->phone,
+                        'country' =>
+                            $lead->country,
                         'reason' =>
                             $lead->latest_reason,
                         'submissions_count' =>

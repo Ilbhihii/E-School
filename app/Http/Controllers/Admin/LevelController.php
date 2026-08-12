@@ -11,7 +11,7 @@ use App\Models\VocalTestPrompt;
 use App\Services\ClassSlotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Schema;
 
 class LevelController extends Controller
 {
@@ -30,6 +30,14 @@ class LevelController extends Controller
             'type' => 'religieux',
         ],
         'soutien lycee' => [
+            'name' => 'Soutien Lycée',
+            'type' => 'scolaire',
+        ],
+        /*
+         * Alias toléré si une ancienne donnée a été enregistrée
+         * avec "Soutient Lycée".
+         */
+        'soutient lycee' => [
             'name' => 'Soutien Lycée',
             'type' => 'scolaire',
         ],
@@ -115,78 +123,100 @@ class LevelController extends Controller
      */
     public function subjectsIndex()
     {
-        $subjectOrder = array_flip(array_keys(self::ALLOWED_SUBJECTS));
-
+        /*
+         * L'administration doit pouvoir gérer TOUTES les matières,
+         * quel que soit leur statut :
+         *
+         * - Active
+         * - Bientôt disponible
+         * - Inactive
+         *
+         * Le filtrage "active uniquement" reste réservé au site
+         * public (/classes).
+         */
         $subjects = Subject::query()
             ->get()
-            ->filter(
-                fn (Subject $subject) =>
-                    $this->isAllowedSubject($subject)
-            )
-            ->sortBy(
-                fn (Subject $subject) =>
-                    $subjectOrder[
-                        VocalTestPrompt::normalizePathName($subject->name)
-                    ] ?? PHP_INT_MAX
-            )
+            ->sortBy(function (Subject $subject) {
+                $normalized =
+                    VocalTestPrompt::normalizePathName(
+                        $subject->name
+                    );
+
+                /*
+                 * Les trois matières historiques restent en tête.
+                 * Les nouvelles matières suivent ensuite par statut
+                 * puis par nom.
+                 */
+                $officialOrder = [
+                    'arabe' => 1,
+                    'coran' => 2,
+                    'soutien lycee' => 3,
+                    'soutient lycee' => 3,
+                ];
+
+                if (
+                    array_key_exists(
+                        $normalized,
+                        $officialOrder
+                    )
+                ) {
+                    return sprintf(
+                        '0-%02d-%s',
+                        $officialOrder[$normalized],
+                        $normalized
+                    );
+                }
+
+                $statusOrder = [
+                    'active' => 1,
+                    'coming_soon' => 2,
+                    'inactive' => 3,
+                ];
+
+                $status = $subject->status
+                    ?? 'active';
+
+                return sprintf(
+                    '1-%02d-%s',
+                    $statusOrder[$status] ?? 9,
+                    $normalized
+                );
+            })
             ->values();
 
         $subjects->each(function (Subject $subject) {
-            $allowedLevelNames =
-                $this->levelNamesForSubject($subject);
-
-            $allowedItemNames =
-                $this->itemNamesForSubject($subject);
-
-            $validLevels = Level::query()
+            $levels = Level::query()
                 ->where('subject_id', $subject->id)
-                ->whereIn('name', $allowedLevelNames)
                 ->with([
-                    'classes' => function ($query) use (
-                        $subject,
-                        $allowedItemNames
-                    ) {
-                        $query
-                            ->whereIn(
-                                'name',
-                                $allowedItemNames
-                            )
-                            ->whereHas(
-                                'subjects',
-                                fn ($subjectQuery) =>
-                                    $subjectQuery->where(
-                                        'subjects.id',
-                                        $subject->id
-                                    )
-                            );
+                    'classes' => function ($query) use ($subject) {
+                        $query->whereHas(
+                            'subjects',
+                            fn ($subjectQuery) =>
+                                $subjectQuery->where(
+                                    'subjects.id',
+                                    $subject->id
+                                )
+                        );
                     },
                 ])
+                ->orderBy('order')
+                ->orderBy('name')
                 ->get();
-
-            $levelGroups = $validLevels->groupBy(
-                fn (Level $level) =>
-                    VocalTestPrompt::normalizePathName(
-                        $level->name
-                    )
-            );
 
             $subject->setAttribute(
                 'validated_level_count',
-                $levelGroups->count()
+                $levels->count()
             );
 
             $subject->setAttribute(
                 'validated_class_count',
-                $levelGroups->sum(
-                    fn ($levels) =>
-                        $levels
-                            ->flatMap(
-                                fn (Level $level) =>
-                                    $level->classes
-                            )
-                            ->unique('id')
-                            ->count()
-                )
+                $levels
+                    ->flatMap(
+                        fn (Level $level) =>
+                            $level->classes
+                    )
+                    ->unique('id')
+                    ->count()
             );
 
             $subject->setAttribute(
@@ -205,24 +235,25 @@ class LevelController extends Controller
      * Crée une structure pédagogique complète :
      * Matière → Niveaux → Classes.
      */
-    public function storeSubjectHierarchy(Request $request)
-    {
-        $allowedSubjectNames = array_column(
-            self::ALLOWED_SUBJECTS,
-            'name'
-        );
-
+    public function storeSubjectHierarchy(
+        Request $request,
+        ClassSlotService $classSlotService
+    ) {
         $validated = $request->validate(
             [
                 'name' => [
                     'required',
                     'string',
-                    Rule::in($allowedSubjectNames),
+                    'max:120',
                 ],
                 'description' => [
                     'nullable',
                     'string',
                     'max:1000',
+                ],
+                'status' => [
+                    'required',
+                    'in:active,coming_soon,inactive',
                 ],
                 'levels' => [
                     'required',
@@ -253,36 +284,51 @@ class LevelController extends Controller
                 ],
             ],
             [
-                'name.required' => 'Sélectionnez une matière.',
-                'name.in' => 'Seules les matières Arabe, Coran et Soutien Lycée sont autorisées.',
-                'levels.required' => 'Ajoutez au moins un niveau.',
-                'levels.min' => 'Ajoutez au moins un niveau.',
-                'levels.*.name.required' => 'Chaque niveau doit avoir un nom.',
-                'levels.*.classes.required' => 'Ajoutez au moins une classe à chaque niveau.',
-                'levels.*.classes.min' => 'Ajoutez au moins une classe à chaque niveau.',
-                'levels.*.classes.*.name.required' => 'Chaque classe doit avoir un nom.',
+                'name.required' =>
+                    'Écrivez le nom de la matière.',
+                'status.required' =>
+                    'Choisissez le statut de la matière.',
+                'status.in' =>
+                    'Le statut sélectionné est invalide.',
+                'levels.required' =>
+                    'Ajoutez au moins un niveau.',
+                'levels.min' =>
+                    'Ajoutez au moins un niveau.',
+                'levels.*.name.required' =>
+                    'Chaque niveau doit avoir un nom.',
+                'levels.*.classes.required' =>
+                    'Ajoutez au moins une classe à chaque niveau.',
+                'levels.*.classes.min' =>
+                    'Ajoutez au moins une classe à chaque niveau.',
+                'levels.*.classes.*.name.required' =>
+                    'Chaque classe doit avoir un nom.',
             ]
         );
 
-        $subjectConfig = $this->allowedSubjectConfig(
-            $validated['name']
-        );
+        $subjectName = trim($validated['name']);
 
-        if ($subjectConfig === null) {
-            return back()
-                ->withErrors([
-                    'name' => 'Cette matière n’est pas autorisée.',
-                ])
-                ->withInput();
-        }
-
+        /*
+         * Vérification des doublons dans les niveaux et les classes
+         * avant toute écriture en base.
+         */
         $levelNames = [];
 
-        foreach ($validated['levels'] as $levelIndex => $levelData) {
+        foreach (
+            $validated['levels']
+            as $levelIndex => $levelData
+        ) {
             $normalizedLevelName =
-                VocalTestPrompt::normalizePathName($levelData['name']);
+                VocalTestPrompt::normalizePathName(
+                    $levelData['name']
+                );
 
-            if (in_array($normalizedLevelName, $levelNames, true)) {
+            if (
+                in_array(
+                    $normalizedLevelName,
+                    $levelNames,
+                    true
+                )
+            ) {
                 return back()
                     ->withErrors([
                         "levels.{$levelIndex}.name" =>
@@ -294,11 +340,22 @@ class LevelController extends Controller
             $levelNames[] = $normalizedLevelName;
             $classNames = [];
 
-            foreach ($levelData['classes'] as $classIndex => $classData) {
+            foreach (
+                $levelData['classes']
+                as $classIndex => $classData
+            ) {
                 $normalizedClassName =
-                    VocalTestPrompt::normalizePathName($classData['name']);
+                    VocalTestPrompt::normalizePathName(
+                        $classData['name']
+                    );
 
-                if (in_array($normalizedClassName, $classNames, true)) {
+                if (
+                    in_array(
+                        $normalizedClassName,
+                        $classNames,
+                        true
+                    )
+                ) {
                     return back()
                         ->withErrors([
                             "levels.{$levelIndex}.classes.{$classIndex}.name" =>
@@ -307,17 +364,26 @@ class LevelController extends Controller
                         ->withInput();
                 }
 
-                $classNames[] = $normalizedClassName;
+                $classNames[] =
+                    $normalizedClassName;
             }
         }
 
         $subject = DB::transaction(
-            function () use ($validated, $subjectConfig) {
+            function () use (
+                $validated,
+                $subjectName,
+                $classSlotService
+            ) {
                 $normalizedSubjectName =
                     VocalTestPrompt::normalizePathName(
-                        $subjectConfig['name']
+                        $subjectName
                     );
 
+                /*
+                 * Si la matière existe déjà, on réutilise la même
+                 * fiche. Sinon elle est créée.
+                 */
                 $subject = Subject::query()
                     ->get()
                     ->first(
@@ -327,84 +393,186 @@ class LevelController extends Controller
                             ) === $normalizedSubjectName
                     );
 
+                /*
+                 * Coran reste religieux.
+                 * Toute nouvelle matière est scolaire par défaut.
+                 * Une matière existante conserve son type.
+                 */
+                $inferredType =
+                    $normalizedSubjectName === 'coran'
+                        ? 'religieux'
+                        : 'scolaire';
+
                 $subjectData = [
-                    'name' => $subjectConfig['name'],
-                    'type' => $subjectConfig['type'],
+                    'name' => $subjectName,
+                    'type' => $subject
+                        ? ($subject->type ?: $inferredType)
+                        : $inferredType,
                 ];
 
+                /*
+                 * Statut administratif de la matière.
+                 * Le statut est enregistré sans supprimer
+                 * aucune donnée pédagogique.
+                 */
+                $subjectStatus =
+                    $validated['status'];
+
                 $description = trim(
-                    (string) ($validated['description'] ?? '')
+                    (string) (
+                        $validated['description']
+                        ?? ''
+                    )
                 );
 
                 if ($description !== '') {
-                    $subjectData['description'] = $description;
+                    $subjectData['description'] =
+                        $description;
                 }
 
                 if ($subject) {
                     $subject->fill($subjectData);
+                    $subject->status =
+                        $subjectStatus;
                     $subject->save();
                 } else {
-                    $subject = Subject::create($subjectData);
-                }
-
-                foreach ($validated['levels'] as $levelIndex => $levelData) {
-                    $normalizedLevelName =
-                        VocalTestPrompt::normalizePathName(
-                            $levelData['name']
+                    $subject =
+                        Subject::create(
+                            $subjectData
                         );
 
+                    $subject->status =
+                        $subjectStatus;
+                    $subject->save();
+                }
+
+                foreach (
+                    $validated['levels']
+                    as $levelIndex => $levelData
+                ) {
+                    $normalizedLevelName =
+                        VocalTestPrompt
+                            ::normalizePathName(
+                                $levelData['name']
+                            );
+
                     $level = Level::query()
-                        ->where('subject_id', $subject->id)
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
                         ->get()
                         ->first(
                             fn (Level $candidate) =>
-                                VocalTestPrompt::normalizePathName(
-                                    $candidate->name
-                                ) === $normalizedLevelName
+                                VocalTestPrompt
+                                    ::normalizePathName(
+                                        $candidate->name
+                                    )
+                                === $normalizedLevelName
                         );
 
                     $levelDataToSave = [
-                        'subject_id' => $subject->id,
-                        'name' => trim($levelData['name']),
-                        'description' => isset($levelData['description'])
-                            ? trim((string) $levelData['description'])
-                            : null,
-                        'order' => $levelIndex + 1,
+                        'subject_id' =>
+                            $subject->id,
+                        'name' =>
+                            trim(
+                                $levelData['name']
+                            ),
+                        'description' =>
+                            isset(
+                                $levelData[
+                                    'description'
+                                ]
+                            )
+                                ? trim(
+                                    (string) $levelData[
+                                        'description'
+                                    ]
+                                )
+                                : null,
+                        'order' =>
+                            $levelIndex + 1,
                     ];
 
                     if ($level) {
-                        $level->fill($levelDataToSave);
+                        $level->fill(
+                            $levelDataToSave
+                        );
                         $level->save();
                     } else {
-                        $level = Level::create($levelDataToSave);
+                        $level = Level::create(
+                            $levelDataToSave
+                        );
                     }
 
-                    foreach ($levelData['classes'] as $classData) {
+                    foreach (
+                        $levelData['classes']
+                        as $classData
+                    ) {
                         $normalizedClassName =
-                            VocalTestPrompt::normalizePathName(
-                                $classData['name']
-                            );
+                            VocalTestPrompt
+                                ::normalizePathName(
+                                    $classData[
+                                        'name'
+                                    ]
+                                );
 
-                        $classRoom = ClassRoom::query()
-                            ->where('level_id', $level->id)
-                            ->get()
-                            ->first(
-                                fn (ClassRoom $candidate) =>
-                                    VocalTestPrompt::normalizePathName(
-                                        $candidate->name
-                                    ) === $normalizedClassName
-                            );
+                        $classRoom =
+                            ClassRoom::query()
+                                ->where(
+                                    'level_id',
+                                    $level->id
+                                )
+                                ->get()
+                                ->first(
+                                    fn (
+                                        ClassRoom
+                                        $candidate
+                                    ) =>
+                                        VocalTestPrompt
+                                            ::normalizePathName(
+                                                $candidate
+                                                    ->name
+                                            )
+                                        ===
+                                        $normalizedClassName
+                                );
 
                         if (!$classRoom) {
-                            $classRoom = ClassRoom::create([
-                                'name' => trim($classData['name']),
-                                'level_id' => $level->id,
-                            ]);
+                            $classRoom =
+                                ClassRoom::create([
+                                    'name' =>
+                                        trim(
+                                            $classData[
+                                                'name'
+                                            ]
+                                        ),
+                                    'level_id' =>
+                                        $level->id,
+                                ]);
                         }
 
-                        $classRoom->subjects()->syncWithoutDetaching([
-                            $subject->id,
-                        ]);
+                        $classRoom
+                            ->subjects()
+                            ->syncWithoutDetaching([
+                                $subject->id,
+                            ]);
+
+                        /*
+                         * Les quatre créneaux sont créés
+                         * AUTOMATIQUEMENT dès que la classe existe.
+                         *
+                         * Débutant      → D1 D2 D3 D4
+                         * Intermédiaire → I1 I2 I3 I4
+                         * Avancé        → A1 A2 A3 A4
+                         * Autre         → G1 G2 G3 G4
+                         */
+                        $classSlotService
+                            ->syncForPath(
+                                $subject,
+                                $level,
+                                $classRoom
+                            );
                     }
                 }
 
@@ -413,10 +581,13 @@ class LevelController extends Controller
         );
 
         return redirect()
-            ->route('admin.subjects.levels', $subject)
+            ->route(
+                'admin.subjects.levels',
+                $subject
+            )
             ->with(
                 'success',
-                'La structure de la matière a été enregistrée avec succès.'
+                'La structure de la matière et ses 4 créneaux par classe ont été enregistrés avec succès.'
             );
     }
 
@@ -435,120 +606,94 @@ class LevelController extends Controller
      * - Intermédiaire
      * - Avancé
      */
-    public function subjectLevels(Subject $subject)
-    {
-        abort_unless(
-            $this->isAllowedSubject($subject),
-            404
-        );
-
-        /*
-         * La vue utilise :
-         * - $subject  : matière actuellement sélectionnée ;
-         * - $subjects : liste des matières actives ;
-         * - $levels   : parcours/niveaux de la matière.
-         */
-        $subjectOrder = array_flip(array_keys(self::ALLOWED_SUBJECTS));
-
+    public function subjectLevels(
+        Subject $subject
+    ) {
         $subjects = Subject::query()
-            ->get()
-            ->filter(
-                fn (Subject $candidate) =>
-                    $this->isAllowedSubject($candidate)
-            )
-            ->sortBy(
-                fn (Subject $candidate) =>
-                    $subjectOrder[
-                        VocalTestPrompt::normalizePathName(
-                            $candidate->name
-                        )
-                    ] ?? PHP_INT_MAX
-            )
-            ->values();
-
-        $allowedLevelNames =
-            $this->levelNamesForSubject($subject);
-
-        $allowedItemNames =
-            $this->itemNamesForSubject($subject);
+            ->orderBy('name')
+            ->get();
 
         $levels = Level::query()
-            ->where('subject_id', $subject->id)
-            ->whereIn('name', $allowedLevelNames)
+            ->where(
+                'subject_id',
+                $subject->id
+            )
             ->with([
-                'classes' => function ($query) use (
-                    $subject,
-                    $allowedItemNames
-                ) {
-                    $query
-                        ->whereIn(
-                            'name',
-                            $allowedItemNames
-                        )
-                        ->whereHas(
-                            'subjects',
-                            fn ($subjectQuery) =>
-                                $subjectQuery->where(
-                                    'subjects.id',
-                                    $subject->id
-                                )
-                        );
-                },
-            ])
-            ->get()
-            ->sortBy(
-                function (Level $level) use (
-                    $allowedLevelNames
-                ) {
-                    $position = array_search(
-                        $level->name,
-                        $allowedLevelNames,
-                        true
-                    );
-
-                    return $position === false
-                        ? PHP_INT_MAX
-                        : $position;
-                }
-            )
-            ->unique('name')
-            ->values();
-
-        $itemOrder = array_flip(
-            array_map(
-                [
-                    VocalTestPrompt::class,
-                    'normalizePathName',
-                ],
-                $allowedItemNames
-            )
-        );
-
-        $levels->each(
-            function (Level $level) use (
-                $itemOrder
-            ) {
-                $level->setRelation(
-                    'classes',
-                    $level->classes
-                        ->sortBy(
-                            fn (ClassRoom $classRoom) =>
-                                $itemOrder[
-                                    VocalTestPrompt
-                                        ::normalizePathName(
-                                            $classRoom->name
+                'classes' =>
+                    function ($query) use (
+                        $subject
+                    ) {
+                        $query
+                            ->whereHas(
+                                'subjects',
+                                fn ($subjectQuery) =>
+                                    $subjectQuery
+                                        ->where(
+                                            'subjects.id',
+                                            $subject->id
                                         )
-                                ] ?? PHP_INT_MAX
+                            )
+                            ->orderBy('name');
+                    },
+            ])
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        /*
+         * Pour la matière Arabe, l'administration doit afficher
+         * uniquement les deux parcours officiels :
+         *
+         * - Communication
+         * - Lecture & Écriture
+         *
+         * Les anciennes lignes Débutant / Intermédiaire / Avancé
+         * restent dans la base de données pour ne rien supprimer,
+         * mais elles ne sont plus affichées sur cette page.
+         */
+        if (
+            VocalTestPrompt::normalizePathName(
+                $subject->name
+            ) === 'arabe'
+        ) {
+            $allowedArabicPaths = [
+                'communication',
+                VocalTestPrompt::normalizePathName(
+                    'Lecture & Écriture'
+                ),
+            ];
+
+            $levels = $levels
+                ->filter(
+                    fn (Level $level) =>
+                        in_array(
+                            VocalTestPrompt::normalizePathName(
+                                $level->name
+                            ),
+                            $allowedArabicPaths,
+                            true
                         )
-                        ->unique('name')
-                        ->values()
-                );
-            }
-        );
+                )
+                ->sortBy(function (Level $level) {
+                    $order = [
+                        'communication' => 1,
+                        'lecture et ecriture' => 2,
+                    ];
+
+                    return $order[
+                        VocalTestPrompt::normalizePathName(
+                            $level->name
+                        )
+                    ] ?? 99;
+                })
+                ->values();
+        }
 
         $subject->setAttribute(
             'is_high_school_support',
-            $this->isHighSchoolSupport($subject)
+            $this->isHighSchoolSupport(
+                $subject
+            )
         );
 
         return view(
@@ -570,52 +715,16 @@ class LevelController extends Controller
         ClassSlotService $classSlotService
     ) {
         abort_unless(
-            $this->isAllowedSubject($subject),
-            404
-        );
-
-        abort_unless(
             (int) $level->subject_id ===
                 (int) $subject->id,
             404
         );
 
-        $allowedLevelNames =
-            $this->levelNamesForSubject($subject);
-
-        abort_unless(
-            in_array(
-                VocalTestPrompt::normalizePathName(
-                    $level->name
-                ),
-                array_map(
-                    [
-                        VocalTestPrompt::class,
-                        'normalizePathName',
-                    ],
-                    $allowedLevelNames
-                ),
-                true
-            ),
-            404
-        );
-
-        $allowedItemNames =
-            $this->itemNamesForSubject($subject);
-
-        $itemOrder = array_flip(
-            array_map(
-                [
-                    VocalTestPrompt::class,
-                    'normalizePathName',
-                ],
-                $allowedItemNames
-            )
-        );
-
         $classes = ClassRoom::query()
-            ->where('level_id', $level->id)
-            ->whereIn('name', $allowedItemNames)
+            ->where(
+                'level_id',
+                $level->id
+            )
             ->whereHas(
                 'subjects',
                 fn ($query) =>
@@ -624,23 +733,12 @@ class LevelController extends Controller
                         $subject->id
                     )
             )
-            ->get()
-            ->sortBy(
-                fn (ClassRoom $classRoom) =>
-                    $itemOrder[
-                        VocalTestPrompt::normalizePathName(
-                            $classRoom->name
-                        )
-                    ] ?? PHP_INT_MAX
-            )
-            ->unique('name')
-            ->values();
+            ->orderBy('name')
+            ->get();
 
         /*
-         * Les créneaux D1-D4 / I1-I4 / A1-A4 sont
-         * STRUCTURELS. Ils existent dès que la classe existe,
-         * sans attendre la création d'une séance dans l'emploi
-         * du temps.
+         * Garantit que chaque classe possède ses quatre
+         * créneaux structurels même pour les anciennes classes.
          */
         foreach ($classes as $classRoom) {
             $classSlotService->syncForPath(
@@ -669,7 +767,9 @@ class LevelController extends Controller
                             'is_active',
                             true
                         )
-                        ->orderBy('position')
+                        ->orderBy(
+                            'position'
+                        )
                         ->orderBy('code');
                 },
         ]);
@@ -687,66 +787,51 @@ class LevelController extends Controller
     /**
      * Affiche les cours d'une matière pour une classe (nouveau chemin Matière → Niveau → Classe → Cours)
      */
-    public function subjectCourses(Subject $subject, Level $level, ClassRoom $class)
-    {
-        abort_unless(
-            $this->isAllowedSubject($subject),
-            404
-        );
-
-        $allowedLevelNames =
-            $this->levelNamesForSubject($subject);
-
-        $allowedItemNames =
-            $this->itemNamesForSubject($subject);
-
+    public function subjectCourses(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ) {
         abort_unless(
             (int) $level->subject_id ===
                 (int) $subject->id
             && (int) $class->level_id ===
                 (int) $level->id
-            && in_array(
-                VocalTestPrompt::normalizePathName(
-                    $level->name
-                ),
-                array_map(
-                    [
-                        VocalTestPrompt::class,
-                        'normalizePathName',
-                    ],
-                    $allowedLevelNames
-                ),
-                true
-            )
-            && in_array(
-                VocalTestPrompt::normalizePathName(
-                    $class->name
-                ),
-                array_map(
-                    [
-                        VocalTestPrompt::class,
-                        'normalizePathName',
-                    ],
-                    $allowedItemNames
-                ),
-                true
-            )
-            && $class->subjects()
+            && $class
+                ->subjects()
                 ->where(
                     'subjects.id',
                     $subject->id
                 )
                 ->exists(),
             404,
-            'Ce parcours ne fait pas partie de la structure pédagogique active.'
+            'Cette classe n’appartient pas à la matière sélectionnée.'
         );
 
-        $courses = Course::approved()->where('subject_id', $subject->id)
-            ->where('class_id', $class->id)
-            ->with(['classRoom', 'subject'])
+        $courses = Course::approved()
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->where(
+                'class_id',
+                $class->id
+            )
+            ->with([
+                'classRoom',
+                'subject',
+            ])
             ->get();
 
-        return view('admin.subjects.courses', compact('level', 'class', 'subject', 'courses'));
+        return view(
+            'admin.subjects.courses',
+            compact(
+                'level',
+                'class',
+                'subject',
+                'courses'
+            )
+        );
     }
 
     private function allowedSubjectConfig(
@@ -756,6 +841,700 @@ class LevelController extends Controller
             VocalTestPrompt::normalizePathName($subjectName);
 
         return self::ALLOWED_SUBJECTS[$normalizedName] ?? null;
+    }
+
+
+    /**
+     * Formulaire de modification d'une matière.
+     */
+    public function editSubject(
+        Subject $subject
+    ) {
+        return view(
+            'admin.subjects.edit',
+            compact('subject')
+        );
+    }
+
+    /**
+     * Modifier une matière sans toucher à sa structure.
+     */
+    public function updateSubject(
+        Request $request,
+        Subject $subject
+    ) {
+        $validated = $request->validate(
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    'max:120',
+                ],
+                'description' => [
+                    'nullable',
+                    'string',
+                    'max:1000',
+                ],
+                'status' => [
+                    'required',
+                    'in:active,coming_soon,inactive',
+                ],
+            ],
+            [
+                'name.required' =>
+                    'Écrivez le nom de la matière.',
+                'status.required' =>
+                    'Choisissez le statut de la matière.',
+                'status.in' =>
+                    'Le statut sélectionné est invalide.',
+            ]
+        );
+
+        $newName = trim(
+            $validated['name']
+        );
+
+        $normalizedNewName =
+            VocalTestPrompt::normalizePathName(
+                $newName
+            );
+
+        $duplicate = Subject::query()
+            ->whereKeyNot($subject->id)
+            ->get()
+            ->contains(
+                fn (Subject $candidate) =>
+                    VocalTestPrompt::normalizePathName(
+                        $candidate->name
+                    ) === $normalizedNewName
+            );
+
+        if ($duplicate) {
+            return back()
+                ->withErrors([
+                    'name' =>
+                        'Une matière avec ce nom existe déjà.',
+                ])
+                ->withInput();
+        }
+
+        $subject->name = $newName;
+
+        /*
+         * Même règle que le formulaire de création actuel :
+         * Coran = Religieux, le reste = Scolaire.
+         */
+        $subject->type =
+            $normalizedNewName === 'coran'
+                ? 'religieux'
+                : 'scolaire';
+
+        $subject->status =
+            $validated['status'];
+
+        $description = trim(
+            (string) (
+                $validated['description']
+                ?? ''
+            )
+        );
+
+        $subject->description =
+            $description !== ''
+                ? $description
+                : null;
+
+        $subject->save();
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with(
+                'success',
+                'La matière a été modifiée avec succès.'
+            );
+    }
+
+    /**
+     * Supprimer une matière uniquement si elle n'est plus utilisée.
+     *
+     * Cette protection évite de supprimer accidentellement des
+     * cours, lives, étudiants, rendez-vous ou historiques.
+     */
+    public function destroySubject(
+        Subject $subject
+    ) {
+        if (
+            Level::query()
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->exists()
+        ) {
+            return back()->with(
+                'error',
+                'Impossible de supprimer cette matière : supprimez d’abord ses niveaux.'
+            );
+        }
+
+        $usage = $this->firstRelatedUsage(
+            'subject_id',
+            $subject->id,
+            [
+                'courses' =>
+                    'des cours',
+                'class_room_subject' =>
+                    'des classes',
+                'class_slots' =>
+                    'des créneaux',
+                'messages' =>
+                    'des messages',
+                'prof_assignments' =>
+                    'des affectations professeur',
+                'assignments' =>
+                    'des devoirs',
+                'schedules' =>
+                    'du planning',
+                'vocal_test_prompts' =>
+                    'des tests vocaux',
+                'vocal_test_submissions' =>
+                    'des soumissions de tests vocaux',
+                'high_school_test_submissions' =>
+                    'des tests écrits',
+                'test_appointments' =>
+                    'des rendez-vous',
+                'absences' =>
+                    'des absences',
+                'class_user' =>
+                    'des inscriptions étudiantes',
+                'tests' =>
+                    'des tests',
+            ]
+        );
+
+        if ($usage !== null) {
+            return back()->with(
+                'error',
+                'Impossible de supprimer cette matière : elle est encore utilisée par '
+                . $usage
+                . '.'
+            );
+        }
+
+        $subjectName = $subject->name;
+        $subject->delete();
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with(
+                'success',
+                'La matière « '
+                . $subjectName
+                . ' » a été supprimée.'
+            );
+    }
+
+    /**
+     * Formulaire de modification d'un niveau / parcours.
+     */
+    public function editSubjectLevel(
+        Subject $subject,
+        Level $level
+    ) {
+        $this->assertLevelBelongsToSubject(
+            $subject,
+            $level
+        );
+
+        return view(
+            'admin.subjects.level-edit',
+            compact(
+                'subject',
+                'level'
+            )
+        );
+    }
+
+    /**
+     * Modifier un niveau / parcours.
+     */
+    public function updateSubjectLevel(
+        Request $request,
+        Subject $subject,
+        Level $level
+    ) {
+        $this->assertLevelBelongsToSubject(
+            $subject,
+            $level
+        );
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:120',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+        ]);
+
+        $newName = trim(
+            $validated['name']
+        );
+
+        $normalizedNewName =
+            VocalTestPrompt::normalizePathName(
+                $newName
+            );
+
+        $duplicate = Level::query()
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->whereKeyNot($level->id)
+            ->get()
+            ->contains(
+                fn (Level $candidate) =>
+                    VocalTestPrompt::normalizePathName(
+                        $candidate->name
+                    ) === $normalizedNewName
+            );
+
+        if ($duplicate) {
+            return back()
+                ->withErrors([
+                    'name' =>
+                        'Ce niveau existe déjà dans cette matière.',
+                ])
+                ->withInput();
+        }
+
+        $level->name = $newName;
+
+        $description = trim(
+            (string) (
+                $validated['description']
+                ?? ''
+            )
+        );
+
+        $level->description =
+            $description !== ''
+                ? $description
+                : null;
+
+        $level->save();
+
+        return redirect()
+            ->route(
+                'admin.subjects.levels',
+                $subject
+            )
+            ->with(
+                'success',
+                'Le niveau a été modifié avec succès.'
+            );
+    }
+
+    /**
+     * Supprimer un niveau uniquement lorsqu'il ne contient plus
+     * de classes ni d'autres données liées.
+     */
+    public function destroySubjectLevel(
+        Subject $subject,
+        Level $level
+    ) {
+        $this->assertLevelBelongsToSubject(
+            $subject,
+            $level
+        );
+
+        if (
+            ClassRoom::query()
+                ->where(
+                    'level_id',
+                    $level->id
+                )
+                ->exists()
+        ) {
+            return back()->with(
+                'error',
+                'Impossible de supprimer ce niveau : supprimez d’abord ses classes.'
+            );
+        }
+
+        $usage = $this->firstRelatedUsage(
+            'level_id',
+            $level->id,
+            [
+                'courses' =>
+                    'des cours',
+                'modules' =>
+                    'des modules',
+                'class_slots' =>
+                    'des créneaux',
+                'prof_assignments' =>
+                    'des affectations professeur',
+                'assignments' =>
+                    'des devoirs',
+                'schedules' =>
+                    'du planning',
+                'vocal_test_prompts' =>
+                    'des tests vocaux',
+                'vocal_test_submissions' =>
+                    'des soumissions de tests vocaux',
+                'high_school_test_submissions' =>
+                    'des tests écrits',
+                'test_appointments' =>
+                    'des rendez-vous',
+                'absences' =>
+                    'des absences',
+                'tests' =>
+                    'des tests',
+            ]
+        );
+
+        if ($usage !== null) {
+            return back()->with(
+                'error',
+                'Impossible de supprimer ce niveau : il est encore utilisé par '
+                . $usage
+                . '.'
+            );
+        }
+
+        $levelName = $level->name;
+        $level->delete();
+
+        return redirect()
+            ->route(
+                'admin.subjects.levels',
+                $subject
+            )
+            ->with(
+                'success',
+                'Le niveau « '
+                . $levelName
+                . ' » a été supprimé.'
+            );
+    }
+
+    /**
+     * Formulaire de modification d'une classe.
+     */
+    public function editSubjectClass(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ) {
+        $this->assertClassBelongsToPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        return view(
+            'admin.subjects.class-edit',
+            compact(
+                'subject',
+                'level',
+                'class'
+            )
+        );
+    }
+
+    /**
+     * Modifier une classe et resynchroniser automatiquement
+     * ses quatre créneaux structurels.
+     */
+    public function updateSubjectClass(
+        Request $request,
+        Subject $subject,
+        Level $level,
+        ClassRoom $class,
+        ClassSlotService $classSlotService
+    ) {
+        $this->assertClassBelongsToPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:120',
+            ],
+        ]);
+
+        $newName = trim(
+            $validated['name']
+        );
+
+        $normalizedNewName =
+            VocalTestPrompt::normalizePathName(
+                $newName
+            );
+
+        $duplicate = ClassRoom::query()
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->whereKeyNot($class->id)
+            ->get()
+            ->contains(
+                fn (ClassRoom $candidate) =>
+                    VocalTestPrompt::normalizePathName(
+                        $candidate->name
+                    ) === $normalizedNewName
+            );
+
+        if ($duplicate) {
+            return back()
+                ->withErrors([
+                    'name' =>
+                        'Cette classe existe déjà dans ce niveau.',
+                ])
+                ->withInput();
+        }
+
+        $class->name = $newName;
+        $class->save();
+
+        $class
+            ->subjects()
+            ->syncWithoutDetaching([
+                $subject->id,
+            ]);
+
+        /*
+         * Après un renommage, par exemple :
+         * Débutant → Avancé,
+         * les créneaux actifs deviennent A1 A2 A3 A4.
+         */
+        $classSlotService->syncForPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        return redirect()
+            ->route(
+                'admin.subjects.classes',
+                [
+                    $subject,
+                    $level,
+                ]
+            )
+            ->with(
+                'success',
+                'La classe et ses 4 créneaux ont été mis à jour.'
+            );
+    }
+
+    /**
+     * Supprimer une classe seulement si aucune donnée métier
+     * importante ne dépend encore d'elle.
+     */
+    public function destroySubjectClass(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ) {
+        $this->assertClassBelongsToPath(
+            $subject,
+            $level,
+            $class
+        );
+
+        $usage = $this->firstRelatedUsage(
+            'class_id',
+            $class->id,
+            [
+                'courses' =>
+                    'des cours',
+                'lives' =>
+                    'des lives',
+                'users' =>
+                    'des comptes utilisateurs',
+                'class_user' =>
+                    'des inscriptions étudiantes',
+                'prof_assignments' =>
+                    'des affectations professeur',
+                'assignments' =>
+                    'des devoirs',
+                'schedules' =>
+                    'du planning',
+                'absences' =>
+                    'des absences',
+                'vocal_test_prompts' =>
+                    'des tests vocaux',
+                'vocal_test_submissions' =>
+                    'des soumissions de tests vocaux',
+                'high_school_test_submissions' =>
+                    'des tests écrits',
+                'test_appointments' =>
+                    'des rendez-vous',
+                'tests' =>
+                    'des tests',
+            ]
+        );
+
+        if ($usage !== null) {
+            return back()->with(
+                'error',
+                'Impossible de supprimer cette classe : elle est encore utilisée par '
+                . $usage
+                . '.'
+            );
+        }
+
+        $className = $class->name;
+
+        DB::transaction(
+            function () use (
+                $subject,
+                $level,
+                $class
+            ) {
+                /*
+                 * Les class_slots ne sont pas considérés comme
+                 * une dépendance bloquante : ce sont les 4 groupes
+                 * structurels générés automatiquement.
+                 */
+                if (
+                    Schema::hasTable('class_slots')
+                ) {
+                    DB::table('class_slots')
+                        ->where(
+                            'subject_id',
+                            $subject->id
+                        )
+                        ->where(
+                            'level_id',
+                            $level->id
+                        )
+                        ->where(
+                            'class_id',
+                            $class->id
+                        )
+                        ->delete();
+                }
+
+                $class
+                    ->subjects()
+                    ->detach(
+                        $subject->id
+                    );
+
+                /*
+                 * Si cette classe n'est liée à aucune autre matière,
+                 * elle peut être supprimée complètement.
+                 */
+                if (
+                    !$class
+                        ->subjects()
+                        ->exists()
+                ) {
+                    $class->delete();
+                }
+            }
+        );
+
+        return redirect()
+            ->route(
+                'admin.subjects.classes',
+                [
+                    $subject,
+                    $level,
+                ]
+            )
+            ->with(
+                'success',
+                'La classe « '
+                . $className
+                . ' » a été supprimée de cette matière.'
+            );
+    }
+
+    private function assertLevelBelongsToSubject(
+        Subject $subject,
+        Level $level
+    ): void {
+        abort_unless(
+            (int) $level->subject_id
+                === (int) $subject->id,
+            404
+        );
+    }
+
+    private function assertClassBelongsToPath(
+        Subject $subject,
+        Level $level,
+        ClassRoom $class
+    ): void {
+        $this->assertLevelBelongsToSubject(
+            $subject,
+            $level
+        );
+
+        abort_unless(
+            (int) $class->level_id
+                === (int) $level->id
+            && $class
+                ->subjects()
+                ->where(
+                    'subjects.id',
+                    $subject->id
+                )
+                ->exists(),
+            404
+        );
+    }
+
+    /**
+     * Retourne le premier type d'utilisation trouvé pour une
+     * colonne donnée. Les tables/colonnes absentes sont ignorées
+     * afin de rester compatible avec les installations existantes.
+     */
+    private function firstRelatedUsage(
+        string $column,
+        int $id,
+        array $tables
+    ): ?string {
+        foreach (
+            $tables
+            as $table => $label
+        ) {
+            if (
+                !Schema::hasTable($table)
+                || !Schema::hasColumn(
+                    $table,
+                    $column
+                )
+            ) {
+                continue;
+            }
+
+            if (
+                DB::table($table)
+                    ->where(
+                        $column,
+                        $id
+                    )
+                    ->exists()
+            ) {
+                return $label;
+            }
+        }
+
+        return null;
     }
 
     private function isAllowedSubject(

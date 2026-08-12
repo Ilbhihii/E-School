@@ -13,6 +13,7 @@ class ContactLead extends Model
         'email_normalized',
         'phone',
         'phone_normalized',
+        'country',
         'latest_reason',
         'submissions_count',
         'marketing_consent',

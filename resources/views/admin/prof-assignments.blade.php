@@ -101,10 +101,7 @@
                             @foreach($professors as $professor)
                                 <option
                                     value="{{ $professor->id }}"
-                                    @selected(
-                                        (string) old('prof_id')
-                                        === (string) $professor->id
-                                    )
+                                    {{ (string) old('prof_id') === (string) $professor->id ? 'selected' : '' }}
                                 >
                                     {{ $professor->name }}
                                 </option>

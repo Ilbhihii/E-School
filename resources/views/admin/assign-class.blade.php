@@ -117,10 +117,7 @@
 
                                 <option
                                     value="{{ $student->id }}"
-                                    @selected(
-                                        (string) old('user_id')
-                                        === (string) $student->id
-                                    )
+                                    {{ (string) old('user_id') === (string) $student->id ? 'selected' : '' }}
                                 >
                                     {{ $studentName }}
                                 </option>
