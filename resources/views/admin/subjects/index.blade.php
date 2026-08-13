@@ -424,42 +424,51 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 11px;
+    margin-top: 12px;
 }
 
-.subject-admin-btn {
+.subject-card-admin-actions form {
+    margin: 0;
+}
+
+.subject-card-admin-btn {
     min-height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 0 10px;
-    border: 1px solid rgba(148,163,184,.16);
+    padding: 0 11px;
+    border: 1px solid rgba(148, 163, 184, .16);
     border-radius: 9px;
     color: #cbd5e1;
-    background: rgba(148,163,184,.055);
+    background: rgba(148, 163, 184, .055);
     font-size: .66rem;
     font-weight: 760;
     text-decoration: none;
+    cursor: pointer;
 }
 
-.subject-admin-btn:hover {
+.subject-card-admin-btn:hover {
     color: #fff;
+    border-color: rgba(99, 102, 241, .34);
+    background: rgba(99, 102, 241, .10);
     text-decoration: none;
-    border-color: rgba(99,102,241,.34);
-    background: rgba(99,102,241,.10);
 }
 
-.subject-admin-btn.is-danger {
+.subject-card-admin-btn.is-danger {
     color: #fda4af;
-    border-color: rgba(244,63,94,.20);
-    background: rgba(244,63,94,.07);
+    border-color: rgba(244, 63, 94, .20);
+    background: rgba(244, 63, 94, .07);
 }
 
-.subject-admin-btn.is-danger:hover {
+.subject-card-admin-btn.is-danger:hover {
     color: #fecdd3;
-    border-color: rgba(244,63,94,.35);
-    background: rgba(244,63,94,.12);
+    border-color: rgba(244, 63, 94, .35);
+    background: rgba(244, 63, 94, .12);
+}
+
+.subject-card-structure-link {
+    text-decoration: none;
 }
 
 .subject-card-action i {
@@ -1392,7 +1401,7 @@ body.subject-builder-open {
 
                     <a
                         href="{{ route('admin.subjects.levels', $subject) }}"
-                        class="subject-card-action"
+                        class="subject-card-action subject-card-structure-link"
                     >
                         Voir la structure
                         <i class="bi bi-arrow-right"></i>
@@ -1401,7 +1410,8 @@ body.subject-builder-open {
                     <div class="subject-card-admin-actions">
                         <a
                             href="{{ route('admin.subjects.edit', $subject) }}"
-                            class="subject-admin-btn"
+                            class="subject-card-admin-btn"
+                            title="Modifier {{ $subject->name }}"
                         >
                             <i class="bi bi-pencil-square"></i>
                             Modifier
@@ -1410,14 +1420,15 @@ body.subject-builder-open {
                         <form
                             method="POST"
                             action="{{ route('admin.subjects.destroy', $subject) }}"
-                            onsubmit="return confirm('Supprimer définitivement la matière {{ addslashes($subject->name) }} ? Cette opération est autorisée seulement si la matière n’est plus utilisée.');"
+                            onsubmit="return confirm('Supprimer la matière « {{ addslashes($subject->name) }} » ? La suppression sera refusée si elle contient encore des niveaux, classes, cours ou autres données liées.');"
                         >
                             @csrf
                             @method('DELETE')
 
                             <button
                                 type="submit"
-                                class="subject-admin-btn is-danger"
+                                class="subject-card-admin-btn is-danger"
+                                title="Supprimer {{ $subject->name }}"
                             >
                                 <i class="bi bi-trash3"></i>
                                 Supprimer
@@ -1493,7 +1504,7 @@ body.subject-builder-open {
                             <i class="bi bi-book"></i>
                             1. Matière
                         </h3>
-                        <span>Nom libre</span>
+                        <span>Toutes les matières</span>
                     </div>
 
                     <div class="subject-form-grid">
@@ -1501,19 +1512,37 @@ body.subject-builder-open {
                             <label class="subject-form-label" for="subjectName">
                                 Matière <span class="subject-required">*</span>
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 class="subject-form-control"
                                 id="subjectName"
                                 name="name"
-                                value="{{ old('name') }}"
-                                maxlength="120"
-                                placeholder="Ex. Mathématiques"
-                                autocomplete="off"
                                 required
                             >
+                                <option value="">
+                                    Sélectionner une matière
+                                </option>
+
+                                @foreach($subjects as $subjectOption)
+                                    @continue(
+                                        strtolower(
+                                            trim($subjectOption->name)
+                                        ) === 'administration'
+                                    )
+
+                                    <option
+                                        value="{{ $subjectOption->name }}"
+                                        data-type="{{ $subjectOption->type ?: 'scolaire' }}"
+                                        data-status="{{ $subjectOption->status ?: 'active' }}"
+                                        data-description="{{ $subjectOption->description }}"
+                                        {{ old('name') === $subjectOption->name ? 'selected' : '' }}
+                                    >
+                                        {{ $subjectOption->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+
                             <small style="display:block;margin-top:7px;color:var(--adm-text-muted,#94a3b8);font-size:.66rem;">
-                                Écrivez librement le nom de la matière.
+                                Toutes les matières enregistrées sont disponibles dans cette liste.
                             </small>
                         </div>
 
@@ -1670,6 +1699,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const subjectTypeInput = document.getElementById('subjectType');
     const subjectStatusInput =
         document.getElementById('subjectStatus');
+    const subjectDescriptionInput =
+        document.querySelector(
+            'textarea[name="description"]'
+        );
     const searchInput = document.getElementById('subjectSearch');
     const noResult = document.getElementById('subjectsNoResult');
     const initialLevels = @json($oldLevels);
@@ -1895,10 +1928,70 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function syncSubjectType() {
+        const selectedOption =
+            subjectNameInput.options[
+                subjectNameInput.selectedIndex
+            ];
+
+        if (
+            selectedOption
+            && selectedOption.value
+        ) {
+            subjectTypeInput.value =
+                selectedOption.dataset.type
+                || inferSubjectType(
+                    selectedOption.value
+                );
+
+            return;
+        }
+
+        subjectTypeInput.value = 'scolaire';
+    }
+
+    function syncSelectedSubjectMeta() {
+        const selectedOption =
+            subjectNameInput.options[
+                subjectNameInput.selectedIndex
+            ];
+
+        if (
+            !selectedOption
+            || !selectedOption.value
+        ) {
+            subjectTypeInput.value =
+                'scolaire';
+
+            if (subjectStatusInput) {
+                subjectStatusInput.value =
+                    'active';
+            }
+
+            return;
+        }
+
         subjectTypeInput.value =
-            inferSubjectType(
-                subjectNameInput.value
+            selectedOption.dataset.type
+            || inferSubjectType(
+                selectedOption.value
             );
+
+        if (
+            subjectStatusInput
+            && selectedOption.dataset.status
+        ) {
+            subjectStatusInput.value =
+                selectedOption.dataset.status;
+        }
+
+        if (
+            subjectDescriptionInput
+            && !subjectDescriptionInput.dataset.userEdited
+        ) {
+            subjectDescriptionInput.value =
+                selectedOption.dataset.description
+                || '';
+        }
     }
 
     function subjectStatusMeta(value) {
@@ -1928,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderPreview() {
         syncSubjectType();
 
-        const subjectName = subjectNameInput.value.trim() || 'Nouvelle matière';
+        const subjectName = subjectNameInput.value.trim() || 'Sélectionnez une matière';
         const typeLabel = subjectTypeInput.value === 'religieux' ? 'Religieux' : 'Scolaire';
         const statusMeta =
             subjectStatusMeta(
@@ -2071,14 +2164,22 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     subjectNameInput.addEventListener(
-        'input',
-        renderPreview
+        'change',
+        function () {
+            syncSelectedSubjectMeta();
+            renderPreview();
+        }
     );
 
-    subjectNameInput.addEventListener(
-        'change',
-        renderPreview
-    );
+    if (subjectDescriptionInput) {
+        subjectDescriptionInput.addEventListener(
+            'input',
+            function () {
+                subjectDescriptionInput.dataset.userEdited =
+                    '1';
+            }
+        );
+    }
 
     if (subjectStatusInput) {
         subjectStatusInput.addEventListener(
@@ -2103,7 +2204,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    syncSubjectType();
+    syncSelectedSubjectMeta();
     renderLevels();
 
     if (overlay.classList.contains('is-open')) {

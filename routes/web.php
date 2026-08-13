@@ -433,6 +433,11 @@ Route::middleware(['auth', 'isAdmin'])
         // NIVEAUX / PARCOURS
         // ================================
 
+        Route::post(
+            '/subjects/{subject}/levels',
+            [LevelController::class, 'storeSubjectLevel']
+        )->name('subjects.levels.store');
+
         Route::get(
             '/subjects/{subject}/levels/{level}/edit',
             [LevelController::class, 'editSubjectLevel']
@@ -452,6 +457,11 @@ Route::middleware(['auth', 'isAdmin'])
         // ================================
         // CLASSES
         // ================================
+
+        Route::post(
+            '/subjects/{subject}/levels/{level}/classes',
+            [LevelController::class, 'storeSubjectClass']
+        )->name('subjects.classes.store');
 
         Route::get(
             '/subjects/{subject}/levels/{level}/classes/{class}/edit',

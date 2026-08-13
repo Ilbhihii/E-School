@@ -99,6 +99,15 @@
     </div>
 
     <div class="page-actions">
+        <button
+            type="button"
+            class="adm-btn adm-btn-primary"
+            data-toggle-add-class
+        >
+            <i class="bi bi-plus-circle"></i>
+            Ajouter une classe
+        </button>
+
         <a
             href="{{
                 route(
@@ -112,6 +121,83 @@
             Retour aux niveaux
         </a>
     </div>
+</div>
+
+<div
+    class="subject-class-add-panel"
+    id="addClassPanel"
+    @if(old('_form') !== 'class') hidden @endif
+>
+    <div class="subject-class-add-head">
+        <div>
+            <h3>
+                <i class="bi bi-plus-circle me-1"></i>
+                Ajouter une classe
+            </h3>
+            <p>
+                {{ $subject->name }} → {{ $level->name }}
+            </p>
+        </div>
+
+        <button
+            type="button"
+            class="adm-btn adm-btn-ghost"
+            data-close-add-class
+        >
+            <i class="bi bi-x-lg"></i>
+            Fermer
+        </button>
+    </div>
+
+    <form
+        method="POST"
+        action="{{ route('admin.subjects.classes.store', [$subject, $level]) }}"
+    >
+        @csrf
+        <input type="hidden" name="_form" value="class">
+
+        <div class="subject-class-add-grid">
+            <div>
+                <label for="newClassName">
+                    Nom de la classe *
+                </label>
+
+                <input
+                    id="newClassName"
+                    type="text"
+                    name="name"
+                    class="subject-class-add-control"
+                    value="{{ old('_form') === 'class' ? old('name') : '' }}"
+                    placeholder="Ex. Débutant"
+                    maxlength="120"
+                    required
+                >
+
+                @if(old('_form') === 'class')
+                    @error('name')
+                        <div class="subject-class-add-error">
+                            {{ $message }}
+                        </div>
+                    @enderror
+                @endif
+            </div>
+
+            <button
+                type="submit"
+                class="adm-btn adm-btn-primary"
+            >
+                <i class="bi bi-check-lg"></i>
+                Ajouter la classe
+            </button>
+        </div>
+
+        <div class="subject-class-add-note">
+            <i class="bi bi-magic"></i>
+            Les 4 créneaux sont créés automatiquement :
+            Débutant → D1-D4, Intermédiaire → I1-I4,
+            Avancé → A1-A4, autre nom → G1-G4.
+        </div>
+    </form>
 </div>
 
 @if($classes->isEmpty())
@@ -135,6 +221,15 @@
                 Aucune {{ $pageEntitySingular }} n’est liée à cette
                 matière pour le niveau {{ $level->name }}.
             </p>
+
+            <button
+                type="button"
+                class="adm-btn adm-btn-primary mt-3"
+                data-toggle-add-class
+            >
+                <i class="bi bi-plus-circle"></i>
+                Ajouter la première classe
+            </button>
         </div>
     </div>
 @else
@@ -420,6 +515,101 @@
 @endif
 
 <style>
+.subject-class-add-panel {
+    width: min(100%, 940px);
+    margin: 0 auto 1.35rem;
+    padding: 1.2rem;
+    border: 1px solid rgba(99,102,241,.22);
+    border-radius: 17px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(20,30,52,.96),
+            rgba(10,18,34,.98)
+        );
+}
+
+.subject-class-add-panel[hidden] {
+    display: none !important;
+}
+
+.subject-class-add-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.subject-class-add-head h3 {
+    margin: 0;
+    color: rgba(255,255,255,.96);
+    font-size: .95rem;
+    font-weight: 820;
+}
+
+.subject-class-add-head p {
+    margin: 4px 0 0;
+    color: var(--adm-text-muted);
+    font-size: .72rem;
+}
+
+.subject-class-add-grid {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.subject-class-add-grid label {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(255,255,255,.78);
+    font-size: .7rem;
+    font-weight: 740;
+}
+
+.subject-class-add-control {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 10px;
+    outline: none;
+    color: #f8fafc;
+    background: rgba(8,15,29,.78);
+    font: inherit;
+    font-size: .78rem;
+}
+
+.subject-class-add-control:focus {
+    border-color: rgba(99,102,241,.6);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.10);
+}
+
+.subject-class-add-error {
+    margin-top: 6px;
+    color: #fda4af;
+    font-size: .68rem;
+}
+
+.subject-class-add-note {
+    margin-top: 11px;
+    padding: 9px 11px;
+    border: 1px solid rgba(56,189,248,.12);
+    border-radius: 10px;
+    color: #cbd5e1;
+    background: rgba(56,189,248,.05);
+    font-size: .69rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+    .subject-class-add-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* =========================================================
    EN-TÊTE
    ========================================================= */
@@ -867,5 +1057,30 @@
 }
 
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const panel = document.getElementById('addClassPanel');
+    const openButtons = document.querySelectorAll('[data-toggle-add-class]');
+    const closeButton = document.querySelector('[data-close-add-class]');
+
+    openButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const input = document.getElementById('newClassName');
+            if (input) {
+                window.setTimeout(function () { input.focus(); }, 250);
+            }
+        });
+    });
+
+    if (closeButton) {
+        closeButton.addEventListener('click', function () {
+            panel.hidden = true;
+        });
+    }
+});
+</script>
 
 @endsection

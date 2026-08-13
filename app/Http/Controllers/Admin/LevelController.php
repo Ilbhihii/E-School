@@ -136,6 +136,18 @@ class LevelController extends Controller
          */
         $subjects = Subject::query()
             ->get()
+            /*
+             * La matière technique « Administration » est utilisée
+             * uniquement par les fonctions internes (notamment le chat).
+             * Elle ne doit pas apparaître dans la gestion pédagogique
+             * /admin/subjects.
+             */
+            ->reject(
+                fn (Subject $subject) =>
+                    VocalTestPrompt::normalizePathName(
+                        $subject->name
+                    ) === 'administration'
+            )
             ->sortBy(function (Subject $subject) {
                 $normalized =
                     VocalTestPrompt::normalizePathName(
@@ -1031,6 +1043,231 @@ class LevelController extends Controller
                 'La matière « '
                 . $subjectName
                 . ' » a été supprimée.'
+            );
+    }
+
+    /**
+     * Ajouter un nouveau niveau / parcours directement depuis
+     * /admin/subjects/{subject}/levels.
+     */
+    public function storeSubjectLevel(
+        Request $request,
+        Subject $subject
+    ) {
+        $validated = $request->validate(
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    'max:120',
+                ],
+                'description' => [
+                    'nullable',
+                    'string',
+                    'max:500',
+                ],
+            ],
+            [
+                'name.required' =>
+                    'Écrivez le nom du niveau.',
+            ]
+        );
+
+        $newName = trim(
+            $validated['name']
+        );
+
+        $normalizedNewName =
+            VocalTestPrompt::normalizePathName(
+                $newName
+            );
+
+        $duplicate = Level::query()
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->get()
+            ->contains(
+                fn (Level $candidate) =>
+                    VocalTestPrompt::normalizePathName(
+                        $candidate->name
+                    ) === $normalizedNewName
+            );
+
+        if ($duplicate) {
+            return back()
+                ->withErrors([
+                    'name' =>
+                        'Ce niveau existe déjà dans cette matière.',
+                ])
+                ->withInput();
+        }
+
+        $nextOrder = (
+            (int) Level::query()
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->max('order')
+        ) + 1;
+
+        $description = trim(
+            (string) (
+                $validated['description']
+                ?? ''
+            )
+        );
+
+        Level::create([
+            'subject_id' =>
+                $subject->id,
+            'name' =>
+                $newName,
+            'description' =>
+                $description !== ''
+                    ? $description
+                    : null,
+            'order' =>
+                $nextOrder,
+        ]);
+
+        return redirect()
+            ->route(
+                'admin.subjects.levels',
+                $subject
+            )
+            ->with(
+                'success',
+                'Le niveau « '
+                . $newName
+                . ' » a été ajouté avec succès.'
+            );
+    }
+
+    /**
+     * Ajouter une classe directement depuis
+     * /admin/subjects/{subject}/levels/{level}/classes.
+     *
+     * Les quatre créneaux structurels sont générés immédiatement.
+     */
+    public function storeSubjectClass(
+        Request $request,
+        Subject $subject,
+        Level $level,
+        ClassSlotService $classSlotService
+    ) {
+        $this->assertLevelBelongsToSubject(
+            $subject,
+            $level
+        );
+
+        $validated = $request->validate(
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    'max:120',
+                ],
+            ],
+            [
+                'name.required' =>
+                    'Écrivez le nom de la classe.',
+            ]
+        );
+
+        $newName = trim(
+            $validated['name']
+        );
+
+        $normalizedNewName =
+            VocalTestPrompt::normalizePathName(
+                $newName
+            );
+
+        /*
+         * Une classe portant le même nom peut déjà exister dans ce
+         * niveau mais ne pas être encore liée à cette matière.
+         * Dans ce cas on la réutilise au lieu d'en créer une copie.
+         */
+        $classRoom = ClassRoom::query()
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->get()
+            ->first(
+                fn (ClassRoom $candidate) =>
+                    VocalTestPrompt::normalizePathName(
+                        $candidate->name
+                    ) === $normalizedNewName
+            );
+
+        if (
+            $classRoom
+            && $classRoom
+                ->subjects()
+                ->where(
+                    'subjects.id',
+                    $subject->id
+                )
+                ->exists()
+        ) {
+            return back()
+                ->withErrors([
+                    'name' =>
+                        'Cette classe existe déjà dans ce niveau.',
+                ])
+                ->withInput();
+        }
+
+        DB::transaction(
+            function () use (
+                $subject,
+                $level,
+                $newName,
+                $classRoom,
+                $classSlotService
+            ) {
+                if (!$classRoom) {
+                    $classRoom =
+                        ClassRoom::create([
+                            'name' =>
+                                $newName,
+                            'level_id' =>
+                                $level->id,
+                        ]);
+                }
+
+                $classRoom
+                    ->subjects()
+                    ->syncWithoutDetaching([
+                        $subject->id,
+                    ]);
+
+                $classSlotService
+                    ->syncForPath(
+                        $subject,
+                        $level,
+                        $classRoom
+                    );
+            }
+        );
+
+        return redirect()
+            ->route(
+                'admin.subjects.classes',
+                [
+                    $subject,
+                    $level,
+                ]
+            )
+            ->with(
+                'success',
+                'La classe « '
+                . $newName
+                . ' » et ses 4 créneaux ont été ajoutés.'
             );
     }
 

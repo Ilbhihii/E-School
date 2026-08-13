@@ -427,6 +427,83 @@
     transform: translateX(4px);
 }
 
+.subject-add-panel {
+    margin-bottom: 1.35rem;
+    padding: 1.2rem;
+    border: 1px solid rgba(99,102,241,.22);
+    border-radius: 16px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(20,30,52,.96),
+            rgba(10,18,34,.98)
+        );
+}
+
+.subject-add-panel[hidden] {
+    display: none !important;
+}
+
+.subject-add-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.subject-add-panel-head h3 {
+    margin: 0;
+    color: rgba(255,255,255,.96);
+    font-size: .95rem;
+    font-weight: 820;
+}
+
+.subject-add-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1.35fr) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.subject-add-field label {
+    display: block;
+    margin-bottom: 6px;
+    color: rgba(255,255,255,.78);
+    font-size: .7rem;
+    font-weight: 740;
+}
+
+.subject-add-control {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 11px;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 10px;
+    outline: none;
+    color: #f8fafc;
+    background: rgba(8,15,29,.78);
+    font: inherit;
+    font-size: .78rem;
+}
+
+.subject-add-control:focus {
+    border-color: rgba(99,102,241,.6);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.10);
+}
+
+.subject-add-error {
+    margin-top: 6px;
+    color: #fda4af;
+    font-size: .68rem;
+}
+
+@media (max-width: 850px) {
+    .subject-add-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .level-card-wrapper {
         opacity: 1;
@@ -524,6 +601,15 @@
     </div>
 
     <div class="page-actions">
+        <button
+            type="button"
+            class="adm-btn adm-btn-primary"
+            data-toggle-add-level
+        >
+            <i class="bi bi-plus-circle"></i>
+            Ajouter un niveau
+        </button>
+
         <a
             href="{{ route('admin.subjects.index') }}"
             class="adm-btn adm-btn-ghost"
@@ -532,6 +618,87 @@
             Retour aux matières
         </a>
     </div>
+</div>
+
+<div
+    class="subject-add-panel"
+    id="addLevelPanel"
+    @if(old('_form') !== 'level') hidden @endif
+>
+    <div class="subject-add-panel-head">
+        <h3>
+            <i class="bi bi-plus-circle me-1"></i>
+            Ajouter un niveau à {{ $subject->name }}
+        </h3>
+
+        <button
+            type="button"
+            class="adm-btn adm-btn-ghost"
+            data-close-add-level
+        >
+            <i class="bi bi-x-lg"></i>
+            Fermer
+        </button>
+    </div>
+
+    <form
+        method="POST"
+        action="{{ route('admin.subjects.levels.store', $subject) }}"
+    >
+        @csrf
+        <input type="hidden" name="_form" value="level">
+
+        <div class="subject-add-form-grid">
+            <div class="subject-add-field">
+                <label for="newLevelName">
+                    Nom du niveau *
+                </label>
+
+                <input
+                    id="newLevelName"
+                    type="text"
+                    name="name"
+                    class="subject-add-control"
+                    value="{{ old('_form') === 'level' ? old('name') : '' }}"
+                    placeholder="Ex. Débutant"
+                    maxlength="120"
+                    required
+                >
+
+                @if(old('_form') === 'level')
+                    @error('name')
+                        <div class="subject-add-error">
+                            {{ $message }}
+                        </div>
+                    @enderror
+                @endif
+            </div>
+
+            <div class="subject-add-field">
+                <label for="newLevelDescription">
+                    Description
+                </label>
+
+                <input
+                    id="newLevelDescription"
+                    type="text"
+                    name="description"
+                    class="subject-add-control"
+                    value="{{ old('_form') === 'level' ? old('description') : '' }}"
+                    placeholder="Description optionnelle"
+                    maxlength="500"
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="adm-btn adm-btn-primary"
+            >
+                <i class="bi bi-check-lg"></i>
+                Ajouter
+            </button>
+        </div>
+    </form>
 </div>
 
 <div class="subject-levels-summary">
@@ -585,6 +752,15 @@
                 Aucun parcours actif n’est associé à
                 {{ $subject->name }}.
             </p>
+
+            <button
+                type="button"
+                class="adm-btn adm-btn-primary mt-3"
+                data-toggle-add-level
+            >
+                <i class="bi bi-plus-circle"></i>
+                Ajouter le premier niveau
+            </button>
         </div>
     </div>
 @else
@@ -720,5 +896,30 @@
         @endforeach
     </div>
 @endif
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const panel = document.getElementById('addLevelPanel');
+    const openButtons = document.querySelectorAll('[data-toggle-add-level]');
+    const closeButton = document.querySelector('[data-close-add-level]');
+
+    openButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            panel.hidden = false;
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const input = document.getElementById('newLevelName');
+            if (input) {
+                window.setTimeout(function () { input.focus(); }, 250);
+            }
+        });
+    });
+
+    if (closeButton) {
+        closeButton.addEventListener('click', function () {
+            panel.hidden = true;
+        });
+    }
+});
+</script>
 
 @endsection
