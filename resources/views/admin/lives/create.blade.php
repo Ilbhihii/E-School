@@ -32,8 +32,8 @@
                         <div class="adm-form-group" style="margin-bottom:1rem;">
                             <label class="adm-form-label" style="font-size:0.75rem;">Plateforme</label>
                             <select id="meeting_provider" class="adm-form-select" style="font-size:0.85rem;">
-                                <option value="teams" @selected(old('provider') === 'teams')>Microsoft Teams</option>
-                                <option value="google_meet" @selected(old('provider', 'google_meet') === 'google_meet')>Google Meet</option>
+                                <option value="teams" {{ old('provider') === 'teams' ? 'selected' : '' }}>Microsoft Teams</option>
+                                <option value="google_meet" {{ old('provider', 'google_meet') === 'google_meet' ? 'selected' : '' }}>Google Meet</option>
                             </select>
                         </div>
 

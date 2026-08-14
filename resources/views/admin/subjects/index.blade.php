@@ -1581,30 +1581,21 @@ body.subject-builder-open {
                             >
                                 <option
                                     value="active"
-                                    @selected(
-                                        old('status', 'active')
-                                        === 'active'
-                                    )
+                                    {{ old('status', 'active') === 'active' ? 'selected' : '' }}
                                 >
                                     Active
                                 </option>
 
                                 <option
                                     value="coming_soon"
-                                    @selected(
-                                        old('status')
-                                        === 'coming_soon'
-                                    )
+                                    {{ old('status') === 'coming_soon' ? 'selected' : '' }}
                                 >
                                     Bientôt disponible
                                 </option>
 
                                 <option
                                     value="inactive"
-                                    @selected(
-                                        old('status')
-                                        === 'inactive'
-                                    )
+                                    {{ old('status') === 'inactive' ? 'selected' : '' }}
                                 >
                                     Inactive
                                 </option>

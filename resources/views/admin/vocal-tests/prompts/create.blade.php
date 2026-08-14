@@ -318,10 +318,7 @@
                                         @foreach($modes as $mode => $label)
                                             <option
                                                 value="{{ $mode }}"
-                                                @selected(
-                                                    old('test_mode')
-                                                    === $mode
-                                                )
+                                                {{ old('test_mode') === $mode ? 'selected' : '' }}
                                             >
                                                 {{ $label }}
                                             </option>
@@ -510,11 +507,7 @@
                                             type="checkbox"
                                             name="hide_text_during_recording"
                                             value="1"
-                                            @checked(
-                                                old(
-                                                    'hide_text_during_recording'
-                                                )
-                                            )
+                                            {{ old('hide_text_during_recording') ? 'checked' : '' }}
                                         >
 
                                         <span class="prompt-option-icon">
@@ -538,12 +531,7 @@
                                             type="checkbox"
                                             name="is_active"
                                             value="1"
-                                            @checked(
-                                                old(
-                                                    'is_active',
-                                                    '1'
-                                                ) === '1'
-                                            )
+                                            {{ old('is_active', '1') === '1' ? 'checked' : '' }}
                                         >
 
                                         <span class="prompt-option-icon active">

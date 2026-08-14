@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ClassRoom;
+use App\Models\ClassSlot;
 use App\Models\Course;
 use App\Models\Level;
 use App\Models\ProfAssignment;
@@ -578,12 +579,73 @@ class LearningPathService
         User $professor,
         Course $course
     ): bool {
-        return $this->professorCanAccessPath(
-            $professor,
-            (int) $course->subject_id,
-            (int) $course->level_id,
-            (int) $course->class_id
+        if (!$professor->isProf()) {
+            return false;
+        }
+
+        $query = ProfAssignment::query()
+            ->where(
+                'prof_id',
+                $professor->id
+            )
+            ->where(
+                'subject_id',
+                $course->subject_id
+            )
+            ->where(
+                'level_id',
+                $course->level_id
+            )
+            ->where(
+                'class_id',
+                $course->class_id
+            );
+
+        $slotCode = strtoupper(
+            trim(
+                (string) $course->slot_code
+            )
         );
+
+        /*
+         * Les anciens cours sans slot_code restent compatibles.
+         * Dès qu'un créneau D1/D2/I1/A1... est présent, l'accès
+         * professeur doit correspondre au class_slot_id exact.
+         */
+        if ($slotCode === '') {
+            return $query->exists();
+        }
+
+        $slotId = ClassSlot::query()
+            ->where(
+                'subject_id',
+                $course->subject_id
+            )
+            ->where(
+                'level_id',
+                $course->level_id
+            )
+            ->where(
+                'class_id',
+                $course->class_id
+            )
+            ->whereRaw(
+                'UPPER(TRIM(code)) = ?',
+                [$slotCode]
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->value('id');
+
+        return $slotId
+            && $query
+                ->where(
+                    'class_slot_id',
+                    $slotId
+                )
+                ->exists();
     }
 
     public function professorCanAccessStudent(

@@ -86,10 +86,7 @@
                     )
                         <option
                             value="{{ $value }}"
-                            @selected(
-                                request('status')
-                                === $value
-                            )
+                            {{ request('status') === $value ? 'selected' : '' }}
                         >
                             {{ $label }}
                         </option>
@@ -111,10 +108,7 @@
                     @foreach($subjects as $subject)
                         <option
                             value="{{ $subject->id }}"
-                            @selected(
-                                (string) request('subject_id')
-                                === (string) $subject->id
-                            )
+                            {{ (string) request('subject_id') === (string) $subject->id ? 'selected' : '' }}
                         >
                             {{ $subject->name }}
                         </option>

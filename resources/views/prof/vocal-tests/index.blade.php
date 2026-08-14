@@ -137,9 +137,7 @@
                     )
                         <option
                             value="{{ $value }}"
-                            @selected(
-                                request('status') === $value
-                            )
+                            {{ request('status') === $value ? 'selected' : '' }}
                         >
                             {{ $label }}
                         </option>
@@ -167,9 +165,7 @@
                     )
                         <option
                             value="{{ $value }}"
-                            @selected(
-                                request('test_mode') === $value
-                            )
+                            {{ request('test_mode') === $value ? 'selected' : '' }}
                         >
                             {{ $label }}
                         </option>

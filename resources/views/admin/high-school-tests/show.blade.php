@@ -218,12 +218,7 @@
                             )
                                 <option
                                     value="{{ $value }}"
-                                    @selected(
-                                        old(
-                                            'status',
-                                            $submission->status
-                                        ) === $value
-                                    )
+                                    {{ old('status', $submission->status) === $value ? 'selected' : '' }}
                                 >
                                     {{ $label }}
                                 </option>

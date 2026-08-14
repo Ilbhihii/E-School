@@ -14,6 +14,7 @@ use App\Models\ProfAssignment;
 use App\Models\Schedule;
 use App\Mail\AccountActivatedMailable;
 use App\Services\ClassSlotService;
+use App\Services\ProfessorAssignmentService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -176,28 +177,57 @@ class UserController extends Controller
     public function storeProfAssignment(
         Request $request
     ) {
+        /*
+         * Compatibilité avec l'ancien formulaire : si une ancienne
+         * soumission envoie encore subject_id / level_id / class_id /
+         * class_slot_id à plat, elle est convertie en une ligne.
+         */
+        if (
+            !$request->has('assignments')
+            && $request->filled('class_slot_id')
+        ) {
+            $request->merge([
+                'assignments' => [[
+                    'subject_id' =>
+                        $request->input('subject_id'),
+                    'level_id' =>
+                        $request->input('level_id'),
+                    'class_id' =>
+                        $request->input('class_id'),
+                    'class_slot_id' =>
+                        $request->input('class_slot_id'),
+                ]],
+            ]);
+        }
+
         $validated = $request->validate([
             'prof_id' => [
                 'required',
                 'integer',
                 'exists:users,id',
             ],
-            'subject_id' => [
+            'assignments' => [
+                'required',
+                'array',
+                'min:1',
+                'max:100',
+            ],
+            'assignments.*.subject_id' => [
                 'required',
                 'integer',
                 'exists:subjects,id',
             ],
-            'level_id' => [
+            'assignments.*.level_id' => [
                 'required',
                 'integer',
                 'exists:levels,id',
             ],
-            'class_id' => [
+            'assignments.*.class_id' => [
                 'required',
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
+            'assignments.*.class_slot_id' => [
                 'required',
                 'integer',
                 'exists:class_slots,id',
@@ -205,19 +235,28 @@ class UserController extends Controller
         ], [
             'prof_id.required' =>
                 'Veuillez sélectionner un professeur.',
-            'subject_id.required' =>
-                'Veuillez sélectionner une matière.',
-            'level_id.required' =>
-                'Veuillez sélectionner un niveau.',
-            'class_id.required' =>
-                'Veuillez sélectionner une classe.',
-            'class_slot_id.required' =>
-                'Veuillez sélectionner un créneau.',
+            'assignments.required' =>
+                'Ajoutez au moins une affectation.',
+            'assignments.min' =>
+                'Ajoutez au moins une affectation.',
+            'assignments.*.subject_id.required' =>
+                'Chaque ligne doit avoir une matière.',
+            'assignments.*.level_id.required' =>
+                'Chaque ligne doit avoir un niveau.',
+            'assignments.*.class_id.required' =>
+                'Chaque ligne doit avoir une classe.',
+            'assignments.*.class_slot_id.required' =>
+                'Chaque ligne doit avoir un créneau.',
         ]);
 
         $professor = User::query()
-            ->whereKey($validated['prof_id'])
-            ->where('role', 'prof')
+            ->whereKey(
+                $validated['prof_id']
+            )
+            ->where(
+                'role',
+                User::ROLE_PROF
+            )
             ->first();
 
         if (!$professor) {
@@ -225,156 +264,163 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'prof_id' =>
-                        'Le compte sélectionné '
-                        . 'n’est pas un professeur.',
+                        'Le compte sélectionné n’est pas un professeur.',
                 ]);
         }
 
-        /*
-         * Même si quelqu'un modifie manuellement la requête,
-         * une matière non active ne peut pas être assignée.
-         */
-        $subject = Subject::query()
-            ->whereKey(
-                $validated['subject_id']
-            )
-            ->where(
-                'status',
-                'active'
-            )
-            ->first();
-
-        if (!$subject) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'subject_id' =>
-                        'Cette matière n’est pas active.',
-                ]);
-        }
-
-        $slotService =
-            app(ClassSlotService::class);
-
-        /*
-         * Vérifie que le créneau appartient réellement au chemin :
-         * Matière → Niveau → Classe.
-         */
-        $slot = $slotService->slotForPath(
-            (int) $validated['class_slot_id'],
-            (int) $subject->id,
-            (int) $validated['level_id'],
-            (int) $validated['class_id']
+        $result = app(
+            ProfessorAssignmentService::class
+        )->add(
+            $professor,
+            $validated['assignments']
         );
 
-        if (!$slot) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'class_slot_id' =>
-                        'Ce créneau n’appartient pas au parcours '
-                        . 'Matière → Niveau → Classe sélectionné.',
-                ]);
-        }
+        return back()->with(
+            'success',
+            $result['total']
+            . ' affectation(s) enregistrée(s) pour '
+            . $professor->name
+            . '.'
+        );
+    }
 
-        /*
-         * Un seul professeur principal par créneau structurel.
-         * Si D1 est déjà affecté, l'assignation est mise à jour.
-         */
-        $assignment = ProfAssignment::query()
+    /**
+     * Modifier toutes les affectations actives d'un professeur.
+     */
+    public function editProfAssignments(
+        User $professor
+    ) {
+        abort_unless(
+            $professor->role === User::ROLE_PROF,
+            404
+        );
+
+        $assignmentHierarchy =
+            $this->buildAssignmentHierarchy();
+
+        $assignments = ProfAssignment::query()
+            ->with([
+                'subject',
+                'level',
+                'classRoom',
+                'classSlot',
+            ])
             ->where(
-                'class_slot_id',
-                $slot->id
+                'prof_id',
+                $professor->id
             )
-            ->first();
-
-        /*
-         * Une séance dans /admin/schedule est optionnelle.
-         * On la cherche uniquement pour synchroniser éventuellement
-         * le professeur et recopier l'horaire.
-         */
-        $schedule = Schedule::query()
-            ->active()
             ->whereHas(
-                'subjectModel',
+                'subject',
                 fn ($query) =>
                     $query->where(
                         'status',
                         'active'
                     )
             )
-            ->where(
-                'subject_id',
-                $slot->subject_id
+            ->whereNotNull(
+                'class_slot_id'
             )
-            ->where(
-                'level_id',
-                $slot->level_id
-            )
-            ->where(
-                'class_id',
-                $slot->class_id
-            )
-            ->whereRaw(
-                'UPPER(TRIM(slot_code)) = ?',
-                [
-                    strtoupper(
-                        trim(
-                            (string) $slot->code
-                        )
-                    ),
+            ->orderBy('subject_id')
+            ->orderBy('level_id')
+            ->orderBy('class_id')
+            ->orderBy('class_slot_id')
+            ->get();
+
+        $selectedAssignments = $assignments
+            ->map(
+                fn (ProfAssignment $assignment) => [
+                    'subject_id' =>
+                        (int) $assignment->subject_id,
+                    'level_id' =>
+                        (int) $assignment->level_id,
+                    'class_id' =>
+                        (int) $assignment->class_id,
+                    'class_slot_id' =>
+                        (int) $assignment->class_slot_id,
                 ]
             )
-            ->first();
+            ->values()
+            ->all();
 
-        $assignmentData = [
-            'prof_id' =>
-                $professor->id,
-            'subject_id' =>
-                $slot->subject_id,
-            'level_id' =>
-                $slot->level_id,
-            'class_id' =>
-                $slot->class_id,
-            'class_slot_id' =>
-                $slot->id,
-            'day_of_week' =>
-                $schedule?->day_of_week,
-            'start_time' =>
-                $schedule?->start_time,
-            'end_time' =>
-                $schedule?->end_time,
-        ];
-
-        if ($assignment) {
-            $assignment->update(
-                $assignmentData
-            );
-        } else {
-            ProfAssignment::create(
-                $assignmentData
-            );
-        }
-
-        /*
-         * Si la séance existe déjà, elle récupère aussi le professeur.
-         * Sans séance, l'affectation reste parfaitement valide.
-         */
-        if ($schedule) {
-            $schedule->update([
-                'prof_id' =>
-                    $professor->id,
-            ]);
-        }
-
-        return back()->with(
-            'success',
-            'Le professeur '
-            . $professor->name
-            . ' a été affecté au créneau '
-            . $slot->code
-            . ' avec succès.'
+        return view(
+            'admin.prof-assignments-edit',
+            compact(
+                'professor',
+                'assignmentHierarchy',
+                'selectedAssignments'
+            )
         );
+    }
+
+    /**
+     * Remplacer la liste des affectations actives d'un professeur.
+     */
+    public function updateProfAssignments(
+        Request $request,
+        User $professor
+    ) {
+        abort_unless(
+            $professor->role === User::ROLE_PROF,
+            404
+        );
+
+        $validated = $request->validate([
+            'assignments' => [
+                'required',
+                'array',
+                'min:1',
+                'max:100',
+            ],
+            'assignments.*.subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'assignments.*.level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'assignments.*.class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'assignments.*.class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
+        ], [
+            'assignments.required' =>
+                'Ajoutez au moins une affectation.',
+            'assignments.min' =>
+                'Le professeur doit conserver au moins une affectation. '
+                . 'Pour tout supprimer, utilisez les boutons Supprimer '
+                . 'depuis la liste principale.',
+        ]);
+
+        $result = app(
+            ProfessorAssignmentService::class
+        )->replaceActive(
+            $professor,
+            $validated['assignments']
+        );
+
+        return redirect()
+            ->route(
+                'admin.users.prof-assignments'
+            )
+            ->with(
+                'success',
+                'Affectations de '
+                . $professor->name
+                . ' mises à jour : '
+                . $result['total']
+                . ' active(s), '
+                . $result['removed']
+                . ' retirée(s).'
+            );
     }
 
     /**
@@ -382,59 +428,12 @@ class UserController extends Controller
      */
     public function destroyProfAssignment($id)
     {
-        /*
-         * ProfAssignment n'a volontairement PAS de relation "schedule".
-         * Le lien principal est classSlot.
-         */
         $assignment = ProfAssignment::query()
-            ->with('classSlot')
             ->findOrFail($id);
 
-        /*
-         * Si une séance correspondant au même créneau structurel
-         * existe, on retire aussi le professeur de cette séance.
-         */
-        if ($assignment->classSlot) {
-            $schedule = Schedule::query()
-                ->active()
-                ->where(
-                    'subject_id',
-                    $assignment->subject_id
-                )
-                ->where(
-                    'level_id',
-                    $assignment->level_id
-                )
-                ->where(
-                    'class_id',
-                    $assignment->class_id
-                )
-                ->whereRaw(
-                    'UPPER(TRIM(slot_code)) = ?',
-                    [
-                        strtoupper(
-                            trim(
-                                (string) $assignment
-                                    ->classSlot
-                                    ->code
-                            )
-                        ),
-                    ]
-                )
-                ->where(
-                    'prof_id',
-                    $assignment->prof_id
-                )
-                ->first();
-
-            if ($schedule) {
-                $schedule->update([
-                    'prof_id' => null,
-                ]);
-            }
-        }
-
-        $assignment->delete();
+        app(
+            ProfessorAssignmentService::class
+        )->remove($assignment);
 
         return back()->with(
             'success',

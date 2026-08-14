@@ -17,6 +17,16 @@ class TestSeeder extends Seeder
 {
     public function run(): void
     {
+        if (!class_exists(Faker::class)) {
+            if ($this->command) {
+                $this->command->warn(
+                    'TestSeeder ignoré : Faker n’est pas installé.'
+                );
+            }
+
+            return;
+        }
+
         $faker = Faker::create();
 
         // Create a level (LevelSeeder already runs first and creates real levels)

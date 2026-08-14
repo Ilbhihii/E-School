@@ -716,6 +716,16 @@ Route::middleware(['auth', 'isAdmin'])
             [UserController::class, 'storeProfAssignment']
         )->name('users.store-prof-assignment');
 
+        Route::get(
+            '/prof-assignments/professors/{professor}/edit',
+            [UserController::class, 'editProfAssignments']
+        )->name('users.edit-prof-assignments');
+
+        Route::patch(
+            '/prof-assignments/professors/{professor}',
+            [UserController::class, 'updateProfAssignments']
+        )->name('users.update-prof-assignments');
+
         Route::delete(
             '/prof-assignments/{id}',
             [UserController::class, 'destroyProfAssignment']
@@ -1316,6 +1326,13 @@ Route::middleware(['auth', 'active'])
             [StudentController::class, 'updatePassword']
         )->name('settings.password.update');
     });
+
+/*
+|--------------------------------------------------------------------------
+| PARENT
+|--------------------------------------------------------------------------
+*/
+require __DIR__ . '/parent.php';
 
 /*
 |--------------------------------------------------------------------------
