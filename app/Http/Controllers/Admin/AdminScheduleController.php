@@ -9,6 +9,8 @@ use App\Models\ProfAssignment;
 use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\ClassSlotService;
+use App\Services\ProfessorAssignmentService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -213,6 +215,9 @@ class AdminScheduleController extends Controller
             'subject_id' => (int) $schedule->subject_id,
             'level_id' => (int) $schedule->level_id,
             'class_id' => (int) $schedule->class_id,
+            'slot_code' => strtoupper(
+                trim((string) $schedule->slot_code)
+            ),
             'prof_id' => (int) $teacher->id,
             'day_of_week' => (int) $schedule->day_of_week,
             'start_time' => Carbon::parse(
@@ -337,7 +342,24 @@ class AdminScheduleController extends Controller
             ]);
         }
 
-        $allowedSlotCodes = $this->slotCodesForClass($classRoom);
+        $allowedSlotCodes = app(
+            ClassSlotService::class
+        )
+            ->syncForPath(
+                $subject,
+                $level,
+                $classRoom
+            )
+            ->pluck('code')
+            ->map(
+                fn ($code) =>
+                    strtoupper(
+                        trim((string) $code)
+                    )
+            )
+            ->values()
+            ->all();
+
         $slotCode = strtoupper(
             trim((string) $validated['slot_code'])
         );
@@ -729,34 +751,45 @@ class AdminScheduleController extends Controller
      */
     private function syncTeachingAssignment(array $data): void
     {
-        if (empty($data['prof_id'])) {
+        if (
+            empty($data['prof_id'])
+            || empty($data['subject_id'])
+            || empty($data['level_id'])
+            || empty($data['class_id'])
+            || empty($data['slot_code'])
+        ) {
             return;
         }
 
-        $assignment = ProfAssignment::firstOrCreate([
-            'prof_id' => $data['prof_id'],
-            'subject_id' => $data['subject_id'],
-            'level_id' => $data['level_id'],
-            'class_id' => $data['class_id'],
-        ]);
+        $professor = User::query()
+            ->whereKey(
+                (int) $data['prof_id']
+            )
+            ->where(
+                'role',
+                User::ROLE_PROF
+            )
+            ->first();
 
-        if (!$assignment->day_of_week) {
-            $assignment->day_of_week = $data['day_of_week'];
+        if (!$professor) {
+            return;
         }
 
-        if (!$assignment->start_time) {
-            $assignment->start_time = Carbon::parse($data['start_time'])
-                ->format('H:i:s');
-        }
-
-        if (!$assignment->end_time) {
-            $assignment->end_time = Carbon::parse($data['end_time'])
-                ->format('H:i:s');
-        }
-
-        if ($assignment->isDirty()) {
-            $assignment->save();
-        }
+        /*
+         * IMPORTANT : une affectation professeur doit toujours pointer
+         * vers le class_slot_id exact. L'ancienne version créait parfois
+         * une ligne ProfAssignment sans class_slot_id depuis le planning,
+         * ce qui rendait l'affectation invisible ou trop large côté Prof.
+         */
+        app(
+            ProfessorAssignmentService::class
+        )->reassignFromSchedule(
+            $professor,
+            (int) $data['subject_id'],
+            (int) $data['level_id'],
+            (int) $data['class_id'],
+            (string) $data['slot_code']
+        );
     }
 
     private function buildScheduleHierarchy(): array
@@ -885,18 +918,43 @@ class AdminScheduleController extends Controller
                 }
 
                 $subjectLevels = $subjectLevels
-                    ->map(function (Level $level) {
+                    ->map(function (Level $level) use ($subject) {
+                        $slotService = app(
+                            ClassSlotService::class
+                        );
+
                         $classes = $level->classes
+                            ->filter(
+                                fn (ClassRoom $classRoom) =>
+                                    $classRoom
+                                        ->subjects()
+                                        ->where(
+                                            'subjects.id',
+                                            $subject->id
+                                        )
+                                        ->exists()
+                            )
                             ->unique('id')
                             ->values()
-                            ->map(function (ClassRoom $classRoom) {
+                            ->map(function (ClassRoom $classRoom) use (
+                                $subject,
+                                $level,
+                                $slotService
+                            ) {
+                                $slotCodes = $slotService
+                                    ->syncForPath(
+                                        $subject,
+                                        $level,
+                                        $classRoom
+                                    )
+                                    ->pluck('code')
+                                    ->values()
+                                    ->all();
+
                                 return [
                                     'id' => (int) $classRoom->id,
                                     'name' => $classRoom->name,
-                                    'slot_codes' =>
-                                        $this->slotCodesForClass(
-                                            $classRoom
-                                        ),
+                                    'slot_codes' => $slotCodes,
                                 ];
                             })
                             ->all();

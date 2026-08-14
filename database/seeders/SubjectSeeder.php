@@ -79,42 +79,6 @@ class SubjectSeeder extends Seeder
                 'image' => null,
             ],
             [
-                'name' => 'Tajwid',
-                'type' => 'religieux',
-                'description' => 'Règles de récitation coranique et perfectionnement de la lecture',
-                'image' => null,
-            ],
-            [
-                'name' => 'Fiqh',
-                'type' => 'religieux',
-                'description' => "Jurisprudence islamique : les règles et principes de l'islam",
-                'image' => null,
-            ],
-            [
-                'name' => 'Aqida',
-                'type' => 'religieux',
-                'description' => 'Croyance islamique : les fondements de la foi',
-                'image' => null,
-            ],
-            [
-                'name' => 'Hadith',
-                'type' => 'religieux',
-                'description' => 'Étude des hadiths du Prophète Muhammad (PSL)',
-                'image' => null,
-            ],
-            [
-                'name' => 'Sira',
-                'type' => 'religieux',
-                'description' => 'Biographie du Prophète Muhammad (PSL) et histoire islamique',
-                'image' => null,
-            ],
-            [
-                'name' => 'Tafsir',
-                'type' => 'religieux',
-                'description' => 'Exégèse et interprétation des versets du Coran',
-                'image' => null,
-            ],
-            [
                 'name' => 'Langue Arabe Islamique',
                 'type' => 'religieux',
                 'description' => 'Langue arabe appliquée aux textes islamiques',

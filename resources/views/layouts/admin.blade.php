@@ -109,6 +109,12 @@
                         <span class="nav-label">Professeurs</span>
                     </a>
 
+                    <a href="{{ route('admin.parents.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.parents*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-person-hearts"></i></span>
+                        <span class="nav-label">Parents</span>
+                    </a>
+
                     <a href="{{ route('admin.assign.class') }}"
                        class="admin-nav-link {{ request()->routeIs('admin.assign.class') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="bi bi-person-check-fill"></i></span>
@@ -174,15 +180,6 @@
 
                 <div class="admin-nav-section">
                     <div class="admin-nav-heading">Communication</div>
-
-                    <a href="{{ route('admin.contacts.index') }}"
-                       class="admin-nav-link {{ request()->routeIs('admin.contacts*') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="bi bi-person-lines-fill"></i></span>
-                        <span class="nav-label">
-                            Contacts / Prospects
-                            <small>Formulaire public</small>
-                        </span>
-                    </a>
 
                     <a href="{{ route('admin.appointments.index') }}"
                        class="admin-nav-link {{ request()->routeIs('admin.appointments*') ? 'active' : '' }}">
@@ -258,9 +255,11 @@
                 </div>
 
                 <div class="admin-topbar-actions">
-                    <a href="{{ route('home') }}" class="admin-site-link" title="Voir le site public">
-                        <i class="bi bi-box-arrow-up-right"></i>
-                        <span>Voir le site</span>
+                    <a href="{{ route('home') }}"
+                       class="admin-site-link"
+                       title="Voir le site public"
+                       aria-label="Voir le site public">
+                        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                     </a>
 
                     @auth

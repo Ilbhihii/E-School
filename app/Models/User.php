@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\ClassRoom;
+use App\Models\Classe;
 use App\Models\Absence;
 use App\Notifications\ResetPasswordNotification;
 
@@ -20,6 +21,7 @@ class User extends Authenticatable
     const ROLE_ADMIN = 'admin';
     const ROLE_PROF = 'prof';
     const ROLE_STUDENT = 'student';
+    const ROLE_PARENT = 'parent';
 
     /**
      * The attributes that are mass assignable.
@@ -81,12 +83,7 @@ class User extends Authenticatable
 
 public function classes()
     {
-        return $this->belongsToMany(
-            ClassRoom::class,
-            'class_user',
-            'user_id',
-            'class_id'
-        )->withPivot('subject_id')->withTimestamps();
+        return $this->belongsToMany(Classe::class);
     }
 
 public function absences()
@@ -109,6 +106,45 @@ public function isStudent()
     return $this->role === static::ROLE_STUDENT;
 }
 
+public function isParent()
+{
+    return $this->role === static::ROLE_PARENT;
+}
+
+public function children()
+{
+    return $this->belongsToMany(
+        static::class,
+        'parent_student',
+        'parent_id',
+        'student_id'
+    )->withPivot([
+        'relationship',
+        'is_primary',
+        'can_view_schedule',
+        'can_view_absences',
+        'can_view_assignments',
+        'can_view_results',
+    ])->withTimestamps();
+}
+
+public function parents()
+{
+    return $this->belongsToMany(
+        static::class,
+        'parent_student',
+        'student_id',
+        'parent_id'
+    )->withPivot([
+        'relationship',
+        'is_primary',
+        'can_view_schedule',
+        'can_view_absences',
+        'can_view_assignments',
+        'can_view_results',
+    ])->withTimestamps();
+}
+
 /**
  * Retourne la route du tableau de bord correspondant au rôle du compte.
  */
@@ -118,6 +154,7 @@ public function dashboardRoute(): string
         static::ROLE_ADMIN => route('admin.dashboard'),
         static::ROLE_PROF => route('prof.dashboard'),
         static::ROLE_STUDENT => route('student.dashboard'),
+        static::ROLE_PARENT => route('parent.dashboard'),
         default => route('home'),
     };
 }
