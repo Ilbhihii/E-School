@@ -329,6 +329,8 @@
                         <i class="bi bi-box-arrow-up-right"></i>
                         <span>Voir le site</span>
                     </a>
+
+                    @include('components.notification-bell')
 <div class="student-user-menu">
 
                         <button

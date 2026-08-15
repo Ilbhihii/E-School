@@ -1339,6 +1339,7 @@ Route::middleware(['auth', 'active'])
 | PARENT
 |--------------------------------------------------------------------------
 */
+require __DIR__ . '/notifications.php';
 require __DIR__ . '/parent.php';
 
 /*

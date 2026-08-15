@@ -40,7 +40,11 @@
         <main class="parent-main">
             <header class="parent-topbar">
                 <div><small>2SA Smart School Academy</small><h1>@yield('page_title', 'Espace Parent')</h1></div>
-                <span><i class="bi bi-shield-check"></i> Suivi sécurisé</span>
+
+                <div style="display:flex;align-items:center;gap:10px;">
+                    @include('components.notification-bell')
+                    <span><i class="bi bi-shield-check"></i> Suivi sécurisé</span>
+                </div>
             </header>
 
             <section class="parent-content">

@@ -279,6 +279,8 @@
                         <i class="bi bi-house-door"></i>
                     </a>
 
+                    @include('components.notification-bell')
+
                     <div class="prof-user-area">
                         <button
                             type="button"

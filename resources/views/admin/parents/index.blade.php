@@ -1030,6 +1030,22 @@
                         <button
                             type="button"
                             class="parent-action-btn"
+                            data-edit-parent
+                            data-parent-id="{{ $parent->id }}"
+                            data-parent-name="{{ $parent->name }}"
+                            data-parent-email="{{ $parent->email }}"
+                            data-parent-active="{{ $isActive ? '1' : '0' }}"
+                            data-update-url="{{ route('admin.parents.update', $parent) }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editParentModal"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                            Modifier
+                        </button>
+
+                        <button
+                            type="button"
+                            class="parent-action-btn"
                             onclick="document.getElementById('manage-parent-{{ $parent->id }}').open = !document.getElementById('manage-parent-{{ $parent->id }}').open"
                         >
                             <i class="bi bi-person-plus"></i>
@@ -1039,7 +1055,7 @@
                         <form
                             method="POST"
                             action="{{ route('admin.parents.destroy', $parent) }}"
-                            onsubmit="return confirm('Supprimer définitivement le compte Parent {{ addslashes($parent->name) }} ?');"
+                            onsubmit="return confirm('Supprimer définitivement le compte Parent {{ addslashes($parent->name) }} ?\n\nLes comptes des enfants seront conservés. Seules les associations avec ce parent seront supprimées.');"
                         >
                             @csrf
                             @method('DELETE')
@@ -1117,6 +1133,142 @@
     </section>
 </div>
 
+<!-- =========================================================
+     MODAL — MODIFIER UN PARENT
+     ========================================================= -->
+<div
+    class="modal fade parents-modal"
+    id="editParentModal"
+    tabindex="-1"
+    aria-labelledby="editParentModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="" id="editParentForm">
+                @csrf
+                @method('PUT')
+
+                <input type="hidden" name="form_context" value="edit">
+                <input type="hidden" name="edit_parent_id" id="edit_parent_id" value="">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editParentModalLabel">
+                        <i class="bi bi-pencil-square" style="color:#a78bfa;"></i>
+                        Modifier le compte Parent
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Fermer"
+                    ></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="parent-form-grid">
+                        <div class="parent-form-field">
+                            <label class="parent-form-label" for="edit_parent_name">
+                                Nom complet <span class="required">*</span>
+                            </label>
+                            <input
+                                id="edit_parent_name"
+                                class="parents-control"
+                                name="name"
+                                maxlength="120"
+                                required
+                            >
+                        </div>
+
+                        <div class="parent-form-field">
+                            <label class="parent-form-label" for="edit_parent_email">
+                                Adresse e-mail <span class="required">*</span>
+                            </label>
+                            <input
+                                id="edit_parent_email"
+                                class="parents-control"
+                                type="email"
+                                name="email"
+                                maxlength="190"
+                                required
+                            >
+                        </div>
+
+                        <div class="parent-form-field full">
+                            <label class="parent-form-label" for="edit_parent_status">
+                                Statut du compte <span class="required">*</span>
+                            </label>
+                            <select
+                                id="edit_parent_status"
+                                class="parents-control"
+                                name="is_active"
+                                required
+                            >
+                                <option value="1">Actif</option>
+                                <option value="0">Inactif</option>
+                            </select>
+                            <small style="display:block;margin-top:7px;color:#64748b;font-size:.55rem;line-height:1.55;">
+                                Un compte inactif reste enregistré mais ne doit plus être utilisé pour accéder à l’espace Parent.
+                            </small>
+                        </div>
+
+                        <div class="parent-form-field">
+                            <label class="parent-form-label" for="edit_parent_password">
+                                Nouveau mot de passe
+                            </label>
+                            <input
+                                id="edit_parent_password"
+                                class="parents-control"
+                                type="password"
+                                name="password"
+                                minlength="8"
+                                autocomplete="new-password"
+                                placeholder="Laisser vide pour conserver l’actuel"
+                            >
+                        </div>
+
+                        <div class="parent-form-field">
+                            <label class="parent-form-label" for="edit_parent_password_confirmation">
+                                Confirmer le nouveau mot de passe
+                            </label>
+                            <input
+                                id="edit_parent_password_confirmation"
+                                class="parents-control"
+                                type="password"
+                                name="password_confirmation"
+                                minlength="8"
+                                autocomplete="new-password"
+                                placeholder="Répéter le nouveau mot de passe"
+                            >
+                        </div>
+
+                        <div class="parent-form-field full">
+                            <div style="padding:12px 13px;border:1px solid rgba(56,189,248,.12);border-radius:11px;background:rgba(56,189,248,.04);color:#94a3b8;font-size:.58rem;line-height:1.65;">
+                                <i class="bi bi-info-circle-fill" style="color:#7dd3fc;margin-right:5px;"></i>
+                                Les enfants associés et leurs permissions se gèrent directement depuis la carte du parent. Ils ne sont pas modifiés par ce formulaire.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer p-3">
+                    <button
+                        type="button"
+                        class="parent-action-btn"
+                        data-bs-dismiss="modal"
+                    >
+                        Annuler
+                    </button>
+                    <button type="submit" class="parents-create-btn">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Enregistrer les modifications
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div
     class="modal fade parents-modal"
     id="createParentModal"
@@ -1128,6 +1280,7 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.parents.store') }}" id="createParentForm">
                 @csrf
+                <input type="hidden" name="form_context" value="create">
 
                 <div class="modal-header">
                     <h5 class="modal-title" id="createParentModalLabel">
@@ -1147,7 +1300,7 @@
                                 id="parent_name"
                                 class="parents-control"
                                 name="name"
-                                value="{{ old('name') }}"
+                                value="{{ old('form_context') === 'create' ? old('name') : '' }}"
                                 placeholder="Ex. Mohamed Amrani"
                                 required
                             >
@@ -1162,7 +1315,7 @@
                                 class="parents-control"
                                 type="email"
                                 name="email"
-                                value="{{ old('email') }}"
+                                value="{{ old('form_context') === 'create' ? old('email') : '' }}"
                                 placeholder="parent@email.com"
                                 required
                             >
@@ -1173,10 +1326,10 @@
                                 Lien avec l’enfant <span class="required">*</span>
                             </label>
                             <select id="parent_relationship" class="parents-control" name="relationship" required>
-                                <option value="Père" @selected(old('relationship') === 'Père')>Père</option>
-                                <option value="Mère" @selected(old('relationship') === 'Mère')>Mère</option>
-                                <option value="Tuteur" @selected(old('relationship') === 'Tuteur')>Tuteur</option>
-                                <option value="Responsable" @selected(old('relationship') === 'Responsable')>Responsable</option>
+                                <option value="Père" @selected(old('form_context') === 'create' && old('relationship') === 'Père')>Père</option>
+                                <option value="Mère" @selected(old('form_context') === 'create' && old('relationship') === 'Mère')>Mère</option>
+                                <option value="Tuteur" @selected(old('form_context') === 'create' && old('relationship') === 'Tuteur')>Tuteur</option>
+                                <option value="Responsable" @selected(old('form_context') === 'create' && old('relationship') === 'Responsable')>Responsable</option>
                             </select>
                         </div>
 
@@ -1199,7 +1352,7 @@
                                 @foreach($students as $student)
                                     @php
                                         $studentInitial = mb_strtoupper(mb_substr(trim($student->name), 0, 1));
-                                        $isChecked = in_array((string) $student->id, array_map('strval', old('student_ids', [])), true);
+                                        $isChecked = old('form_context') === 'create' && in_array((string) $student->id, array_map('strval', old('student_ids', [])), true);
                                     @endphp
                                     <div
                                         class="parent-student-option"
@@ -1373,6 +1526,63 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // ---------------------------------------------------------
+    // Modification d'un compte Parent
+    // ---------------------------------------------------------
+    const editParentModal = document.getElementById('editParentModal');
+    const editParentForm = document.getElementById('editParentForm');
+    const editParentId = document.getElementById('edit_parent_id');
+    const editParentName = document.getElementById('edit_parent_name');
+    const editParentEmail = document.getElementById('edit_parent_email');
+    const editParentStatus = document.getElementById('edit_parent_status');
+    const editParentPassword = document.getElementById('edit_parent_password');
+    const editParentPasswordConfirmation = document.getElementById('edit_parent_password_confirmation');
+    const editButtons = Array.from(document.querySelectorAll('[data-edit-parent]'));
+
+    const loadParentIntoEditModal = button => {
+        if (!button || !editParentForm) return;
+
+        editParentForm.action = button.dataset.updateUrl || '';
+        editParentId.value = button.dataset.parentId || '';
+        editParentName.value = button.dataset.parentName || '';
+        editParentEmail.value = button.dataset.parentEmail || '';
+        editParentStatus.value = button.dataset.parentActive === '1' ? '1' : '0';
+
+        // Le mot de passe n'est jamais renvoyé par le serveur.
+        editParentPassword.value = '';
+        editParentPasswordConfirmation.value = '';
+    };
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            loadParentIntoEditModal(button);
+        });
+    });
+
+    @if(old('form_context') === 'edit' && old('edit_parent_id'))
+        const oldEditButton = document.querySelector(
+            '[data-edit-parent][data-parent-id="{{ (int) old('edit_parent_id') }}"]'
+        );
+
+        if (oldEditButton && editParentModal) {
+            loadParentIntoEditModal(oldEditButton);
+            editParentName.value = @json(old('name'));
+            editParentEmail.value = @json(old('email'));
+            editParentStatus.value = @json((string) old('is_active', '1'));
+
+            bootstrap.Modal
+                .getOrCreateInstance(editParentModal)
+                .show();
+        }
+    @elseif(old('form_context') === 'create' && $errors->any())
+        const createParentModal = document.getElementById('createParentModal');
+        if (createParentModal) {
+            bootstrap.Modal
+                .getOrCreateInstance(createParentModal)
+                .show();
+        }
+    @endif
 
     applySort();
 });

@@ -268,6 +268,8 @@
                         <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                     </a>
 
+                    @include('components.notification-bell')
+
                     @auth
                         <div class="admin-user-menu-wrap">
                             <button type="button" class="admin-user-trigger" id="adminUserMenuButton" aria-expanded="false">
