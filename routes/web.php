@@ -733,6 +733,17 @@ Route::middleware(['auth', 'isAdmin'])
             [UserController::class, 'storeProfAssignment']
         )->name('users.store-prof-assignment');
 
+        // Modifier toutes les affectations d'un professeur
+        Route::get(
+            '/prof-assignments/professors/{professor}/edit',
+            [UserController::class, 'editProfAssignments']
+        )->name('users.edit-prof-assignments');
+
+        Route::patch(
+            '/prof-assignments/professors/{professor}',
+            [UserController::class, 'updateProfAssignments']
+        )->name('users.update-prof-assignments');
+
         Route::delete(
             '/prof-assignments/{id}',
             [UserController::class, 'destroyProfAssignment']
