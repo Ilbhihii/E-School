@@ -9,6 +9,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ProfessorAvailabilityController extends Controller
@@ -64,6 +65,40 @@ class ProfessorAvailabilityController extends Controller
             $selectedProfessor = $professors->first();
         }
 
+        /*
+         * Onglet affiché au chargement.
+         * Le tableau récapitulatif devient la vue par défaut afin que
+         * l'administrateur voie immédiatement l'ensemble des professeurs.
+         */
+        $activeTab = (string) $request->query('tab', 'summary');
+
+        if (!in_array($activeTab, ['editor', 'week', 'summary'], true)) {
+            $activeTab = 'summary';
+        }
+
+        /*
+         * Filtre optionnel de la vue hebdomadaire.
+         * 0 = tous les professeurs.
+         */
+        $weekProfessorId = (int) $request->query(
+            'week_professor_id',
+            0
+        );
+
+        if (
+            $weekProfessorId > 0
+            && !$professors->contains(
+                'id',
+                $weekProfessorId
+            )
+        ) {
+            $weekProfessorId = 0;
+        }
+
+        $weekProfessor = $weekProfessorId > 0
+            ? $professors->firstWhere('id', $weekProfessorId)
+            : null;
+
         $selectedAvailabilityKeys = collect();
 
         if ($selectedProfessor) {
@@ -92,8 +127,9 @@ class ProfessorAvailabilityController extends Controller
             ->groupBy('prof_id');
 
         $teachingSummary = [];
+        $professorColors = [];
 
-        foreach ($professors as $professor) {
+        foreach ($professors as $index => $professor) {
             $items = $assignments->get(
                 $professor->id,
                 collect()
@@ -115,6 +151,13 @@ class ProfessorAvailabilityController extends Controller
                 ->filter()
                 ->unique()
                 ->values();
+
+            $professorColors[$professor->id] =
+                $this->resolveProfessorColor(
+                    $professor,
+                    $items,
+                    (int) $index
+                );
         }
 
         $professorsWithAvailability = $availabilityByProfessor
@@ -142,6 +185,10 @@ class ProfessorAvailabilityController extends Controller
                 'availabilityMatrix' => $availabilityMatrix,
                 'availabilityByProfessor' => $availabilityByProfessor,
                 'teachingSummary' => $teachingSummary,
+                'professorColors' => $professorColors,
+                'activeTab' => $activeTab,
+                'weekProfessorId' => $weekProfessorId,
+                'weekProfessor' => $weekProfessor,
                 'days' => ProfessorAvailability::DAYS,
                 'timeSlots' => ProfessorAvailability::timeSlots(),
                 'stats' => $stats,
@@ -212,7 +259,10 @@ class ProfessorAvailabilityController extends Controller
         return redirect()
             ->route(
                 'admin.professor-availability.index',
-                ['professor_id' => $professor->id]
+                [
+                    'professor_id' => $professor->id,
+                    'tab' => 'editor',
+                ]
             )
             ->with(
                 'success',
@@ -239,6 +289,167 @@ class ProfessorAvailabilityController extends Controller
                 . $professor->name
                 . ' ont été effacées.'
             );
+    }
+
+    /**
+     * Retourne une couleur stable pour chaque professeur.
+     *
+     * Règles :
+     * - Hamza  : bleu foncé
+     * - Maryam : bleu ciel
+     * - Nadia  : bleu turquoise
+     * - autres professeurs d'Arabe : nuances de bleu
+     * - Anglais : nuances violettes
+     * - autres matières : palette distincte
+     */
+    private function resolveProfessorColor(
+        User $professor,
+        $assignments,
+        int $fallbackIndex
+    ): array {
+        $name = Str::lower(
+            Str::ascii((string) $professor->name)
+        );
+
+        $subjectNames = collect($assignments)
+            ->map(function (ProfAssignment $assignment) {
+                return optional($assignment->subject)->name;
+            })
+            ->filter()
+            ->map(function ($subjectName) {
+                return Str::lower(
+                    Str::ascii((string) $subjectName)
+                );
+            })
+            ->implode(' ');
+
+        if (Str::contains($name, 'hamza')) {
+            return [
+                'hex' => '#1D4ED8',
+                'rgb' => '29,78,216',
+                'label' => 'Bleu foncé',
+            ];
+        }
+
+        if (
+            Str::contains($name, 'maryam')
+            || Str::contains($name, 'meryem')
+        ) {
+            return [
+                'hex' => '#38BDF8',
+                'rgb' => '56,189,248',
+                'label' => 'Bleu ciel',
+            ];
+        }
+
+        if (Str::contains($name, 'nadia')) {
+            return [
+                'hex' => '#06B6D4',
+                'rgb' => '6,182,212',
+                'label' => 'Bleu turquoise',
+            ];
+        }
+
+        $arabicPalette = [
+            [
+                'hex' => '#2563EB',
+                'rgb' => '37,99,235',
+                'label' => 'Bleu',
+            ],
+            [
+                'hex' => '#60A5FA',
+                'rgb' => '96,165,250',
+                'label' => 'Bleu clair',
+            ],
+            [
+                'hex' => '#0EA5E9',
+                'rgb' => '14,165,233',
+                'label' => 'Bleu azur',
+            ],
+            [
+                'hex' => '#14B8A6',
+                'rgb' => '20,184,166',
+                'label' => 'Turquoise',
+            ],
+        ];
+
+        $englishPalette = [
+            [
+                'hex' => '#7C3AED',
+                'rgb' => '124,58,237',
+                'label' => 'Violet',
+            ],
+            [
+                'hex' => '#A855F7',
+                'rgb' => '168,85,247',
+                'label' => 'Violet clair',
+            ],
+            [
+                'hex' => '#C026D3',
+                'rgb' => '192,38,211',
+                'label' => 'Violet fuchsia',
+            ],
+            [
+                'hex' => '#6366F1',
+                'rgb' => '99,102,241',
+                'label' => 'Indigo',
+            ],
+        ];
+
+        $generalPalette = [
+            [
+                'hex' => '#22C55E',
+                'rgb' => '34,197,94',
+                'label' => 'Vert',
+            ],
+            [
+                'hex' => '#F59E0B',
+                'rgb' => '245,158,11',
+                'label' => 'Ambre',
+            ],
+            [
+                'hex' => '#F97316',
+                'rgb' => '249,115,22',
+                'label' => 'Orange',
+            ],
+            [
+                'hex' => '#E11D48',
+                'rgb' => '225,29,72',
+                'label' => 'Rose',
+            ],
+            [
+                'hex' => '#8B5CF6',
+                'rgb' => '139,92,246',
+                'label' => 'Violet',
+            ],
+            [
+                'hex' => '#10B981',
+                'rgb' => '16,185,129',
+                'label' => 'Émeraude',
+            ],
+        ];
+
+        if (
+            Str::contains($subjectNames, 'arabe')
+            || Str::contains($subjectNames, 'arabic')
+        ) {
+            return $arabicPalette[
+                $fallbackIndex % count($arabicPalette)
+            ];
+        }
+
+        if (
+            Str::contains($subjectNames, 'anglais')
+            || Str::contains($subjectNames, 'english')
+        ) {
+            return $englishPalette[
+                $fallbackIndex % count($englishPalette)
+            ];
+        }
+
+        return $generalPalette[
+            $fallbackIndex % count($generalPalette)
+        ];
     }
 
     private function assertProfessor(User $professor): void
