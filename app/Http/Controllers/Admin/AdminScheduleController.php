@@ -6,11 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
 use App\Models\Level;
 use App\Models\ProfAssignment;
+use App\Models\ProfessorAvailability;
 use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\User;
-use App\Services\ClassSlotService;
-use App\Services\ProfessorAssignmentService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -148,6 +147,7 @@ class AdminScheduleController extends Controller
     {
         $data = $this->validateAndNormalize($request);
 
+        $this->assertProfessorAvailability($data);
         $this->assertNoConflict($data);
 
         Schedule::create($data);
@@ -165,6 +165,7 @@ class AdminScheduleController extends Controller
     {
         $data = $this->validateAndNormalize($request);
 
+        $this->assertProfessorAvailability($data);
         $this->assertNoConflict($data, $schedule->id);
 
         $schedule->update($data);
@@ -215,9 +216,6 @@ class AdminScheduleController extends Controller
             'subject_id' => (int) $schedule->subject_id,
             'level_id' => (int) $schedule->level_id,
             'class_id' => (int) $schedule->class_id,
-            'slot_code' => strtoupper(
-                trim((string) $schedule->slot_code)
-            ),
             'prof_id' => (int) $teacher->id,
             'day_of_week' => (int) $schedule->day_of_week,
             'start_time' => Carbon::parse(
@@ -237,6 +235,8 @@ class AdminScheduleController extends Controller
                 $schedule->status
                 ?: Schedule::STATUS_ACTIVE,
         ];
+
+        $this->assertProfessorAvailability($conflictData);
 
         $this->assertNoConflict(
             $conflictData,
@@ -342,24 +342,7 @@ class AdminScheduleController extends Controller
             ]);
         }
 
-        $allowedSlotCodes = app(
-            ClassSlotService::class
-        )
-            ->syncForPath(
-                $subject,
-                $level,
-                $classRoom
-            )
-            ->pluck('code')
-            ->map(
-                fn ($code) =>
-                    strtoupper(
-                        trim((string) $code)
-                    )
-            )
-            ->values()
-            ->all();
-
+        $allowedSlotCodes = $this->slotCodesForClass($classRoom);
         $slotCode = strtoupper(
             trim((string) $validated['slot_code'])
         );
@@ -420,6 +403,124 @@ class AdminScheduleController extends Controller
             'start_time' => $startDateTime->format('Y-m-d H:i:s'),
             'end_time' => $endDateTime->format('Y-m-d H:i:s'),
         ];
+    }
+
+
+    /**
+     * Si l'administration a déjà renseigné les disponibilités du
+     * professeur, le planning doit rester dans les plages déclarées.
+     *
+     * Important : si aucune disponibilité n'est encore renseignée pour
+     * ce professeur (retour encore en attente), on ne bloque pas le
+     * planning existant. La page des disponibilités indiquera simplement
+     * que son retour manque encore.
+     */
+    private function assertProfessorAvailability(array $data): void
+    {
+        if (empty($data['prof_id'])) {
+            return;
+        }
+
+        $professorId = (int) $data['prof_id'];
+
+        $hasDeclaredAvailability = ProfessorAvailability::query()
+            ->where('prof_id', $professorId)
+            ->exists();
+
+        if (!$hasDeclaredAvailability) {
+            return;
+        }
+
+        $dayOfWeek = (int) $data['day_of_week'];
+        $scheduleStart = Carbon::parse($data['start_time']);
+        $scheduleEnd = Carbon::parse($data['end_time']);
+
+        $availabilities = ProfessorAvailability::query()
+            ->where('prof_id', $professorId)
+            ->where('day_of_week', $dayOfWeek)
+            ->orderBy('start_time')
+            ->get();
+
+        if ($availabilities->isEmpty()) {
+            $teacherName = optional(
+                User::find($professorId)
+            )->name ?: 'Ce professeur';
+
+            throw ValidationException::withMessages([
+                'prof_id' =>
+                    $teacherName
+                    . ' n’a déclaré aucune disponibilité le '
+                    . (ProfessorAvailability::DAYS[$dayOfWeek] ?? 'jour sélectionné')
+                    . '.',
+            ]);
+        }
+
+        /*
+         * Fusion des créneaux adjacents :
+         * 09:00-10:30 + 10:30-12:00 deviennent 09:00-12:00.
+         * Cela permet également de planifier exceptionnellement un cours
+         * couvrant deux créneaux consécutifs si nécessaire.
+         */
+        $merged = [];
+
+        foreach ($availabilities as $availability) {
+            $start = Carbon::parse(
+                $scheduleStart->format('Y-m-d')
+                . ' '
+                . Carbon::parse($availability->start_time)->format('H:i:s')
+            );
+
+            $end = Carbon::parse(
+                $scheduleStart->format('Y-m-d')
+                . ' '
+                . Carbon::parse($availability->end_time)->format('H:i:s')
+            );
+
+            if (empty($merged)) {
+                $merged[] = [$start, $end];
+                continue;
+            }
+
+            $lastIndex = count($merged) - 1;
+            $lastEnd = $merged[$lastIndex][1];
+
+            if ($start->lte($lastEnd)) {
+                if ($end->gt($lastEnd)) {
+                    $merged[$lastIndex][1] = $end;
+                }
+                continue;
+            }
+
+            $merged[] = [$start, $end];
+        }
+
+        foreach ($merged as $range) {
+            if (
+                $scheduleStart->gte($range[0])
+                && $scheduleEnd->lte($range[1])
+            ) {
+                return;
+            }
+        }
+
+        $teacherName = optional(
+            User::find($professorId)
+        )->name ?: 'Ce professeur';
+
+        $declaredRanges = $availabilities
+            ->map(function (ProfessorAvailability $availability) {
+                return $availability->range_label;
+            })
+            ->implode(', ');
+
+        throw ValidationException::withMessages([
+            'prof_id' =>
+                $teacherName
+                . ' n’est pas disponible sur cette plage horaire. '
+                . 'Disponibilités déclarées : '
+                . $declaredRanges
+                . '.',
+        ]);
     }
 
     private function assertNoConflict(
@@ -751,45 +852,34 @@ class AdminScheduleController extends Controller
      */
     private function syncTeachingAssignment(array $data): void
     {
-        if (
-            empty($data['prof_id'])
-            || empty($data['subject_id'])
-            || empty($data['level_id'])
-            || empty($data['class_id'])
-            || empty($data['slot_code'])
-        ) {
+        if (empty($data['prof_id'])) {
             return;
         }
 
-        $professor = User::query()
-            ->whereKey(
-                (int) $data['prof_id']
-            )
-            ->where(
-                'role',
-                User::ROLE_PROF
-            )
-            ->first();
+        $assignment = ProfAssignment::firstOrCreate([
+            'prof_id' => $data['prof_id'],
+            'subject_id' => $data['subject_id'],
+            'level_id' => $data['level_id'],
+            'class_id' => $data['class_id'],
+        ]);
 
-        if (!$professor) {
-            return;
+        if (!$assignment->day_of_week) {
+            $assignment->day_of_week = $data['day_of_week'];
         }
 
-        /*
-         * IMPORTANT : une affectation professeur doit toujours pointer
-         * vers le class_slot_id exact. L'ancienne version créait parfois
-         * une ligne ProfAssignment sans class_slot_id depuis le planning,
-         * ce qui rendait l'affectation invisible ou trop large côté Prof.
-         */
-        app(
-            ProfessorAssignmentService::class
-        )->reassignFromSchedule(
-            $professor,
-            (int) $data['subject_id'],
-            (int) $data['level_id'],
-            (int) $data['class_id'],
-            (string) $data['slot_code']
-        );
+        if (!$assignment->start_time) {
+            $assignment->start_time = Carbon::parse($data['start_time'])
+                ->format('H:i:s');
+        }
+
+        if (!$assignment->end_time) {
+            $assignment->end_time = Carbon::parse($data['end_time'])
+                ->format('H:i:s');
+        }
+
+        if ($assignment->isDirty()) {
+            $assignment->save();
+        }
     }
 
     private function buildScheduleHierarchy(): array
@@ -918,43 +1008,18 @@ class AdminScheduleController extends Controller
                 }
 
                 $subjectLevels = $subjectLevels
-                    ->map(function (Level $level) use ($subject) {
-                        $slotService = app(
-                            ClassSlotService::class
-                        );
-
+                    ->map(function (Level $level) {
                         $classes = $level->classes
-                            ->filter(
-                                fn (ClassRoom $classRoom) =>
-                                    $classRoom
-                                        ->subjects()
-                                        ->where(
-                                            'subjects.id',
-                                            $subject->id
-                                        )
-                                        ->exists()
-                            )
                             ->unique('id')
                             ->values()
-                            ->map(function (ClassRoom $classRoom) use (
-                                $subject,
-                                $level,
-                                $slotService
-                            ) {
-                                $slotCodes = $slotService
-                                    ->syncForPath(
-                                        $subject,
-                                        $level,
-                                        $classRoom
-                                    )
-                                    ->pluck('code')
-                                    ->values()
-                                    ->all();
-
+                            ->map(function (ClassRoom $classRoom) {
                                 return [
                                     'id' => (int) $classRoom->id,
                                     'name' => $classRoom->name,
-                                    'slot_codes' => $slotCodes,
+                                    'slot_codes' =>
+                                        $this->slotCodesForClass(
+                                            $classRoom
+                                        ),
                                 ];
                             })
                             ->all();

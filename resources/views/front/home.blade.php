@@ -154,6 +154,22 @@
         text-align: left;
     }
 
+    /* Le formulaire est maintenant entre les objectifs et le CTA final. */
+    .home-contact-section {
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(
+                circle at 50% 0%,
+                rgba(79, 111, 245, 0.08),
+                transparent 38%
+            );
+    }
+
+    .home-contact-section .home-contact-wrap {
+        margin-bottom: 0;
+    }
+
     .home-contact-card {
         position: relative;
         overflow: hidden;
@@ -1045,201 +1061,6 @@
 <section class="hero-3d text-center" style="padding: 90px 0 100px;">
     <div class="container hero-3d-content">
 
-        <div id="prise-de-contact" class="home-contact-wrap">
-            <div class="home-contact-card">
-                <div class="home-contact-head">
-                    <div>
-                        <span class="home-contact-eyebrow">
-                            <i class="bi bi-headset"></i>
-                            Prise de contact
-                        </span>
-
-                        <h2 class="home-contact-title">
-                            Vous souhaitez en savoir plus ?
-                        </h2>
-
-                        <p class="home-contact-subtitle">
-                            Laissez vos coordonnées. Notre équipe vous recontactera rapidement.
-                        </p>
-                    </div>
-                </div>
-
-                @if(session('contact_success'))
-                    <div class="home-contact-alert success" role="alert">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span>{{ session('contact_success') }}</span>
-                    </div>
-                @endif
-
-                @if(session('contact_error'))
-                    <div class="home-contact-alert error" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                        <span>{{ session('contact_error') }}</span>
-                    </div>
-                @endif
-
-                @if($errors->any())
-                    <div class="home-contact-alert error" role="alert">
-                        <i class="bi bi-exclamation-circle-fill"></i>
-                        <div>
-                            <strong>Veuillez vérifier les informations saisies.</strong>
-                            <ul class="home-contact-errors">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                @endif
-
-                <form
-                    method="POST"
-                    action="{{ route('contact.store') }}"
-                    class="home-contact-form"
-                    autocomplete="on"
-                >
-                    @csrf
-
-                    <div class="home-contact-field">
-                        <label for="contact_last_name">Nom</label>
-                        <input
-                            id="contact_last_name"
-                            type="text"
-                            name="last_name"
-                            value="{{ old('last_name') }}"
-                            class="home-contact-input @error('last_name') is-invalid @enderror"
-                            placeholder="Votre nom"
-                            autocomplete="family-name"
-                            maxlength="100"
-                            required
-                        >
-                    </div>
-
-                    <div class="home-contact-field">
-                        <label for="contact_first_name">Prénom</label>
-                        <input
-                            id="contact_first_name"
-                            type="text"
-                            name="first_name"
-                            value="{{ old('first_name') }}"
-                            class="home-contact-input @error('first_name') is-invalid @enderror"
-                            placeholder="Votre prénom"
-                            autocomplete="given-name"
-                            maxlength="100"
-                            required
-                        >
-                    </div>
-
-                    <div class="home-contact-field">
-                        <label for="contact_email">E-mail</label>
-                        <input
-                            id="contact_email"
-                            type="email"
-                            name="email"
-                            value="{{ old('email') }}"
-                            class="home-contact-input @error('email') is-invalid @enderror"
-                            placeholder="nom@email.com"
-                            autocomplete="email"
-                            maxlength="190"
-                            required
-                        >
-                    </div>
-
-                    <div class="home-contact-field">
-                        <label for="contact_phone">Téléphone</label>
-                        <input
-                            id="contact_phone"
-                            type="tel"
-                            name="phone"
-                            value="{{ old('phone') }}"
-                            class="home-contact-input @error('phone') is-invalid @enderror"
-                            placeholder="06 00 00 00 00"
-                            autocomplete="tel"
-                            maxlength="30"
-                            required
-                        >
-                    </div>
-
-                    <div class="home-contact-field">
-                        <label for="contact_country">Pays</label>
-                        <input
-                            id="contact_country"
-                            type="text"
-                            name="country"
-                            value="{{ old('country') }}"
-                            class="home-contact-input @error('country') is-invalid @enderror"
-                            placeholder="Ex. Maroc"
-                            autocomplete="country-name"
-                            maxlength="100"
-                            required
-                        >
-                    </div>
-
-                    <div class="home-contact-field home-contact-field-full">
-                        <label for="contact_reason">
-                            Commentaire / Raison
-                        </label>
-
-                        <textarea
-                            id="contact_reason"
-                            name="reason"
-                            class="home-contact-textarea @error('reason') is-invalid @enderror"
-                            rows="4"
-                            maxlength="1500"
-                            placeholder="Exemple : Je souhaite avoir plus d’informations sur les cours, les tarifs ou les horaires..."
-                            required
-                        >{{ old('reason') }}</textarea>
-
-                        @error('reason')
-                            <small style="
-                                display:block;
-                                margin-top:.35rem;
-                                color:#fca5a5;
-                                font-size:.7rem;
-                            ">
-                                {{ $message }}
-                            </small>
-                        @enderror
-                    </div>
-
-                    <div class="home-contact-consent">
-                        <input
-                            id="contact_marketing_consent"
-                            type="checkbox"
-                            name="marketing_consent"
-                            value="1"
-                            {{ old('marketing_consent') ? 'checked' : '' }}
-                        >
-
-                        <label for="contact_marketing_consent">
-                            <strong>Informations et offres :</strong>
-                            j’accepte de recevoir les actualités et offres
-                            de Smart School Academy par e-mail.
-                        </label>
-                    </div>
-
-                    <div class="home-contact-honeypot" aria-hidden="true">
-                        <label for="contact_website">Site web</label>
-                        <input
-                            id="contact_website"
-                            type="text"
-                            name="website"
-                            value=""
-                            tabindex="-1"
-                            autocomplete="off"
-                        >
-                    </div>
-
-                    <div class="home-contact-action">
-                        <button type="submit" class="home-contact-submit">
-                            <i class="bi bi-send-fill"></i>
-                            Être contacté
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
         <h1 class="hero-3d-title mb-4 mx-auto" style="max-width: 850px;">
             La plateforme intelligente<br>
             <span class="gradient-text">La réussite est à portée de Clic</span>
@@ -1919,6 +1740,212 @@
         </div>
     </div>
 </section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     PRISE DE CONTACT — après les objectifs
+     ══════════════════════════════════════════════════════ -->
+<section class="home-contact-section py-5" aria-labelledby="homeContactTitle">
+    <div class="container">
+        <div id="prise-de-contact" class="home-contact-wrap">
+            <div class="home-contact-card">
+                <div class="home-contact-head">
+                    <div>
+                        <span class="home-contact-eyebrow">
+                            <i class="bi bi-headset"></i>
+                            Prise de contact
+                        </span>
+
+                        <h2 class="home-contact-title" id="homeContactTitle">
+                            Vous souhaitez en savoir plus ?
+                        </h2>
+
+                        <p class="home-contact-subtitle">
+                            Laissez vos coordonnées. Notre équipe vous recontactera rapidement.
+                        </p>
+                    </div>
+                </div>
+
+                @if(session('contact_success'))
+                    <div class="home-contact-alert success" role="alert">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>{{ session('contact_success') }}</span>
+                    </div>
+                @endif
+
+                @if(session('contact_error'))
+                    <div class="home-contact-alert error" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span>{{ session('contact_error') }}</span>
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="home-contact-alert error" role="alert">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <div>
+                            <strong>Veuillez vérifier les informations saisies.</strong>
+                            <ul class="home-contact-errors">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+
+                <form
+                    method="POST"
+                    action="{{ route('contact.store') }}"
+                    class="home-contact-form"
+                    autocomplete="on"
+                >
+                    @csrf
+
+                    <div class="home-contact-field">
+                        <label for="contact_last_name">Nom</label>
+                        <input
+                            id="contact_last_name"
+                            type="text"
+                            name="last_name"
+                            value="{{ old('last_name') }}"
+                            class="home-contact-input @error('last_name') is-invalid @enderror"
+                            placeholder="Votre nom"
+                            autocomplete="family-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_first_name">Prénom</label>
+                        <input
+                            id="contact_first_name"
+                            type="text"
+                            name="first_name"
+                            value="{{ old('first_name') }}"
+                            class="home-contact-input @error('first_name') is-invalid @enderror"
+                            placeholder="Votre prénom"
+                            autocomplete="given-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_email">E-mail</label>
+                        <input
+                            id="contact_email"
+                            type="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            class="home-contact-input @error('email') is-invalid @enderror"
+                            placeholder="nom@email.com"
+                            autocomplete="email"
+                            maxlength="190"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_phone">Téléphone</label>
+                        <input
+                            id="contact_phone"
+                            type="tel"
+                            name="phone"
+                            value="{{ old('phone') }}"
+                            class="home-contact-input @error('phone') is-invalid @enderror"
+                            placeholder="06 00 00 00 00"
+                            autocomplete="tel"
+                            maxlength="30"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field">
+                        <label for="contact_country">Pays</label>
+                        <input
+                            id="contact_country"
+                            type="text"
+                            name="country"
+                            value="{{ old('country') }}"
+                            class="home-contact-input @error('country') is-invalid @enderror"
+                            placeholder="Ex. Maroc"
+                            autocomplete="country-name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="home-contact-field home-contact-field-full">
+                        <label for="contact_reason">
+                            Commentaire / Raison
+                        </label>
+
+                        <textarea
+                            id="contact_reason"
+                            name="reason"
+                            class="home-contact-textarea @error('reason') is-invalid @enderror"
+                            rows="4"
+                            maxlength="1500"
+                            placeholder="Exemple : Je souhaite avoir plus d’informations sur les cours, les tarifs ou les horaires..."
+                            required
+                        >{{ old('reason') }}</textarea>
+
+                        @error('reason')
+                            <small style="
+                                display:block;
+                                margin-top:.35rem;
+                                color:#fca5a5;
+                                font-size:.7rem;
+                            ">
+                                {{ $message }}
+                            </small>
+                        @enderror
+                    </div>
+
+                    <div class="home-contact-consent">
+                        <input
+                            id="contact_marketing_consent"
+                            type="checkbox"
+                            name="marketing_consent"
+                            value="1"
+                            {{ old('marketing_consent') ? 'checked' : '' }}
+                        >
+
+                        <label for="contact_marketing_consent">
+                            <strong>Informations et offres :</strong>
+                            j’accepte de recevoir les actualités et offres
+                            de Smart School Academy par e-mail.
+                        </label>
+                    </div>
+
+                    <div class="home-contact-honeypot" aria-hidden="true">
+                        <label for="contact_website">Site web</label>
+                        <input
+                            id="contact_website"
+                            type="text"
+                            name="website"
+                            value=""
+                            tabindex="-1"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="home-contact-action">
+                        <button type="submit" class="home-contact-submit">
+                            <i class="bi bi-send-fill"></i>
+                            Être contacté
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+
 
 
 <style>

@@ -413,7 +413,17 @@ class ClassScheduleDisplayService
             $from,
             $to,
             $limit
-        );
+        )->map(function (array $occurrence) use ($professor) {
+            /*
+             * Un même créneau peut être partagé par plusieurs professeurs.
+             * Dans l'espace du professeur connecté, on affiche donc son
+             * propre nom au lieu du prof_id principal éventuellement stocké
+             * dans la ligne schedules.
+             */
+            $occurrence['teacher'] = $professor->name;
+
+            return $occurrence;
+        })->values();
     }
 
     private function baseQuery(): Builder

@@ -109,6 +109,12 @@
                         <span class="nav-label">Professeurs</span>
                     </a>
 
+                    <a href="{{ route('admin.professor-availability.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.professor-availability*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-calendar2-check-fill"></i></span>
+                        <span class="nav-label">Disponibilités profs <small>Créneaux de 1h30</small></span>
+                    </a>
+
                     <a href="{{ route('admin.parents.index') }}"
                        class="admin-nav-link {{ request()->routeIs('admin.parents*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="bi bi-person-hearts"></i></span>

@@ -23,9 +23,11 @@ class ProfessorAssignmentService
     /**
      * Ajoute une ou plusieurs affectations à un professeur.
      *
-     * Un professeur peut avoir autant de Matières → Niveaux → Classes
-     * → Créneaux que nécessaire. Un créneau structurel donné reste,
-     * par contre, affecté à un seul professeur principal à la fois.
+     * Règle :
+     * - un même professeur ne possède qu'une seule affectation
+     *   sur un même class_slot_id ;
+     * - plusieurs professeurs différents peuvent partager
+     *   exactement le même créneau.
      */
     public function add(
         User $professor,
@@ -39,28 +41,15 @@ class ProfessorAssignmentService
             $professor,
             $targets
         ) {
-            $this->assertNoOtherProfessor(
-                $professor,
-                $targets
-            );
-
             $created = 0;
             $updated = 0;
 
             foreach ($targets as $slot) {
-                $schedule = $this->scheduleForSlot(
-                    $slot
-                );
+                $schedule = $this->scheduleForSlot($slot);
 
                 $assignment = ProfAssignment::query()
-                    ->where(
-                        'prof_id',
-                        $professor->id
-                    )
-                    ->where(
-                        'class_slot_id',
-                        $slot->id
-                    )
+                    ->where('prof_id', $professor->id)
+                    ->where('class_slot_id', $slot->id)
                     ->first();
 
                 $data = $this->assignmentData(
@@ -78,36 +67,27 @@ class ProfessorAssignmentService
                 }
 
                 /*
-                 * Nettoyage des anciennes affectations sans class_slot_id
-                 * du même parcours. Elles sont devenues ambiguës depuis
-                 * l'introduction des groupes D1/D2/I1/A1...
+                 * Nettoyage uniquement des anciennes affectations
+                 * ambiguës DU MÊME PROFESSEUR et du même parcours.
+                 *
+                 * On ne touche jamais aux affectations des autres profs.
                  */
                 ProfAssignment::query()
-                    ->where(
-                        'prof_id',
-                        $professor->id
-                    )
-                    ->where(
-                        'subject_id',
-                        $slot->subject_id
-                    )
-                    ->where(
-                        'level_id',
-                        $slot->level_id
-                    )
-                    ->where(
-                        'class_id',
-                        $slot->class_id
-                    )
-                    ->whereNull(
-                        'class_slot_id'
-                    )
+                    ->where('prof_id', $professor->id)
+                    ->where('subject_id', $slot->subject_id)
+                    ->where('level_id', $slot->level_id)
+                    ->where('class_id', $slot->class_id)
+                    ->whereNull('class_slot_id')
                     ->delete();
 
-                $this->syncScheduleProfessor(
-                    $slot,
-                    $professor->id
-                );
+                /*
+                 * IMPORTANT :
+                 * on ne modifie pas schedules.prof_id ici.
+                 *
+                 * Une affectation créée depuis /admin/prof-assignments
+                 * ne doit pas remplacer le professeur éventuellement
+                 * affiché comme professeur principal dans le planning.
+                 */
             }
 
             return [
@@ -120,10 +100,11 @@ class ProfessorAssignmentService
     }
 
     /**
-     * Remplace toutes les affectations ACTIVES d'un professeur par la
-     * sélection reçue. Les affectations d'une ancienne matière devenue
-     * inactive sont conservées pour ne pas supprimer de l'historique
-     * invisible depuis le formulaire.
+     * Remplace toutes les affectations ACTIVES d'un professeur
+     * par la sélection reçue.
+     *
+     * Les affectations appartenant aux autres professeurs sont
+     * totalement indépendantes et ne sont jamais supprimées.
      */
     public function replaceActive(
         User $professor,
@@ -132,6 +113,7 @@ class ProfessorAssignmentService
         $this->assertProfessor($professor);
 
         $targets = $this->resolveTargets($rows);
+
         $targetSlotIds = $targets
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
@@ -142,27 +124,16 @@ class ProfessorAssignmentService
             $targets,
             $targetSlotIds
         ) {
-            $this->assertNoOtherProfessor(
-                $professor,
-                $targets
-            );
-
             $existing = ProfAssignment::query()
                 ->with([
                     'subject',
                     'classSlot',
                 ])
-                ->where(
-                    'prof_id',
-                    $professor->id
-                )
+                ->where('prof_id', $professor->id)
                 ->whereHas(
                     'subject',
                     fn ($query) =>
-                        $query->where(
-                            'status',
-                            'active'
-                        )
+                        $query->where('status', 'active')
                 )
                 ->get();
 
@@ -178,14 +149,10 @@ class ProfessorAssignmentService
                     continue;
                 }
 
-                if ($assignment->classSlot) {
-                    $this->syncScheduleProfessor(
-                        $assignment->classSlot,
-                        null,
-                        (int) $professor->id
-                    );
-                }
-
+                /*
+                 * On supprime seulement l'affectation de CE professeur.
+                 * Le même créneau peut rester affecté à d'autres profs.
+                 */
                 $assignment->delete();
                 $removed++;
             }
@@ -194,19 +161,11 @@ class ProfessorAssignmentService
             $updated = 0;
 
             foreach ($targets as $slot) {
-                $schedule = $this->scheduleForSlot(
-                    $slot
-                );
+                $schedule = $this->scheduleForSlot($slot);
 
                 $assignment = ProfAssignment::query()
-                    ->where(
-                        'prof_id',
-                        $professor->id
-                    )
-                    ->where(
-                        'class_slot_id',
-                        $slot->id
-                    )
+                    ->where('prof_id', $professor->id)
+                    ->where('class_slot_id', $slot->id)
                     ->first();
 
                 $data = $this->assignmentData(
@@ -222,11 +181,6 @@ class ProfessorAssignmentService
                     ProfAssignment::create($data);
                     $created++;
                 }
-
-                $this->syncScheduleProfessor(
-                    $slot,
-                    $professor->id
-                );
             }
 
             return [
@@ -238,32 +192,29 @@ class ProfessorAssignmentService
         });
     }
 
+    /**
+     * Supprime une seule affectation.
+     *
+     * Les autres professeurs partageant le même créneau
+     * restent affectés normalement.
+     */
     public function remove(
         ProfAssignment $assignment
     ): void {
         DB::transaction(function () use (
             $assignment
         ) {
-            $assignment->loadMissing(
-                'classSlot'
-            );
-
-            if ($assignment->classSlot) {
-                $this->syncScheduleProfessor(
-                    $assignment->classSlot,
-                    null,
-                    (int) $assignment->prof_id
-                );
-            }
-
             $assignment->delete();
         });
     }
 
     /**
-     * Utilisé par l'emploi du temps lorsque l'admin choisit directement
-     * un professeur. Ici, la modification est explicite : si le créneau
-     * appartenait à un autre professeur, il est réaffecté.
+     * Utilisé par /admin/schedule lorsque l'admin choisit
+     * explicitement un professeur pour une séance.
+     *
+     * Ce choix ajoute/met à jour l'affectation du professeur choisi,
+     * mais ne supprime jamais les autres professeurs qui partagent
+     * le même créneau.
      */
     public function reassignFromSchedule(
         User $professor,
@@ -284,47 +235,25 @@ class ProfessorAssignmentService
         }
 
         $slot = ClassSlot::query()
-            ->where(
-                'subject_id',
-                $subjectId
-            )
-            ->where(
-                'level_id',
-                $levelId
-            )
-            ->where(
-                'class_id',
-                $classId
-            )
+            ->where('subject_id', $subjectId)
+            ->where('level_id', $levelId)
+            ->where('class_id', $classId)
             ->whereRaw(
                 'UPPER(TRIM(code)) = ?',
-                [
-                    strtoupper(
-                        trim($slotCode)
-                    ),
-                ]
+                [strtoupper(trim($slotCode))]
             )
-            ->where(
-                'is_active',
-                true
-            )
+            ->where('is_active', true)
             ->first();
 
         if (!$slot) {
             $level = Level::query()
                 ->whereKey($levelId)
-                ->where(
-                    'subject_id',
-                    $subjectId
-                )
+                ->where('subject_id', $subjectId)
                 ->first();
 
             $classRoom = ClassRoom::query()
                 ->whereKey($classId)
-                ->where(
-                    'level_id',
-                    $levelId
-                )
+                ->where('level_id', $levelId)
                 ->first();
 
             if ($level && $classRoom) {
@@ -337,13 +266,8 @@ class ProfessorAssignmentService
                     ->first(
                         fn (ClassSlot $candidate) =>
                             strtoupper(
-                                trim(
-                                    (string) $candidate->code
-                                )
-                            )
-                            === strtoupper(
-                                trim($slotCode)
-                            )
+                                trim((string) $candidate->code)
+                            ) === strtoupper(trim($slotCode))
                     );
             }
         }
@@ -356,34 +280,17 @@ class ProfessorAssignmentService
             $professor,
             $slot
         ) {
+            $schedule = $this->scheduleForSlot($slot);
+
             /*
-             * L'emploi du temps représente une modification explicite
-             * du professeur du groupe. On évite donc de laisser deux
-             * enseignants principaux sur le même class_slot_id.
+             * IMPORTANT :
+             * aucune suppression des autres professeurs.
              */
-            ProfAssignment::query()
-                ->where(
-                    'class_slot_id',
-                    $slot->id
-                )
-                ->where(
-                    'prof_id',
-                    '<>',
-                    $professor->id
-                )
-                ->delete();
-
-            $schedule = $this->scheduleForSlot(
-                $slot
-            );
-
             $assignment = ProfAssignment::query()
                 ->updateOrCreate(
                     [
-                        'prof_id' =>
-                            $professor->id,
-                        'class_slot_id' =>
-                            $slot->id,
+                        'prof_id' => $professor->id,
+                        'class_slot_id' => $slot->id,
                     ],
                     $this->assignmentData(
                         $professor,
@@ -393,27 +300,18 @@ class ProfessorAssignmentService
                 );
 
             ProfAssignment::query()
-                ->where(
-                    'prof_id',
-                    $professor->id
-                )
-                ->where(
-                    'subject_id',
-                    $slot->subject_id
-                )
-                ->where(
-                    'level_id',
-                    $slot->level_id
-                )
-                ->where(
-                    'class_id',
-                    $slot->class_id
-                )
-                ->whereNull(
-                    'class_slot_id'
-                )
+                ->where('prof_id', $professor->id)
+                ->where('subject_id', $slot->subject_id)
+                ->where('level_id', $slot->level_id)
+                ->where('class_id', $slot->class_id)
+                ->whereNull('class_slot_id')
                 ->delete();
 
+            /*
+             * Ici seulement, le planning peut garder ce professeur
+             * comme professeur principal de la séance.
+             * Cela n'efface aucune autre ProfAssignment.
+             */
             $this->syncScheduleProfessor(
                 $slot,
                 $professor->id
@@ -423,6 +321,9 @@ class ProfessorAssignmentService
         });
     }
 
+    /**
+     * Vérifie et transforme les lignes du formulaire en ClassSlot.
+     */
     private function resolveTargets(
         array $rows
     ): Collection {
@@ -430,13 +331,8 @@ class ProfessorAssignmentService
 
         foreach ($rows as $index => $row) {
             $subject = Subject::query()
-                ->whereKey(
-                    (int) $row['subject_id']
-                )
-                ->where(
-                    'status',
-                    'active'
-                )
+                ->whereKey((int) $row['subject_id'])
+                ->where('status', 'active')
                 ->first();
 
             if (!$subject) {
@@ -463,124 +359,59 @@ class ProfessorAssignmentService
             $targets->push($slot);
         }
 
+        /*
+         * Si le même créneau est envoyé deux fois dans le formulaire,
+         * on le garde une seule fois pour ce professeur.
+         */
         return $targets
             ->unique('id')
             ->values();
     }
 
-    private function assertNoOtherProfessor(
-        User $professor,
-        Collection $targets
-    ): void {
-        $slotIds = $targets
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values();
-
-        if ($slotIds->isEmpty()) {
-            return;
-        }
-
-        $conflicts = ProfAssignment::query()
-            ->with([
-                'prof',
-                'subject',
-                'level',
-                'classRoom',
-                'classSlot',
-            ])
-            ->whereIn(
-                'class_slot_id',
-                $slotIds
-            )
-            ->where(
-                'prof_id',
-                '<>',
-                $professor->id
-            )
-            ->lockForUpdate()
-            ->get();
-
-        if ($conflicts->isEmpty()) {
-            return;
-        }
-
-        $labels = $conflicts
-            ->map(function (
-                ProfAssignment $assignment
-            ) {
-                return collect([
-                    $assignment->subject?->name,
-                    $assignment->level?->name,
-                    $assignment->classRoom?->name,
-                    $assignment->classSlot?->code,
-                ])
-                    ->filter()
-                    ->implode(' → ')
-                    . ' : '
-                    . (
-                        $assignment->prof?->name
-                        ?? 'autre professeur'
-                    );
-            })
-            ->unique()
-            ->values()
-            ->implode(' ; ');
-
-        throw ValidationException::withMessages([
-            'assignments' =>
-                'Certains créneaux sont déjà affectés à un autre professeur : '
-                . $labels
-                . '. Retirez ou modifiez d’abord ces affectations.',
-        ]);
-    }
-
+    /**
+     * Données enregistrées dans prof_assignments.
+     */
     private function assignmentData(
         User $professor,
         ClassSlot $slot,
         ?Schedule $schedule
     ): array {
         return [
-            'prof_id' =>
-                $professor->id,
-            'subject_id' =>
-                $slot->subject_id,
-            'level_id' =>
-                $slot->level_id,
-            'class_id' =>
-                $slot->class_id,
-            'class_slot_id' =>
-                $slot->id,
-            'day_of_week' =>
-                $schedule?->day_of_week,
-            'start_time' =>
-                $schedule?->start_time,
-            'end_time' =>
-                $schedule?->end_time,
+            'prof_id' => $professor->id,
+            'subject_id' => $slot->subject_id,
+            'level_id' => $slot->level_id,
+            'class_id' => $slot->class_id,
+            'class_slot_id' => $slot->id,
+            'day_of_week' => $schedule?->day_of_week,
+            'start_time' => $schedule?->start_time,
+            'end_time' => $schedule?->end_time,
         ];
     }
 
+    /**
+     * Récupère l'horaire correspondant au créneau.
+     */
     private function scheduleForSlot(
         ClassSlot $slot
     ): ?Schedule {
-        return $this->scheduleQueryForSlot(
-            $slot
-        )
+        return $this->scheduleQueryForSlot($slot)
             ->active()
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->first();
     }
 
+    /**
+     * Met à jour uniquement le professeur principal stocké dans schedules.
+     * Cette méthode n'est utilisée que depuis la logique du planning.
+     */
     private function syncScheduleProfessor(
         ClassSlot $slot,
         ?int $professorId,
         ?int $expectedCurrentProfessorId = null
     ): void {
         $query = $this
-            ->scheduleQueryForSlot(
-                $slot
-            )
+            ->scheduleQueryForSlot($slot)
             ->active();
 
         if ($expectedCurrentProfessorId) {
@@ -599,25 +430,14 @@ class ProfessorAssignmentService
         ClassSlot $slot
     ) {
         return Schedule::query()
-            ->where(
-                'subject_id',
-                $slot->subject_id
-            )
-            ->where(
-                'level_id',
-                $slot->level_id
-            )
-            ->where(
-                'class_id',
-                $slot->class_id
-            )
+            ->where('subject_id', $slot->subject_id)
+            ->where('level_id', $slot->level_id)
+            ->where('class_id', $slot->class_id)
             ->whereRaw(
                 'UPPER(TRIM(slot_code)) = ?',
                 [
                     strtoupper(
-                        trim(
-                            (string) $slot->code
-                        )
+                        trim((string) $slot->code)
                     ),
                 ]
             );

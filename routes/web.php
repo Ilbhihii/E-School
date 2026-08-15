@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LevelController;
 use App\Http\Controllers\Admin\LiveController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProfessorController;
+use App\Http\Controllers\Admin\ProfessorAvailabilityController;
 use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
@@ -378,6 +379,22 @@ Route::middleware(['auth', 'isAdmin'])
                 )->name('resend');
             });
 
+        // Disponibilités professeurs : créneaux fixes de 1h30
+        Route::get(
+            '/professor-availability',
+            [ProfessorAvailabilityController::class, 'index']
+        )->name('professor-availability.index');
+
+        Route::put(
+            '/professor-availability/{professor}',
+            [ProfessorAvailabilityController::class, 'update']
+        )->name('professor-availability.update');
+
+        Route::delete(
+            '/professor-availability/{professor}',
+            [ProfessorAvailabilityController::class, 'destroy']
+        )->name('professor-availability.destroy');
+
         Route::resource(
             'devoirs',
             DevoirController::class
@@ -715,16 +732,6 @@ Route::middleware(['auth', 'isAdmin'])
             '/prof-assignments',
             [UserController::class, 'storeProfAssignment']
         )->name('users.store-prof-assignment');
-
-        Route::get(
-            '/prof-assignments/professors/{professor}/edit',
-            [UserController::class, 'editProfAssignments']
-        )->name('users.edit-prof-assignments');
-
-        Route::patch(
-            '/prof-assignments/professors/{professor}',
-            [UserController::class, 'updateProfAssignments']
-        )->name('users.update-prof-assignments');
 
         Route::delete(
             '/prof-assignments/{id}',
