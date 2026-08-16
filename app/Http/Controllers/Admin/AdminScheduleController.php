@@ -98,6 +98,66 @@ class AdminScheduleController extends Controller
         $classes = ClassRoom::query()->orderBy('name')->get();
 
         /*
+         * État global des retours de disponibilités.
+         *
+         * Le planning peut déjà contenir des séances alors que certains
+         * professeurs n'ont pas encore communiqué leurs disponibilités.
+         * On expose donc un indicateur indépendant du planning afin que
+         * l'administrateur sache immédiatement si la grille est provisoire
+         * ou si tous les retours ont été reçus.
+         */
+        $availabilityCounts = $teachers->isEmpty()
+            ? collect()
+            : ProfessorAvailability::query()
+                ->whereIn('prof_id', $teachers->pluck('id'))
+                ->selectRaw('prof_id, COUNT(*) as availability_count')
+                ->groupBy('prof_id')
+                ->pluck('availability_count', 'prof_id');
+
+        $professorAvailabilityStatus = $teachers
+            ->map(function (User $teacher) use ($availabilityCounts) {
+                $count = (int) ($availabilityCounts[$teacher->id] ?? 0);
+
+                return [
+                    'id' => (int) $teacher->id,
+                    'name' => $teacher->name,
+                    'count' => $count,
+                    'received' => $count > 0,
+                ];
+            })
+            ->values();
+
+        $receivedAvailabilityProfessors = $professorAvailabilityStatus
+            ->where('received', true)
+            ->values();
+
+        $pendingAvailabilityProfessors = $professorAvailabilityStatus
+            ->where('received', false)
+            ->values();
+
+        $availabilityProgress = [
+            'total' => $professorAvailabilityStatus->count(),
+            'received' => $receivedAvailabilityProfessors->count(),
+            'pending' => $pendingAvailabilityProfessors->count(),
+            'complete' => $professorAvailabilityStatus->isNotEmpty()
+                && $pendingAvailabilityProfessors->isEmpty(),
+            'percentage' => $professorAvailabilityStatus->isEmpty()
+                ? 0
+                : (int) round(
+                    ($receivedAvailabilityProfessors->count()
+                        / $professorAvailabilityStatus->count()) * 100
+                ),
+            'received_names' => $receivedAvailabilityProfessors
+                ->pluck('name')
+                ->filter()
+                ->values(),
+            'pending_names' => $pendingAvailabilityProfessors
+                ->pluck('name')
+                ->filter()
+                ->values(),
+        ];
+
+        /*
          * Couleurs stables utilisées dans la vue finale du planning.
          * Elles reprennent la même logique que la page des disponibilités :
          * Hamza = bleu foncé, Maryam = bleu ciel, Nadia = turquoise.
@@ -112,7 +172,9 @@ class AdminScheduleController extends Controller
             'classes',
             'scheduleHierarchy',
             'professorColors',
-            'scheduleProfessors'
+            'scheduleProfessors',
+            'professorAvailabilityStatus',
+            'availabilityProgress'
         ));
     }
 

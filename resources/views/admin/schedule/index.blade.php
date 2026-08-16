@@ -532,6 +532,58 @@
         class="schedule-final-mode"
         style="{{ $displayMode === 'final' ? '' : 'display:none;' }}"
     >
+        @if(($availabilityProgress['total'] ?? 0) > 0)
+            <div class="schedule-progress-banner {{ ($availabilityProgress['complete'] ?? false) ? 'is-complete' : 'is-building' }}">
+                <div class="schedule-progress-main">
+                    <span class="schedule-progress-icon">
+                        <i class="bi {{ ($availabilityProgress['complete'] ?? false) ? 'bi-check2-circle' : 'bi-hourglass-split' }}"></i>
+                    </span>
+
+                    <div class="schedule-progress-copy">
+                        <span class="schedule-progress-kicker">
+                            {{ ($availabilityProgress['complete'] ?? false) ? 'RETOURS TERMINÉS' : 'PLANNING PROVISOIRE' }}
+                        </span>
+                        <strong>
+                            {{ ($availabilityProgress['complete'] ?? false)
+                                ? 'Toutes les disponibilités professeurs ont été reçues'
+                                : 'Planning en construction' }}
+                        </strong>
+                        <p>
+                            {{ $availabilityProgress['received'] ?? 0 }} professeur(s) sur
+                            {{ $availabilityProgress['total'] ?? 0 }} ont communiqué leurs disponibilités.
+                            @if(!($availabilityProgress['complete'] ?? false))
+                                La grille ci-dessous peut donc encore évoluer.
+                            @endif
+                        </p>
+
+                        @if(!empty($availabilityProgress['pending_names']) && $availabilityProgress['pending_names']->isNotEmpty())
+                            <div class="schedule-progress-pending">
+                                <i class="bi bi-clock-history"></i>
+                                <span>En attente :</span>
+                                @foreach($availabilityProgress['pending_names'] as $pendingName)
+                                    <strong>{{ $pendingName }}</strong>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="schedule-progress-side">
+                    <div class="schedule-progress-number">
+                        <strong>{{ $availabilityProgress['percentage'] ?? 0 }}%</strong>
+                        <span>retours reçus</span>
+                    </div>
+                    <div class="schedule-progress-track">
+                        <span style="width: {{ $availabilityProgress['percentage'] ?? 0 }}%;"></span>
+                    </div>
+                    <a href="{{ route('admin.professor-availability.index', ['tab' => 'summary']) }}" class="adm-btn adm-btn-ghost adm-btn-sm">
+                        <i class="bi bi-person-check"></i>
+                        Suivre les retours
+                    </a>
+                </div>
+            </div>
+        @endif
+
         <div class="schedule-final-summary">
             <article class="schedule-final-stat">
                 <span class="schedule-final-stat-icon"><i class="bi bi-calendar2-week"></i></span>
@@ -739,6 +791,10 @@
 @endsection
 
 <style>
+
+
+/* Progression des disponibilités dans le planning final */
+.schedule-progress-banner{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:16px;padding:18px 20px;border:1px solid rgba(245,158,11,.24);border-radius:18px;background:radial-gradient(circle at 92% 20%,rgba(245,158,11,.11),transparent 30%),linear-gradient(145deg,rgba(37,27,10,.55),rgba(12,20,35,.92))}.schedule-progress-banner.is-complete{border-color:rgba(34,197,94,.24);background:radial-gradient(circle at 92% 20%,rgba(34,197,94,.1),transparent 30%),linear-gradient(145deg,rgba(10,37,25,.45),rgba(12,20,35,.92))}.schedule-progress-main{display:flex;align-items:center;gap:14px;min-width:0}.schedule-progress-icon{width:48px;height:48px;display:grid;place-items:center;flex:0 0 48px;border-radius:14px;color:#fde68a;background:rgba(245,158,11,.12);font-size:1.15rem}.schedule-progress-banner.is-complete .schedule-progress-icon{color:#86efac;background:rgba(34,197,94,.12)}.schedule-progress-copy{min-width:0}.schedule-progress-kicker{display:block;margin-bottom:3px;color:#fbbf24;font-size:.59rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.schedule-progress-banner.is-complete .schedule-progress-kicker{color:#4ade80}.schedule-progress-copy>strong{display:block;color:#fff;font-size:.92rem}.schedule-progress-copy p{margin:4px 0 0;color:#94a3b8;font-size:.66rem;line-height:1.5}.schedule-progress-pending{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;color:#fbbf24;font-size:.59rem}.schedule-progress-pending strong{padding:3px 7px;border:1px solid rgba(245,158,11,.16);border-radius:999px;color:#fde68a;background:rgba(245,158,11,.08);font-size:.55rem}.schedule-progress-side{width:190px;flex:0 0 190px;display:grid;gap:7px}.schedule-progress-number{display:flex;align-items:baseline;gap:6px}.schedule-progress-number strong{color:#fff;font-size:1.12rem}.schedule-progress-number span{color:#64748b;font-size:.55rem}.schedule-progress-track{height:7px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.07)}.schedule-progress-track>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f59e0b,#fbbf24)}.schedule-progress-banner.is-complete .schedule-progress-track>span{background:linear-gradient(90deg,#22c55e,#4ade80)}.schedule-progress-side .adm-btn{width:100%;justify-content:center}@media(max-width:850px){.schedule-progress-banner{align-items:flex-start;flex-direction:column}.schedule-progress-side{width:100%;flex-basis:auto}}
 .schedule-slot-presets {
     display: flex;
     align-items: center;
