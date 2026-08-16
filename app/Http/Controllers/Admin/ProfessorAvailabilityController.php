@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ProfAssignment;
 use App\Models\ProfessorAvailability;
 use App\Models\User;
+use App\Services\ProfessorAutoSchedulerService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -198,7 +199,8 @@ class ProfessorAvailabilityController extends Controller
 
     public function update(
         Request $request,
-        User $professor
+        User $professor,
+        ProfessorAutoSchedulerService $autoScheduler
     ) {
         $this->assertProfessor($professor);
 
@@ -256,7 +258,35 @@ class ProfessorAvailabilityController extends Controller
             }
         });
 
-        return redirect()
+        /*
+         * Après l'enregistrement des disponibilités, on croise
+         * automatiquement :
+         *
+         * ProfAssignment
+         * Matière → Niveau → Classe → D1/D2/I1/A1...
+         *              +
+         * ProfessorAvailability
+         * Jour → heure début → heure fin
+         *              =
+         * Schedule hebdomadaire.
+         *
+         * Le service ne supprime jamais un planning manuel existant.
+         */
+        $autoPlanning = $autoScheduler->syncForProfessor($professor);
+
+        $successMessage =
+            count($rows)
+            . ' créneau(x) de disponibilité enregistré(s) pour '
+            . $professor->name
+            . '. Planification automatique : '
+            . $autoPlanning['created']
+            . ' séance(s) créée(s), '
+            . $autoPlanning['reused']
+            . ' créneau(x) existant(s) réutilisé(s), '
+            . $autoPlanning['pending']
+            . ' affectation(s) restant à planifier.';
+
+        $redirect = redirect()
             ->route(
                 'admin.professor-availability.index',
                 [
@@ -264,13 +294,21 @@ class ProfessorAvailabilityController extends Controller
                     'tab' => 'editor',
                 ]
             )
-            ->with(
-                'success',
-                count($rows)
-                    . ' créneau(x) de disponibilité enregistré(s) pour '
-                    . $professor->name
-                    . '.'
-            );
+            ->with('success', $successMessage);
+
+        if (!empty($autoPlanning['issues'])) {
+            $issues = collect($autoPlanning['issues'])
+                ->take(4)
+                ->implode(' ');
+
+            if (count($autoPlanning['issues']) > 4) {
+                $issues .= ' D’autres affectations restent également à vérifier.';
+            }
+
+            $redirect->with('warning', $issues);
+        }
+
+        return $redirect;
     }
 
     public function destroy(User $professor)
@@ -288,6 +326,10 @@ class ProfessorAvailabilityController extends Controller
                 'Les disponibilités de '
                 . $professor->name
                 . ' ont été effacées.'
+            )
+            ->with(
+                'warning',
+                'Par sécurité, aucun emploi du temps existant n’a été supprimé automatiquement.'
             );
     }
 

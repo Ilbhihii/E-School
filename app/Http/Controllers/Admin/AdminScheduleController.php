@@ -1222,7 +1222,36 @@ class AdminScheduleController extends Controller
                     );
 
                     if ($scheduleSlotCode !== '' && $assignmentSlotCode !== '') {
-                        return $scheduleSlotCode === $assignmentSlotCode;
+                        if ($scheduleSlotCode !== $assignmentSlotCode) {
+                            return false;
+                        }
+
+                        /*
+                         * IMPORTANT pour la planification automatique :
+                         * une affectation D1/D2/I1/A1... seule ne suffit pas
+                         * pour afficher le professeur dans le planning final.
+                         *
+                         * Il devient visible quand son affectation possède
+                         * réellement le jour et l'horaire du Schedule. Ces
+                         * champs sont synchronisés après l'enregistrement de
+                         * ses disponibilités par ProfessorAutoSchedulerService.
+                         *
+                         * Exception : schedules.prof_id reste le professeur
+                         * principal choisi manuellement dans l'admin.
+                         */
+                        if (
+                            !$assignment->day_of_week
+                            || !$assignment->start_time
+                            || !$assignment->end_time
+                        ) {
+                            return (int) $schedule->prof_id
+                                === (int) $assignment->prof_id;
+                        }
+
+                        return
+                            (int) $assignment->day_of_week === (int) $schedule->day_of_week
+                            && Carbon::parse($assignment->start_time)->format('H:i') === $scheduleStart
+                            && Carbon::parse($assignment->end_time)->format('H:i') === $scheduleEnd;
                     }
 
                     /*
