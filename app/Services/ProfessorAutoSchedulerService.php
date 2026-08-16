@@ -24,7 +24,8 @@ class ProfessorAutoSchedulerService
      *
      * Règles de sécurité :
      * - aucun planning manuel existant n'est supprimé ;
-     * - aucun planning existant n'est déplacé automatiquement ;
+     * - aucun planning déjà utilisé par un autre professeur n'est déplacé ;
+     * - un créneau « À affecter » réellement libre peut être repositionné ;
      * - si le créneau structurel possède déjà un planning hebdomadaire,
      *   on le réutilise seulement si le professeur est disponible ;
      * - sinon on crée le premier horaire disponible sans conflit ;
@@ -76,6 +77,7 @@ class ProfessorAutoSchedulerService
                 'assignments' => $assignments->count(),
                 'created' => 0,
                 'reused' => 0,
+                'rescheduled' => 0,
                 'pending' => 0,
                 'issues' => [],
             ];
@@ -142,17 +144,61 @@ class ProfessorAutoSchedulerService
                         }
 
                         $result['reused']++;
-                    } else {
-                        $result['pending']++;
-                        $result['issues'][] = $this->assignmentLabel($assignment)
-                            . ' : le créneau existe déjà le '
-                            . $existingSchedule->day_label
-                            . ' '
-                            . $existingSchedule->time_range_label
-                            . ', mais cet horaire n’est pas inclus dans les disponibilités de '
-                            . $professor->name
-                            . '.';
+                        continue;
                     }
+
+                    /*
+                     * Cas important : un ancien créneau peut exister dans
+                     * schedules sans professeur réellement synchronisé.
+                     * C'est précisément ce qui apparaît comme « À affecter »
+                     * dans la vue finale.
+                     *
+                     * Si ce Schedule est encore libre, on peut le repositionner
+                     * sur une disponibilité réelle du professeur au lieu de le
+                     * laisser bloqué à un ancien horaire incompatible.
+                     *
+                     * On ne déplace JAMAIS une séance déjà utilisée par un autre
+                     * professeur. Les plannings manuels affectés restent intacts.
+                     */
+                    if ($this->scheduleCanBeAutoRescheduled(
+                        $existingSchedule,
+                        $professor
+                    )) {
+                        $candidate = $this->firstAvailableCandidate(
+                            $professor,
+                            $assignment,
+                            $slotCode,
+                            $availabilities,
+                            $assignments,
+                            $existingSchedule->id
+                        );
+
+                        if ($candidate) {
+                            $this->rescheduleExistingSchedule(
+                                $existingSchedule,
+                                $professor,
+                                $candidate
+                            );
+
+                            $this->syncAssignmentWithSchedule(
+                                $assignment,
+                                $existingSchedule
+                            );
+
+                            $result['rescheduled']++;
+                            continue;
+                        }
+                    }
+
+                    $result['pending']++;
+                    $result['issues'][] = $this->assignmentLabel($assignment)
+                        . ' : le créneau existe déjà le '
+                        . $existingSchedule->day_label
+                        . ' '
+                        . $existingSchedule->time_range_label
+                        . ', mais cet horaire n’est pas inclus dans les disponibilités de '
+                        . $professor->name
+                        . ' et le créneau ne peut pas être déplacé automatiquement.';
 
                     continue;
                 }
@@ -207,7 +253,8 @@ class ProfessorAutoSchedulerService
         ProfAssignment $assignment,
         string $slotCode,
         Collection $availabilities,
-        Collection $professorAssignments
+        Collection $professorAssignments,
+        ?int $ignoreScheduleId = null
     ): ?array {
         foreach ($availabilities as $availability) {
             $dayOfWeek = (int) $availability->day_of_week;
@@ -244,7 +291,8 @@ class ProfessorAutoSchedulerService
                 $professor,
                 $assignment,
                 $candidate,
-                $professorAssignments
+                $professorAssignments,
+                $ignoreScheduleId
             )) {
                 return $candidate;
             }
@@ -262,7 +310,8 @@ class ProfessorAutoSchedulerService
         User $professor,
         ProfAssignment $assignment,
         array $candidate,
-        Collection $professorAssignments
+        Collection $professorAssignments,
+        ?int $ignoreScheduleId = null
     ): bool {
         $schedules = Schedule::query()
             ->active()
@@ -270,6 +319,13 @@ class ProfessorAutoSchedulerService
             ->get();
 
         foreach ($schedules as $existing) {
+            if (
+                $ignoreScheduleId
+                && (int) $existing->id === (int) $ignoreScheduleId
+            ) {
+                continue;
+            }
+
             if (!$this->scheduleCanOverlapWeeklyCandidate(
                 $existing,
                 $candidate['anchor_date'],
@@ -440,6 +496,156 @@ class ProfessorAutoSchedulerService
             ->first();
     }
 
+    /**
+     * Un Schedule peut être déplacé automatiquement uniquement s'il n'est pas
+     * déjà réellement utilisé par un autre professeur.
+     *
+     * Sont autorisés :
+     * - un créneau sans prof_id et sans ProfAssignment synchronisé ;
+     * - un créneau créé automatiquement pour CE professeur et qui n'est pas
+     *   partagé avec un autre professeur.
+     */
+    private function scheduleCanBeAutoRescheduled(
+        Schedule $schedule,
+        User $professor
+    ): bool {
+        $syncedProfessorIds = $this->syncedProfessorIdsForSchedule($schedule);
+
+        $otherProfessorIds = $syncedProfessorIds
+            ->reject(
+                fn ($professorId) =>
+                    (int) $professorId === (int) $professor->id
+            )
+            ->values();
+
+        if ($otherProfessorIds->isNotEmpty()) {
+            return false;
+        }
+
+        if (empty($schedule->prof_id)) {
+            return true;
+        }
+
+        return
+            (int) $schedule->prof_id === (int) $professor->id
+            && strpos(
+                (string) $schedule->notes,
+                self::AUTO_NOTE_PREFIX
+            ) !== false;
+    }
+
+    /**
+     * Professeurs déjà synchronisés sur le jour + horaire exact du Schedule.
+     * Une simple affectation structurelle D1/I2/... sans horaire ne compte pas.
+     */
+    private function syncedProfessorIdsForSchedule(
+        Schedule $schedule
+    ): Collection {
+        $levelId = (int) (
+            $schedule->level_id
+            ?: optional($schedule->classRoom)->level_id
+        );
+
+        $slotCode = strtoupper(
+            trim((string) $schedule->slot_code)
+        );
+
+        $scheduleStart = Carbon::parse(
+            $schedule->start_time
+        )->format('H:i');
+
+        $scheduleEnd = Carbon::parse(
+            $schedule->end_time
+        )->format('H:i');
+
+        return ProfAssignment::query()
+            ->with('classSlot')
+            ->where('subject_id', $schedule->subject_id)
+            ->where('level_id', $levelId)
+            ->where('class_id', $schedule->class_id)
+            ->get()
+            ->filter(function (ProfAssignment $assignment) use (
+                $schedule,
+                $slotCode,
+                $scheduleStart,
+                $scheduleEnd
+            ) {
+                $assignmentSlotCode = $this->assignmentSlotCode(
+                    $assignment
+                );
+
+                if (
+                    $slotCode !== ''
+                    && $assignmentSlotCode !== ''
+                    && $slotCode !== $assignmentSlotCode
+                ) {
+                    return false;
+                }
+
+                if (
+                    !$assignment->day_of_week
+                    || !$assignment->start_time
+                    || !$assignment->end_time
+                ) {
+                    return false;
+                }
+
+                return
+                    (int) $assignment->day_of_week
+                        === (int) $schedule->day_of_week
+                    && Carbon::parse(
+                        $assignment->start_time
+                    )->format('H:i') === $scheduleStart
+                    && Carbon::parse(
+                        $assignment->end_time
+                    )->format('H:i') === $scheduleEnd;
+            })
+            ->pluck('prof_id')
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Repositionne un ancien créneau libre sur la disponibilité retenue.
+     * La ligne Schedule est réutilisée : aucun doublon n'est créé.
+     */
+    private function rescheduleExistingSchedule(
+        Schedule $schedule,
+        User $professor,
+        array $candidate
+    ): void {
+        $existingNotes = trim((string) $schedule->notes);
+
+        $autoNote = self::AUTO_NOTE_PREFIX
+            . ' Créneau sans professeur repositionné automatiquement selon '
+            . 'les disponibilités de '
+            . $professor->name
+            . '.';
+
+        if (
+            $existingNotes !== ''
+            && strpos($existingNotes, self::AUTO_NOTE_PREFIX) === false
+        ) {
+            $autoNote = $existingNotes . PHP_EOL . $autoNote;
+        }
+
+        $schedule->update([
+            'prof_id' => $professor->id,
+            'date' => $candidate['anchor_date']->toDateString(),
+            'day_of_week' => (int) $candidate['day_of_week'],
+            'start_time' => $candidate['start_at']->format('Y-m-d H:i:s'),
+            'end_time' => $candidate['end_at']->format('Y-m-d H:i:s'),
+            'recurrence' => Schedule::RECURRENCE_WEEKLY,
+            'valid_from' => $candidate['anchor_date']->toDateString(),
+            'valid_until' => null,
+            'status' => Schedule::STATUS_ACTIVE,
+            'notes' => $autoNote,
+        ]);
+
+        $schedule->refresh();
+    }
+
     private function availabilityCoversSchedule(
         Collection $availabilities,
         Schedule $schedule
@@ -564,6 +770,7 @@ class ProfessorAutoSchedulerService
             'assignments' => 0,
             'created' => 0,
             'reused' => 0,
+            'rescheduled' => 0,
             'pending' => 0,
             'issues' => [$issue],
         ];

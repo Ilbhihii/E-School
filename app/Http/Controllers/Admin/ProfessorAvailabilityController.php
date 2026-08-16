@@ -283,6 +283,8 @@ class ProfessorAvailabilityController extends Controller
             . ' séance(s) créée(s), '
             . $autoPlanning['reused']
             . ' créneau(x) existant(s) réutilisé(s), '
+            . ($autoPlanning['rescheduled'] ?? 0)
+            . ' créneau(x) « À affecter » repositionné(s), '
             . $autoPlanning['pending']
             . ' affectation(s) restant à planifier.';
 
