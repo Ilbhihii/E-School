@@ -20,11 +20,27 @@
         7 => 'Dimanche',
     ];
 
+    $displayMode = request('mode') === 'final' ? 'final' : 'build';
+
     $scheduleFilters = request()->only([
         'subject_id',
         'level_id',
         'class_id',
+        'prof_id',
     ]);
+
+    $modeQuery = request()->query();
+    unset($modeQuery['mode']);
+
+    $buildModeUrl = route(
+        'admin.schedule.index',
+        array_merge($modeQuery, ['mode' => 'build'])
+    );
+
+    $finalModeUrl = route(
+        'admin.schedule.index',
+        array_merge($modeQuery, ['mode' => 'final'])
+    );
 
     $scheduleEditData = $schedules->mapWithKeys(function ($schedule) {
         return [$schedule->id => [
@@ -46,6 +62,68 @@
     $activeFilterCount = collect($scheduleFilters)->filter(function ($value) {
         return $value !== null && $value !== '';
     })->count();
+
+    /*
+     * Vue finale demandée par l'équipe :
+     * lignes = plages horaires, colonnes = jours, cartes = séances.
+     * Seules les séances actives apparaissent dans cette synthèse.
+     */
+    $finalSchedules = $schedules
+        ->filter(function ($schedule) {
+            return ($schedule->status ?: 'active') === 'active';
+        })
+        ->values();
+
+    $finalTimeRows = $finalSchedules
+        ->map(function ($schedule) {
+            $start = optional($schedule->start_time)->format('H:i') ?: '--:--';
+            $end = optional($schedule->end_time)->format('H:i') ?: '--:--';
+
+            return [
+                'key' => $start . '|' . $end,
+                'start' => $start,
+                'end' => $end,
+                'label' => $start . ' – ' . $end,
+            ];
+        })
+        ->unique('key')
+        ->sortBy(function ($row) {
+            return $row['start'] . '|' . $row['end'];
+        })
+        ->values();
+
+    $finalMatrix = $finalSchedules->groupBy(function ($schedule) {
+        $start = optional($schedule->start_time)->format('H:i') ?: '--:--';
+        $end = optional($schedule->end_time)->format('H:i') ?: '--:--';
+
+        return (int) $schedule->day_of_week
+            . '|'
+            . $start
+            . '|'
+            . $end;
+    });
+
+    $usedProfessorIds = $finalSchedules
+        ->flatMap(function ($schedule) use ($scheduleProfessors) {
+            return collect($scheduleProfessors[$schedule->id] ?? [])
+                ->pluck('id');
+        })
+        ->filter()
+        ->unique()
+        ->values();
+
+    $usedProfessors = $teachers
+        ->filter(function ($teacher) use ($usedProfessorIds) {
+            return $usedProfessorIds->contains((int) $teacher->id);
+        })
+        ->values();
+
+    $finalStats = [
+        'sessions' => $finalSchedules->count(),
+        'professors' => $usedProfessors->count(),
+        'classes' => $finalSchedules->pluck('class_id')->filter()->unique()->count(),
+        'days' => $finalSchedules->pluck('day_of_week')->filter()->unique()->count(),
+    ];
 @endphp
 
 <div class="schedule-page">
@@ -59,10 +137,30 @@
             <p>Planifiez le parcours complet Matière → Niveau → Classe → Créneau.</p>
         </div>
 
-        <div class="schedule-hero-actions">
-            <button type="button" class="adm-btn adm-btn-primary schedule-primary-action" onclick="resetPlanningForm(true)">
-                <i class="bi bi-plus-lg"></i> Nouvelle séance
-            </button>
+        <div class="schedule-hero-actions schedule-view-switcher">
+            <a
+                href="{{ $buildModeUrl }}"
+                class="adm-btn {{ $displayMode === 'build' ? 'adm-btn-primary' : 'adm-btn-ghost' }}"
+            >
+                <i class="bi bi-tools"></i> Construire le planning
+            </a>
+
+            <a
+                href="{{ $finalModeUrl }}"
+                class="adm-btn {{ $displayMode === 'final' ? 'adm-btn-primary' : 'adm-btn-ghost' }}"
+            >
+                <i class="bi bi-grid-3x3-gap-fill"></i> Vue planning final
+            </a>
+
+            @if($displayMode === 'build')
+                <button type="button" class="adm-btn adm-btn-primary schedule-primary-action" onclick="resetPlanningForm(true)">
+                    <i class="bi bi-plus-lg"></i> Nouvelle séance
+                </button>
+            @else
+                <button type="button" class="adm-btn adm-btn-ghost" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Imprimer
+                </button>
+            @endif
         </div>
     </section>
 
@@ -100,6 +198,7 @@
         </div>
         <div class="adm-card-body schedule-card-body">
             <form method="GET" action="{{ route('admin.schedule.index') }}" class="schedule-filter-grid">
+                <input type="hidden" name="mode" value="{{ $displayMode }}">
                 <div class="adm-form-group mb-0">
                     <label class="adm-form-label">Matière</label>
                     <select
@@ -152,12 +251,13 @@
 
                 <div class="schedule-filter-actions">
                     <button class="adm-btn adm-btn-primary" type="submit"><i class="bi bi-search"></i> Filtrer</button>
-                    <a href="{{ route('admin.schedule.index') }}" class="adm-btn adm-btn-ghost schedule-reset-button" title="Réinitialiser les filtres"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    <a href="{{ route('admin.schedule.index', ['mode' => $displayMode]) }}" class="adm-btn adm-btn-ghost schedule-reset-button" title="Réinitialiser les filtres"><i class="bi bi-arrow-counterclockwise"></i></a>
                 </div>
             </form>
         </div>
     </section>
 
+    <div class="schedule-build-mode" style="{{ $displayMode === 'build' ? '' : 'display:none;' }}">
     <x-schedule-slot-matrix
         :items="$schedules"
         title="Organisation des créneaux"
@@ -426,6 +526,215 @@
             </div>
         </section>
     </div>
+    </div>
+
+    <section
+        class="schedule-final-mode"
+        style="{{ $displayMode === 'final' ? '' : 'display:none;' }}"
+    >
+        <div class="schedule-final-summary">
+            <article class="schedule-final-stat">
+                <span class="schedule-final-stat-icon"><i class="bi bi-calendar2-week"></i></span>
+                <div><strong>{{ $finalStats['sessions'] }}</strong><small>Séances actives</small></div>
+            </article>
+            <article class="schedule-final-stat">
+                <span class="schedule-final-stat-icon"><i class="bi bi-person-video3"></i></span>
+                <div><strong>{{ $finalStats['professors'] }}</strong><small>Professeurs visibles</small></div>
+            </article>
+            <article class="schedule-final-stat">
+                <span class="schedule-final-stat-icon"><i class="bi bi-collection"></i></span>
+                <div><strong>{{ $finalStats['classes'] }}</strong><small>Classes concernées</small></div>
+            </article>
+            <article class="schedule-final-stat">
+                <span class="schedule-final-stat-icon"><i class="bi bi-calendar-check"></i></span>
+                <div><strong>{{ $finalStats['days'] }}</strong><small>Jours occupés</small></div>
+            </article>
+        </div>
+
+        <section class="adm-card schedule-card schedule-final-card">
+            <div class="adm-card-header schedule-card-head schedule-final-head">
+                <div class="schedule-card-title-wrap">
+                    <span class="schedule-card-icon is-green"><i class="bi bi-grid-3x3-gap-fill"></i></span>
+                    <div>
+                        <span class="schedule-final-kicker">RÉSULTAT FINAL ADMIN</span>
+                        <h3>Planning hebdomadaire global</h3>
+                        <p>Vue opérationnelle de toutes les séances actives correspondant aux filtres sélectionnés.</p>
+                    </div>
+                </div>
+
+                <span class="schedule-count-badge">
+                    <i class="bi bi-palette"></i> Couleur par professeur
+                </span>
+            </div>
+
+            <div class="adm-card-body schedule-final-body">
+                @if($finalSchedules->isEmpty())
+                    <div class="adm-empty schedule-final-empty">
+                        <div class="adm-empty-icon"><i class="bi bi-calendar-x"></i></div>
+                        <h5>Aucun créneau actif à afficher</h5>
+                        <p>Modifiez les filtres ou ajoutez des séances dans « Construire le planning ».</p>
+                        <a href="{{ $buildModeUrl }}" class="adm-btn adm-btn-primary">
+                            <i class="bi bi-tools"></i> Construire le planning
+                        </a>
+                    </div>
+                @else
+                    <div class="schedule-final-layout">
+                        <div class="schedule-final-table-wrap">
+                            <table class="schedule-final-table">
+                                <thead>
+                                    <tr>
+                                        <th class="schedule-final-time-head">Horaires</th>
+                                        @foreach($dayNames as $dayNumber => $dayName)
+                                            <th>
+                                                <span class="schedule-final-day-number">{{ str_pad($dayNumber, 2, '0', STR_PAD_LEFT) }}</span>
+                                                {{ $dayName }}
+                                            </th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($finalTimeRows as $timeRow)
+                                        <tr>
+                                            <th class="schedule-final-time-cell">
+                                                <strong>{{ $timeRow['start'] }}</strong>
+                                                <span>{{ $timeRow['end'] }}</span>
+                                            </th>
+
+                                            @foreach($dayNames as $dayNumber => $dayName)
+                                                @php
+                                                    $cellKey = $dayNumber
+                                                        . '|'
+                                                        . $timeRow['start']
+                                                        . '|'
+                                                        . $timeRow['end'];
+
+                                                    $cellSchedules = $finalMatrix->get(
+                                                        $cellKey,
+                                                        collect()
+                                                    );
+                                                @endphp
+
+                                                <td class="schedule-final-cell {{ $cellSchedules->isEmpty() ? 'is-empty' : '' }}">
+                                                    @forelse($cellSchedules as $schedule)
+                                                        @php
+                                                            $subjectName = optional($schedule->subjectModel)->name
+                                                                ?: $schedule->subject
+                                                                ?: 'Matière';
+
+                                                            $levelName = optional($schedule->level)->name
+                                                                ?: optional(optional($schedule->classRoom)->level)->name
+                                                                ?: '-';
+
+                                                            $className = optional($schedule->classRoom)->name
+                                                                ?: 'Classe';
+
+                                                            $professorsForSchedule = collect(
+                                                                $scheduleProfessors[$schedule->id] ?? []
+                                                            );
+
+                                                            if ($professorsForSchedule->isEmpty()) {
+                                                                $professorsForSchedule = collect([null]);
+                                                            }
+                                                        @endphp
+
+                                                        @foreach($professorsForSchedule as $scheduleProfessor)
+                                                            @php
+                                                                $professorId = $scheduleProfessor?->id;
+                                                                $color = $professorColors[$professorId] ?? [
+                                                                    'hex' => '#64748B',
+                                                                    'rgb' => '100,116,139',
+                                                                    'label' => 'Non affecté',
+                                                                ];
+
+                                                                $teacherName = $scheduleProfessor?->name
+                                                                    ?: 'À affecter';
+                                                            @endphp
+
+                                                            <article
+                                                                class="schedule-final-event"
+                                                                style="--prof-color: {{ $color['hex'] }}; --prof-rgb: {{ $color['rgb'] }};"
+                                                                title="{{ $subjectName }} · {{ $levelName }} · {{ $className }} · {{ $teacherName }}"
+                                                            >
+                                                                <div class="schedule-final-event-top">
+                                                                    @if($schedule->slot_code)
+                                                                        <span class="schedule-final-slot">{{ $schedule->slot_code }}</span>
+                                                                    @endif
+                                                                    <span class="schedule-final-class">{{ $className }}</span>
+                                                                </div>
+
+                                                                <strong class="schedule-final-subject">{{ $subjectName }}</strong>
+                                                                <span class="schedule-final-level">{{ $levelName }}</span>
+
+                                                                <div class="schedule-final-professor">
+                                                                    <span class="schedule-final-prof-dot"></span>
+                                                                    <span>{{ $teacherName }}</span>
+                                                                </div>
+                                                            </article>
+                                                        @endforeach
+                                                    @empty
+                                                        <span class="schedule-final-dash">·</span>
+                                                    @endforelse
+                                                </td>
+                                            @endforeach
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <aside class="schedule-final-legend">
+                            <div class="schedule-final-legend-head">
+                                <i class="bi bi-palette2"></i>
+                                <div>
+                                    <strong>Professeurs</strong>
+                                    <small>Légende des couleurs</small>
+                                </div>
+                            </div>
+
+                            <div class="schedule-final-legend-list">
+                                @forelse($usedProfessors as $teacher)
+                                    @php
+                                        $teacherColor = $professorColors[$teacher->id] ?? [
+                                            'hex' => '#64748B',
+                                            'rgb' => '100,116,139',
+                                            'label' => 'Couleur',
+                                        ];
+                                    @endphp
+
+                                    <div
+                                        class="schedule-final-legend-item"
+                                        style="--prof-color: {{ $teacherColor['hex'] }}; --prof-rgb: {{ $teacherColor['rgb'] }};"
+                                    >
+                                        <span class="schedule-final-legend-avatar">
+                                            {{ strtoupper(mb_substr($teacher->name, 0, 1)) }}
+                                        </span>
+                                        <div>
+                                            <strong>{{ $teacher->name }}</strong>
+                                            <small>{{ $teacherColor['label'] }}</small>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="schedule-final-legend-empty">Aucun professeur affecté.</div>
+                                @endforelse
+                            </div>
+
+                            @if($finalSchedules->contains(function ($schedule) use ($scheduleProfessors) {
+                                return collect($scheduleProfessors[$schedule->id] ?? [])->isEmpty();
+                            }))
+                                <div class="schedule-final-legend-item is-unassigned">
+                                    <span class="schedule-final-legend-avatar">?</span>
+                                    <div>
+                                        <strong>À affecter</strong>
+                                        <small>Professeur non défini</small>
+                                    </div>
+                                </div>
+                            @endif
+                        </aside>
+                    </div>
+                @endif
+            </div>
+        </section>
+    </section>
 </div>
 @endsection
 
@@ -540,6 +849,479 @@
     letter-spacing: .04em;
 }
 
+
+
+/* =========================================================
+   VUE FINALE ADMIN — PLANNING HEBDOMADAIRE
+   ========================================================= */
+.schedule-view-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.schedule-final-mode {
+    margin-top: 14px;
+}
+
+.schedule-final-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.schedule-final-stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 76px;
+    padding: 14px 16px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(15, 23, 42, .92), rgba(10, 18, 32, .92));
+    box-shadow: 0 12px 30px rgba(2, 6, 23, .14);
+}
+
+.schedule-final-stat-icon {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(96, 165, 250, .18);
+    border-radius: 11px;
+    color: #93c5fd;
+    background: rgba(37, 99, 235, .10);
+}
+
+.schedule-final-stat strong {
+    display: block;
+    color: #f8fafc;
+    font-size: 1.12rem;
+    line-height: 1.1;
+}
+
+.schedule-final-stat small {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: .64rem;
+}
+
+.schedule-final-card {
+    overflow: hidden;
+}
+
+.schedule-final-kicker {
+    display: block;
+    margin-bottom: 3px;
+    color: #a78bfa;
+    font-size: .56rem;
+    font-weight: 900;
+    letter-spacing: .09em;
+}
+
+.schedule-final-body {
+    padding: 14px !important;
+}
+
+.schedule-final-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px;
+    gap: 14px;
+    align-items: start;
+}
+
+.schedule-final-table-wrap {
+    overflow-x: auto;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 13px;
+    background: #07101e;
+}
+
+.schedule-final-table {
+    width: 100%;
+    min-width: 1020px;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+}
+
+.schedule-final-table th,
+.schedule-final-table td {
+    border-right: 1px solid rgba(148, 163, 184, .10);
+    border-bottom: 1px solid rgba(148, 163, 184, .10);
+}
+
+.schedule-final-table tr:last-child th,
+.schedule-final-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.schedule-final-table th:last-child,
+.schedule-final-table td:last-child {
+    border-right: 0;
+}
+
+.schedule-final-table thead th {
+    height: 48px;
+    padding: 9px 7px;
+    color: #dbeafe;
+    background: #0c1728;
+    font-size: .63rem;
+    font-weight: 850;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .045em;
+}
+
+.schedule-final-day-number {
+    display: block;
+    margin-bottom: 2px;
+    color: #475569;
+    font-size: .49rem;
+}
+
+.schedule-final-time-head,
+.schedule-final-time-cell {
+    width: 94px;
+    min-width: 94px;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+
+.schedule-final-time-head {
+    z-index: 4;
+}
+
+.schedule-final-time-cell {
+    padding: 12px 8px;
+    color: #e2e8f0;
+    background: #0a1423;
+    text-align: center;
+    vertical-align: top;
+}
+
+.schedule-final-time-cell strong,
+.schedule-final-time-cell span {
+    display: block;
+}
+
+.schedule-final-time-cell strong {
+    font-size: .72rem;
+}
+
+.schedule-final-time-cell span {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: .58rem;
+}
+
+.schedule-final-cell {
+    min-width: 128px;
+    height: 104px;
+    padding: 6px;
+    vertical-align: top;
+    background: rgba(8, 16, 29, .72);
+}
+
+.schedule-final-cell.is-empty {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.schedule-final-dash {
+    color: #243247;
+    font-size: 1rem;
+}
+
+.schedule-final-event {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 91px;
+    padding: 8px;
+    margin-bottom: 5px;
+    overflow: hidden;
+    border: 1px solid rgba(var(--prof-rgb), .30);
+    border-left: 3px solid var(--prof-color);
+    border-radius: 9px;
+    background: linear-gradient(145deg, rgba(var(--prof-rgb), .15), rgba(var(--prof-rgb), .055));
+    box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+}
+
+.schedule-final-event:last-child {
+    margin-bottom: 0;
+}
+
+.schedule-final-event-top {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+}
+
+.schedule-final-slot {
+    display: inline-flex;
+    min-width: 26px;
+    height: 19px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border-radius: 5px;
+    color: #fff;
+    background: var(--prof-color);
+    font-size: .48rem;
+    font-weight: 900;
+    letter-spacing: .03em;
+}
+
+.schedule-final-class {
+    min-width: 0;
+    overflow: hidden;
+    color: #f8fafc;
+    font-size: .58rem;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.schedule-final-subject {
+    overflow: hidden;
+    color: #e2e8f0;
+    font-size: .58rem;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.schedule-final-level {
+    overflow: hidden;
+    color: #94a3b8;
+    font-size: .50rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.schedule-final-professor {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
+    min-width: 0;
+    color: #cbd5e1;
+    font-size: .50rem;
+    font-weight: 700;
+}
+
+.schedule-final-professor span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.schedule-final-prof-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: var(--prof-color);
+    box-shadow: 0 0 0 3px rgba(var(--prof-rgb), .12);
+}
+
+.schedule-final-legend {
+    position: sticky;
+    top: 84px;
+    padding: 12px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 13px;
+    background: #0a1423;
+}
+
+.schedule-final-legend-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-bottom: 10px;
+    margin-bottom: 9px;
+    border-bottom: 1px solid rgba(148, 163, 184, .10);
+    color: #93c5fd;
+}
+
+.schedule-final-legend-head strong,
+.schedule-final-legend-head small {
+    display: block;
+}
+
+.schedule-final-legend-head strong {
+    color: #e2e8f0;
+    font-size: .68rem;
+}
+
+.schedule-final-legend-head small {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: .50rem;
+}
+
+.schedule-final-legend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.schedule-final-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 7px;
+    border: 1px solid rgba(var(--prof-rgb), .16);
+    border-radius: 9px;
+    background: rgba(var(--prof-rgb), .065);
+}
+
+.schedule-final-legend-avatar {
+    display: inline-flex;
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: #fff;
+    background: var(--prof-color);
+    font-size: .58rem;
+    font-weight: 900;
+}
+
+.schedule-final-legend-item div {
+    min-width: 0;
+}
+
+.schedule-final-legend-item strong,
+.schedule-final-legend-item small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.schedule-final-legend-item strong {
+    color: #e2e8f0;
+    font-size: .60rem;
+}
+
+.schedule-final-legend-item small {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: .48rem;
+}
+
+.schedule-final-legend-item.is-unassigned {
+    --prof-color: #64748B;
+    --prof-rgb: 100,116,139;
+    margin-top: 7px;
+}
+
+.schedule-final-legend-empty {
+    color: #64748b;
+    font-size: .58rem;
+    text-align: center;
+}
+
+.schedule-final-empty {
+    padding: 34px 16px;
+}
+
+@media (max-width: 1180px) {
+    .schedule-final-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .schedule-final-legend {
+        position: static;
+    }
+
+    .schedule-final-legend-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 820px) {
+    .schedule-final-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .schedule-view-switcher {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .schedule-view-switcher .adm-btn {
+        flex: 1 1 auto;
+    }
+
+    .schedule-final-legend-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .schedule-final-summary,
+    .schedule-final-legend-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media print {
+    body.admin-portal .admin-sidebar,
+    body.admin-portal .admin-topbar,
+    body.admin-portal .admin-mobile-header,
+    .schedule-hero-actions,
+    .schedule-card:has(.schedule-filter-grid),
+    .schedule-final-summary {
+        display: none !important;
+    }
+
+    body,
+    body.admin-portal,
+    body.admin-portal .admin-main,
+    body.admin-portal .admin-content {
+        background: #fff !important;
+        color: #111827 !important;
+    }
+
+    .schedule-final-card,
+    .schedule-final-table-wrap,
+    .schedule-final-legend {
+        border-color: #d1d5db !important;
+        box-shadow: none !important;
+    }
+
+    .schedule-final-layout {
+        grid-template-columns: minmax(0, 1fr) 160px !important;
+    }
+
+    .schedule-final-table {
+        min-width: 0 !important;
+    }
+
+    .schedule-final-table thead th,
+    .schedule-final-time-cell,
+    .schedule-final-cell,
+    .schedule-final-legend {
+        background: #fff !important;
+        color: #111827 !important;
+    }
+}
 </style>
 
 @push('scripts')

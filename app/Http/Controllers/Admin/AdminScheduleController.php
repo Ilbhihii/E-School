@@ -37,7 +37,13 @@ class AdminScheduleController extends Controller
                 'prof',
             ]);
 
-        foreach (['subject_id', 'level_id', 'class_id', 'slot_code', 'prof_id', 'status'] as $filter) {
+        /*
+         * Le filtre professeur est appliqué après chargement afin de tenir
+         * compte de ProfAssignment. Un même créneau peut être partagé par
+         * plusieurs professeurs alors que schedules.prof_id ne garde qu'un
+         * professeur principal / historique.
+         */
+        foreach (['subject_id', 'level_id', 'class_id', 'slot_code', 'status'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->input($filter));
             }
@@ -47,6 +53,30 @@ class AdminScheduleController extends Controller
             ->orderByRaw('COALESCE(day_of_week, 8) asc')
             ->orderByRaw('TIME(start_time) asc')
             ->get();
+
+        $scheduleProfessors = $this->buildScheduleProfessorMap($schedules);
+
+        if ($request->filled('prof_id')) {
+            $professorId = (int) $request->input('prof_id');
+
+            $schedules = $schedules
+                ->filter(function (Schedule $schedule) use (
+                    $scheduleProfessors,
+                    $professorId
+                ) {
+                    return collect(
+                        $scheduleProfessors[$schedule->id] ?? []
+                    )->contains(
+                        fn (User $professor) =>
+                            (int) $professor->id === $professorId
+                    );
+                })
+                ->values();
+
+            $scheduleProfessors = collect($scheduleProfessors)
+                ->only($schedules->pluck('id')->all())
+                ->all();
+        }
 
         $scheduleHierarchy = $this->buildScheduleHierarchy();
 
@@ -67,13 +97,22 @@ class AdminScheduleController extends Controller
         $levels = Level::query()->orderBy('name')->get();
         $classes = ClassRoom::query()->orderBy('name')->get();
 
+        /*
+         * Couleurs stables utilisées dans la vue finale du planning.
+         * Elles reprennent la même logique que la page des disponibilités :
+         * Hamza = bleu foncé, Maryam = bleu ciel, Nadia = turquoise.
+         */
+        $professorColors = $this->buildProfessorColorMap($teachers);
+
         return view('admin.schedule.index', compact(
             'schedules',
             'subjects',
             'teachers',
             'levels',
             'classes',
-            'scheduleHierarchy'
+            'scheduleHierarchy',
+            'professorColors',
+            'scheduleProfessors'
         ));
     }
 
@@ -1113,6 +1152,299 @@ class AdminScheduleController extends Controller
                     $prefix . $number
             )
             ->all();
+    }
+
+    /**
+     * Retourne, pour chaque ligne Schedule, TOUS les professeurs réellement
+     * affectés au créneau structurel via ProfAssignment.
+     *
+     * Ceci est indispensable parce que plusieurs professeurs peuvent partager
+     * le même créneau (même matière / niveau / classe / D1-I1-A1...).
+     * schedules.prof_id reste uniquement un fallback historique.
+     */
+    private function buildScheduleProfessorMap($schedules): array
+    {
+        $schedules = collect($schedules)->values();
+
+        if ($schedules->isEmpty()) {
+            return [];
+        }
+
+        $assignments = ProfAssignment::query()
+            ->with([
+                'prof',
+                'classSlot',
+            ])
+            ->whereIn(
+                'class_id',
+                $schedules->pluck('class_id')->filter()->unique()->all()
+            )
+            ->get();
+
+        $map = [];
+
+        foreach ($schedules as $schedule) {
+            $levelId = (int) (
+                $schedule->level_id
+                ?: optional($schedule->classRoom)->level_id
+            );
+
+            $scheduleSlotCode = strtoupper(
+                trim((string) $schedule->slot_code)
+            );
+
+            $scheduleStart = $schedule->start_time
+                ? Carbon::parse($schedule->start_time)->format('H:i')
+                : null;
+
+            $scheduleEnd = $schedule->end_time
+                ? Carbon::parse($schedule->end_time)->format('H:i')
+                : null;
+
+            $professors = $assignments
+                ->filter(function (ProfAssignment $assignment) use (
+                    $schedule,
+                    $levelId,
+                    $scheduleSlotCode,
+                    $scheduleStart,
+                    $scheduleEnd
+                ) {
+                    if (
+                        (int) $assignment->subject_id !== (int) $schedule->subject_id
+                        || (int) $assignment->level_id !== $levelId
+                        || (int) $assignment->class_id !== (int) $schedule->class_id
+                    ) {
+                        return false;
+                    }
+
+                    $assignmentSlotCode = strtoupper(
+                        trim((string) optional($assignment->classSlot)->code)
+                    );
+
+                    if ($scheduleSlotCode !== '' && $assignmentSlotCode !== '') {
+                        return $scheduleSlotCode === $assignmentSlotCode;
+                    }
+
+                    /*
+                     * Compatibilité avec les anciennes affectations sans
+                     * class_slot_id : on retombe sur jour + plage horaire.
+                     */
+                    if (
+                        !$assignment->day_of_week
+                        || !$assignment->start_time
+                        || !$assignment->end_time
+                    ) {
+                        return false;
+                    }
+
+                    return
+                        (int) $assignment->day_of_week === (int) $schedule->day_of_week
+                        && Carbon::parse($assignment->start_time)->format('H:i') === $scheduleStart
+                        && Carbon::parse($assignment->end_time)->format('H:i') === $scheduleEnd;
+                })
+                ->map(fn (ProfAssignment $assignment) => $assignment->prof)
+                ->filter()
+                ->unique('id')
+                ->values();
+
+            /*
+             * Fallback : une ancienne séance peut n'avoir aucune ligne
+             * ProfAssignment mais conserver schedules.prof_id.
+             */
+            if ($professors->isEmpty() && $schedule->prof) {
+                $professors = collect([$schedule->prof]);
+            }
+
+            $map[$schedule->id] = $professors;
+        }
+
+        return $map;
+    }
+
+    /**
+     * Construit la palette du planning final.
+     *
+     * La couleur dépend d'abord du nom demandé par l'équipe puis,
+     * pour les autres professeurs, de leur matière principale.
+     */
+    private function buildProfessorColorMap($teachers): array
+    {
+        $teacherIds = collect($teachers)
+            ->pluck('id')
+            ->filter()
+            ->values();
+
+        $assignments = ProfAssignment::query()
+            ->with('subject')
+            ->when(
+                $teacherIds->isNotEmpty(),
+                fn ($query) =>
+                    $query->whereIn('prof_id', $teacherIds)
+            )
+            ->get()
+            ->groupBy('prof_id');
+
+        $colors = [];
+
+        foreach ($teachers as $index => $teacher) {
+            $colors[$teacher->id] = $this->resolveProfessorColor(
+                $teacher,
+                $assignments->get($teacher->id, collect()),
+                (int) $index
+            );
+        }
+
+        return $colors;
+    }
+
+    private function resolveProfessorColor(
+        User $professor,
+        $assignments,
+        int $fallbackIndex
+    ): array {
+        $name = Str::lower(
+            Str::ascii((string) $professor->name)
+        );
+
+        $subjectNames = collect($assignments)
+            ->map(function (ProfAssignment $assignment) {
+                return optional($assignment->subject)->name;
+            })
+            ->filter()
+            ->map(function ($subjectName) {
+                return Str::lower(
+                    Str::ascii((string) $subjectName)
+                );
+            })
+            ->implode(' ');
+
+        if (Str::contains($name, 'hamza')) {
+            return [
+                'hex' => '#1D4ED8',
+                'rgb' => '29,78,216',
+                'label' => 'Bleu foncé',
+            ];
+        }
+
+        if (
+            Str::contains($name, 'maryam')
+            || Str::contains($name, 'meryem')
+        ) {
+            return [
+                'hex' => '#38BDF8',
+                'rgb' => '56,189,248',
+                'label' => 'Bleu ciel',
+            ];
+        }
+
+        if (Str::contains($name, 'nadia')) {
+            return [
+                'hex' => '#06B6D4',
+                'rgb' => '6,182,212',
+                'label' => 'Bleu turquoise',
+            ];
+        }
+
+        $arabicPalette = [
+            [
+                'hex' => '#2563EB',
+                'rgb' => '37,99,235',
+                'label' => 'Bleu',
+            ],
+            [
+                'hex' => '#60A5FA',
+                'rgb' => '96,165,250',
+                'label' => 'Bleu clair',
+            ],
+            [
+                'hex' => '#0EA5E9',
+                'rgb' => '14,165,233',
+                'label' => 'Bleu azur',
+            ],
+            [
+                'hex' => '#14B8A6',
+                'rgb' => '20,184,166',
+                'label' => 'Turquoise',
+            ],
+        ];
+
+        $englishPalette = [
+            [
+                'hex' => '#7C3AED',
+                'rgb' => '124,58,237',
+                'label' => 'Violet',
+            ],
+            [
+                'hex' => '#A855F7',
+                'rgb' => '168,85,247',
+                'label' => 'Violet clair',
+            ],
+            [
+                'hex' => '#C026D3',
+                'rgb' => '192,38,211',
+                'label' => 'Violet fuchsia',
+            ],
+            [
+                'hex' => '#6366F1',
+                'rgb' => '99,102,241',
+                'label' => 'Indigo',
+            ],
+        ];
+
+        $generalPalette = [
+            [
+                'hex' => '#22C55E',
+                'rgb' => '34,197,94',
+                'label' => 'Vert',
+            ],
+            [
+                'hex' => '#F59E0B',
+                'rgb' => '245,158,11',
+                'label' => 'Ambre',
+            ],
+            [
+                'hex' => '#F97316',
+                'rgb' => '249,115,22',
+                'label' => 'Orange',
+            ],
+            [
+                'hex' => '#E11D48',
+                'rgb' => '225,29,72',
+                'label' => 'Rose',
+            ],
+            [
+                'hex' => '#8B5CF6',
+                'rgb' => '139,92,246',
+                'label' => 'Violet',
+            ],
+            [
+                'hex' => '#10B981',
+                'rgb' => '16,185,129',
+                'label' => 'Émeraude',
+            ],
+        ];
+
+        if (
+            Str::contains($subjectNames, 'arabe')
+            || Str::contains($subjectNames, 'arabic')
+        ) {
+            return $arabicPalette[
+                $fallbackIndex % count($arabicPalette)
+            ];
+        }
+
+        if (
+            Str::contains($subjectNames, 'anglais')
+            || Str::contains($subjectNames, 'english')
+        ) {
+            return $englishPalette[
+                $fallbackIndex % count($englishPalette)
+            ];
+        }
+
+        return $generalPalette[
+            $fallbackIndex % count($generalPalette)
+        ];
     }
 
     private function normalizePathName(
