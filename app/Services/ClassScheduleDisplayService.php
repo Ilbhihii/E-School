@@ -288,65 +288,97 @@ class ClassScheduleDisplayService
                 'slot_code'
             );
 
-        $query->where(
-            function (
-                Builder $outer
-            ) use (
-                $assignments,
-                $scheduleHasSlotCode
-            ) {
-                foreach (
-                    $assignments as $assignment
-                ) {
-                    $outer->orWhere(
-                        function (
-                            Builder $path
-                        ) use (
-                            $assignment,
-                            $scheduleHasSlotCode
-                        ) {
-                            $path->where(
-                                'subject_id',
-                                $assignment->subject_id
-                            )
-                            ->where(
-                                'level_id',
-                                $assignment->level_id
-                            )
-                            ->where(
-                                'class_id',
-                                $assignment->class_id
-                            );
+        /*
+         * Nouveau modèle multi-séances : si les affectations du professeur
+         * sont déjà reliées à des Schedule par le pivot, cette liaison exacte
+         * est prioritaire. Ainsi, si I2 a deux séances mardi + samedi, le prof
+         * voit exactement ces deux séances et pas les séances I2 d'un autre
+         * professeur partageant le même créneau structurel.
+         */
+        $linkedScheduleIds = collect();
 
-                            if (
+        if (Schema::hasTable('prof_assignment_schedule')) {
+            $linkedScheduleIds = DB::table(
+                'prof_assignment_schedule'
+            )
+                ->whereIn(
+                    'prof_assignment_id',
+                    $assignments->pluck('id')
+                )
+                ->pluck('schedule_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        if ($linkedScheduleIds->isNotEmpty()) {
+            $query->whereIn(
+                'schedules.id',
+                $linkedScheduleIds
+            );
+        } else {
+            /*
+             * Fallback pour les anciennes données créées avant le pivot.
+             */
+            $query->where(
+                function (
+                    Builder $outer
+                ) use (
+                    $assignments,
+                    $scheduleHasSlotCode
+                ) {
+                    foreach (
+                        $assignments as $assignment
+                    ) {
+                        $outer->orWhere(
+                            function (
+                                Builder $path
+                            ) use (
+                                $assignment,
                                 $scheduleHasSlotCode
-                                && $assignment
-                                    ->classSlot
-                                && trim(
-                                    (string) $assignment
-                                        ->classSlot
-                                        ->code
-                                ) !== ''
                             ) {
-                                $path->whereRaw(
-                                    'UPPER(TRIM(slot_code)) = ?',
-                                    [
-                                        strtoupper(
-                                            trim(
-                                                (string)
-                                                $assignment
-                                                    ->classSlot
-                                                    ->code
-                                            )
-                                        ),
-                                    ]
+                                $path->where(
+                                    'subject_id',
+                                    $assignment->subject_id
+                                )
+                                ->where(
+                                    'level_id',
+                                    $assignment->level_id
+                                )
+                                ->where(
+                                    'class_id',
+                                    $assignment->class_id
                                 );
+
+                                if (
+                                    $scheduleHasSlotCode
+                                    && $assignment->classSlot
+                                    && trim(
+                                        (string) $assignment
+                                            ->classSlot
+                                            ->code
+                                    ) !== ''
+                                ) {
+                                    $path->whereRaw(
+                                        'UPPER(TRIM(slot_code)) = ?',
+                                        [
+                                            strtoupper(
+                                                trim(
+                                                    (string)
+                                                    $assignment
+                                                        ->classSlot
+                                                        ->code
+                                                )
+                                            ),
+                                        ]
+                                    );
+                                }
                             }
-                        }
-                    );
+                        );
+                    }
                 }
-            }
-        );
+            );
+        }
 
         $subjectId = !empty(
             $filters['subject_id']

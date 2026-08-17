@@ -11,10 +11,13 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class ProfessorAssignmentService
 {
+    private const AUTO_NOTE_PREFIX = '[AUTO:PROF_AVAILABILITY]';
+
     public function __construct(
         private ClassSlotService $slots
     ) {
@@ -153,7 +156,7 @@ class ProfessorAssignmentService
                  * On supprime seulement l'affectation de CE professeur.
                  * Le même créneau peut rester affecté à d'autres profs.
                  */
-                $assignment->delete();
+                $this->removeAssignmentWithSchedules($assignment);
                 $removed++;
             }
 
@@ -204,8 +207,71 @@ class ProfessorAssignmentService
         DB::transaction(function () use (
             $assignment
         ) {
-            $assignment->delete();
+            $this->removeAssignmentWithSchedules($assignment);
         });
+    }
+
+    /**
+     * Supprime une affectation sans laisser de séances AUTO orphelines.
+     * Une séance partagée avec un autre professeur est conservée.
+     */
+    private function removeAssignmentWithSchedules(
+        ProfAssignment $assignment
+    ): void {
+        if (!Schema::hasTable('prof_assignment_schedule')) {
+            $assignment->delete();
+            return;
+        }
+
+        $professorId = (int) $assignment->prof_id;
+        $scheduleIds = DB::table('prof_assignment_schedule')
+            ->where('prof_assignment_id', $assignment->id)
+            ->pluck('schedule_id')
+            ->values();
+
+        $assignment->delete();
+
+        if ($scheduleIds->isEmpty()) {
+            return;
+        }
+
+        $schedules = Schedule::query()
+            ->whereIn('id', $scheduleIds)
+            ->get();
+
+        foreach ($schedules as $schedule) {
+            $remainingAssignmentIds = DB::table(
+                'prof_assignment_schedule'
+            )
+                ->where('schedule_id', $schedule->id)
+                ->pluck('prof_assignment_id');
+
+            $remainingProfessorIds = $remainingAssignmentIds->isEmpty()
+                ? collect()
+                : ProfAssignment::query()
+                    ->whereIn('id', $remainingAssignmentIds)
+                    ->pluck('prof_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values();
+
+            if (
+                $remainingAssignmentIds->isEmpty()
+                && strpos(
+                    (string) $schedule->notes,
+                    self::AUTO_NOTE_PREFIX
+                ) !== false
+            ) {
+                $schedule->delete();
+                continue;
+            }
+
+            if ((int) $schedule->prof_id === $professorId) {
+                $schedule->update([
+                    'prof_id' => $remainingProfessorIds->first(),
+                ]);
+            }
+        }
     }
 
     /**

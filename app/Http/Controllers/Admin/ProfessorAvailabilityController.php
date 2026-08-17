@@ -279,14 +279,18 @@ class ProfessorAvailabilityController extends Controller
             . ' créneau(x) de disponibilité enregistré(s) pour '
             . $professor->name
             . '. Planification automatique : '
+            . ($autoPlanning['requested_sessions'] ?? 0)
+            . ' séance(s)/semaine demandée(s), '
             . $autoPlanning['created']
-            . ' séance(s) créée(s), '
+            . ' créée(s), '
             . $autoPlanning['reused']
-            . ' créneau(x) existant(s) réutilisé(s), '
+            . ' réutilisée(s), '
             . ($autoPlanning['rescheduled'] ?? 0)
-            . ' créneau(x) « À affecter » repositionné(s), '
+            . ' repositionnée(s), '
+            . ($autoPlanning['removed'] ?? 0)
+            . ' retirée(s) après réduction, '
             . $autoPlanning['pending']
-            . ' affectation(s) restant à planifier.';
+            . ' séance(s) restant à planifier.';
 
         $redirect = redirect()
             ->route(

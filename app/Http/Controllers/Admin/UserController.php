@@ -11,10 +11,12 @@ use App\Models\Subject;
 use App\Models\Test;
 use App\Models\Result;
 use App\Models\ProfAssignment;
+use App\Models\ProfessorAvailability;
 use App\Models\Schedule;
 use App\Mail\AccountActivatedMailable;
 use App\Services\ClassSlotService;
 use App\Services\ProfessorAssignmentService;
+use App\Services\ProfessorAutoSchedulerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -112,6 +114,7 @@ class UserController extends Controller
                 'classRoom',
                 'subject',
                 'classSlot',
+                'schedules',
             ])
             ->whereHas(
                 'subject',
@@ -143,8 +146,10 @@ class UserController extends Controller
                     )
             )
             ->whereNotNull('slot_code')
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
             ->get()
-            ->keyBy(
+            ->groupBy(
                 fn (Schedule $schedule) =>
                     (int) $schedule->subject_id
                     . ':'
@@ -196,6 +201,8 @@ class UserController extends Controller
                         $request->input('class_id'),
                     'class_slot_id' =>
                         $request->input('class_slot_id'),
+                    'weekly_sessions' =>
+                        $request->input('weekly_sessions', 1),
                 ]],
             ]);
         }
@@ -232,6 +239,12 @@ class UserController extends Controller
                 'integer',
                 'exists:class_slots,id',
             ],
+            'assignments.*.weekly_sessions' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:7',
+            ],
         ], [
             'prof_id.required' =>
                 'Veuillez sélectionner un professeur.',
@@ -247,6 +260,12 @@ class UserController extends Controller
                 'Chaque ligne doit avoir une classe.',
             'assignments.*.class_slot_id.required' =>
                 'Chaque ligne doit avoir un créneau.',
+            'assignments.*.weekly_sessions.required' =>
+                'Indiquez le nombre de séances par semaine.',
+            'assignments.*.weekly_sessions.min' =>
+                'Une affectation doit avoir au moins une séance par semaine.',
+            'assignments.*.weekly_sessions.max' =>
+                'Le maximum autorisé est de 7 séances par semaine.',
         ]);
 
         $professor = User::query()
@@ -275,13 +294,37 @@ class UserController extends Controller
             $validated['assignments']
         );
 
-        return back()->with(
-            'success',
-            $result['total']
+        $this->applyWeeklySessionCounts(
+            $professor,
+            $validated['assignments']
+        );
+
+        $autoPlanning = $this->syncPlanningIfAvailabilityExists(
+            $professor
+        );
+
+        $message = $result['total']
             . ' affectation(s) enregistrée(s) pour '
             . $professor->name
-            . '.'
-        );
+            . '.';
+
+        if ($autoPlanning) {
+            $message .= ' Planning recalculé : '
+                . ($autoPlanning['requested_sessions'] ?? 0)
+                . ' séance(s)/semaine demandée(s), '
+                . $autoPlanning['created']
+                . ' créée(s), '
+                . $autoPlanning['reused']
+                . ' réutilisée(s), '
+                . ($autoPlanning['rescheduled'] ?? 0)
+                . ' repositionnée(s), '
+                . ($autoPlanning['removed'] ?? 0)
+                . ' retirée(s), '
+                . $autoPlanning['pending']
+                . ' restant à planifier.';
+        }
+
+        return back()->with('success', $message);
     }
 
     /**
@@ -337,6 +380,8 @@ class UserController extends Controller
                         (int) $assignment->class_id,
                     'class_slot_id' =>
                         (int) $assignment->class_slot_id,
+                    'weekly_sessions' =>
+                        (int) ($assignment->weekly_sessions ?: 1),
                 ]
             )
             ->values()
@@ -391,6 +436,12 @@ class UserController extends Controller
                 'integer',
                 'exists:class_slots,id',
             ],
+            'assignments.*.weekly_sessions' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:7',
+            ],
         ], [
             'assignments.required' =>
                 'Ajoutez au moins une affectation.',
@@ -407,20 +458,93 @@ class UserController extends Controller
             $validated['assignments']
         );
 
+        $this->applyWeeklySessionCounts(
+            $professor,
+            $validated['assignments']
+        );
+
+        $autoPlanning = $this->syncPlanningIfAvailabilityExists(
+            $professor
+        );
+
+        $message = 'Affectations de '
+            . $professor->name
+            . ' mises à jour : '
+            . $result['total']
+            . ' active(s), '
+            . $result['removed']
+            . ' retirée(s).';
+
+        if ($autoPlanning) {
+            $message .= ' Planning recalculé : '
+                . ($autoPlanning['requested_sessions'] ?? 0)
+                . ' séance(s)/semaine demandée(s), '
+                . $autoPlanning['created']
+                . ' créée(s), '
+                . $autoPlanning['reused']
+                . ' réutilisée(s), '
+                . ($autoPlanning['rescheduled'] ?? 0)
+                . ' repositionnée(s), '
+                . ($autoPlanning['removed'] ?? 0)
+                . ' retirée(s), '
+                . $autoPlanning['pending']
+                . ' restant à planifier.';
+        }
+
         return redirect()
-            ->route(
-                'admin.users.prof-assignments'
-            )
-            ->with(
-                'success',
-                'Affectations de '
-                . $professor->name
-                . ' mises à jour : '
-                . $result['total']
-                . ' active(s), '
-                . $result['removed']
-                . ' retirée(s).'
-            );
+            ->route('admin.users.prof-assignments')
+            ->with('success', $message);
+    }
+
+    /**
+     * Enregistre le nombre de séances hebdomadaires demandé pour chaque
+     * affectation structurelle (D1/D2/I1/I2/A1...).
+     */
+    private function applyWeeklySessionCounts(
+        User $professor,
+        array $rows
+    ): void {
+        foreach ($rows as $row) {
+            if (empty($row['class_slot_id'])) {
+                continue;
+            }
+
+            ProfAssignment::query()
+                ->where('prof_id', $professor->id)
+                ->where(
+                    'class_slot_id',
+                    (int) $row['class_slot_id']
+                )
+                ->update([
+                    'weekly_sessions' => max(
+                        1,
+                        min(
+                            7,
+                            (int) ($row['weekly_sessions'] ?? 1)
+                        )
+                    ),
+                ]);
+        }
+    }
+
+    /**
+     * Si les disponibilités ont déjà été reçues, une modification du nombre
+     * de séances doit être visible immédiatement dans le planning final.
+     */
+    private function syncPlanningIfAvailabilityExists(
+        User $professor
+    ): ?array {
+        $hasAvailability = ProfessorAvailability::query()
+            ->where('prof_id', $professor->id)
+            ->exists();
+
+        if (!$hasAvailability) {
+            return null;
+        }
+
+        return app(
+            ProfessorAutoSchedulerService::class
+        )->syncForProfessor($professor);
     }
 
     /**

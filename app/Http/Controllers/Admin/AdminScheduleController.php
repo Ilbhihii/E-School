@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
+use App\Models\ClassSlot;
 use App\Models\Level;
 use App\Models\ProfAssignment;
 use App\Models\ProfessorAvailability;
@@ -14,6 +15,8 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -251,10 +254,10 @@ class AdminScheduleController extends Controller
         $this->assertProfessorAvailability($data);
         $this->assertNoConflict($data);
 
-        Schedule::create($data);
+        $schedule = Schedule::create($data);
 
         if (!empty($data['prof_id'])) {
-            $this->syncTeachingAssignment($data);
+            $this->syncTeachingAssignment($data, $schedule);
         }
 
         return redirect()
@@ -271,8 +274,10 @@ class AdminScheduleController extends Controller
 
         $schedule->update($data);
 
+        $this->pruneScheduleAssignmentLinks($schedule);
+
         if (!empty($data['prof_id'])) {
-            $this->syncTeachingAssignment($data);
+            $this->syncTeachingAssignment($data, $schedule);
         }
 
         return redirect()
@@ -349,7 +354,8 @@ class AdminScheduleController extends Controller
         ]);
 
         $this->syncTeachingAssignment(
-            $conflictData
+            $conflictData,
+            $schedule
         );
 
         return redirect()
@@ -951,35 +957,154 @@ class AdminScheduleController extends Controller
      * Les heures de ProfAssignment sont conservées uniquement pour la
      * rétrocompatibilité. La source officielle des créneaux est schedules.
      */
-    private function syncTeachingAssignment(array $data): void
-    {
+    private function syncTeachingAssignment(
+        array $data,
+        Schedule $schedule
+    ): void {
         if (empty($data['prof_id'])) {
             return;
         }
 
-        $assignment = ProfAssignment::firstOrCreate([
-            'prof_id' => $data['prof_id'],
-            'subject_id' => $data['subject_id'],
-            'level_id' => $data['level_id'],
-            'class_id' => $data['class_id'],
-        ]);
+        $slotCode = strtoupper(
+            trim((string) ($data['slot_code'] ?? ''))
+        );
 
+        $classSlot = null;
+
+        if ($slotCode !== '') {
+            $classSlot = ClassSlot::query()
+                ->where('subject_id', (int) $data['subject_id'])
+                ->where('level_id', (int) $data['level_id'])
+                ->where('class_id', (int) $data['class_id'])
+                ->whereRaw(
+                    'UPPER(TRIM(code)) = ?',
+                    [$slotCode]
+                )
+                ->first();
+        }
+
+        $assignmentQuery = ProfAssignment::query()
+            ->where('prof_id', (int) $data['prof_id'])
+            ->where('subject_id', (int) $data['subject_id'])
+            ->where('level_id', (int) $data['level_id'])
+            ->where('class_id', (int) $data['class_id']);
+
+        if ($classSlot) {
+            $assignmentQuery->where(
+                'class_slot_id',
+                $classSlot->id
+            );
+        } else {
+            $assignmentQuery->whereNull('class_slot_id');
+        }
+
+        $assignment = $assignmentQuery->first();
+
+        if (!$assignment) {
+            $assignment = ProfAssignment::create([
+                'prof_id' => (int) $data['prof_id'],
+                'subject_id' => (int) $data['subject_id'],
+                'level_id' => (int) $data['level_id'],
+                'class_id' => (int) $data['class_id'],
+                'class_slot_id' => $classSlot?->id,
+                'weekly_sessions' => 1,
+            ]);
+        }
+
+        /*
+         * Le pivot devient la source exacte : une même affectation I2 peut
+         * être reliée à plusieurs séances (mardi + samedi, par exemple).
+         */
+        if (Schema::hasTable('prof_assignment_schedule')) {
+            $assignment->schedules()->syncWithoutDetaching([
+                $schedule->id,
+            ]);
+        }
+
+        /*
+         * day/start/end restent seulement une compatibilité historique.
+         * On conserve la première séance, sans écraser l'horaire à chaque
+         * nouvelle séance hebdomadaire.
+         */
         if (!$assignment->day_of_week) {
-            $assignment->day_of_week = $data['day_of_week'];
+            $assignment->day_of_week = (int) $data['day_of_week'];
         }
 
         if (!$assignment->start_time) {
-            $assignment->start_time = Carbon::parse($data['start_time'])
-                ->format('H:i:s');
+            $assignment->start_time = Carbon::parse(
+                $data['start_time']
+            )->format('H:i:s');
         }
 
         if (!$assignment->end_time) {
-            $assignment->end_time = Carbon::parse($data['end_time'])
-                ->format('H:i:s');
+            $assignment->end_time = Carbon::parse(
+                $data['end_time']
+            )->format('H:i:s');
         }
 
         if ($assignment->isDirty()) {
             $assignment->save();
+        }
+    }
+
+    /**
+     * Après modification d'une séance, retire uniquement les anciens liens
+     * d'affectation qui ne correspondent plus à son parcours structurel.
+     * Les autres professeurs partageant encore le même créneau sont conservés.
+     */
+    private function pruneScheduleAssignmentLinks(
+        Schedule $schedule
+    ): void {
+        if (!Schema::hasTable('prof_assignment_schedule')) {
+            return;
+        }
+
+        $links = DB::table('prof_assignment_schedule')
+            ->where('schedule_id', $schedule->id)
+            ->get();
+
+        if ($links->isEmpty()) {
+            return;
+        }
+
+        $assignments = ProfAssignment::query()
+            ->with('classSlot')
+            ->whereIn(
+                'id',
+                $links->pluck('prof_assignment_id')
+            )
+            ->get();
+
+        $scheduleLevelId = (int) (
+            $schedule->level_id
+            ?: optional($schedule->classRoom)->level_id
+        );
+
+        $scheduleSlotCode = strtoupper(
+            trim((string) $schedule->slot_code)
+        );
+
+        foreach ($assignments as $assignment) {
+            $assignmentSlotCode = strtoupper(
+                trim((string) optional($assignment->classSlot)->code)
+            );
+
+            $samePath =
+                (int) $assignment->subject_id === (int) $schedule->subject_id
+                && (int) $assignment->level_id === $scheduleLevelId
+                && (int) $assignment->class_id === (int) $schedule->class_id
+                && (
+                    $scheduleSlotCode === ''
+                    || $assignmentSlotCode === ''
+                    || $scheduleSlotCode === $assignmentSlotCode
+                );
+
+            if (!$samePath) {
+                DB::table('prof_assignment_schedule')
+                    ->where('prof_assignment_id', $assignment->id)
+                    ->where('schedule_id', $schedule->id)
+                    ->delete();
+            }
         }
     }
 
@@ -1232,7 +1357,54 @@ class AdminScheduleController extends Controller
             return [];
         }
 
-        $assignments = ProfAssignment::query()
+        $map = [];
+
+        /*
+         * Source principale multi-séances :
+         * prof_assignment_schedule dit exactement quel professeur assure
+         * quelle ligne Schedule. Une affectation I2 peut donc être liée à
+         * plusieurs séances, et plusieurs professeurs peuvent partager une
+         * même séance si nécessaire.
+         */
+        $pivotAssignmentsBySchedule = collect();
+
+        if (Schema::hasTable('prof_assignment_schedule')) {
+            $links = DB::table('prof_assignment_schedule')
+                ->whereIn(
+                    'schedule_id',
+                    $schedules->pluck('id')->all()
+                )
+                ->get();
+
+            if ($links->isNotEmpty()) {
+                $assignmentsById = ProfAssignment::query()
+                    ->with('prof')
+                    ->whereIn(
+                        'id',
+                        $links->pluck('prof_assignment_id')->unique()
+                    )
+                    ->get()
+                    ->keyBy('id');
+
+                $pivotAssignmentsBySchedule = $links
+                    ->groupBy('schedule_id')
+                    ->map(function ($scheduleLinks) use ($assignmentsById) {
+                        return $scheduleLinks
+                            ->map(function ($link) use ($assignmentsById) {
+                                return $assignmentsById->get(
+                                    (int) $link->prof_assignment_id
+                                );
+                            })
+                            ->filter();
+                    });
+            }
+        }
+
+        /*
+         * Anciennes données sans pivot : on garde le fallback exact
+         * parcours + créneau + jour + heure.
+         */
+        $legacyAssignments = ProfAssignment::query()
             ->with([
                 'prof',
                 'classSlot',
@@ -1243,105 +1415,83 @@ class AdminScheduleController extends Controller
             )
             ->get();
 
-        $map = [];
-
         foreach ($schedules as $schedule) {
-            $levelId = (int) (
-                $schedule->level_id
-                ?: optional($schedule->classRoom)->level_id
-            );
+            $professors = collect(
+                $pivotAssignmentsBySchedule->get(
+                    (int) $schedule->id,
+                    collect()
+                )
+            )
+                ->map(fn (ProfAssignment $assignment) => $assignment->prof)
+                ->filter()
+                ->unique('id')
+                ->values();
 
-            $scheduleSlotCode = strtoupper(
-                trim((string) $schedule->slot_code)
-            );
+            if ($professors->isEmpty()) {
+                $levelId = (int) (
+                    $schedule->level_id
+                    ?: optional($schedule->classRoom)->level_id
+                );
 
-            $scheduleStart = $schedule->start_time
-                ? Carbon::parse($schedule->start_time)->format('H:i')
-                : null;
+                $scheduleSlotCode = strtoupper(
+                    trim((string) $schedule->slot_code)
+                );
 
-            $scheduleEnd = $schedule->end_time
-                ? Carbon::parse($schedule->end_time)->format('H:i')
-                : null;
+                $scheduleStart = $schedule->start_time
+                    ? Carbon::parse($schedule->start_time)->format('H:i')
+                    : null;
 
-            $professors = $assignments
-                ->filter(function (ProfAssignment $assignment) use (
-                    $schedule,
-                    $levelId,
-                    $scheduleSlotCode,
-                    $scheduleStart,
-                    $scheduleEnd
-                ) {
-                    if (
-                        (int) $assignment->subject_id !== (int) $schedule->subject_id
-                        || (int) $assignment->level_id !== $levelId
-                        || (int) $assignment->class_id !== (int) $schedule->class_id
+                $scheduleEnd = $schedule->end_time
+                    ? Carbon::parse($schedule->end_time)->format('H:i')
+                    : null;
+
+                $professors = $legacyAssignments
+                    ->filter(function (ProfAssignment $assignment) use (
+                        $schedule,
+                        $levelId,
+                        $scheduleSlotCode,
+                        $scheduleStart,
+                        $scheduleEnd
                     ) {
-                        return false;
-                    }
-
-                    $assignmentSlotCode = strtoupper(
-                        trim((string) optional($assignment->classSlot)->code)
-                    );
-
-                    if ($scheduleSlotCode !== '' && $assignmentSlotCode !== '') {
-                        if ($scheduleSlotCode !== $assignmentSlotCode) {
+                        if (
+                            (int) $assignment->subject_id !== (int) $schedule->subject_id
+                            || (int) $assignment->level_id !== $levelId
+                            || (int) $assignment->class_id !== (int) $schedule->class_id
+                        ) {
                             return false;
                         }
 
-                        /*
-                         * IMPORTANT pour la planification automatique :
-                         * une affectation D1/D2/I1/A1... seule ne suffit pas
-                         * pour afficher le professeur dans le planning final.
-                         *
-                         * Il devient visible quand son affectation possède
-                         * réellement le jour et l'horaire du Schedule. Ces
-                         * champs sont synchronisés après l'enregistrement de
-                         * ses disponibilités par ProfessorAutoSchedulerService.
-                         *
-                         * Exception : schedules.prof_id reste le professeur
-                         * principal choisi manuellement dans l'admin.
-                         */
+                        $assignmentSlotCode = strtoupper(
+                            trim((string) optional($assignment->classSlot)->code)
+                        );
+
+                        if (
+                            $scheduleSlotCode !== ''
+                            && $assignmentSlotCode !== ''
+                            && $scheduleSlotCode !== $assignmentSlotCode
+                        ) {
+                            return false;
+                        }
+
                         if (
                             !$assignment->day_of_week
                             || !$assignment->start_time
                             || !$assignment->end_time
                         ) {
-                            return (int) $schedule->prof_id
-                                === (int) $assignment->prof_id;
+                            return false;
                         }
 
                         return
                             (int) $assignment->day_of_week === (int) $schedule->day_of_week
                             && Carbon::parse($assignment->start_time)->format('H:i') === $scheduleStart
                             && Carbon::parse($assignment->end_time)->format('H:i') === $scheduleEnd;
-                    }
+                    })
+                    ->map(fn (ProfAssignment $assignment) => $assignment->prof)
+                    ->filter()
+                    ->unique('id')
+                    ->values();
+            }
 
-                    /*
-                     * Compatibilité avec les anciennes affectations sans
-                     * class_slot_id : on retombe sur jour + plage horaire.
-                     */
-                    if (
-                        !$assignment->day_of_week
-                        || !$assignment->start_time
-                        || !$assignment->end_time
-                    ) {
-                        return false;
-                    }
-
-                    return
-                        (int) $assignment->day_of_week === (int) $schedule->day_of_week
-                        && Carbon::parse($assignment->start_time)->format('H:i') === $scheduleStart
-                        && Carbon::parse($assignment->end_time)->format('H:i') === $scheduleEnd;
-                })
-                ->map(fn (ProfAssignment $assignment) => $assignment->prof)
-                ->filter()
-                ->unique('id')
-                ->values();
-
-            /*
-             * Fallback : une ancienne séance peut n'avoir aucune ligne
-             * ProfAssignment mais conserver schedules.prof_id.
-             */
             if ($professors->isEmpty() && $schedule->prof) {
                 $professors = collect([$schedule->prof]);
             }

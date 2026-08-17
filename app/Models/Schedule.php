@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Schedule extends Model
 {
@@ -67,6 +68,20 @@ class Schedule extends Model
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class, 'room_id');
+    }
+
+    /**
+     * Affectations professeur réellement liées à CETTE séance.
+     * Une même séance peut être partagée par plusieurs professeurs.
+     */
+    public function profAssignments(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            ProfAssignment::class,
+            'prof_assignment_schedule',
+            'schedule_id',
+            'prof_assignment_id'
+        )->withTimestamps();
     }
 
     public function scopeActive($query)

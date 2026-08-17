@@ -54,6 +54,7 @@
             'level_id' => old('level_id', ''),
             'class_id' => old('class_id', ''),
             'class_slot_id' => old('class_slot_id', ''),
+            'weekly_sessions' => old('weekly_sessions', 1),
         ]];
     }
 @endphp
@@ -173,7 +174,8 @@
                                     <th>Niveau</th>
                                     <th>Classe</th>
                                     <th>Créneau</th>
-                                    <th>Horaire</th>
+                                    <th>Séances / sem.</th>
+                                    <th>Horaires</th>
                                     <th style="text-align:right;">
                                         Actions
                                     </th>
@@ -201,8 +203,60 @@
                                             . ':'
                                             . $slotCode;
 
-                                        $linkedSchedule =
-                                            $scheduleMap->get($scheduleKey);
+                                        $linkedSchedules = collect(
+                                            $assignment->schedules ?? collect()
+                                        )
+                                            ->filter(function ($schedule) {
+                                                return ($schedule->status ?: 'active') === 'active'
+                                                    && ($schedule->recurrence ?: 'weekly') === 'weekly';
+                                            })
+                                            ->sortBy(function ($schedule) {
+                                                return sprintf(
+                                                    '%d|%s',
+                                                    (int) $schedule->day_of_week,
+                                                    optional($schedule->start_time)->format('H:i') ?: '99:99'
+                                                );
+                                            })
+                                            ->values();
+
+                                        /*
+                                         * Compatibilité avant le premier recalcul : si le pivot
+                                         * multi-séances n'est pas encore rempli, on reprend
+                                         * uniquement l'ancien horaire exact mémorisé dans
+                                         * ProfAssignment. On n'affiche jamais les horaires
+                                         * d'un autre professeur par simple correspondance I2/D1.
+                                         */
+                                        if (
+                                            $linkedSchedules->isEmpty()
+                                            && $assignment->day_of_week
+                                            && $assignment->start_time
+                                            && $assignment->end_time
+                                        ) {
+                                            $legacyStart = \Carbon\Carbon::parse(
+                                                $assignment->start_time
+                                            )->format('H:i');
+                                            $legacyEnd = \Carbon\Carbon::parse(
+                                                $assignment->end_time
+                                            )->format('H:i');
+
+                                            $linkedSchedules = collect(
+                                                $scheduleMap->get(
+                                                    $scheduleKey,
+                                                    collect()
+                                                )
+                                            )->filter(function ($schedule) use (
+                                                $assignment,
+                                                $legacyStart,
+                                                $legacyEnd
+                                            ) {
+                                                return (int) $schedule->day_of_week
+                                                        === (int) $assignment->day_of_week
+                                                    && optional($schedule->start_time)->format('H:i')
+                                                        === $legacyStart
+                                                    && optional($schedule->end_time)->format('H:i')
+                                                        === $legacyEnd;
+                                            })->values();
+                                        }
                                     @endphp
 
                                     <tr>
@@ -252,17 +306,36 @@
                                         </td>
 
                                         <td>
-                                            @if($linkedSchedule)
-                                                <div class="prof-linked-schedule">
-                                                    <span class="prof-day-badge">
-                                                        <i class="bi bi-calendar3"></i>
-                                                        {{ $linkedSchedule->day_label }}
-                                                    </span>
+                                            @php
+                                                $weeklySessions = max(
+                                                    1,
+                                                    (int) ($assignment->weekly_sessions ?: 1)
+                                                );
+                                            @endphp
 
-                                                    <span class="prof-time-badge">
-                                                        <i class="bi bi-clock"></i>
-                                                        {{ $linkedSchedule->time_range_label }}
-                                                    </span>
+                                            <span class="prof-session-count-badge">
+                                                <i class="bi bi-repeat"></i>
+                                                {{ $weeklySessions }}
+                                                séance{{ $weeklySessions > 1 ? 's' : '' }}
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            @if($linkedSchedules->isNotEmpty())
+                                                <div class="prof-linked-schedule">
+                                                    @foreach($linkedSchedules as $linkedSchedule)
+                                                        <div class="prof-linked-schedule-row">
+                                                            <span class="prof-day-badge">
+                                                                <i class="bi bi-calendar3"></i>
+                                                                {{ $linkedSchedule->day_label }}
+                                                            </span>
+
+                                                            <span class="prof-time-badge">
+                                                                <i class="bi bi-clock"></i>
+                                                                {{ $linkedSchedule->time_range_label }}
+                                                            </span>
+                                                        </div>
+                                                    @endforeach
                                                 </div>
                                             @else
                                                 <span class="prof-no-schedule">
@@ -358,6 +431,7 @@
 }
 
 .prof-slot-badge,
+.prof-session-count-badge,
 .prof-day-badge,
 .prof-time-badge {
     display: inline-flex;
@@ -378,6 +452,12 @@
     background: rgba(124,58,237,.10);
 }
 
+.prof-session-count-badge {
+    color: #FDE68A;
+    border: 1px solid rgba(245,158,11,.16);
+    background: rgba(245,158,11,.08);
+}
+
 .prof-day-badge {
     color: #93C5FD;
     border: 1px solid rgba(59,130,246,.15);
@@ -394,7 +474,14 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    gap: 6px;
+}
+
+.prof-linked-schedule-row {
+    display: flex;
+    align-items: center;
     gap: 5px;
+    flex-wrap: wrap;
 }
 
 .prof-no-schedule {

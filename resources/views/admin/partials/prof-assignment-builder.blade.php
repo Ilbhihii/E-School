@@ -8,6 +8,7 @@
             'level_id' => '',
             'class_id' => '',
             'class_slot_id' => '',
+            'weekly_sessions' => 1,
         ]];
     }
 @endphp
@@ -23,7 +24,7 @@
             </strong>
             <small>
                 Chaque ligne correspond à une affectation exacte :
-                Matière → Niveau → Classe → Créneau.
+                Matière → Niveau → Classe → Créneau + nombre de séances/semaine.
             </small>
         </div>
 
@@ -45,10 +46,10 @@
     <div class="prof-multi-help">
         <i class="bi bi-info-circle"></i>
         <span>
-            Vous pouvez ajouter plusieurs matières, plusieurs niveaux,
-            plusieurs classes et plusieurs créneaux au même professeur.
-            Un même créneau ne peut pas être attribué simultanément à
-            deux professeurs principaux.
+            Vous pouvez ajouter plusieurs matières, niveaux, classes et
+            créneaux au même professeur. Pour chaque créneau, choisissez de
+            1 à 7 séances par semaine. Exemple : I2 avec 2 séances/semaine
+            pourra être placé le mardi ET le samedi selon les disponibilités.
         </span>
     </div>
 </div>
@@ -148,6 +149,11 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+}
+
+.prof-multi-field-sessions {
+    grid-column: 1 / -1;
+    max-width: 270px;
 }
 
 .prof-multi-field label {
@@ -276,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const level = row.querySelector('.js-prof-level');
         const classRoom = row.querySelector('.js-prof-class');
         const slot = row.querySelector('.js-prof-slot');
+        const sessions = row.querySelector('.js-prof-weekly-sessions');
         const preview = row.querySelector('.prof-multi-path');
 
         const labels = [
@@ -285,8 +292,14 @@ document.addEventListener('DOMContentLoaded', function () {
             optionLabel(slot),
         ].filter(Boolean);
 
+        const sessionCount = Math.max(
+            1,
+            Number(sessions?.value || 1)
+        );
+
         preview.textContent = labels.length
             ? labels.join(' → ')
+                + ` · ${sessionCount} séance${sessionCount > 1 ? 's' : ''}/sem.`
             : 'Matière → Niveau → Classe → Créneau';
 
         preview.classList.toggle(
@@ -454,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function () {
             row.querySelector('.js-prof-level').name = `assignments[${index}][level_id]`;
             row.querySelector('.js-prof-class').name = `assignments[${index}][class_id]`;
             row.querySelector('.js-prof-slot').name = `assignments[${index}][class_slot_id]`;
+            row.querySelector('.js-prof-weekly-sessions').name = `assignments[${index}][weekly_sessions]`;
         });
 
         rows.forEach(row => {
@@ -502,6 +516,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     <label>Créneau / groupe *</label>
                     <select class="adm-form-select js-prof-slot" required disabled></select>
                 </div>
+
+                <div class="prof-multi-field prof-multi-field-sessions">
+                    <label>Séances par semaine *</label>
+                    <select class="adm-form-select js-prof-weekly-sessions" required>
+                        <option value="1">1 séance / semaine</option>
+                        <option value="2">2 séances / semaine</option>
+                        <option value="3">3 séances / semaine</option>
+                        <option value="4">4 séances / semaine</option>
+                        <option value="5">5 séances / semaine</option>
+                        <option value="6">6 séances / semaine</option>
+                        <option value="7">7 séances / semaine</option>
+                    </select>
+                </div>
             </div>
 
             <div class="prof-multi-path">
@@ -515,6 +542,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const levelSelect = row.querySelector('.js-prof-level');
         const classSelect = row.querySelector('.js-prof-class');
         const slotSelect = row.querySelector('.js-prof-slot');
+        const sessionsSelect = row.querySelector('.js-prof-weekly-sessions');
+
+        sessionsSelect.value = text(data.weekly_sessions || 1);
 
         subjectSelect.appendChild(
             makeOption('', 'Sélectionner une matière')
@@ -570,6 +600,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         slotSelect.addEventListener('change', () => {
+            updatePath(row);
+        });
+
+        sessionsSelect.addEventListener('change', () => {
             updatePath(row);
         });
 
