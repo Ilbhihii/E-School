@@ -2,8 +2,8 @@
 
 @section(
     'title',
-    $showOnlySoutien
-        ? 'Offre Soutien Lycée'
+    $singleOffer
+        ? 'Offre ' . ($singleOfferName ?: '')
         : 'Nos offres'
 )
 
@@ -11,7 +11,7 @@
 
 <div
     class="plans-page
-        {{ $showOnlySoutien
+        {{ $singleOffer
             ? 'plans-page-single'
             : ''
         }}"
@@ -20,7 +20,7 @@
     <div class="plans-glow plans-glow-two"></div>
 
     <div class="container plans-content">
-        @unless($showOnlySoutien)
+        @unless($singleOffer)
             <header class="plans-heading">
                 <span class="plans-label">
                     <i class="bi bi-stars"></i>
@@ -43,6 +43,14 @@
             </div>
         @endif
 
+        @if(empty($plans))
+            <div class="plans-empty">
+                <i class="bi bi-hourglass-split"></i>
+                <h2>Aucune offre disponible pour le moment</h2>
+                <p>Nos nouvelles formules seront publiées prochainement.</p>
+            </div>
+        @endif
+
         <div
             class="plans-grid
                 {{ count($plans) === 1
@@ -51,11 +59,15 @@
                 }}"
         >
             @foreach($plans as $planCode => $plan)
-                <article class="offer-card {{ $planCode === 'soutien_lycee' ? 'offer-card-high-school' : '' }}">
+                <article class="offer-card {{ ($plan['restricted_to_high_school'] ?? false) ? 'offer-card-high-school' : '' }} {{ ($plan['is_recommended'] ?? false) ? 'offer-card-recommended' : '' }}">
                     <div class="offer-card-top">
-                        <span class="offer-badge">
-                            {{ $plan['badge'] }}
-                        </span>
+                        @if(!empty($plan['badge']))
+                            <span class="offer-badge">
+                                {{ $plan['badge'] }}
+                            </span>
+                        @else
+                            <span></span>
+                        @endif
 
                         <span class="offer-icon">
                             <i class="bi {{ $plan['icon'] }}"></i>
@@ -83,14 +95,7 @@
                         @endforeach
                     </ul>
 
-                    @if(
-                        (
-                            $plan[
-                                'restricted_to_high_school'
-                            ] ?? false
-                        )
-                        || $planCode === 'soutien_lycee'
-                    )
+                    @if($plan['restricted_to_high_school'] ?? false)
                         <div class="offer-restriction">
                             <i class="bi bi-shield-lock-fill"></i>
                             Cette offre ne donne pas accès
@@ -99,27 +104,44 @@
                     @endif
 
                     <div class="offer-actions">
-                        <a
-                            href="{{ route('student.payment', ['plan' => $planCode, 'method' => 'paypal']) }}"
-                            class="offer-button offer-paypal"
-                        >
-                            <i class="bi bi-paypal"></i>
-                            Payer avec PayPal
-                        </a>
+                        @if($plan['allow_paypal'] ?? true)
+                            <a
+                                href="{{ route('student.payment', ['plan' => $planCode, 'method' => 'paypal']) }}"
+                                class="offer-button offer-paypal"
+                            >
+                                <i class="bi bi-paypal"></i>
+                                Payer avec PayPal
+                            </a>
+                        @endif
 
-                        <a
-                            href="{{ route('student.payment', ['plan' => $planCode, 'method' => 'bank']) }}"
-                            class="offer-button offer-bank"
-                        >
-                            <i class="bi bi-bank"></i>
-                            Virement bancaire
-                        </a>
+                        @if($plan['allow_bank'] ?? true)
+                            <a
+                                href="{{ route('student.payment', ['plan' => $planCode, 'method' => 'bank']) }}"
+                                class="offer-button offer-bank"
+                            >
+                                <i class="bi bi-bank"></i>
+                                Virement bancaire
+                            </a>
+                        @endif
+
+                        @if(
+                            !($plan['allow_paypal'] ?? true)
+                            && !($plan['allow_bank'] ?? true)
+                        )
+                            <a
+                                href="{{ route('appointment.create') }}"
+                                class="offer-button offer-contact"
+                            >
+                                <i class="bi bi-chat-dots-fill"></i>
+                                Contacter l’administration
+                            </a>
+                        @endif
                     </div>
                 </article>
             @endforeach
         </div>
 
-        @unless($showOnlySoutien)
+        @unless($singleOffer)
             <div class="plans-security">
                 <i class="bi bi-shield-check"></i>
                 Le choix de l’offre ne rend pas le compte payant.
@@ -1064,6 +1086,29 @@ html.light-mode .plans-security {
     }
 }
 
+
+.offer-card-recommended {
+    box-shadow:
+        0 30px 70px rgba(60, 82, 220, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+.offer-contact {
+    border: 1px solid rgba(96, 165, 250, 0.18);
+    background: rgba(37, 99, 235, 0.09);
+}
+.plans-empty {
+    max-width: 660px;
+    margin: 0 auto 1.5rem;
+    padding: 2.2rem 1.4rem;
+    color: var(--plans-muted);
+    border: 1px solid var(--plans-border);
+    border-radius: 20px;
+    background: rgba(15, 27, 47, 0.75);
+    text-align: center;
+}
+.plans-empty > i { font-size: 1.7rem; color: #879aff; }
+.plans-empty h2 { margin: .8rem 0 .35rem; color: var(--plans-text); font-size: 1.1rem; }
+.plans-empty p { margin: 0; font-size: .72rem; }
 </style>
 
 @endsection

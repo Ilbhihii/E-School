@@ -201,6 +201,16 @@
                 </div>
 
                 <div class="admin-nav-section">
+                    <div class="admin-nav-heading">Commercial</div>
+
+                    <a href="{{ route('admin.plans.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.plans*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-tags-fill"></i></span>
+                        <span class="nav-label">Offres & abonnements <small>Prix, contenu, publication</small></span>
+                    </a>
+                </div>
+
+                <div class="admin-nav-section">
                     <div class="admin-nav-heading">Mon compte</div>
 
                     <a href="{{ route('admin.profile') }}"

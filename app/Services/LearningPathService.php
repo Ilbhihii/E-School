@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Models\ClassRoom;
-use App\Models\ClassSlot;
 use App\Models\Course;
 use App\Models\Level;
+use App\Models\Plan;
 use App\Models\ProfAssignment;
 use App\Models\Subject;
 use App\Models\User;
@@ -579,73 +579,12 @@ class LearningPathService
         User $professor,
         Course $course
     ): bool {
-        if (!$professor->isProf()) {
-            return false;
-        }
-
-        $query = ProfAssignment::query()
-            ->where(
-                'prof_id',
-                $professor->id
-            )
-            ->where(
-                'subject_id',
-                $course->subject_id
-            )
-            ->where(
-                'level_id',
-                $course->level_id
-            )
-            ->where(
-                'class_id',
-                $course->class_id
-            );
-
-        $slotCode = strtoupper(
-            trim(
-                (string) $course->slot_code
-            )
+        return $this->professorCanAccessPath(
+            $professor,
+            (int) $course->subject_id,
+            (int) $course->level_id,
+            (int) $course->class_id
         );
-
-        /*
-         * Les anciens cours sans slot_code restent compatibles.
-         * Dès qu'un créneau D1/D2/I1/A1... est présent, l'accès
-         * professeur doit correspondre au class_slot_id exact.
-         */
-        if ($slotCode === '') {
-            return $query->exists();
-        }
-
-        $slotId = ClassSlot::query()
-            ->where(
-                'subject_id',
-                $course->subject_id
-            )
-            ->where(
-                'level_id',
-                $course->level_id
-            )
-            ->where(
-                'class_id',
-                $course->class_id
-            )
-            ->whereRaw(
-                'UPPER(TRIM(code)) = ?',
-                [$slotCode]
-            )
-            ->where(
-                'is_active',
-                true
-            )
-            ->value('id');
-
-        return $slotId
-            && $query
-                ->where(
-                    'class_slot_id',
-                    $slotId
-                )
-                ->exists();
     }
 
     public function professorCanAccessStudent(
@@ -765,10 +704,35 @@ class LearningPathService
     private function hasSoutienLyceeOnlyPlan(
         User $student
     ): bool {
-        return
-            (string) $student
-                ->subscription_type
-            === 'soutien_lycee';
+        $subscriptionCode = trim(
+            (string) $student->subscription_type
+        );
+
+        if ($subscriptionCode === '') {
+            return false;
+        }
+
+        /*
+         * Nouveau fonctionnement : le périmètre d'accès est lu depuis
+         * l'offre administrable. On utilise withTrashed() afin qu'un ancien
+         * abonné continue d'être interprété correctement même si l'offre
+         * a été retirée du catalogue public.
+         */
+        if (Schema::hasTable('plans')) {
+            $plan = Plan::withTrashed()
+                ->where('code', $subscriptionCode)
+                ->first();
+
+            if ($plan) {
+                return (bool) $plan
+                    ->restricted_to_high_school;
+            }
+        }
+
+        /*
+         * Compatibilité avant migration / ancien déploiement.
+         */
+        return $subscriptionCode === 'soutien_lycee';
     }
 
     private function isSoutienLyceeSubject(

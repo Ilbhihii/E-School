@@ -1384,3 +1384,9 @@ Route::post(
     '/checkout',
     [PaymentController::class, 'checkout']
 )->name('student.checkout');
+/*
+|--------------------------------------------------------------------------
+| ADMIN — GESTION DES OFFRES
+|--------------------------------------------------------------------------
+*/
+require __DIR__ . '/admin_plans.php';

@@ -2,66 +2,91 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PlanCatalogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Stripe\Checkout\Session;
 use Stripe\Stripe;
 
 class PlanController extends Controller
 {
-    public function index(Request $request)
-    {
-        $plans = config('plans.offers', []);
+    public function index(
+        Request $request,
+        PlanCatalogService $catalog
+    ) {
+        $plans = $catalog->all(true);
+        $offerCode = trim(
+            (string) $request->query('offer', '')
+        );
 
-        $showOnlySoutien =
-            $request->query('offer')
-            === 'soutien_lycee';
+        $singleOffer = false;
+        $singleOfferName = null;
 
-        if ($showOnlySoutien) {
+        if ($offerCode !== '') {
+            $plan = $plans->get($offerCode);
+
             abort_unless(
-                isset($plans['soutien_lycee']),
+                $plan,
                 404,
-                'L’offre Soutien Lycée est indisponible.'
+                'Cette offre est indisponible.'
             );
 
-            $plans = [
-                'soutien_lycee' =>
-                    $plans['soutien_lycee'],
-            ];
-        } else {
-            /*
-             * L’offre Soutien Lycée à 1000 DH reste configurée
-             * pour les parcours qui utilisent son lien direct,
-             * mais elle n’apparaît plus sur la page publique /plans.
-             */
-            unset($plans['soutien_lycee']);
+            $plans = collect([
+                $offerCode => $plan,
+            ]);
+
+            $singleOffer = true;
+            $singleOfferName = $plan['name'];
         }
+
+        /*
+         * Variable historique conservée pour les anciennes variantes
+         * de la vue et les liens Soutien Lycée existants.
+         */
+        $showOnlySoutien =
+            $singleOffer
+            && (bool) (
+                $plans->first()[
+                    'restricted_to_high_school'
+                ] ?? false
+            );
 
         return view(
             'plans.index',
-            compact(
-                'plans',
-                'showOnlySoutien'
-            )
+            [
+                'plans' => $plans->all(),
+                'singleOffer' => $singleOffer,
+                'singleOfferName' => $singleOfferName,
+                'showOnlySoutien' => $showOnlySoutien,
+            ]
         );
     }
 
     /**
      * Flux Stripe conservé pour compatibilité.
-     * Le paiement doit ensuite être confirmé par un webhook
-     * avant d'accorder définitivement l'accès.
+     * L'accès n'est accordé qu'après confirmation réelle du paiement.
      */
-    public function checkout(Request $request)
-    {
-        $plans = config('plans.offers', []);
-
+    public function checkout(
+        Request $request,
+        PlanCatalogService $catalog
+    ) {
         $validated = $request->validate([
             'plan' => [
                 'required',
-                Rule::in(array_keys($plans)),
+                'string',
+                'max:60',
             ],
         ]);
+
+        $planCode = $validated['plan'];
+        $plan = $catalog->find($planCode, true);
+
+        if (!$plan) {
+            throw ValidationException::withMessages([
+                'plan' => 'L’offre sélectionnée est indisponible.',
+            ]);
+        }
 
         if (!Auth::check()) {
             return redirect()
@@ -71,9 +96,6 @@ class PlanController extends Controller
                     'Connectez-vous avant de choisir une offre.'
                 );
         }
-
-        $planCode = $validated['plan'];
-        $plan = $plans[$planCode];
 
         Auth::user()->forceFill([
             'subscription_type' => $planCode,
@@ -106,7 +128,7 @@ class PlanController extends Controller
             ),
             'cancel_url' => route(
                 'plans',
-                ['plan' => $planCode]
+                ['offer' => $planCode]
             ),
             'metadata' => [
                 'user_id' => Auth::id(),
