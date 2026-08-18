@@ -5,7 +5,7 @@
 @section('content')
 
 <style>
-    /* Cartes harmonisées pour Arabe, Coran et Soutien Lycée */
+    /* Cartes harmonisées pour les matières actives */
     .home-subjects-grid {
         max-width: 1080px;
     }
@@ -1072,66 +1072,182 @@
         </p>
 
         <div class="row g-4 justify-content-center mb-5 mx-auto home-subjects-grid">
-            @foreach($subjectsGrouped as $group)
-                @foreach($group['subjects'] as $subject)
-                    @php
-                        $normalizedSubjectName = mb_strtolower(
-                            trim($subject->name ?? '')
-                        );
+            @foreach($homeSubjects as $subject)
+                @php
+                    $normalizedSubjectName = mb_strtolower(
+                        trim($subject->name ?? '')
+                    );
 
-                        $subjectDesign = match ($normalizedSubjectName) {
-                            'arabe' => [
-                                'icon' => 'bi-translate',
-                                'gradient' =>
-                                    'linear-gradient(135deg,#2563EB,#06B6D4)',
-                            ],
+                    $subjectDesign = match ($normalizedSubjectName) {
+                        'arabe' => [
+                            'icon' => 'bi-translate',
+                            'gradient' =>
+                                'linear-gradient(135deg,#2563EB,#06B6D4)',
+                        ],
 
-                            'coran', 'quran', 'couran', 'القرآن', 'القران' => [
-                                'icon' => 'bi-book-half',
-                                'gradient' =>
-                                    'linear-gradient(135deg,#7C3AED,#A855F7)',
-                            ],
+                        'coran', 'quran', 'couran', 'القرآن', 'القران' => [
+                            'icon' => 'bi-book-half',
+                            'gradient' =>
+                                'linear-gradient(135deg,#7C3AED,#A855F7)',
+                        ],
 
-                            'soutien lycée', 'soutien lycee' => [
-                                'icon' => 'bi-mortarboard-fill',
-                                'gradient' =>
-                                    'linear-gradient(135deg,#F59E0B,#EA580C)',
-                            ],
+                        'soutien lycée', 'soutien lycee',
+                        'soutient lycée', 'soutient lycee' => [
+                            'icon' => 'bi-mortarboard-fill',
+                            'gradient' =>
+                                'linear-gradient(135deg,#F59E0B,#EA580C)',
+                        ],
 
-                            default => [
-                                'icon' => 'bi-journal-bookmark-fill',
-                                'gradient' =>
-                                    'linear-gradient(135deg,#4F46E5,#7C3AED)',
-                            ],
-                        };
-                    @endphp
+                        'anglais', 'english' => [
+                            'icon' => 'bi-globe2',
+                            'gradient' =>
+                                'linear-gradient(135deg,#0EA5E9,#2563EB)',
+                        ],
 
-                    <div class="col-lg-4 col-md-6">
-                        <a href="{{ route('front.subject.levels', $subject->id) }}"
-                           class="text-decoration-none d-block h-100"
-                           aria-label="Voir les niveaux de {{ $subject->name }}">
-                            <div class="card-3d text-center h-100 reveal-3d home-subject-card" style="cursor:pointer;">
-                                <div
-                                    class="home-subject-icon"
-                                    style="background:{{ $subjectDesign['gradient'] }};"
-                                    aria-hidden="true"
-                                >
-                                    <i class="bi {{ $subjectDesign['icon'] }}"></i>
-                                </div>
-                                <h5 class="fw-bold text-white mt-2 mb-2 home-subject-card-title" style="font-family:'Poppins',sans-serif;">
-                                    {{ $subject->name }}
-                                </h5>
-                                <span class="badge mx-auto mb-3" style="background:{{ $subject->type === 'religieux' ? 'rgba(155,89,182,0.2)' : 'rgba(52,152,219,0.2)' }};color:{{ $subject->type === 'religieux' ? '#D7A1F9' : '#7DD3FC' }};border-radius:20px;font-size:0.72rem;">
-                                    {{ $subject->type === 'religieux' ? 'Matière religieuse' : 'Matière scolaire' }}
-                                </span>
-                                <p class="text-white-50 small mb-0">
-                                    Voir les niveaux <i class="bi bi-arrow-right ms-1" style="color:var(--3d-gold);"></i>
-                                </p>
+                        'français', 'francais' => [
+                            'icon' => 'bi-chat-square-text-fill',
+                            'gradient' =>
+                                'linear-gradient(135deg,#EC4899,#8B5CF6)',
+                        ],
+
+                        'mathématiques', 'mathematiques', 'maths' => [
+                            'icon' => 'bi-calculator-fill',
+                            'gradient' =>
+                                'linear-gradient(135deg,#10B981,#059669)',
+                        ],
+
+                        default => [
+                            'icon' => 'bi-journal-bookmark-fill',
+                            'gradient' =>
+                                'linear-gradient(135deg,#4F46E5,#7C3AED)',
+                        ],
+                    };
+                @endphp
+
+                <div class="col-lg-4 col-md-6">
+                    <a href="{{ route('front.subject.levels', $subject->id) }}"
+                       class="text-decoration-none d-block h-100"
+                       aria-label="Voir les niveaux de {{ $subject->name }}">
+                        <div class="card-3d text-center h-100 reveal-3d home-subject-card" style="cursor:pointer;">
+                            <div
+                                class="home-subject-icon"
+                                style="background:{{ $subjectDesign['gradient'] }};"
+                                aria-hidden="true"
+                            >
+                                <i class="bi {{ $subjectDesign['icon'] }}"></i>
                             </div>
-                        </a>
-                    </div>
-                @endforeach
+
+                            <h5
+                                class="fw-bold text-white mt-2 mb-2 home-subject-card-title"
+                                style="font-family:'Poppins',sans-serif;"
+                            >
+                                {{ $subject->name }}
+                            </h5>
+
+                            <span
+                                class="badge mx-auto mb-3"
+                                style="
+                                    background:{{
+                                        $subject->type === 'religieux'
+                                            ? 'rgba(155,89,182,0.2)'
+                                            : 'rgba(52,152,219,0.2)'
+                                    }};
+                                    color:{{
+                                        $subject->type === 'religieux'
+                                            ? '#D7A1F9'
+                                            : '#7DD3FC'
+                                    }};
+                                    border-radius:20px;
+                                    font-size:0.72rem;
+                                "
+                            >
+                                {{
+                                    $subject->type === 'religieux'
+                                        ? 'Matière religieuse'
+                                        : 'Matière scolaire'
+                                }}
+                            </span>
+
+                            <p class="text-white-50 small mb-0">
+                                Voir les niveaux
+                                <i
+                                    class="bi bi-arrow-right ms-1"
+                                    style="color:var(--3d-gold);"
+                                ></i>
+                            </p>
+                        </div>
+                    </a>
+                </div>
             @endforeach
+
+            @if($hasMoreSubjects)
+                <div class="col-lg-4 col-md-6">
+                    <a
+                        href="{{ route('front.classes') }}"
+                        class="text-decoration-none d-block h-100"
+                        aria-label="Explorer toutes les matières"
+                    >
+                        <div
+                            class="
+                                card-3d
+                                text-center
+                                h-100
+                                reveal-3d
+                                home-subject-card
+                                home-subject-explore-card
+                            "
+                            style="cursor:pointer;"
+                        >
+                            <div
+                                class="home-subject-icon"
+                                style="
+                                    background:
+                                        linear-gradient(
+                                            135deg,
+                                            #7C3AED,
+                                            #F59E0B
+                                        );
+                                "
+                                aria-hidden="true"
+                            >
+                                <i class="bi bi-grid-3x3-gap-fill"></i>
+                            </div>
+
+                            <h5
+                                class="fw-bold text-white mt-2 mb-2 home-subject-card-title"
+                                style="font-family:'Poppins',sans-serif;"
+                            >
+                                Explorer les autres matières
+                            </h5>
+
+                            <span
+                                class="badge mx-auto mb-3"
+                                style="
+                                    background:rgba(245,158,11,0.14);
+                                    color:#FCD34D;
+                                    border-radius:20px;
+                                    font-size:0.72rem;
+                                "
+                            >
+                                +{{ $otherSubjectsCount }}
+                                {{
+                                    $otherSubjectsCount > 1
+                                        ? 'matières'
+                                        : 'matière'
+                                }}
+                            </span>
+
+                            <p class="text-white-50 small mb-0">
+                                Voir toutes les matières
+                                <i
+                                    class="bi bi-arrow-right ms-1"
+                                    style="color:var(--3d-gold);"
+                                ></i>
+                            </p>
+                        </div>
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
 

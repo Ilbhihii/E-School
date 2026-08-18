@@ -25,27 +25,49 @@ class HomeController extends Controller
         $courses = Course::approved()->count();
         $lives = Live::latest()->take(3)->get();
 
-        $subjectsReligieux = Subject::query()
-            ->where('name', 'Coran')
-            ->get();
-
-        $subjectsScolaire = Subject::query()
-            ->whereIn(
-                'name',
-                ['Arabe', 'Soutien Lycée']
+        /*
+         * Accueil :
+         * - seules les matières dont le statut est "active" sont affichées ;
+         * - "Administration" reste une matière interne et n'apparaît jamais ;
+         * - l'accueil affiche au maximum 5 matières ;
+         * - s'il existe plus de 5 matières actives, une carte
+         *   "Explorer les autres matières" redirige vers /classes.
+         *
+         * Une matière passée de "coming_soon" à "active" apparaîtra donc
+         * automatiquement ici sans modifier le code.
+         */
+        $activeSubjects = Subject::query()
+            ->where('status', 'active')
+            ->whereRaw(
+                "LOWER(TRIM(name)) <> ?",
+                ['administration']
             )
+            ->orderByRaw(
+                "CASE
+                    WHEN LOWER(name) = 'arabe' THEN 1
+                    WHEN LOWER(name) = 'coran' THEN 2
+                    WHEN LOWER(name) IN (
+                        'soutien lycée',
+                        'soutient lycée'
+                    ) THEN 3
+                    ELSE 4
+                END"
+            )
+            ->orderBy('name')
             ->get();
 
-        $subjectsGrouped = [
-            'Matières Religieuses' => [
-                'subjects' => $subjectsReligieux,
-                'color' => 'primary',
-            ],
-            'Matières Scolaires' => [
-                'subjects' => $subjectsScolaire,
-                'color' => 'success',
-            ],
-        ];
+        $activeSubjectsCount = $activeSubjects->count();
+
+        $homeSubjects = $activeSubjects
+            ->take(5)
+            ->values();
+
+        $hasMoreSubjects = $activeSubjectsCount > 5;
+
+        $otherSubjectsCount = max(
+            0,
+            $activeSubjectsCount - $homeSubjects->count()
+        );
 
         return view(
             'front.home',
@@ -53,7 +75,10 @@ class HomeController extends Controller
                 'classes',
                 'courses',
                 'lives',
-                'subjectsGrouped'
+                'homeSubjects',
+                'activeSubjectsCount',
+                'hasMoreSubjects',
+                'otherSubjectsCount'
             )
         );
     }
@@ -87,21 +112,20 @@ class HomeController extends Controller
     public function classes()
     {
         /*
-         * La page publique /classes affiche uniquement
-         * les matières dont le statut administratif est "active".
+         * La page publique /classes utilise directement le statut
+         * administratif de la matière :
          *
-         * - active      => visible
-         * - coming_soon => masquée
-         * - inactive    => masquée
+         * - active      => visible, badge vert, liens cliquables ;
+         * - coming_soon => visible, badge orange, non cliquable ;
+         * - inactive    => masquée.
          *
-         * On ne supprime aucune donnée : le filtrage est uniquement
-         * appliqué à l'affichage public.
+         * Aucune donnée pédagogique n'est supprimée quand le statut change.
          */
         $subjects = Subject::query()
             ->with([
                 'levels.classes.subjects',
             ])
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'coming_soon'])
             /*
              * "Administration" est une matière interne.
              * Elle ne doit jamais apparaître sur la page publique
@@ -290,21 +314,37 @@ class HomeController extends Controller
                 )
             );
 
-            /*
-             * Si la matière arrive jusqu'ici, son statut BDD
-             * est obligatoirement "active". Le visiteur voit
-             * donc le badge "Disponible".
-             */
-            $subject->status_label =
-                'Disponible';
-            $subject->status_icon =
-                'bi-check-circle-fill';
-            $subject->status_color =
-                '#4ADE80';
-            $subject->status_bg =
-                'rgba(34,197,94,0.15)';
-            $subject->status_border =
-                'rgba(34,197,94,0.2)';
+            $isComingSoon =
+                $subject->status === 'coming_soon';
+
+            $subject->setAttribute(
+                'is_publicly_available',
+                !$isComingSoon
+            );
+
+            if ($isComingSoon) {
+                $subject->status_label =
+                    'Bientôt disponible';
+                $subject->status_icon =
+                    'bi-hourglass-split';
+                $subject->status_color =
+                    '#FB923C';
+                $subject->status_bg =
+                    'rgba(249,115,22,0.14)';
+                $subject->status_border =
+                    'rgba(251,146,60,0.30)';
+            } else {
+                $subject->status_label =
+                    'Disponible';
+                $subject->status_icon =
+                    'bi-check-circle-fill';
+                $subject->status_color =
+                    '#4ADE80';
+                $subject->status_bg =
+                    'rgba(34,197,94,0.15)';
+                $subject->status_border =
+                    'rgba(34,197,94,0.2)';
+            }
         });
 
         return view(

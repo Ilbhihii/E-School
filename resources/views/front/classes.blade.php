@@ -206,6 +206,44 @@
         }
     }
 
+    .subject-card-panel.is-coming-soon {
+        border-color: rgba(251,146,60,0.28) !important;
+        background:
+            radial-gradient(
+                circle at 50% 0%,
+                rgba(249,115,22,0.08),
+                transparent 42%
+            ),
+            rgba(15,23,42,0.78) !important;
+        cursor: default;
+    }
+
+    .subject-card-panel.is-coming-soon:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    .subject-card-panel.is-coming-soon .subject-icon-box {
+        opacity: 0.82;
+        filter: saturate(0.82);
+    }
+
+    .subject-coming-soon-note {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 36px;
+        padding: 8px 12px;
+        border: 1px dashed rgba(251,146,60,0.24);
+        border-radius: 12px;
+        color: #FDBA74;
+        background: rgba(249,115,22,0.07);
+        font-size: 0.72rem;
+        font-weight: 650;
+        line-height: 1.35;
+    }
+
     @media (prefers-reduced-motion: reduce) {
         .subject-card-panel,
         .subject-icon-box {
@@ -251,6 +289,9 @@
                     trim($subject->name ?? '')
                 );
 
+                $isComingSoon =
+                    ($subject->status ?? 'active') === 'coming_soon';
+
                 $subjectDesign = match ($normalizedSubjectName) {
                     'arabe' => [
                         'icon' => 'bi-translate',
@@ -277,52 +318,106 @@
                     ],
                 };
             @endphp
-            <div class="col subject-card" data-type="{{ $subject->type }}">
-                <div class="card-3d text-center h-100 reveal-3d subject-card-panel">
-                    <a href="{{ route('front.subject.levels', $subject->id) }}" class="text-decoration-none">
-                        <div
-                            class="subject-icon-box"
-                            style="background:{{ $subjectDesign['gradient'] }};"
-                            aria-hidden="true"
-                        >
-                            <i class="bi {{ $subjectDesign['icon'] }}"></i>
+            <div
+                class="col subject-card"
+                data-type="{{ $subject->type }}"
+                data-status="{{ $subject->status }}"
+            >
+                <div
+                    class="card-3d text-center h-100 reveal-3d subject-card-panel {{ $isComingSoon ? 'is-coming-soon' : '' }}"
+                >
+                    @if($isComingSoon)
+                        <div aria-disabled="true">
+                            <div
+                                class="subject-icon-box"
+                                style="background:{{ $subjectDesign['gradient'] }};"
+                                aria-hidden="true"
+                            >
+                                <i class="bi {{ $subjectDesign['icon'] }}"></i>
+                            </div>
+
+                            <h5
+                                class="fw-bold text-white mb-2 subject-card-heading"
+                                style="font-family:'Poppins',sans-serif;"
+                            >
+                                {{ $subject->name }}
+                            </h5>
                         </div>
-
-                        <h5
-                            class="fw-bold text-white mb-2 subject-card-heading"
-                            style="font-family:'Poppins',sans-serif;"
+                    @else
+                        <a
+                            href="{{ route('front.subject.levels', $subject->id) }}"
+                            class="text-decoration-none"
                         >
-                            {{ $subject->name }}
-                        </h5>
-                    </a>
-                        <span class="badge px-3 py-1 mb-2" style="background: {{ $subject->status_bg }}; color: {{ $subject->status_color }}; border: 1px solid {{ $subject->status_border }}; border-radius: 20px; font-weight: 500; font-size: 0.75rem;">
-                            <i class="bi {{ $subject->status_icon }} me-1"></i> {{ $subject->status_label }}
-                        </span>
-                        <p class="text-white-50 small mb-3">
-                            <span class="badge" style="background: {{ $subject->type === 'religieux' ? 'rgba(155,89,182,0.2)' : 'rgba(52,152,219,0.2)' }}; color: {{ $subject->type === 'religieux' ? '#D7A1F9' : '#7DD3FC' }}; border-radius: 20px; font-size: 0.7rem;">
-                                {{ $subject->type === 'religieux' ? '🕌 Religieux' : '📚 Scolaire' }}
-                            </span>
-                        </p>
+                            <div
+                                class="subject-icon-box"
+                                style="background:{{ $subjectDesign['gradient'] }};"
+                                aria-hidden="true"
+                            >
+                                <i class="bi {{ $subjectDesign['icon'] }}"></i>
+                            </div>
 
-                        <div class="pt-3 subject-levels-block" style="border-top:1px solid rgba(255,255,255,0.08);">
-                            <div class="small fw-semibold mb-2" style="color:rgba(255,255,255,0.65);">
+                            <h5
+                                class="fw-bold text-white mb-2 subject-card-heading"
+                                style="font-family:'Poppins',sans-serif;"
+                            >
+                                {{ $subject->name }}
+                            </h5>
+                        </a>
+                    @endif
+
+                    <span
+                        class="badge px-3 py-1 mb-2"
+                        style="background: {{ $subject->status_bg }}; color: {{ $subject->status_color }}; border: 1px solid {{ $subject->status_border }}; border-radius: 20px; font-weight: 500; font-size: 0.75rem;"
+                    >
+                        <i class="bi {{ $subject->status_icon }} me-1"></i>
+                        {{ $subject->status_label }}
+                    </span>
+
+                    <p class="text-white-50 small mb-3">
+                        <span
+                            class="badge"
+                            style="background: {{ $subject->type === 'religieux' ? 'rgba(155,89,182,0.2)' : 'rgba(52,152,219,0.2)' }}; color: {{ $subject->type === 'religieux' ? '#D7A1F9' : '#7DD3FC' }}; border-radius: 20px; font-size: 0.7rem;"
+                        >
+                            {{ $subject->type === 'religieux' ? '🕌 Religieux' : '📚 Scolaire' }}
+                        </span>
+                    </p>
+
+                    <div
+                        class="pt-3 subject-levels-block"
+                        style="border-top:1px solid rgba(255,255,255,0.08);"
+                    >
+                        @if($isComingSoon)
+                            <div class="subject-coming-soon-note">
+                                <i class="bi bi-hourglass-split"></i>
+                                <span>Les niveaux seront accessibles prochainement.</span>
+                            </div>
+                        @else
+                            <div
+                                class="small fw-semibold mb-2"
+                                style="color:rgba(255,255,255,0.65);"
+                            >
                                 <i class="bi bi-layers me-1"></i>
                                 {{ $subject->is_high_school_support
                                     ? 'Parcours disponible'
                                     : 'Niveaux disponibles' }}
                             </div>
+
                             <div class="d-flex flex-wrap justify-content-center gap-2">
                                 @forelse($subject->available_levels as $level)
-                                    <a href="{{ route('front.subject.levels', $subject->id) }}?open={{ $level->id }}"
-                                       class="badge text-decoration-none px-3 py-2"
-                                       style="background:rgba(124,58,237,0.16);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25);border-radius:20px;">
-                                        {{ $level->name }} <i class="bi bi-chevron-right ms-1"></i>
+                                    <a
+                                        href="{{ route('front.subject.levels', $subject->id) }}?open={{ $level->id }}"
+                                        class="badge text-decoration-none px-3 py-2"
+                                        style="background:rgba(124,58,237,0.16);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25);border-radius:20px;"
+                                    >
+                                        {{ $level->name }}
+                                        <i class="bi bi-chevron-right ms-1"></i>
                                     </a>
                                 @empty
                                     <span class="text-white-50 small">Aucun niveau disponible</span>
                                 @endforelse
                             </div>
-                        </div>
+                        @endif
+                    </div>
                 </div>
             </div>
             @empty
