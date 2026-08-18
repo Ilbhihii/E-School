@@ -1181,7 +1181,7 @@
                         <span style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                             <i class="bi bi-telephone" style="font-size: 0.85rem;"></i>
                         </span>
-                        +212707678821
+                        +33 7 60 96 12 74 </br> +212 7 88 81 79 42
                     </span>
               </div>
             </div>

@@ -16,6 +16,10 @@ class Plan extends Model
         'subtitle',
         'scope',
         'amount_minor',
+        'price_1_month_minor',
+        'price_2_month_minor',
+        'price_3_month_minor',
+        'price_4_month_minor',
         'currency',
         'currency_symbol',
         'period',
@@ -26,6 +30,9 @@ class Plan extends Model
         'allow_paypal',
         'allow_bank',
         'paypal_url',
+        'whatsapp_france',
+        'whatsapp_maroc',
+        'whatsapp_message',
         'is_recommended',
         'is_active',
         'sort_order',
@@ -33,6 +40,10 @@ class Plan extends Model
 
     protected $casts = [
         'amount_minor' => 'integer',
+        'price_1_month_minor' => 'integer',
+        'price_2_month_minor' => 'integer',
+        'price_3_month_minor' => 'integer',
+        'price_4_month_minor' => 'integer',
         'features' => 'array',
         'restricted_to_high_school' => 'boolean',
         'allow_paypal' => 'boolean',
@@ -75,6 +86,49 @@ class Plan extends Model
         );
     }
 
+
+    public function getPricingOptionsAttribute()
+    {
+        $options = [
+            $this->pricingOption(12, (int) $this->amount_minor, '12 mois — Annuel', true),
+        ];
+
+        foreach ([4, 3, 2, 1] as $months) {
+            $column = 'price_' . $months . '_month_minor';
+            $minor = $this->{$column};
+
+            if ($minor !== null) {
+                $options[] = $this->pricingOption(
+                    $months,
+                    (int) $minor,
+                    $months === 1 ? '1 mois' : $months . ' mois',
+                    false
+                );
+            }
+        }
+
+        return $options;
+    }
+
+    private function pricingOption($months, $minor, $label, $recommended)
+    {
+        $amount = ((int) $minor) / 100;
+        $display = abs($amount - round($amount)) < 0.00001
+            ? number_format($amount, 0, ',', ' ')
+            : number_format($amount, 2, ',', ' ');
+
+        return [
+            'duration_months' => (int) $months,
+            'label' => $label,
+            'amount_minor' => (int) $minor,
+            'amount_display' => $display,
+            'period_label' => $months === 12
+                ? 'an'
+                : ($months === 1 ? 'mois' : $months . ' mois'),
+            'is_best_value' => (bool) $recommended,
+        ];
+    }
+
     public function isSystemPlan()
     {
         return in_array(
@@ -94,6 +148,7 @@ class Plan extends Model
             'scope' => (string) $this->scope,
             'amount_display' => $this->amount_display,
             'amount_minor' => (int) $this->amount_minor,
+            'pricing_options' => $this->pricing_options,
             'currency' => strtolower((string) $this->currency),
             'currency_symbol' => (string) $this->currency_symbol,
             'period' => (string) $this->period,
@@ -104,6 +159,9 @@ class Plan extends Model
             'allow_paypal' => (bool) $this->allow_paypal,
             'allow_bank' => (bool) $this->allow_bank,
             'paypal_url' => $this->paypal_url,
+            'whatsapp_france' => $this->whatsapp_france,
+            'whatsapp_maroc' => $this->whatsapp_maroc,
+            'whatsapp_message' => $this->whatsapp_message,
             'is_recommended' => (bool) $this->is_recommended,
             'is_active' => (bool) $this->is_active,
             'sort_order' => (int) $this->sort_order,

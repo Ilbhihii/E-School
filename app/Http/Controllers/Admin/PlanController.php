@@ -37,6 +37,10 @@ class PlanController extends Controller
         $plan->currency = 'mad';
         $plan->currency_symbol = 'DH';
         $plan->period = 'an';
+        $plan->price_1_month_minor = null;
+        $plan->price_2_month_minor = null;
+        $plan->price_3_month_minor = null;
+        $plan->price_4_month_minor = null;
         $plan->icon = 'bi-stars';
         $plan->allow_paypal = true;
         $plan->allow_bank = true;
@@ -45,6 +49,9 @@ class PlanController extends Controller
         $plan->is_recommended = false;
         $plan->sort_order = ((int) Plan::max('sort_order')) + 10;
         $plan->paypal_url = 'https://www.paypal.me/abdelghanimaloulou1';
+        $plan->whatsapp_france = '+33 7 60 96 12 74';
+        $plan->whatsapp_maroc = '+212 6 65 72 99 77';
+        $plan->whatsapp_message = 'Bonjour, je souhaite envoyer mon reçu de paiement pour l’offre {offre}. Durée : {duree}. Référence : {reference}. Montant : {montant} {devise}. Je joins le reçu à ce message.';
         $plan->features = [];
 
         return view(
@@ -212,6 +219,10 @@ class PlanController extends Controller
                 'min:0',
                 'max:99999999.99',
             ],
+            'price_1_month' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'price_2_month' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'price_3_month' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'price_4_month' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'currency' => [
                 'required',
                 'string',
@@ -255,11 +266,32 @@ class PlanController extends Controller
                 'url',
                 'max:500',
             ],
+            'whatsapp_france' => [
+                'nullable',
+                'string',
+                'max:30',
+                'regex:/^\+?[0-9\s().-]{7,30}$/',
+            ],
+            'whatsapp_maroc' => [
+                'nullable',
+                'string',
+                'max:30',
+                'regex:/^\+?[0-9\s().-]{7,30}$/',
+            ],
+            'whatsapp_message' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
             'sort_order' => [
                 'required',
                 'integer',
                 'min:0',
                 'max:999999',
+            ],
+            'is_active' => [
+                'required',
+                Rule::in(['0', '1', 0, 1]),
             ],
         ]);
 
@@ -297,6 +329,10 @@ class PlanController extends Controller
                 ((float) $validated['price'])
                 * 100
             ),
+            'price_1_month_minor' => $this->priceToMinor($validated['price_1_month'] ?? null),
+            'price_2_month_minor' => $this->priceToMinor($validated['price_2_month'] ?? null),
+            'price_3_month_minor' => $this->priceToMinor($validated['price_3_month'] ?? null),
+            'price_4_month_minor' => $this->priceToMinor($validated['price_4_month'] ?? null),
             'currency' => strtolower(
                 $validated['currency']
             ),
@@ -326,6 +362,15 @@ class PlanController extends Controller
             'paypal_url' => $this->nullableTrim(
                 $validated['paypal_url'] ?? null
             ),
+            'whatsapp_france' => $this->nullableTrim(
+                $validated['whatsapp_france'] ?? null
+            ),
+            'whatsapp_maroc' => $this->nullableTrim(
+                $validated['whatsapp_maroc'] ?? null
+            ),
+            'whatsapp_message' => $this->nullableTrim(
+                $validated['whatsapp_message'] ?? null
+            ),
             'is_recommended' =>
                 $request->boolean('is_active')
                 && $request->boolean(
@@ -337,6 +382,16 @@ class PlanController extends Controller
                 'sort_order'
             ],
         ];
+    }
+
+
+    private function priceToMinor($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (int) round(((float) $value) * 100);
     }
 
     private function nullableTrim($value)

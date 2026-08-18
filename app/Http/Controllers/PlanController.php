@@ -77,6 +77,11 @@ class PlanController extends Controller
                 'string',
                 'max:60',
             ],
+            'duration' => [
+                'nullable',
+                'integer',
+                'in:1,2,3,4,12',
+            ],
         ]);
 
         $planCode = $validated['plan'];
@@ -85,6 +90,17 @@ class PlanController extends Controller
         if (!$plan) {
             throw ValidationException::withMessages([
                 'plan' => 'L’offre sélectionnée est indisponible.',
+            ]);
+        }
+
+        $pricing = $catalog->pricingOption(
+            $plan,
+            $validated['duration'] ?? null
+        );
+
+        if (!$pricing) {
+            throw ValidationException::withMessages([
+                'duration' => 'Cette durée n’est pas disponible pour cette offre.',
             ]);
         }
 
@@ -111,10 +127,10 @@ class PlanController extends Controller
                 'price_data' => [
                     'currency' => $plan['currency'],
                     'product_data' => [
-                        'name' => 'Abonnement ' . $plan['name'],
+                        'name' => 'Abonnement ' . $plan['name'] . ' — ' . $pricing['label'],
                         'description' => $plan['scope'],
                     ],
-                    'unit_amount' => $plan['amount_minor'],
+                    'unit_amount' => (int) $pricing['amount_minor'],
                 ],
                 'quantity' => 1,
             ]],
@@ -124,15 +140,17 @@ class PlanController extends Controller
                 [
                     'plan' => $planCode,
                     'checkout' => 'success',
+                    'duration' => $pricing['duration_months'],
                 ]
             ),
             'cancel_url' => route(
                 'plans',
-                ['offer' => $planCode]
+                ['offer' => $planCode, 'duration' => $pricing['duration_months']]
             ),
             'metadata' => [
                 'user_id' => Auth::id(),
                 'plan' => $planCode,
+                'duration_months' => (int) $pricing['duration_months'],
             ],
         ]);
 

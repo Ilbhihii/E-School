@@ -16,53 +16,43 @@ class PaymentController extends Controller
         Request $request,
         PlanCatalogService $catalog
     ) {
-        list(
-            $planCode,
-            $selectedPlan
-        ) = $this->resolvePlan(
+        list($planCode, $selectedPlan) = $this->resolvePlan(
             $request->query('plan'),
             $catalog
         );
 
-        $method = (string) $request->query(
-            'method',
-            ''
+        $selectedPricing = $catalog->pricingOption(
+            $selectedPlan,
+            $request->query('duration')
         );
 
-        if (
-            $method === 'paypal'
-            && empty($selectedPlan['allow_paypal'])
-        ) {
+        abort_unless(
+            $selectedPricing,
+            404,
+            'Cette durée n’est pas disponible pour l’offre sélectionnée.'
+        );
+
+        $durationMonths = (int) $selectedPricing['duration_months'];
+        $method = (string) $request->query('method', '');
+
+        if ($method === 'paypal' && empty($selectedPlan['allow_paypal'])) {
             return redirect()
-                ->route(
-                    'student.payment',
-                    ['plan' => $planCode]
-                )
-                ->with(
-                    'error',
-                    'Le paiement PayPal n’est pas activé pour cette offre.'
-                );
+                ->route('student.payment', [
+                    'plan' => $planCode,
+                    'duration' => $durationMonths,
+                ])
+                ->with('error', 'Le paiement PayPal n’est pas activé pour cette offre.');
         }
 
-        if (
-            $method === 'bank'
-            && empty($selectedPlan['allow_bank'])
-        ) {
+        if ($method === 'bank' && empty($selectedPlan['allow_bank'])) {
             return redirect()
-                ->route(
-                    'student.payment',
-                    ['plan' => $planCode]
-                )
-                ->with(
-                    'error',
-                    'Le virement bancaire n’est pas activé pour cette offre.'
-                );
+                ->route('student.payment', [
+                    'plan' => $planCode,
+                    'duration' => $durationMonths,
+                ])
+                ->with('error', 'Le virement bancaire n’est pas activé pour cette offre.');
         }
 
-        /*
-         * Le plan choisi est mémorisé comme intention uniquement.
-         * is_paid ne change pas ici.
-         */
         if (
             Auth::check()
             && Auth::user()->isStudent()
@@ -73,13 +63,12 @@ class PaymentController extends Controller
             ])->save();
         }
 
-        return view(
-            'payment',
-            compact(
-                'planCode',
-                'selectedPlan'
-            )
-        );
+        return view('payment', compact(
+            'planCode',
+            'selectedPlan',
+            'selectedPricing',
+            'durationMonths'
+        ));
     }
 
     public function processPayment(
@@ -87,15 +76,9 @@ class PaymentController extends Controller
         PlanCatalogService $catalog
     ) {
         $validated = $request->validate([
-            'payment_method' => [
-                'required',
-                'string',
-            ],
-            'plan' => [
-                'required',
-                'string',
-                'max:60',
-            ],
+            'payment_method' => ['required', 'string'],
+            'plan' => ['required', 'string', 'max:60'],
+            'duration' => ['nullable', 'integer', 'in:1,2,3,4,12'],
         ]);
 
         if (!Auth::check()) {
@@ -115,28 +98,37 @@ class PaymentController extends Controller
             ], 422);
         }
 
+        $pricing = $catalog->pricingOption(
+            $plan,
+            $validated['duration'] ?? null
+        );
+
+        if (!$pricing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette durée n’est pas disponible pour cette offre.',
+            ], 422);
+        }
+
         try {
-            Stripe::setApiKey(
-                config('services.stripe.secret_key')
-            );
+            Stripe::setApiKey(config('services.stripe.secret_key'));
 
             $user = Auth::user();
 
             $paymentIntent = PaymentIntent::create([
-                'amount' => $plan['amount_minor'],
+                'amount' => (int) $pricing['amount_minor'],
                 'currency' => $plan['currency'],
-                'payment_method' => $validated[
-                    'payment_method'
-                ],
+                'payment_method' => $validated['payment_method'],
                 'confirmation_method' => 'manual',
                 'confirm' => true,
-                'return_url' => route(
-                    'student.payment',
-                    ['plan' => $planCode]
-                ),
+                'return_url' => route('student.payment', [
+                    'plan' => $planCode,
+                    'duration' => $pricing['duration_months'],
+                ]),
                 'metadata' => [
                     'user_id' => $user->id,
                     'plan' => $planCode,
+                    'duration_months' => (int) $pricing['duration_months'],
                 ],
             ]);
 
@@ -160,10 +152,7 @@ class PaymentController extends Controller
                 'message' => 'Le paiement nécessite une action supplémentaire.',
             ], 400);
         } catch (\Throwable $exception) {
-            Log::error(
-                'Payment process failed: '
-                . $exception->getMessage()
-            );
+            Log::error('Payment process failed: ' . $exception->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -177,11 +166,8 @@ class PaymentController extends Controller
         PlanCatalogService $catalog
     ) {
         $validated = $request->validate([
-            'plan' => [
-                'required',
-                'string',
-                'max:60',
-            ],
+            'plan' => ['required', 'string', 'max:60'],
+            'duration' => ['nullable', 'integer', 'in:1,2,3,4,12'],
         ]);
 
         $planCode = $validated['plan'];
@@ -193,13 +179,21 @@ class PaymentController extends Controller
             ]);
         }
 
+        $pricing = $catalog->pricingOption(
+            $plan,
+            $validated['duration'] ?? null
+        );
+
+        if (!$pricing) {
+            throw ValidationException::withMessages([
+                'duration' => 'Cette durée n’est pas disponible pour cette offre.',
+            ]);
+        }
+
         if (!Auth::check()) {
             return redirect()
                 ->route('login')
-                ->with(
-                    'error',
-                    'Connectez-vous avant de continuer le paiement.'
-                );
+                ->with('error', 'Connectez-vous avant de continuer le paiement.');
         }
 
         $user = Auth::user();
@@ -208,9 +202,7 @@ class PaymentController extends Controller
             'subscription_type' => $planCode,
         ])->save();
 
-        Stripe::setApiKey(
-            config('services.stripe.secret_key')
-        );
+        Stripe::setApiKey(config('services.stripe.secret_key'));
 
         $session = \Stripe\Checkout\Session::create([
             'payment_method_types' => ['card'],
@@ -218,25 +210,27 @@ class PaymentController extends Controller
                 'price_data' => [
                     'currency' => $plan['currency'],
                     'product_data' => [
-                        'name' => 'Abonnement ' . $plan['name'],
+                        'name' => 'Abonnement ' . $plan['name']
+                            . ' — ' . $pricing['label'],
                         'description' => $plan['scope'],
                     ],
-                    'unit_amount' => $plan['amount_minor'],
+                    'unit_amount' => (int) $pricing['amount_minor'],
                 ],
                 'quantity' => 1,
             ]],
             'mode' => 'payment',
             'success_url' => url(
-                '/payment-success?plan='
-                . urlencode($planCode)
+                '/payment-success?plan=' . urlencode($planCode)
+                . '&duration=' . (int) $pricing['duration_months']
             ),
-            'cancel_url' => route(
-                'student.payment',
-                ['plan' => $planCode]
-            ),
+            'cancel_url' => route('student.payment', [
+                'plan' => $planCode,
+                'duration' => $pricing['duration_months'],
+            ]),
             'metadata' => [
                 'user_id' => $user->id,
                 'plan' => $planCode,
+                'duration_months' => (int) $pricing['duration_months'],
             ],
         ]);
 
@@ -247,12 +241,20 @@ class PaymentController extends Controller
         Request $request,
         PlanCatalogService $catalog
     ) {
-        list(
-            $planCode,
-            $plan
-        ) = $this->resolvePlan(
+        list($planCode, $plan) = $this->resolvePlan(
             $request->query('plan'),
             $catalog
+        );
+
+        $pricing = $catalog->pricingOption(
+            $plan,
+            $request->query('duration')
+        );
+
+        abort_unless(
+            $pricing,
+            404,
+            'Cette durée n’est pas disponible pour cette offre.'
         );
 
         abort_unless(
@@ -261,10 +263,7 @@ class PaymentController extends Controller
             'PayPal n’est pas activé pour cette offre.'
         );
 
-        if (
-            Auth::check()
-            && Auth::user()->isStudent()
-        ) {
+        if (Auth::check() && Auth::user()->isStudent()) {
             Auth::user()->forceFill([
                 'subscription_type' => $planCode,
             ])->save();
@@ -285,16 +284,10 @@ class PaymentController extends Controller
             : '';
 
         if ($requestedPlan !== '') {
-            $plan = $catalog->find(
-                $requestedPlan,
-                true
-            );
+            $plan = $catalog->find($requestedPlan, true);
 
             if ($plan) {
-                return [
-                    $requestedPlan,
-                    $plan,
-                ];
+                return [$requestedPlan, $plan];
             }
         }
 

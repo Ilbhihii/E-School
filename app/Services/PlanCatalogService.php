@@ -60,6 +60,44 @@ class PlanCatalogService
         return $this->all($activeOnly)->get($code);
     }
 
+
+    public function pricingOption(array $plan, $requestedDuration = null)
+    {
+        $options = collect($plan['pricing_options'] ?? []);
+
+        if ($options->isEmpty()) {
+            $options = collect([[
+                'duration_months' => 12,
+                'label' => '12 mois — Annuel',
+                'amount_minor' => (int) ($plan['amount_minor'] ?? 0),
+                'amount_display' => (string) ($plan['amount_display'] ?? '0'),
+                'period_label' => (string) ($plan['period'] ?? 'an'),
+                'is_best_value' => true,
+            ]]);
+        }
+
+        $hasExplicitDuration =
+            $requestedDuration !== null
+            && $requestedDuration !== ''
+            && is_numeric($requestedDuration);
+
+        $duration = $hasExplicitDuration
+            ? (int) $requestedDuration
+            : 12;
+
+        $selected = $options->first(function ($option) use ($duration) {
+            return (int) ($option['duration_months'] ?? 0) === $duration;
+        });
+
+        if ($selected) {
+            return $selected;
+        }
+
+        return $hasExplicitDuration
+            ? null
+            : $options->first();
+    }
+
     public function defaultCode()
     {
         $configured = (string) config(
@@ -100,6 +138,18 @@ class PlanCatalogService
                     $plan['paypal_url']
                     ?? 'https://www.paypal.me/abdelghanimaloulou1';
 
+                $plan['whatsapp_france'] =
+                    $plan['whatsapp_france']
+                    ?? '+33 7 60 96 12 74';
+
+                $plan['whatsapp_maroc'] =
+                    $plan['whatsapp_maroc']
+                    ?? '+212 6 65 72 99 77';
+
+                $plan['whatsapp_message'] =
+                    $plan['whatsapp_message']
+                    ?? 'Bonjour, je souhaite envoyer mon reçu de paiement pour l’offre {offre}. Durée : {duree}. Référence : {reference}. Montant : {montant} {devise}. Je joins le reçu à ce message.';
+
                 $plan['is_recommended'] =
                     $plan['is_recommended']
                     ?? (
@@ -117,6 +167,15 @@ class PlanCatalogService
                     array_values(
                         (array) ($plan['features'] ?? [])
                     );
+
+                $plan['pricing_options'] = [[
+                    'duration_months' => 12,
+                    'label' => '12 mois — Annuel',
+                    'amount_minor' => (int) ($plan['amount_minor'] ?? 0),
+                    'amount_display' => (string) ($plan['amount_display'] ?? '0'),
+                    'period_label' => (string) ($plan['period'] ?? 'an'),
+                    'is_best_value' => true,
+                ]];
 
                 return [$code => $plan];
             }

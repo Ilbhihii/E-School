@@ -59,7 +59,7 @@
                 }}"
         >
             @foreach($plans as $planCode => $plan)
-                <article class="offer-card {{ ($plan['restricted_to_high_school'] ?? false) ? 'offer-card-high-school' : '' }} {{ ($plan['is_recommended'] ?? false) ? 'offer-card-recommended' : '' }}">
+                <article class="offer-card {{ ($plan['restricted_to_high_school'] ?? false) ? 'offer-card-high-school' : '' }} {{ ($plan['is_recommended'] ?? false) ? 'offer-card-recommended' : '' }}" data-plan-card data-plan-code="{{ $planCode }}">
                     <div class="offer-card-top">
                         @if(!empty($plan['badge']))
                             <span class="offer-badge">
@@ -80,11 +80,46 @@
                         <p>{{ $plan['subtitle'] }}</p>
                     </div>
 
-                    <div class="offer-price">
-                        <strong>{{ $plan['amount_display'] }}</strong>
+                    @php
+                        $pricingOptions = collect($plan['pricing_options'] ?? []);
+                        if ($pricingOptions->isEmpty()) {
+                            $pricingOptions = collect([[
+                                'duration_months' => 12,
+                                'label' => '12 mois — Annuel',
+                                'amount_display' => $plan['amount_display'],
+                                'amount_minor' => $plan['amount_minor'],
+                                'period_label' => $plan['period'],
+                                'is_best_value' => true,
+                            ]]);
+                        }
+                        $defaultPricing = $pricingOptions->first();
+                    @endphp
+
+                    <div class="offer-price" data-plan-price>
+                        <strong data-price-amount>{{ $defaultPricing['amount_display'] }}</strong>
                         <span>{{ $plan['currency_symbol'] }}</span>
-                        <small>/ {{ $plan['period'] }}</small>
+                        <small>/ <span data-price-period>{{ $defaultPricing['period_label'] }}</span></small>
                     </div>
+
+                    @if($pricingOptions->count() > 1)
+                        <div class="offer-duration-selector">
+                            <label for="duration-{{ $planCode }}">Choisir la durée</label>
+                            <select id="duration-{{ $planCode }}" data-duration-select>
+                                @foreach($pricingOptions as $pricing)
+                                    <option
+                                        value="{{ $pricing['duration_months'] }}"
+                                        data-amount="{{ $pricing['amount_display'] }}"
+                                        data-period="{{ $pricing['period_label'] }}"
+                                    >
+                                        {{ $pricing['label'] }} — {{ $pricing['amount_display'] }} {{ $plan['currency_symbol'] }}{{ !empty($pricing['is_best_value']) ? ' · Meilleur prix' : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small><i class="bi bi-info-circle"></i> Le prix est payé une seule fois pour la durée choisie.</small>
+                        </div>
+                    @else
+                        <input type="hidden" data-duration-select value="{{ $defaultPricing['duration_months'] }}">
+                    @endif
 
                     <ul class="offer-features">
                         @foreach($plan['features'] as $feature)
@@ -106,8 +141,10 @@
                     <div class="offer-actions">
                         @if($plan['allow_paypal'] ?? true)
                             <a
-                                href="{{ route('student.payment', ['plan' => $planCode, 'method' => 'paypal']) }}"
+                                href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $defaultPricing['duration_months'], 'method' => 'paypal']) }}"
                                 class="offer-button offer-paypal"
+                                data-payment-link
+                                data-method="paypal"
                             >
                                 <i class="bi bi-paypal"></i>
                                 Payer avec PayPal
@@ -116,8 +153,10 @@
 
                         @if($plan['allow_bank'] ?? true)
                             <a
-                                href="{{ route('student.payment', ['plan' => $planCode, 'method' => 'bank']) }}"
+                                href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $defaultPricing['duration_months'], 'method' => 'bank']) }}"
                                 class="offer-button offer-bank"
+                                data-payment-link
+                                data-method="bank"
                             >
                                 <i class="bi bi-bank"></i>
                                 Virement bancaire
@@ -1109,6 +1148,39 @@ html.light-mode .plans-security {
 .plans-empty > i { font-size: 1.7rem; color: #879aff; }
 .plans-empty h2 { margin: .8rem 0 .35rem; color: var(--plans-text); font-size: 1.1rem; }
 .plans-empty p { margin: 0; font-size: .72rem; }
+
+.offer-duration-selector{margin:-.1rem 0 1rem;padding:10px 11px;border:1px solid rgba(79,114,245,.13);border-radius:12px;background:rgba(79,114,245,.045)}.offer-duration-selector label{display:block;margin-bottom:6px;color:var(--plans-soft);font-size:.6rem;font-weight:800}.offer-duration-selector select{width:100%;height:40px;padding:0 10px;color:var(--plans-text);border:1px solid rgba(148,163,184,.16);border-radius:9px;outline:0;background:#0a1525;font-size:.65rem;font-weight:700}.offer-duration-selector select:focus{border-color:rgba(99,102,241,.45);box-shadow:0 0 0 3px rgba(99,102,241,.08)}.offer-duration-selector small{display:flex;align-items:flex-start;gap:5px;margin-top:6px;color:var(--plans-muted);font-size:.52rem;line-height:1.4}.offer-duration-selector small i{margin-top:1px;color:#8fa3ff}html.light-mode .offer-duration-selector{background:rgba(79,114,245,.04)}html.light-mode .offer-duration-selector select{color:#172033;border-color:rgba(15,23,42,.12);background:#fff}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-plan-card]').forEach(function (card) {
+        const select = card.querySelector('[data-duration-select]');
+        const amount = card.querySelector('[data-price-amount]');
+        const period = card.querySelector('[data-price-period]');
+        const planCode = card.dataset.planCode;
+
+        const sync = function () {
+            if (!select) return;
+            const option = select.tagName === 'SELECT' ? select.options[select.selectedIndex] : null;
+            const duration = select.value || '12';
+            if (option && amount) amount.textContent = option.dataset.amount || amount.textContent;
+            if (option && period) period.textContent = option.dataset.period || period.textContent;
+
+            card.querySelectorAll('[data-payment-link]').forEach(function (link) {
+                const method = link.dataset.method || '';
+                const url = new URL(link.href, window.location.origin);
+                url.searchParams.set('plan', planCode);
+                url.searchParams.set('duration', duration);
+                if (method) url.searchParams.set('method', method);
+                link.href = url.toString();
+            });
+        };
+
+        select?.addEventListener('change', sync);
+        sync();
+    });
+});
+</script>
 
 @endsection
