@@ -1203,7 +1203,7 @@
 </button>
 
 <!-- ═══ CONTACT WHATSAPP ═══ -->
-<a href="https://wa.me/212707678821?text={{ rawurlencode('Bonjour Smart School Academy, je souhaite obtenir plus d’informations.') }}" target="_blank" rel="noopener noreferrer" class="floating-chat" aria-label="Ouvrir une discussion WhatsApp">
+<a href="https://wa.me/33760961274?text={{ rawurlencode('Bonjour Smart School Academy, je souhaite obtenir plus d’informations.') }}" target="_blank" rel="noopener noreferrer" class="floating-chat" aria-label="Ouvrir une discussion WhatsApp">
     <i class="bi bi-whatsapp"></i>
     <span class="chat-tooltip">Discuter sur WhatsApp</span>
 </a>
