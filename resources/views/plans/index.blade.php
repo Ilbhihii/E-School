@@ -51,6 +51,62 @@
             </div>
         @endif
 
+        @php
+            $availableMonthlyDurations = collect($plans)
+                ->flatMap(function ($plan) {
+                    return collect($plan['pricing_options'] ?? [])
+                        ->pluck('duration_months');
+                })
+                ->map(function ($months) {
+                    return (int) $months;
+                })
+                ->filter(function ($months) {
+                    return $months >= 1 && $months < 12;
+                })
+                ->unique()
+                ->sort()
+                ->values();
+        @endphp
+
+        @if(!empty($plans))
+            <div class="plans-billing-control" data-billing-control>
+                <div class="plans-billing-switch" role="group" aria-label="Type de tarification">
+                    <button type="button" class="active" data-billing-mode="annual">
+                        <i class="bi bi-calendar-check-fill"></i>
+                        Annuelle
+                    </button>
+                    <button
+                        type="button"
+                        data-billing-mode="monthly"
+                        {{ $availableMonthlyDurations->isEmpty() ? 'disabled' : '' }}
+                    >
+                        <i class="bi bi-calendar-month-fill"></i>
+                        Mensuelle
+                    </button>
+                </div>
+
+                @if($availableMonthlyDurations->isNotEmpty())
+                    <div class="plans-monthly-durations" data-monthly-durations hidden>
+                        <span>Choisir la durée :</span>
+                        @foreach($availableMonthlyDurations as $months)
+                            <button
+                                type="button"
+                                data-month-duration="{{ $months }}"
+                                class="{{ $loop->first ? 'active' : '' }}"
+                            >
+                                {{ $months }} {{ $months === 1 ? 'mois' : 'mois' }}
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <div class="plans-duration-empty" data-duration-empty hidden>
+                <i class="bi bi-calendar-x"></i>
+                <span>Aucune offre n’est disponible pour cette durée.</span>
+            </div>
+        @endif
+
         <div
             class="plans-grid
                 {{ count($plans) === 1
@@ -59,7 +115,30 @@
                 }}"
         >
             @foreach($plans as $planCode => $plan)
-                <article class="offer-card {{ ($plan['restricted_to_high_school'] ?? false) ? 'offer-card-high-school' : '' }} {{ ($plan['is_recommended'] ?? false) ? 'offer-card-recommended' : '' }}" data-plan-card data-plan-code="{{ $planCode }}">
+                @php
+                    $pricingOptions = collect($plan['pricing_options'] ?? []);
+                    if ($pricingOptions->isEmpty()) {
+                        $pricingOptions = collect([[
+                            'duration_months' => 12,
+                            'label' => '12 mois — Annuel',
+                            'amount_display' => $plan['amount_display'],
+                            'amount_minor' => $plan['amount_minor'],
+                            'period_label' => $plan['period'],
+                            'is_best_value' => true,
+                        ]]);
+                    }
+
+                    $defaultPricing = $pricingOptions->first(function ($pricing) {
+                        return (int) ($pricing['duration_months'] ?? 0) === 12;
+                    }) ?: $pricingOptions->first();
+                @endphp
+
+                <article
+                    class="offer-card {{ ($plan['restricted_to_high_school'] ?? false) ? 'offer-card-high-school' : '' }} {{ ($plan['is_recommended'] ?? false) ? 'offer-card-recommended' : '' }} {{ ($plan['is_family_pack'] ?? false) ? 'offer-card-family' : '' }}"
+                    data-plan-card
+                    data-plan-code="{{ $planCode }}"
+                    data-pricing-options="{{ $pricingOptions->values()->toJson() }}"
+                >
                     <div class="offer-card-top">
                         @if(!empty($plan['badge']))
                             <span class="offer-badge">
@@ -80,20 +159,17 @@
                         <p>{{ $plan['subtitle'] }}</p>
                     </div>
 
-                    @php
-                        $pricingOptions = collect($plan['pricing_options'] ?? []);
-                        if ($pricingOptions->isEmpty()) {
-                            $pricingOptions = collect([[
-                                'duration_months' => 12,
-                                'label' => '12 mois — Annuel',
-                                'amount_display' => $plan['amount_display'],
-                                'amount_minor' => $plan['amount_minor'],
-                                'period_label' => $plan['period'],
-                                'is_best_value' => true,
-                            ]]);
-                        }
-                        $defaultPricing = $pricingOptions->first();
-                    @endphp
+                    @if($plan['is_family_pack'] ?? false)
+                        <div class="offer-family-pack">
+                            <i class="bi bi-people-fill"></i>
+                            <div>
+                                <strong>Family Pack</strong>
+                                <span>
+                                    Jusqu’à {{ (int) ($plan['family_members'] ?? 4) }} membres
+                                </span>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="offer-price" data-plan-price>
                         <strong data-price-amount>{{ $defaultPricing['amount_display'] }}</strong>
@@ -101,25 +177,10 @@
                         <small>/ <span data-price-period>{{ $defaultPricing['period_label'] }}</span></small>
                     </div>
 
-                    @if($pricingOptions->count() > 1)
-                        <div class="offer-duration-selector">
-                            <label for="duration-{{ $planCode }}">Choisir la durée</label>
-                            <select id="duration-{{ $planCode }}" data-duration-select>
-                                @foreach($pricingOptions as $pricing)
-                                    <option
-                                        value="{{ $pricing['duration_months'] }}"
-                                        data-amount="{{ $pricing['amount_display'] }}"
-                                        data-period="{{ $pricing['period_label'] }}"
-                                    >
-                                        {{ $pricing['label'] }} — {{ $pricing['amount_display'] }} {{ $plan['currency_symbol'] }}{{ !empty($pricing['is_best_value']) ? ' · Meilleur prix' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small><i class="bi bi-info-circle"></i> Le prix est payé une seule fois pour la durée choisie.</small>
-                        </div>
-                    @else
-                        <input type="hidden" data-duration-select value="{{ $defaultPricing['duration_months'] }}">
-                    @endif
+                    <div class="offer-selected-duration" data-selected-duration-label>
+                        <i class="bi bi-calendar2-week"></i>
+                        <span>Tarif annuel sélectionné</span>
+                    </div>
 
                     <ul class="offer-features">
                         @foreach($plan['features'] as $feature)
@@ -1149,37 +1210,135 @@ html.light-mode .plans-security {
 .plans-empty h2 { margin: .8rem 0 .35rem; color: var(--plans-text); font-size: 1.1rem; }
 .plans-empty p { margin: 0; font-size: .72rem; }
 
+.plans-billing-control{display:flex;flex-direction:column;align-items:center;gap:10px;margin:-.25rem auto 1.35rem}.plans-billing-switch{display:inline-grid;grid-template-columns:repeat(2,minmax(138px,1fr));gap:5px;padding:5px;border:1px solid rgba(148,163,184,.14);border-radius:14px;background:rgba(8,17,31,.72);box-shadow:0 12px 30px rgba(0,0,0,.16)}.plans-billing-switch button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 15px;color:#8594aa;border:0;border-radius:10px;background:transparent;font-size:.66rem;font-weight:800;cursor:pointer;transition:all .18s ease}.plans-billing-switch button.active{color:#fff;background:linear-gradient(135deg,#4569ef,#7654e8);box-shadow:0 8px 18px rgba(79,114,245,.22)}.plans-billing-switch button:disabled{opacity:.35;cursor:not-allowed}.plans-monthly-durations{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}.plans-monthly-durations>span{margin-right:2px;color:#718198;font-size:.58rem;font-weight:700}.plans-monthly-durations button{min-height:31px;padding:0 10px;color:#91a1b7;border:1px solid rgba(148,163,184,.13);border-radius:999px;background:rgba(255,255,255,.025);font-size:.57rem;font-weight:800;cursor:pointer}.plans-monthly-durations button.active{color:#dfe7ff;border-color:rgba(79,114,245,.38);background:rgba(79,114,245,.13);box-shadow:0 6px 14px rgba(79,114,245,.1)}.plans-duration-empty{max-width:620px;margin:0 auto 1rem;padding:10px 13px;color:#d8a753;border:1px solid rgba(225,165,58,.16);border-radius:11px;background:rgba(225,165,58,.055);font-size:.62rem;text-align:center}.plans-duration-empty i{margin-right:5px}.offer-family-pack{display:flex;align-items:center;gap:9px;padding:9px 10px;margin:.72rem 0 .15rem;border:1px solid rgba(34,197,94,.14);border-radius:11px;background:rgba(34,197,94,.055)}.offer-family-pack>i{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;color:#7ce0ad;border-radius:9px;background:rgba(34,197,94,.1)}.offer-family-pack strong{display:block;color:#d9fbea;font-size:.61rem}.offer-family-pack span{display:block;margin-top:1px;color:#75a58c;font-size:.52rem}.offer-selected-duration{display:flex;align-items:center;gap:6px;margin:-.12rem 0 .85rem;color:#7f90aa;font-size:.55rem}.offer-selected-duration i{color:#8ea4ff}.offer-card[hidden]{display:none!important}.offer-card-family{border-color:rgba(34,197,94,.15)}html.light-mode .plans-billing-switch{background:rgba(255,255,255,.9)}html.light-mode .plans-billing-switch button{color:#64748b}html.light-mode .plans-billing-switch button.active{color:#fff}html.light-mode .plans-monthly-durations button{color:#64748b;background:#fff}html.light-mode .offer-family-pack{background:rgba(34,197,94,.045)}@media(max-width:575px){.plans-billing-switch{width:100%;grid-template-columns:1fr 1fr}.plans-billing-switch button{min-width:0;padding:0 8px}.plans-monthly-durations>span{width:100%;margin:0 0 2px;text-align:center}}
+
 .offer-duration-selector{margin:-.1rem 0 1rem;padding:10px 11px;border:1px solid rgba(79,114,245,.13);border-radius:12px;background:rgba(79,114,245,.045)}.offer-duration-selector label{display:block;margin-bottom:6px;color:var(--plans-soft);font-size:.6rem;font-weight:800}.offer-duration-selector select{width:100%;height:40px;padding:0 10px;color:var(--plans-text);border:1px solid rgba(148,163,184,.16);border-radius:9px;outline:0;background:#0a1525;font-size:.65rem;font-weight:700}.offer-duration-selector select:focus{border-color:rgba(99,102,241,.45);box-shadow:0 0 0 3px rgba(99,102,241,.08)}.offer-duration-selector small{display:flex;align-items:flex-start;gap:5px;margin-top:6px;color:var(--plans-muted);font-size:.52rem;line-height:1.4}.offer-duration-selector small i{margin-top:1px;color:#8fa3ff}html.light-mode .offer-duration-selector{background:rgba(79,114,245,.04)}html.light-mode .offer-duration-selector select{color:#172033;border-color:rgba(15,23,42,.12);background:#fff}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('[data-plan-card]').forEach(function (card) {
-        const select = card.querySelector('[data-duration-select]');
-        const amount = card.querySelector('[data-price-amount]');
-        const period = card.querySelector('[data-price-period]');
-        const planCode = card.dataset.planCode;
+    const cards = Array.from(document.querySelectorAll('[data-plan-card]'));
+    const modeButtons = Array.from(document.querySelectorAll('[data-billing-mode]'));
+    const monthButtons = Array.from(document.querySelectorAll('[data-month-duration]'));
+    const monthContainer = document.querySelector('[data-monthly-durations]');
+    const emptyState = document.querySelector('[data-duration-empty]');
 
-        const sync = function () {
-            if (!select) return;
-            const option = select.tagName === 'SELECT' ? select.options[select.selectedIndex] : null;
-            const duration = select.value || '12';
-            if (option && amount) amount.textContent = option.dataset.amount || amount.textContent;
-            if (option && period) period.textContent = option.dataset.period || period.textContent;
+    let mode = 'annual';
+    let selectedDuration = 12;
+
+    const pricingFor = function (card, duration) {
+        try {
+            const options = JSON.parse(card.dataset.pricingOptions || '[]');
+            return options.find(function (option) {
+                return Number(option.duration_months) === Number(duration);
+            }) || null;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const setActiveButton = function (buttons, activeButton) {
+        buttons.forEach(function (button) {
+            button.classList.toggle('active', button === activeButton);
+        });
+    };
+
+    const syncCards = function () {
+        const targetDuration = mode === 'annual' ? 12 : selectedDuration;
+        let visibleCards = 0;
+
+        cards.forEach(function (card) {
+            const pricing = pricingFor(card, targetDuration);
+            card.hidden = !pricing;
+
+            if (!pricing) return;
+            visibleCards += 1;
+
+            const amount = card.querySelector('[data-price-amount]');
+            const period = card.querySelector('[data-price-period]');
+            const durationLabel = card.querySelector('[data-selected-duration-label] span');
+            const planCode = card.dataset.planCode;
+
+            if (amount) amount.textContent = pricing.amount_display || '0';
+            if (period) period.textContent = pricing.period_label || '';
+            if (durationLabel) {
+                durationLabel.textContent = mode === 'annual'
+                    ? 'Tarif annuel · 12 mois'
+                    : 'Tarif ' + (pricing.label || (targetDuration + ' mois'));
+            }
 
             card.querySelectorAll('[data-payment-link]').forEach(function (link) {
                 const method = link.dataset.method || '';
                 const url = new URL(link.href, window.location.origin);
                 url.searchParams.set('plan', planCode);
-                url.searchParams.set('duration', duration);
+                url.searchParams.set('duration', String(targetDuration));
                 if (method) url.searchParams.set('method', method);
                 link.href = url.toString();
             });
-        };
+        });
 
-        select?.addEventListener('change', sync);
-        sync();
+        if (emptyState) {
+            emptyState.hidden = visibleCards > 0;
+        }
+    };
+
+    const setMode = function (newMode) {
+        mode = newMode === 'monthly' ? 'monthly' : 'annual';
+        const activeMode = modeButtons.find(function (button) {
+            return button.dataset.billingMode === mode;
+        });
+        if (activeMode) setActiveButton(modeButtons, activeMode);
+
+        if (monthContainer) {
+            monthContainer.hidden = mode !== 'monthly';
+        }
+
+        if (mode === 'monthly' && selectedDuration === 12) {
+            const firstMonth = monthButtons[0];
+            if (firstMonth) {
+                selectedDuration = Number(firstMonth.dataset.monthDuration || 1);
+                setActiveButton(monthButtons, firstMonth);
+            }
+        }
+
+        syncCards();
+    };
+
+    modeButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            if (button.disabled) return;
+            setMode(button.dataset.billingMode);
+        });
     });
+
+    monthButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            selectedDuration = Number(button.dataset.monthDuration || 1);
+            setActiveButton(monthButtons, button);
+            mode = 'monthly';
+            const monthlyMode = modeButtons.find(function (item) {
+                return item.dataset.billingMode === 'monthly';
+            });
+            if (monthlyMode) setActiveButton(modeButtons, monthlyMode);
+            if (monthContainer) monthContainer.hidden = false;
+            syncCards();
+        });
+    });
+
+    const requestedDuration = Number(
+        new URLSearchParams(window.location.search).get('duration') || 12
+    );
+    const requestedMonthButton = monthButtons.find(function (button) {
+        return Number(button.dataset.monthDuration) === requestedDuration;
+    });
+
+    if (requestedDuration < 12 && requestedMonthButton) {
+        selectedDuration = requestedDuration;
+        setActiveButton(monthButtons, requestedMonthButton);
+        setMode('monthly');
+    } else {
+        setMode('annual');
+    }
 });
 </script>
 

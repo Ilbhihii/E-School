@@ -46,6 +46,8 @@ class PlanController extends Controller
         $plan->allow_bank = true;
         $plan->is_active = true;
         $plan->restricted_to_high_school = false;
+        $plan->is_family_pack = false;
+        $plan->family_members = 4;
         $plan->is_recommended = false;
         $plan->sort_order = ((int) Plan::max('sort_order')) + 10;
         $plan->paypal_url = 'https://www.paypal.me/abdelghanimaloulou1';
@@ -289,6 +291,17 @@ class PlanController extends Controller
                 'min:0',
                 'max:999999',
             ],
+            'is_family_pack' => [
+                'required',
+                Rule::in(['0', '1', 0, 1]),
+            ],
+            'family_members' => [
+                'nullable',
+                'integer',
+                'min:2',
+                'max:10',
+                'required_if:is_family_pack,1',
+            ],
             'is_active' => [
                 'required',
                 Rule::in(['0', '1', 0, 1]),
@@ -351,6 +364,12 @@ class PlanController extends Controller
                 $request->boolean(
                     'restricted_to_high_school'
                 ),
+            'is_family_pack' =>
+                $request->boolean('is_family_pack'),
+            'family_members' =>
+                $request->boolean('is_family_pack')
+                    ? (int) ($validated['family_members'] ?? 4)
+                    : null,
             'allow_paypal' =>
                 $request->boolean(
                     'allow_paypal'

@@ -264,6 +264,56 @@
             </small>
         </label>
 
+        @php
+            $familyPackValue = (string) old(
+                'is_family_pack',
+                $plan->is_family_pack ? '1' : '0'
+            );
+        @endphp
+
+        <div class="plan-family-block">
+            <div class="plan-family-title">
+                <i class="bi bi-people-fill"></i>
+                <div>
+                    <strong>Type de formule</strong>
+                    <small>Créez une offre individuelle ou un Family Pack.</small>
+                </div>
+            </div>
+
+            <div class="plan-fields two mb-0">
+                <label>
+                    <span>Type *</span>
+                    <select name="is_family_pack" id="planFamilyType" required>
+                        <option value="0" {{ $familyPackValue === '0' ? 'selected' : '' }}>
+                            Offre individuelle
+                        </option>
+                        <option value="1" {{ $familyPackValue === '1' ? 'selected' : '' }}>
+                            Family Pack
+                        </option>
+                    </select>
+                </label>
+
+                <label id="planFamilyMembersWrap">
+                    <span>Nombre maximum de membres *</span>
+                    <input
+                        type="number"
+                        name="family_members"
+                        id="planFamilyMembers"
+                        min="2"
+                        max="10"
+                        value="{{ old('family_members', $plan->family_members ?: 4) }}"
+                        placeholder="4"
+                    >
+                    <small>Ex. 4 = un pack familial annoncé jusqu’à 4 membres.</small>
+                </label>
+            </div>
+
+            <div class="plan-family-note">
+                <i class="bi bi-info-circle-fill"></i>
+                Le Family Pack est affiché comme une offre familiale sur /plans. Le prix annuel et les tarifs 1 à 4 mois restent gérés dans la section Tarification.
+            </div>
+        </div>
+
         <div class="plan-toggle-list mt-3">
             <label class="plan-toggle-row">
                 <div><i class="bi bi-stars"></i><span><strong>Offre recommandée</strong><small>Une seule offre peut être recommandée.</small></span></div>
@@ -290,6 +340,8 @@
 .plan-status-field select{min-height:44px}.plan-status-field small{display:block;margin-top:7px;color:#64748b;font-size:.61rem;line-height:1.45}
 .plan-whatsapp-block{margin-top:14px;padding-top:14px;border-top:1px solid rgba(148,163,184,.09)}.plan-whatsapp-title{display:flex;align-items:center;gap:9px;margin-bottom:12px}.plan-whatsapp-title>i{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;color:#57d68d;background:rgba(37,211,102,.08)}.plan-whatsapp-title strong{display:block;color:#eaf3ef;font-size:.68rem}.plan-whatsapp-title small{display:block;margin-top:2px;color:#61738b;font-size:.51rem}.plan-message-textarea{width:100%;min-height:92px;padding:10px 11px;resize:vertical;color:#e9eff8;border:1px solid rgba(148,163,184,.13);border-radius:10px;outline:0;background:#08111f;font-size:.66rem;line-height:1.55}.plan-message-textarea:focus{border-color:rgba(37,211,102,.45);box-shadow:0 0 0 3px rgba(37,211,102,.07)}.plan-help-text{display:block;margin-top:6px;color:#61738b;font-size:.51rem;line-height:1.5}.plan-help-text code{color:#86efac;background:rgba(34,197,94,.07);padding:1px 4px;border-radius:4px}
 
+.plan-family-block{margin-top:14px;padding:13px;border:1px solid rgba(79,114,245,.12);border-radius:12px;background:rgba(79,114,245,.035)}.plan-family-title{display:flex;align-items:center;gap:9px;margin-bottom:11px}.plan-family-title>i{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;color:#a9b7ff;background:rgba(79,114,245,.1)}.plan-family-title strong{display:block;color:#e9eff8;font-size:.68rem}.plan-family-title small{display:block;margin-top:2px;color:#64748b;font-size:.51rem}.plan-family-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;color:#6f8098;font-size:.51rem;line-height:1.45}.plan-family-note i{margin-top:1px;color:#8fa3ff}.plan-family-block.is-individual #planFamilyMembersWrap{opacity:.46}.plan-family-block.is-individual #planFamilyMembers{cursor:not-allowed}
+
 .plan-short-pricing{margin-top:14px;padding-top:14px;border-top:1px solid rgba(148,163,184,.09)}.plan-short-pricing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.plan-short-pricing-head strong{display:block;color:#e8eef8;font-size:.68rem}.plan-short-pricing-head small{display:block;margin-top:3px;color:#64748b;font-size:.52rem;line-height:1.4}.plan-short-pricing-head>span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(79,114,245,.14);border-radius:999px;color:#9fb2ff;background:rgba(79,114,245,.06);font-size:.52rem;font-weight:800}.plan-duration-price-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.plan-duration-price{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid rgba(148,163,184,.09);border-radius:11px;background:#08111f}.plan-duration-price>span strong{display:block;color:#dfe7f2;font-size:.62rem}.plan-duration-price>span small{display:block;margin-top:2px;color:#596a82;font-size:.48rem}.plan-duration-price>div{position:relative;width:118px}.plan-duration-price input{width:100%;height:37px;padding:0 38px 0 9px;color:#e9eff8;border:1px solid rgba(148,163,184,.13);border-radius:9px;outline:0;background:#0a1422;font-size:.64rem}.plan-duration-price input:focus{border-color:rgba(79,114,245,.5);box-shadow:0 0 0 3px rgba(79,114,245,.08)}.plan-duration-symbol{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:#75869d;font-size:.55rem;font-style:normal}.plan-pricing-example{display:flex;align-items:flex-start;gap:7px;margin-top:10px;padding:9px 10px;border-radius:9px;color:#8290a5;background:rgba(245,158,11,.045);font-size:.52rem;line-height:1.45}.plan-pricing-example i{margin-top:1px;color:#e6ad45}@media(max-width:620px){.plan-duration-price-grid{grid-template-columns:1fr}.plan-duration-price>div{width:130px}}
 </style>
 
@@ -301,6 +353,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const iconPreview = document.getElementById('planIconPreview');
     const currency = document.getElementById('planCurrency');
     const symbol = document.getElementById('planCurrencySymbol');
+    const familyType = document.getElementById('planFamilyType');
+    const familyMembers = document.getElementById('planFamilyMembers');
+    const familyBlock = familyType?.closest('.plan-family-block');
 
     const rowHtml = () => `
         <div class="plan-feature-row">
@@ -330,6 +385,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const value = (iconInput.value || 'bi-stars').trim();
         iconPreview.className = 'bi ' + (value.startsWith('bi-') ? value : 'bi-stars');
     });
+
+    const syncFamilyPack = function () {
+        const isFamily = familyType?.value === '1';
+        familyBlock?.classList.toggle('is-individual', !isFamily);
+        if (familyMembers) {
+            familyMembers.disabled = !isFamily;
+            familyMembers.required = isFamily;
+            if (isFamily && !familyMembers.value) {
+                familyMembers.value = '4';
+            }
+        }
+    };
+
+    familyType?.addEventListener('change', syncFamilyPack);
+    syncFamilyPack();
 
     const symbols = { mad: 'DH', eur: '€', usd: '$', gbp: '£' };
     currency?.addEventListener('change', function () {

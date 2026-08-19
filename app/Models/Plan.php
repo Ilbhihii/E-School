@@ -27,6 +27,8 @@ class Plan extends Model
         'icon',
         'features',
         'restricted_to_high_school',
+        'is_family_pack',
+        'family_members',
         'allow_paypal',
         'allow_bank',
         'paypal_url',
@@ -46,6 +48,8 @@ class Plan extends Model
         'price_4_month_minor' => 'integer',
         'features' => 'array',
         'restricted_to_high_school' => 'boolean',
+        'is_family_pack' => 'boolean',
+        'family_members' => 'integer',
         'allow_paypal' => 'boolean',
         'allow_bank' => 'boolean',
         'is_recommended' => 'boolean',
@@ -155,6 +159,10 @@ class Plan extends Model
             'badge' => (string) $this->badge,
             'icon' => $this->icon ?: 'bi-stars',
             'restricted_to_high_school' => (bool) $this->restricted_to_high_school,
+            'is_family_pack' => (bool) $this->is_family_pack,
+            'family_members' => $this->is_family_pack
+                ? max(2, (int) ($this->family_members ?: 4))
+                : null,
             'features' => array_values((array) $this->features),
             'allow_paypal' => (bool) $this->allow_paypal,
             'allow_bank' => (bool) $this->allow_bank,
