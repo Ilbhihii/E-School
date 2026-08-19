@@ -136,18 +136,6 @@ class LevelController extends Controller
          */
         $subjects = Subject::query()
             ->get()
-            /*
-             * La matière technique « Administration » est utilisée
-             * uniquement par les fonctions internes (notamment le chat).
-             * Elle ne doit pas apparaître dans la gestion pédagogique
-             * /admin/subjects.
-             */
-            ->reject(
-                fn (Subject $subject) =>
-                    VocalTestPrompt::normalizePathName(
-                        $subject->name
-                    ) === 'administration'
-            )
             ->sortBy(function (Subject $subject) {
                 $normalized =
                     VocalTestPrompt::normalizePathName(
@@ -875,6 +863,33 @@ class LevelController extends Controller
         Request $request,
         Subject $subject
     ) {
+        /*
+         * Action rapide depuis la carte Matière :
+         * Activer / Masquer sans modifier le reste de la fiche.
+         */
+        if ($request->boolean('_visibility_only')) {
+            $visibility = $request->validate([
+                'is_active' => [
+                    'required',
+                    'boolean',
+                ],
+            ]);
+
+            $isActive = (bool) $visibility['is_active'];
+
+            $subject->status = $isActive
+                ? 'active'
+                : 'inactive';
+            $subject->save();
+
+            return back()->with(
+                'success',
+                $isActive
+                    ? 'La matière « ' . $subject->name . ' » est maintenant active.'
+                    : 'La matière « ' . $subject->name . ' » est maintenant masquée.'
+            );
+        }
+
         $validated = $request->validate(
             [
                 'name' => [
@@ -1305,6 +1320,31 @@ class LevelController extends Controller
             $level
         );
 
+        /*
+         * Action rapide depuis la carte Niveau / Parcours.
+         * On conserve les classes, cours, créneaux et affectations.
+         */
+        if ($request->boolean('_visibility_only')) {
+            $visibility = $request->validate([
+                'is_active' => [
+                    'required',
+                    'boolean',
+                ],
+            ]);
+
+            $isActive = (bool) $visibility['is_active'];
+
+            $level->is_active = $isActive;
+            $level->save();
+
+            return back()->with(
+                'success',
+                $isActive
+                    ? 'Le niveau « ' . $level->name . ' » est maintenant actif.'
+                    : 'Le niveau « ' . $level->name . ' » est maintenant masqué.'
+            );
+        }
+
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -1500,6 +1540,31 @@ class LevelController extends Controller
             $level,
             $class
         );
+
+        /*
+         * Action rapide depuis la carte Classe.
+         * Masquer une classe ne supprime aucune donnée liée.
+         */
+        if ($request->boolean('_visibility_only')) {
+            $visibility = $request->validate([
+                'is_active' => [
+                    'required',
+                    'boolean',
+                ],
+            ]);
+
+            $isActive = (bool) $visibility['is_active'];
+
+            $class->is_active = $isActive;
+            $class->save();
+
+            return back()->with(
+                'success',
+                $isActive
+                    ? 'La classe « ' . $class->name . ' » est maintenant active.'
+                    : 'La classe « ' . $class->name . ' » est maintenant masquée.'
+            );
+        }
 
         $validated = $request->validate([
             'name' => [

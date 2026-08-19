@@ -8,63 +8,64 @@ use App\Models\Level;
 use App\Models\Course;
 use App\Models\ClassRoom;
 use App\Models\VocalTestPrompt;
-use App\Models\HighSchoolTestSubmission;
-use App\Services\LearningPathService;
-use Illuminate\Support\Facades\URL;
 
 class FrontController extends Controller
 {
-    private LearningPathService $paths;
-
-    public function __construct(LearningPathService $paths)
-    {
-        $this->paths = $paths;
-    }
     public function subjects()
     {
-        $subjectsReligieux = Subject::where('type', 'religieux')->get();
-        $subjectsScolaire = Subject::where('type', 'scolaire')->get();
+        $subjectsReligieux = Subject::where('type', 'religieux')
+            ->where('status', 'active')
+            ->get();
+        $subjectsScolaire = Subject::where('type', 'scolaire')
+            ->where('status', 'active')
+            ->get();
         return view('front.classes', compact('subjectsReligieux', 'subjectsScolaire'));
     }
 
     public function subjectClasses($id)
     {
-        $subject = Subject::with('classes')->findOrFail($id);
+        $subject = Subject::query()
+            ->where('status', 'active')
+            ->with([
+                'classes' => fn ($query) =>
+                    $query
+                        ->where('is_active', true)
+                        ->whereHas(
+                            'level',
+                            fn ($levelQuery) =>
+                                $levelQuery->where(
+                                    'is_active',
+                                    true
+                                )
+                        ),
+            ])
+            ->findOrFail($id);
+
         return view('front.subject-classes', compact('subject'));
     }
 
     public function subjectLevels($id)
     {
-        $subject = Subject::findOrFail($id);
+        $subject = Subject::query()
+            ->where('status', 'active')
+            ->findOrFail($id);
 
         $allowedLevelNames =
-            $this->levelNamesForSubject($subject);
+            VocalTestPrompt::pathNamesForSubject($subject);
 
-        $allowedItemNames =
-            $this->itemNamesForSubject($subject);
+        $allowedClassNames =
+            VocalTestPrompt::allowedClassNames();
 
-        $levelOrder = array_flip(
+        $classOrder = array_flip(
             array_map(
-                [
-                    VocalTestPrompt::class,
-                    'normalizePathName',
-                ],
-                $allowedLevelNames
-            )
-        );
-
-        $itemOrder = array_flip(
-            array_map(
-                [
-                    VocalTestPrompt::class,
-                    'normalizePathName',
-                ],
-                $allowedItemNames
+                [VocalTestPrompt::class, 'normalizePathName'],
+                $allowedClassNames
             )
         );
 
         $levels = Level::query()
             ->where('subject_id', $subject->id)
+            ->where('is_active', true)
             ->when(
                 !empty($allowedLevelNames),
                 fn ($query) =>
@@ -83,16 +84,13 @@ class FrontController extends Controller
             ->with([
                 'classes' => function ($query) use (
                     $subject,
-                    $allowedItemNames
+                    $allowedClassNames
                 ) {
                     $query
-                        ->when(
-                            !empty($allowedItemNames),
-                            fn ($classQuery) =>
-                                $classQuery->whereIn(
-                                    'name',
-                                    $allowedItemNames
-                                )
+                        ->where('is_active', true)
+                        ->whereIn(
+                            'name',
+                            $allowedClassNames
                         )
                         ->whereHas(
                             'subjects',
@@ -107,17 +105,19 @@ class FrontController extends Controller
             ->orderBy('order')
             ->orderBy('id')
             ->get()
-            ->sortBy(
-                function (Level $level) use (
-                    $levelOrder
-                ) {
-                    return $levelOrder[
-                        VocalTestPrompt::normalizePathName(
-                            $level->name
-                        )
-                    ] ?? PHP_INT_MAX;
-                }
-            )
+            ->sortBy(function (Level $level) use (
+                $allowedLevelNames
+            ) {
+                $position = array_search(
+                    $level->name,
+                    $allowedLevelNames,
+                    true
+                );
+
+                return $position === false
+                    ? PHP_INT_MAX
+                    : $position;
+            })
             ->unique(
                 fn (Level $level) =>
                     VocalTestPrompt::normalizePathName(
@@ -126,19 +126,22 @@ class FrontController extends Controller
             )
             ->values();
 
-        $isHighSchoolSupport =
-            $this->isHighSchoolSupport($subject);
-
+        /*
+         * On ne compte que les trois classes actives :
+         * Débutant, Intermédiaire et Avancé.
+         *
+         * Les anciennes classes et les doublons présents
+         * dans la base ne sont pas inclus.
+         */
         $levels->each(
             function (Level $level) use (
-                $itemOrder,
-                $subject,
-                $isHighSchoolSupport
+                $classOrder,
+                $subject
             ) {
-                $validItems = $level->classes
+                $validClasses = $level->classes
                     ->sortBy(
                         fn (ClassRoom $classRoom) =>
-                            $itemOrder[
+                            $classOrder[
                                 VocalTestPrompt::normalizePathName(
                                     $classRoom->name
                                 )
@@ -152,16 +155,18 @@ class FrontController extends Controller
                     )
                     ->values();
 
-                $validItems->each(
+                /*
+                 * Préparer les informations nécessaires à l'arbre
+                 * affiché directement dans subject-levels.blade.php.
+                 */
+                $validClasses->each(
                     function (ClassRoom $classRoom) use (
                         $subject,
-                        $level,
-                        $isHighSchoolSupport
+                        $level
                     ) {
                         $classRoom->setAttribute(
                             'requires_vocal_test',
-                            !$isHighSchoolSupport
-                            && VocalTestPrompt::requiresVocalTest(
+                            VocalTestPrompt::requiresVocalTest(
                                 $subject,
                                 $level,
                                 $classRoom
@@ -170,8 +175,7 @@ class FrontController extends Controller
 
                         $classRoom->setAttribute(
                             'is_without_vocal_test',
-                            !$isHighSchoolSupport
-                            && VocalTestPrompt::isExcludedPath(
+                            VocalTestPrompt::isExcludedPath(
                                 $subject,
                                 $level,
                                 $classRoom
@@ -182,16 +186,24 @@ class FrontController extends Controller
 
                 $level->setRelation(
                     'classes',
-                    $validItems
+                    $validClasses
                 );
 
                 $level->setAttribute(
                     'available_classes_count',
-                    $validItems->count()
+                    $validClasses->count()
                 );
             }
         );
 
+        /*
+         * Cette valeur est utilisée dans la partie supérieure
+         * de resources/views/front/subject-levels.blade.php.
+         *
+         * Résultat :
+         * - Arabe : 2 parcours × 3 classes = 6
+         * - Coran : 1 parcours × 3 classes = 3
+         */
         $subject->setAttribute(
             'classes_count',
             $levels->sum('available_classes_count')
@@ -202,25 +214,11 @@ class FrontController extends Controller
             $levels->count()
         );
 
-        $subject->setAttribute(
-            'is_high_school_support',
-            $isHighSchoolSupport
-        );
-
-        $subject->setAttribute(
-            'child_plural_label',
-            $isHighSchoolSupport
-                ? 'Matières'
-                : 'Classes'
-        );
-
         $sameFamilySubjects = Subject::query()
             ->where('type', $subject->type)
+            ->where('status', 'active')
             ->where('id', '!=', $subject->id)
-            ->whereIn(
-                'name',
-                ['Arabe', 'Coran', 'Soutien Lycée']
-            )
+            ->whereIn('name', ['Arabe', 'Coran'])
             ->withCount('courses')
             ->get();
 
@@ -236,198 +234,122 @@ class FrontController extends Controller
 
     public function levelClasses($subjectId, $levelId)
     {
-        $subject = Subject::findOrFail($subjectId);
-
-        $level = Level::query()
-            ->whereKey($levelId)
+        $subject = Subject::query()
+            ->where('status', 'active')
+            ->findOrFail($subjectId);
+        $level = Level::whereKey($levelId)
             ->where('subject_id', $subject->id)
+            ->where('is_active', true)
             ->firstOrFail();
 
-        $allowedLevelNames =
-            $this->levelNamesForSubject($subject);
-
         abort_unless(
-            in_array(
-                VocalTestPrompt::normalizePathName(
-                    $level->name
-                ),
-                array_map(
-                    [
-                        VocalTestPrompt::class,
-                        'normalizePathName',
-                    ],
-                    $allowedLevelNames
-                ),
-                true
-            ),
+            VocalTestPrompt::isSupportedLevel($subject, $level),
             404,
             'Ce parcours ne fait pas partie de la structure actuelle.'
         );
 
-        $allowedItemNames =
-            $this->itemNamesForSubject($subject);
+        $allowedClassNames = VocalTestPrompt::allowedClassNames();
+        $classOrder = array_flip(array_map(
+            [VocalTestPrompt::class, 'normalizePathName'],
+            $allowedClassNames
+        ));
 
-        $itemOrder = array_flip(
-            array_map(
-                [
-                    VocalTestPrompt::class,
-                    'normalizePathName',
-                ],
-                $allowedItemNames
-            )
-        );
-
-        $classes = ClassRoom::query()
-            ->where('level_id', $level->id)
-            ->whereIn('name', $allowedItemNames)
+        $classes = ClassRoom::where('level_id', $level->id)
+            ->where('is_active', true)
+            ->whereIn('name', $allowedClassNames)
             ->whereHas(
                 'subjects',
-                fn ($query) =>
-                    $query->where(
-                        'subjects.id',
-                        $subject->id
-                    )
+                fn($query) => $query->where('subjects.id', $subject->id)
             )
             ->get()
-            ->sortBy(
-                fn (ClassRoom $classRoom) =>
-                    $itemOrder[
-                        VocalTestPrompt::normalizePathName(
-                            $classRoom->name
-                        )
-                    ] ?? PHP_INT_MAX
-            )
-            ->unique(
-                fn (ClassRoom $classRoom) =>
-                    VocalTestPrompt::normalizePathName(
-                        $classRoom->name
-                    )
-            )
+            ->sortBy(function (ClassRoom $class) use ($classOrder) {
+                return $classOrder[
+                    VocalTestPrompt::normalizePathName($class->name)
+                ] ?? 99;
+            })
             ->values();
 
-        $isHighSchoolSupport =
-            $this->isHighSchoolSupport($subject);
-
-        $classes->each(
-            function (ClassRoom $classRoom) use (
+        $classes->each(function (ClassRoom $class) use ($subject, $level) {
+            $class->requires_vocal_test = VocalTestPrompt::requiresVocalTest(
                 $subject,
                 $level,
-                $isHighSchoolSupport
-            ) {
-                $classRoom->requires_vocal_test =
-                    !$isHighSchoolSupport
-                    && VocalTestPrompt::requiresVocalTest(
-                        $subject,
-                        $level,
-                        $classRoom
-                    );
+                $class
+            );
 
-                $classRoom->is_without_vocal_test =
-                    !$isHighSchoolSupport
-                    && VocalTestPrompt::isExcludedPath(
-                        $subject,
-                        $level,
-                        $classRoom
-                    );
-            }
-        );
+            $class->is_without_vocal_test = VocalTestPrompt::isExcludedPath(
+                $subject,
+                $level,
+                $class
+            );
+        });
 
         return view(
             'front.level-classes',
-            compact(
-                'subject',
-                'level',
-                'classes'
-            )
+            compact('subject', 'level', 'classes')
         );
+    }
+
+    public function levelCourses($id)
+    {
+        $level = Level::query()
+            ->where('is_active', true)
+            ->with(['courses', 'subject'])
+            ->findOrFail($id);
+
+        abort_unless(
+            $level->subject
+                && ($level->subject->status ?? 'active') === 'active',
+            404
+        );
+
+        return view('front.level-courses', compact('level'));
+    }
+
+    public function showCourse($id)
+    {
+        $course = Course::with(['learningTests', 'subject', 'level', 'classRoom'])->findOrFail($id);
+
+        abort_unless(
+            $course->subject
+                && ($course->subject->status ?? 'active') === 'active'
+                && (!$course->level || (bool) ($course->level->is_active ?? true))
+                && (!$course->classRoom || (bool) ($course->classRoom->is_active ?? true)),
+            404
+        );
+
+        // Autres matières de la même famille (même type : religieux / scolaire)
+        $sameFamilySubjects = collect([]);
+        if ($course->subject) {
+            $sameFamilySubjects = Subject::where('type', $course->subject->type)
+                ->where('status', 'active')
+                ->where('id', '!=', $course->subject->id)
+                ->withCount('courses')
+                ->limit(4)
+                ->get();
+        }
+
+        return view('front.course-show', compact('course', 'sameFamilySubjects'));
     }
 
     public function courses($subject_id, $level_id, $class_id)
     {
-        $subject = Subject::findOrFail($subject_id);
+        $subject = Subject::query()
+            ->where('status', 'active')
+            ->findOrFail($subject_id);
 
         $level = Level::whereKey($level_id)
             ->where('subject_id', $subject->id)
+            ->where('is_active', true)
             ->firstOrFail();
 
         $class = ClassRoom::whereKey($class_id)
             ->where('level_id', $level->id)
+            ->where('is_active', true)
             ->whereHas(
                 'subjects',
                 fn($query) => $query->where('subjects.id', $subject->id)
             )
             ->firstOrFail();
-
-        /*
-         * Soutien Lycée :
-         * - test validé : accès à l'espace étudiant ;
-         * - test en correction : page de suivi ;
-         * - sinon : affichage du test écrit.
-         */
-        if ($this->isHighSchoolSupport($subject)) {
-            if (
-                auth()->check()
-                && auth()->user()->role === 'student'
-            ) {
-                $submission =
-                    HighSchoolTestSubmission::query()
-                        ->where(
-                            'user_id',
-                            auth()->id()
-                        )
-                        ->where(
-                            'subject_id',
-                            $subject->id
-                        )
-                        ->where(
-                            'level_id',
-                            $level->id
-                        )
-                        ->where(
-                            'class_id',
-                            $class->id
-                        )
-                        ->latest('submitted_at')
-                        ->latest('id')
-                        ->first();
-
-                if (
-                    $submission
-                    && $submission->isApproved()
-                ) {
-                    return redirect()->route(
-                        'student.subjects.courses',
-                        [
-                            $subject,
-                            $level,
-                            $class,
-                        ]
-                    )->with(
-                        'success',
-                        'Test validé : accès aux cours autorisé.'
-                    );
-                }
-
-                if (
-                    $submission
-                    && $submission->isPendingReview()
-                ) {
-                    return redirect()->route(
-                        'student.written-tests.show',
-                        $submission
-                    );
-                }
-            }
-
-            return redirect()->route(
-                'high-school-test.show',
-                [
-                    $subject,
-                    $level,
-                    $class,
-                ]
-            );
-        }
 
         if (!VocalTestPrompt::isSupportedPath($subject, $level, $class)) {
             return redirect()
@@ -439,11 +361,27 @@ class FrontController extends Controller
         }
 
         if (VocalTestPrompt::isExcludedPath($subject, $level, $class)) {
+            $appointmentUrl = route(
+                'appointment.create',
+                ['type' => 'test']
+            );
+
+            if (auth()->guest()) {
+                session()->put('url.intended', $appointmentUrl);
+
+                return redirect()
+                    ->route('register')
+                    ->with(
+                        'info',
+                        'Ce parcours débutant ne nécessite aucun test vocal. Créez votre compte pour continuer.'
+                    );
+            }
+
             return redirect()
-                ->route('appointment.create', ['type' => 'test'])
+                ->to($appointmentUrl)
                 ->with(
                     'info',
-                    'Aucun test vocal n’est demandé pour ce parcours débutant. Prenez votre rendez-vous, puis créez votre compte.'
+                    'Aucun test vocal n’est demandé pour ce parcours débutant. Vous pouvez prendre rendez-vous directement.'
                 );
         }
 
@@ -454,145 +392,66 @@ class FrontController extends Controller
         );
 
         if ($prompt) {
-            return redirect()->route(
+            $vocalTestUrl = route(
                 'vocal-test.create',
                 [$subject, $level, $class]
             );
+
+            if (auth()->guest()) {
+                session()->put('url.intended', $vocalTestUrl);
+
+                return redirect()
+                    ->route('register')
+                    ->with(
+                        'info',
+                        'Créez votre compte pour passer le test vocal.'
+                    );
+            }
+
+            return redirect()->to($vocalTestUrl);
+        }
+
+        $appointmentUrl = route(
+            'appointment.create',
+            ['type' => 'test']
+        );
+
+        if (auth()->guest()) {
+            session()->put('url.intended', $appointmentUrl);
+
+            return redirect()
+                ->route('register')
+                ->with(
+                    'info',
+                    'Créez votre compte pour poursuivre votre inscription.'
+                );
         }
 
         return redirect()
-            ->route('appointment.create', ['type' => 'test'])
+            ->to($appointmentUrl)
             ->with(
                 'info',
-                'Aucun test vocal actif n’est configuré pour cette sélection. Prenez votre rendez-vous, puis créez votre compte.'
+                'Aucun test vocal actif n’est configuré pour cette sélection. Vous pouvez prendre rendez-vous.'
             );
     }
 
-
-
-    /**
-     * Liste publique des cours d’un niveau.
-     * Les ressources privées ne sont jamais exposées ici.
-     */
-    public function levelCourses($id)
-    {
-        $level = Level::with(['subject'])->findOrFail($id);
-        $courses = Course::query()->approved()
-            ->where('level_id', $level->id)
-            ->with(['subject', 'level', 'classRoom'])
-            ->orderBy('order')
-            ->orderBy('id')
-            ->get();
-
-        $level->setRelation('courses', $courses);
-
-        return view('front.level-courses', compact('level'));
-    }
-
-    /**
-     * Détail d’un cours public ou autorisé.
-     */
-    public function showCourse($id)
-    {
-        $course = Course::approved()->with([
-            'subject',
-            'level',
-            'classRoom',
-            'learningTests.questions.answers',
-        ])->findOrFail($id);
-
-        $user = auth()->user();
-        $canAccess = $this->paths->userCanAccessCourse($user, $course);
-
-        if (!$canAccess) {
-            if (!$user) {
-                session()->put('url.intended', request()->fullUrl());
-                return redirect()->route('login')
-                    ->with('info', 'Connectez-vous pour accéder à ce cours premium.');
-            }
-
-            if ($user->isStudent() && !$user->is_active) {
-                return redirect()->route('student.waiting');
-            }
-
-            if ($user->isStudent() && !$user->is_paid) {
-                return redirect()->route('plans')
-                    ->with('error', 'Un abonnement actif est nécessaire pour accéder à ce cours.');
-            }
-
-            abort(403, 'Ce cours ne fait pas partie de votre parcours.');
-        }
-
-        $sameFamilySubjects = $course->subject
-            ? Subject::query()
-                ->where('type', $course->subject->type)
-                ->where('id', '!=', $course->subject->id)
-                ->whereIn('name', ['Arabe', 'Coran', 'Soutien Lycée'])
-                ->withCount('courses')
-                ->get()
-            : collect();
-
-        $resourceUrls = [];
-        foreach (['video', 'pdf', 'link'] as $type) {
-            $exists = $type === 'video'
-                ? ($course->video || $course->video_url)
-                : ($type === 'pdf' ? $course->pdf : $course->course_link);
-
-            if ($exists) {
-                $resourceUrls[$type] = URL::temporarySignedRoute(
-                    'course.resource',
-                    now()->addMinutes(10),
-                    ['course' => $course->id, 'type' => $type]
-                );
-            }
-        }
-
-        return view('front.course-show', compact(
-            'course',
-            'sameFamilySubjects',
-            'resourceUrls'
-        ));
-    }
-
-    private function levelNamesForSubject(
-        Subject $subject
-    ): array {
-        if ($this->isHighSchoolSupport($subject)) {
-            return ['BAC'];
-        }
-
-        return VocalTestPrompt::pathNamesForSubject(
-            $subject
-        );
-    }
-
-    private function itemNamesForSubject(
-        Subject $subject
-    ): array {
-        if ($this->isHighSchoolSupport($subject)) {
-            return [
-                'Mathématiques',
-                'Physique-Chimie',
-            ];
-        }
-
-        return VocalTestPrompt::allowedClassNames();
-    }
-
-    private function isHighSchoolSupport(
-        Subject $subject
-    ): bool {
-        return VocalTestPrompt::normalizePathName(
-            $subject->name
-        ) === 'soutien lycee';
-    }
 
     /**
      * Affiche les classes d'un niveau (navigation publique)
      */
     public function publicClasses(Level $level)
     {
+        $level->load('subject');
+
+        abort_unless(
+            (bool) ($level->is_active ?? true)
+                && $level->subject
+                && ($level->subject->status ?? 'active') === 'active',
+            404
+        );
+
         $classes = \App\Models\ClassRoom::where('level_id', $level->id)
+            ->where('is_active', true)
             ->withCount('subjects')
             ->get();
 
@@ -605,7 +464,19 @@ class FrontController extends Controller
     public function publicSubjects(Level $level, \App\Models\ClassRoom $class_room)
     {
         $class = $class_room;
+        $level->load('subject');
+
+        abort_unless(
+            (bool) ($level->is_active ?? true)
+                && (bool) ($class->is_active ?? true)
+                && (int) $class->level_id === (int) $level->id
+                && $level->subject
+                && ($level->subject->status ?? 'active') === 'active',
+            404
+        );
+
         $subjects = Subject::whereIn('name', ['Arabe', 'Coran'])
+            ->where('status', 'active')
             ->whereHas('classes', fn($q) => $q->where('class_room_id', $class->id))
             ->withCount('courses')
             ->get();
@@ -619,7 +490,16 @@ class FrontController extends Controller
     public function publicCourses(Level $level, \App\Models\ClassRoom $class_room, Subject $subject)
     {
         $class = $class_room;
-        $courses = Course::approved()->where('subject_id', $subject->id)
+
+        abort_unless(
+            ($subject->status ?? 'active') === 'active'
+                && (bool) ($level->is_active ?? true)
+                && (bool) ($class->is_active ?? true)
+                && (int) $class->level_id === (int) $level->id,
+            404
+        );
+
+        $courses = Course::where('subject_id', $subject->id)
             ->where('class_id', $class->id)
             ->where('level_id', $level->id)
             ->withCount('learningTests')
@@ -632,6 +512,7 @@ class FrontController extends Controller
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
             ->where('type', 'religieux')
+            ->where('status', 'active')
             ->where('name', 'Coran')
             ->get();
 
@@ -664,7 +545,8 @@ class FrontController extends Controller
     {
         $subjects = \App\Models\Subject::withCount(['courses', 'classes'])
             ->where('type', 'scolaire')
-            ->whereIn('name', ['Arabe', 'Soutien Lycée'])
+            ->where('status', 'active')
+            ->where('name', 'Arabe')
             ->get();
 
         $subjects->each(function ($subject) {

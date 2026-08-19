@@ -190,6 +190,79 @@
 }
 
 
+
+.level-card-visibility-actions {
+    position: absolute;
+    top: 52px;
+    right: 10px;
+    z-index: 8;
+    display: flex;
+    gap: 5px;
+}
+
+.level-card-visibility-actions form {
+    margin: 0;
+}
+
+.level-visibility-btn {
+    min-height: 27px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 7px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px;
+    color: rgba(255,255,255,.72);
+    background: rgba(8,15,29,.52);
+    backdrop-filter: blur(8px);
+    font-size: .5rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.level-visibility-btn.is-activate.is-current {
+    color: #86efac;
+    border-color: rgba(34,197,94,.35);
+    background: rgba(22,101,52,.56);
+}
+
+.level-visibility-btn.is-hide.is-current {
+    color: #fde68a;
+    border-color: rgba(245,158,11,.35);
+    background: rgba(120,53,15,.56);
+}
+
+.level-visibility-btn:not(.is-current) {
+    opacity: .66;
+}
+
+.level-visibility-badge {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: .52rem;
+    font-weight: 850;
+    backdrop-filter: blur(8px);
+}
+
+.level-visibility-badge.is-active {
+    color: #bbf7d0;
+    border: 1px solid rgba(34,197,94,.28);
+    background: rgba(22,101,52,.62);
+}
+
+.level-visibility-badge.is-hidden {
+    color: #fde68a;
+    border: 1px solid rgba(245,158,11,.30);
+    background: rgba(120,53,15,.64);
+}
+
 .level-card-wrapper {
     position: relative;
 }
@@ -814,6 +887,48 @@
                     </form>
                 </div>
 
+                @php
+                    $levelIsActive = (bool) ($level->is_active ?? true);
+                @endphp
+
+                <div class="level-card-visibility-actions">
+                    <form
+                        method="POST"
+                        action="{{ route('admin.subjects.levels.update', [$subject, $level]) }}"
+                    >
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="_visibility_only" value="1">
+                        <input type="hidden" name="is_active" value="1">
+                        <button
+                            type="submit"
+                            class="level-visibility-btn is-activate {{ $levelIsActive ? 'is-current' : '' }}"
+                            title="Activer {{ $level->name }}"
+                        >
+                            <i class="bi bi-eye-fill"></i>
+                            Activer
+                        </button>
+                    </form>
+
+                    <form
+                        method="POST"
+                        action="{{ route('admin.subjects.levels.update', [$subject, $level]) }}"
+                    >
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="_visibility_only" value="1">
+                        <input type="hidden" name="is_active" value="0">
+                        <button
+                            type="submit"
+                            class="level-visibility-btn is-hide {{ !$levelIsActive ? 'is-current' : '' }}"
+                            title="Masquer {{ $level->name }}"
+                        >
+                            <i class="bi bi-eye-slash-fill"></i>
+                            Masquer
+                        </button>
+                    </form>
+                </div>
+
                 <a
                     href="{{
                         route(
@@ -844,6 +959,11 @@
                                     {{ $subjectDesign['gradient'] }};
                             "
                         >
+                            <span class="level-visibility-badge {{ $levelIsActive ? 'is-active' : 'is-hidden' }}">
+                                <i class="bi {{ $levelIsActive ? 'bi-check-circle-fill' : 'bi-eye-slash-fill' }}"></i>
+                                {{ $levelIsActive ? 'Active' : 'Masquée' }}
+                            </span>
+
                             <i
                                 class="bi {{
                                     $isHighSchoolSupport

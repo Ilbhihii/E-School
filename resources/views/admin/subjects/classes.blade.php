@@ -371,6 +371,10 @@
                     ->map->count();
             @endphp
 
+            @php
+                $classIsActive = (bool) ($class->is_active ?? true);
+            @endphp
+
             <article
                 class="subject-class-card st-fade-up"
                 style="
@@ -411,6 +415,49 @@
                             </button>
                         </form>
                     </div>
+
+                    <div class="subject-class-visibility-actions">
+                        <form
+                            method="POST"
+                            action="{{ route('admin.subjects.classes.update', [$subject, $level, $class]) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="_visibility_only" value="1">
+                            <input type="hidden" name="is_active" value="1">
+                            <button
+                                type="submit"
+                                class="subject-class-visibility-btn is-activate {{ $classIsActive ? 'is-current' : '' }}"
+                                title="Activer {{ $class->name }}"
+                            >
+                                <i class="bi bi-eye-fill"></i>
+                                Activer
+                            </button>
+                        </form>
+
+                        <form
+                            method="POST"
+                            action="{{ route('admin.subjects.classes.update', [$subject, $level, $class]) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="_visibility_only" value="1">
+                            <input type="hidden" name="is_active" value="0">
+                            <button
+                                type="submit"
+                                class="subject-class-visibility-btn is-hide {{ !$classIsActive ? 'is-current' : '' }}"
+                                title="Masquer {{ $class->name }}"
+                            >
+                                <i class="bi bi-eye-slash-fill"></i>
+                                Masquer
+                            </button>
+                        </form>
+                    </div>
+
+                    <span class="subject-class-visibility-badge {{ $classIsActive ? 'is-active' : 'is-hidden' }}">
+                        <i class="bi {{ $classIsActive ? 'bi-check-circle-fill' : 'bi-eye-slash-fill' }}"></i>
+                        {{ $classIsActive ? 'Active' : 'Masquée' }}
+                    </span>
 
                     <div class="subject-class-cover-orb orb-one"></div>
                     <div class="subject-class-cover-orb orb-two"></div>
@@ -693,6 +740,79 @@
 /* =========================================================
    CARTE
    ========================================================= */
+
+
+.subject-class-visibility-actions {
+    position: absolute;
+    top: 47px;
+    left: 12px;
+    z-index: 7;
+    display: flex;
+    gap: 5px;
+}
+
+.subject-class-visibility-actions form {
+    margin: 0;
+}
+
+.subject-class-visibility-btn {
+    min-height: 27px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 7px;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px;
+    color: rgba(255,255,255,.76);
+    background: rgba(8,15,29,.48);
+    backdrop-filter: blur(8px);
+    font-size: .5rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.subject-class-visibility-btn.is-activate.is-current {
+    color: #dcfce7;
+    border-color: rgba(34,197,94,.32);
+    background: rgba(22,101,52,.58);
+}
+
+.subject-class-visibility-btn.is-hide.is-current {
+    color: #fef3c7;
+    border-color: rgba(245,158,11,.34);
+    background: rgba(120,53,15,.58);
+}
+
+.subject-class-visibility-btn:not(.is-current) {
+    opacity: .66;
+}
+
+.subject-class-visibility-badge {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: .51rem;
+    font-weight: 850;
+    backdrop-filter: blur(8px);
+}
+
+.subject-class-visibility-badge.is-active {
+    color: #dcfce7;
+    border: 1px solid rgba(34,197,94,.30);
+    background: rgba(22,101,52,.62);
+}
+
+.subject-class-visibility-badge.is-hidden {
+    color: #fef3c7;
+    border: 1px solid rgba(245,158,11,.30);
+    background: rgba(120,53,15,.62);
+}
 
 .subject-class-card {
     min-width: 0;

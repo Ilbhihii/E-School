@@ -85,12 +85,27 @@ class HomeController extends Controller
 
     public function niveaux()
     {
-        $levels = \App\Models\Level::withCount([
-                'classes as class_count',
+        $levels = \App\Models\Level::query()
+            ->where('is_active', true)
+            ->whereHas(
+                'subject',
+                fn ($query) => $query->where(
+                    'status',
+                    'active'
+                )
+            )
+            ->withCount([
+                'classes as class_count' =>
+                    fn ($query) => $query->where(
+                        'is_active',
+                        true
+                    ),
             ])
             ->with([
                 'classes' => function ($query) {
-                    $query->withCount('subjects');
+                    $query
+                        ->where('is_active', true)
+                        ->withCount('subjects');
                 },
             ])
             ->orderBy('order')
@@ -123,7 +138,17 @@ class HomeController extends Controller
          */
         $subjects = Subject::query()
             ->with([
-                'levels.classes.subjects',
+                'levels' => function ($levelQuery) {
+                    $levelQuery
+                        ->where('is_active', true)
+                        ->with([
+                            'classes' => function ($classQuery) {
+                                $classQuery
+                                    ->where('is_active', true)
+                                    ->with('subjects');
+                            },
+                        ]);
+                },
             ])
             ->whereIn('status', ['active', 'coming_soon'])
             /*
@@ -355,10 +380,26 @@ class HomeController extends Controller
 
     public function classCourses($id)
     {
-        $class = ClassRoom::with([
-            'courses',
-            'subjects',
-        ])->findOrFail($id);
+        $class = ClassRoom::query()
+            ->where('is_active', true)
+            ->whereHas(
+                'level',
+                fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereHas(
+                        'subject',
+                        fn ($subjectQuery) =>
+                            $subjectQuery->where(
+                                'status',
+                                'active'
+                            )
+                    )
+            )
+            ->with([
+                'courses',
+                'subjects',
+            ])
+            ->findOrFail($id);
 
         $courses = $class->courses;
 
@@ -380,10 +421,26 @@ class HomeController extends Controller
 
     public function allClassesCourses()
     {
-        $classes = ClassRoom::with([
-            'courses',
-            'subjects',
-        ])->get();
+        $classes = ClassRoom::query()
+            ->where('is_active', true)
+            ->whereHas(
+                'level',
+                fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereHas(
+                        'subject',
+                        fn ($subjectQuery) =>
+                            $subjectQuery->where(
+                                'status',
+                                'active'
+                            )
+                    )
+            )
+            ->with([
+                'courses',
+                'subjects',
+            ])
+            ->get();
 
         return view(
             'front.all-classes-courses',

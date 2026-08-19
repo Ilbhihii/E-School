@@ -467,6 +467,59 @@
     background: rgba(244, 63, 94, .12);
 }
 
+
+.subject-card-visibility-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+    margin-top: 9px;
+}
+
+.subject-card-visibility-actions form {
+    margin: 0;
+}
+
+.subject-visibility-btn {
+    width: 100%;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 9px;
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 9px;
+    color: #94a3b8;
+    background: rgba(148, 163, 184, .055);
+    font-size: .62rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.subject-visibility-btn:hover {
+    transform: translateY(-1px);
+}
+
+.subject-visibility-btn.is-activate,
+.subject-visibility-btn.is-activate.is-current {
+    color: #86efac;
+    border-color: rgba(34, 197, 94, .24);
+    background: rgba(34, 197, 94, .09);
+}
+
+.subject-visibility-btn.is-hide,
+.subject-visibility-btn.is-hide.is-current {
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, .24);
+    background: rgba(245, 158, 11, .08);
+}
+
+.subject-visibility-btn:not(.is-current) {
+    opacity: .62;
+}
+
 .subject-card-structure-link {
     text-decoration: none;
 }
@@ -1347,7 +1400,7 @@ body.subject-builder-open {
                                 'coming_soon' =>
                                     'Bientôt disponible',
                                 'inactive' =>
-                                    'Inactive',
+                                    'Masquée',
                                 default =>
                                     'Active',
                             };
@@ -1406,6 +1459,44 @@ body.subject-builder-open {
                         Voir la structure
                         <i class="bi bi-arrow-right"></i>
                     </a>
+
+                    <div class="subject-card-visibility-actions">
+                        <form
+                            method="POST"
+                            action="{{ route('admin.subjects.update', $subject) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="_visibility_only" value="1">
+                            <input type="hidden" name="is_active" value="1">
+                            <button
+                                type="submit"
+                                class="subject-visibility-btn is-activate {{ $subjectStatus === 'active' ? 'is-current' : '' }}"
+                                title="Activer {{ $subject->name }}"
+                            >
+                                <i class="bi bi-eye-fill"></i>
+                                Activer
+                            </button>
+                        </form>
+
+                        <form
+                            method="POST"
+                            action="{{ route('admin.subjects.update', $subject) }}"
+                        >
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="_visibility_only" value="1">
+                            <input type="hidden" name="is_active" value="0">
+                            <button
+                                type="submit"
+                                class="subject-visibility-btn is-hide {{ $subjectStatus === 'inactive' ? 'is-current' : '' }}"
+                                title="Masquer {{ $subject->name }}"
+                            >
+                                <i class="bi bi-eye-slash-fill"></i>
+                                Masquer
+                            </button>
+                        </form>
+                    </div>
 
                     <div class="subject-card-admin-actions">
                         <a
@@ -1581,21 +1672,30 @@ body.subject-builder-open {
                             >
                                 <option
                                     value="active"
-                                    {{ old('status', 'active') === 'active' ? 'selected' : '' }}
+                                    @selected(
+                                        old('status', 'active')
+                                        === 'active'
+                                    )
                                 >
                                     Active
                                 </option>
 
                                 <option
                                     value="coming_soon"
-                                    {{ old('status') === 'coming_soon' ? 'selected' : '' }}
+                                    @selected(
+                                        old('status')
+                                        === 'coming_soon'
+                                    )
                                 >
                                     Bientôt disponible
                                 </option>
 
                                 <option
                                     value="inactive"
-                                    {{ old('status') === 'inactive' ? 'selected' : '' }}
+                                    @selected(
+                                        old('status')
+                                        === 'inactive'
+                                    )
                                 >
                                     Inactive
                                 </option>
