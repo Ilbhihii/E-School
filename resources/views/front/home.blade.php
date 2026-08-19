@@ -1570,6 +1570,238 @@
     }
 </style>
 
+<section class="home-promo-videos py-5" id="videos-presentation">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge px-3 py-2 mb-3 home-video-badge">
+                <i class="bi bi-play-circle-fill me-1"></i>
+                Découvrez Smart School
+            </span>
+            <h2 class="section-title-3d">Smart School Academy en vidéos</h2>
+            <p class="text-white-50 mt-3 mx-auto home-video-intro">
+                Découvrez nos cours, notre accompagnement et les étapes pour rejoindre la plateforme.
+            </p>
+        </div>
+
+        @php
+            $promoVideos = [
+                [
+                    'src' => 'videos/promotions/inscription-3-etapes.mp4',
+                    'title' => 'Inscrivez-vous en 3 étapes',
+                    'subtitle' => 'Choisissez un cours, un créneau puis réalisez votre entretien.',
+                    'icon' => 'bi-person-check-fill',
+                ],
+                [
+                    'src' => 'videos/promotions/coran-soeurs.mp4',
+                    'title' => 'Cours de Coran pour les sœurs',
+                    'subtitle' => 'Progressez dans votre lecture du Coran à votre rythme.',
+                    'icon' => 'bi-book-half',
+                ],
+                [
+                    'src' => 'videos/promotions/coran-apprentissage.mp4',
+                    'title' => 'Lire, réciter et mémoriser le Coran',
+                    'subtitle' => 'Un accompagnement progressif adapté à votre niveau.',
+                    'icon' => 'bi-stars',
+                ],
+                [
+                    'src' => 'videos/promotions/arabe-live.mp4',
+                    'title' => 'Cours d’arabe en live',
+                    'subtitle' => 'Transformez votre écran en véritable outil d’apprentissage.',
+                    'icon' => 'bi-camera-video-fill',
+                ],
+            ];
+        @endphp
+
+        <div class="row g-4 justify-content-center">
+            @foreach($promoVideos as $video)
+                <div class="col-lg-6">
+                    <article class="home-video-card reveal-3d h-100">
+                        <div class="home-video-player-wrap">
+                            <video
+                                class="home-promo-video"
+                                autoplay
+                                muted
+                                loop
+                                controls
+                                playsinline
+                                preload="auto"
+                                aria-label="{{ $video['title'] }}"
+                            >
+                                <source src="{{ '/' . ltrim($video['src'], '/') }}" type="video/mp4">
+                                Votre navigateur ne prend pas en charge la lecture vidéo.
+                            </video>
+                        </div>
+                        <div class="home-video-copy">
+                            <div class="home-video-icon" aria-hidden="true">
+                                <i class="bi {{ $video['icon'] }}"></i>
+                            </div>
+                            <div>
+                                <h3>{{ $video['title'] }}</h3>
+                                <p>{{ $video['subtitle'] }}</p>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{{ route('front.classes') }}" class="btn-3d btn-3d-outline home-video-cta">
+                <i class="bi bi-grid-fill"></i>
+                Découvrir toutes nos matières
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <style>
+        .home-promo-videos {
+            position: relative;
+            background:
+                radial-gradient(circle at 20% 10%, rgba(79, 70, 229, 0.11), transparent 32%),
+                radial-gradient(circle at 82% 82%, rgba(168, 85, 247, 0.08), transparent 34%);
+            border-top: 1px solid rgba(148, 163, 184, 0.08);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+        }
+
+        .home-video-badge {
+            background: rgba(59, 130, 246, 0.11);
+            color: #93C5FD;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.78rem;
+            letter-spacing: 0.04em;
+        }
+
+        .home-video-intro {
+            max-width: 650px;
+            line-height: 1.8;
+        }
+
+        .home-video-card {
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 24px;
+            background: linear-gradient(145deg, rgba(18, 29, 51, 0.96), rgba(10, 18, 34, 0.98));
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+        }
+
+        .home-video-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 30px 72px rgba(0, 0, 0, 0.34);
+        }
+
+        .home-video-player-wrap {
+            position: relative;
+            background: #030712;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+        }
+
+        .home-promo-video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            background: #030712;
+        }
+
+        .home-video-copy {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.25rem 1.35rem 1.35rem;
+        }
+
+        .home-video-icon {
+            width: 44px;
+            height: 44px;
+            flex: 0 0 44px;
+            display: grid;
+            place-items: center;
+            border-radius: 13px;
+            color: #fff;
+            background: linear-gradient(135deg, #2563EB, #7C3AED);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+        }
+
+        .home-video-copy h3 {
+            margin: 0 0 .35rem;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .home-video-copy p {
+            margin: 0;
+            color: rgba(255,255,255,.54);
+            font-size: .86rem;
+            line-height: 1.65;
+        }
+
+        .home-video-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: .65rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .home-video-card {
+                border-radius: 18px;
+            }
+
+            .home-video-copy {
+                padding: 1rem;
+            }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const videos = Array.from(document.querySelectorAll('.home-promo-video'));
+
+            // L'autoplay avec son est bloqué par les navigateurs modernes.
+            // Les vidéos démarrent donc automatiquement en muet ; l'utilisateur
+            // peut activer le son directement depuis les contrôles du lecteur.
+            const observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    const video = entry.target;
+
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.35) {
+                        video.play().catch(function () {
+                            // Si le navigateur refuse l'autoplay, les contrôles restent disponibles.
+                        });
+                    } else {
+                        video.pause();
+                    }
+                });
+            }, {
+                threshold: [0, 0.35, 0.75]
+            });
+
+            videos.forEach(function (video) {
+                // Force le chargement des métadonnées immédiatement. Les MP4 sont
+                // optimisés avec le bloc MOOV au début (faststart), donc Chrome peut
+                // afficher la durée et la première image sans télécharger tout le fichier.
+                video.load();
+
+                video.addEventListener('loadedmetadata', function () {
+                    if (video.getBoundingClientRect().top < window.innerHeight &&
+                        video.getBoundingClientRect().bottom > 0) {
+                        video.play().catch(function () {});
+                    }
+                }, { once: true });
+
+                observer.observe(video);
+            });
+        });
+    </script>
+</section>
+
 <!-- ══════════════════════════════════════════════════════
      HOW IT WORKS
      ══════════════════════════════════════════════════════ -->
