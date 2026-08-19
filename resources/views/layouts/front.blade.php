@@ -1123,6 +1123,7 @@
                     <a href="#" class="social-icon-3d"><i class="bi bi-facebook"></i></a>
                     <a href="https://www.instagram.com/smart.schoolacademy?igsh=MXYwN29uaW52cXI2MQ==" class="social-icon-3d"><i class="bi bi-instagram"></i></a>
                     <a href="https://www.tiktok.com/@smart.school.acad?_r=1&_t=ZS-9913R3aThwW" class="social-icon-3d"><i class="bi bi-tiktok"></i></a>
+                    <a href="https://wa.me/33760961274?text={{ rawurlencode('Bonjour Smart School Academy, je souhaite obtenir plus d’informations.') }}" class="social-icon-3d"><i class="bi bi-whatsapp"></i></a>
                 </div>
             </div>
 
