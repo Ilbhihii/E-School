@@ -68,7 +68,7 @@
             <div class="admin-sidebar-head">
                 <a href="{{ route('home') }}" class="admin-brand" title="Retour à l'accueil principal">
                     <span class="admin-brand-logo">
-                        <img src="{{ asset('images/logoSSA.jpeg') }}" alt="Smart School Academy" class="logo-theme-dark">
+                        <img src="{{ asset('images/logoSmartSchool.jpg') }}" alt="Smart School Academy" class="logo-theme-dark">
                         <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="Smart School Academy" class="logo-theme-light">
                     </span>
                     <span class="admin-brand-copy">

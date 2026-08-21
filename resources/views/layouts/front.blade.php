@@ -17,9 +17,9 @@
     <meta name="apple-mobile-web-app-title" content="SS Academy">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Smart School Academy">
-    <link rel="apple-touch-icon" href="{{ asset('images/logoSSA.jpeg') }}">
-    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSSA.jpeg') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSSA.jpeg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logoSmartSchool.jpg') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSmartSchool.jpg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSmartSchool.jpg') }}">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -967,7 +967,7 @@
 
 <!-- ═══ PRELOADER ═══ -->
 <div class="preloader-3d" id="preloader">
-    <img src="{{ asset('images/logoSSA.jpeg') }}" alt="" class="preloader-3d-logo logo-theme-dark">
+    <img src="{{ asset('images/logoSmartSchool.jpg') }}" alt="" class="preloader-3d-logo logo-theme-dark">
     <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" alt="" class="preloader-3d-logo logo-theme-light">
     <div class="preloader-3d-bar">
         <div class="preloader-3d-bar-inner"></div>
@@ -1001,7 +1001,7 @@
 <nav id="navbar3d" class="navbar navbar-expand-lg navbar-3d fixed-top">
     <div class="container">
         <a class="navbar-brand" href="{{ route('home') }}">
-            <img src="{{ asset('images/logoSSA.jpeg') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-dark me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+            <img src="{{ asset('images/logoSmartSchool.jpg') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-dark me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="60" height="60" alt="Smart School Academy" class="logo-theme-light me-2" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             <span class="front-brand-name">
                 <span>Smart School</span>
@@ -1107,7 +1107,7 @@
 
             <div class="col-lg-4 col-md-6">
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <img src="{{ asset('images/logoSSA.jpeg') }}" width="64" height="64" alt="" class="logo-theme-dark" style="border-radius: 12px;">
+                    <img src="{{ asset('images/logoSmartSchool.jpg') }}" width="64" height="64" alt="" class="logo-theme-dark" style="border-radius: 12px;">
                     <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="64" height="64" alt="" class="logo-theme-light" style="border-radius: 12px;">
                     <div>
                         <h5 class="front-footer-brand mb-0">

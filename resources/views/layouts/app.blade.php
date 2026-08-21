@@ -20,9 +20,9 @@
     <meta name="apple-mobile-web-app-title" content="SS Academy">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Smart School Academy">
-    <link rel="apple-touch-icon" href="{{ asset('images/logoSSA.jpeg') }}">
-    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSSA.jpeg') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSSA.jpeg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logoSmartSchool.jpg') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSmartSchool.jpg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSmartSchool.jpg') }}">
 
     @stack('head')
 
@@ -173,7 +173,7 @@
 <!-- ═══ NAVBAR ═══ -->
 <nav class="navbar-3d app-navbar d-flex align-items-center justify-content-between px-4 py-3 flex-wrap gap-3" aria-label="Navigation principale">
     <a href="{{ route('home') }}" class="navbar-brand mb-0">
-        <img src="{{ asset('images/logoSSA.jpeg') }}" width="48" height="48" alt="" class="logo-theme-dark me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <img src="{{ asset('images/logoSmartSchool.jpg') }}" width="48" height="48" alt="" class="logo-theme-dark me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
         <img src="{{ asset('images/logoSSA-removebg-preview.png') }}" width="48" height="48" alt="" class="logo-theme-light me-2" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
         <span class="app-brand-text">SChool bridge</span>
     </a>

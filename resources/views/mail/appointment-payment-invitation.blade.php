@@ -15,7 +15,7 @@
                 </tr>
                 <tr>
                     <td align="center" style="padding:32px 38px 25px;background:#091426;">
-                        <img src="{{ asset('images/logoSSA.jpeg') }}" width="76" height="76" alt="Smart School Academy" style="display:block;margin:0 auto 15px;border-radius:18px;object-fit:contain;background:#ffffff;">
+                        <img src="{{ asset('images/logoSmartSchool.jpg') }}" width="76" height="76" alt="Smart School Academy" style="display:block;margin:0 auto 15px;border-radius:18px;object-fit:contain;background:#ffffff;">
                         <div style="color:#ffffff;font-size:21px;font-weight:800;">Smart School Academy</div>
                         <div style="margin-top:6px;color:#8fa1ba;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;">Finalisation de l’inscription</div>
                     </td>

@@ -68,7 +68,7 @@
                     >
                         <img
                             src="{{ asset(
-                                'images/logoSSA.jpeg'
+                                'images/logoSmartSchool.jpg'
                             ) }}"
                             width="76"
                             height="76"
