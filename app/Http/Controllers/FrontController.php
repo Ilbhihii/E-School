@@ -30,6 +30,7 @@ class FrontController extends Controller
                 'classes' => fn ($query) =>
                     $query
                         ->where('is_active', true)
+                        ->where('is_visible', true)
                         ->whereHas(
                             'level',
                             fn ($levelQuery) =>
@@ -53,18 +54,29 @@ class FrontController extends Controller
         $isHighSchoolSupport =
             $this->isHighSchoolSupport($subject);
 
-        /*
-         * Arabe / Coran conservent leur structure validée.
-         * Soutien Lycée devient dynamique : niveau BAC + toutes les
-         * classes/matières actives créées depuis l'administration.
-         */
-        $allowedLevelNames = $isHighSchoolSupport
-            ? ['BAC']
-            : VocalTestPrompt::pathNamesForSubject($subject);
+        $usesLegacyVocalStructure =
+            $this->usesLegacyVocalStructure($subject);
 
-        $allowedClassNames = $isHighSchoolSupport
-            ? []
-            : VocalTestPrompt::allowedClassNames();
+        /*
+         * Arabe / Coran conservent leur structure historique validée.
+         *
+         * Toutes les autres matières (TOEIC, Français, etc.) deviennent
+         * entièrement dynamiques : les niveaux et classes créés depuis
+         * l'administration sont affichés automatiquement s'ils sont actifs
+         * et visibles.
+         */
+        if ($isHighSchoolSupport) {
+            $allowedLevelNames = ['BAC'];
+        } elseif ($usesLegacyVocalStructure) {
+            $allowedLevelNames =
+                VocalTestPrompt::pathNamesForSubject($subject);
+        } else {
+            $allowedLevelNames = [];
+        }
+
+        $allowedClassNames = $usesLegacyVocalStructure
+            ? VocalTestPrompt::allowedClassNames()
+            : [];
 
         $classOrder = array_flip(
             array_map(
@@ -95,12 +107,13 @@ class FrontController extends Controller
                 'classes' => function ($query) use (
                     $subject,
                     $allowedClassNames,
-                    $isHighSchoolSupport
+                    $usesLegacyVocalStructure
                 ) {
                     $query
                         ->where('is_active', true)
+                        ->where('is_visible', true)
                         ->when(
-                            !$isHighSchoolSupport,
+                            $usesLegacyVocalStructure,
                             fn ($classQuery) =>
                                 $classQuery->whereIn(
                                     'name',
@@ -146,11 +159,11 @@ class FrontController extends Controller
             function (Level $level) use (
                 $classOrder,
                 $subject,
-                $isHighSchoolSupport
+                $usesLegacyVocalStructure
             ) {
                 $validClasses = $level->classes;
 
-                if (!$isHighSchoolSupport) {
+                if ($usesLegacyVocalStructure) {
                     $validClasses = $validClasses
                         ->sortBy(
                             fn (ClassRoom $classRoom) =>
@@ -182,8 +195,7 @@ class FrontController extends Controller
                 $validClasses->each(
                     function (ClassRoom $classRoom) use (
                         $subject,
-                        $level,
-                        $isHighSchoolSupport
+                        $level
                     ) {
                         $admissionMode = strtolower(
                             trim(
@@ -294,19 +306,28 @@ class FrontController extends Controller
         $isHighSchoolSupport =
             $this->isHighSchoolSupport($subject);
 
-        abort_unless(
-            $isHighSchoolSupport
-                || VocalTestPrompt::isSupportedLevel(
+        $usesLegacyVocalStructure =
+            $this->usesLegacyVocalStructure($subject);
+
+        /*
+         * La validation stricte VocalTestPrompt ne concerne plus que
+         * Arabe / Coran. TOEIC et les autres matières utilisent les
+         * niveaux réellement créés dans l'administration.
+         */
+        if ($usesLegacyVocalStructure) {
+            abort_unless(
+                VocalTestPrompt::isSupportedLevel(
                     $subject,
                     $level
                 ),
-            404,
-            'Ce parcours ne fait pas partie de la structure actuelle.'
-        );
+                404,
+                'Ce parcours ne fait pas partie de la structure actuelle.'
+            );
+        }
 
-        $allowedClassNames = $isHighSchoolSupport
-            ? []
-            : VocalTestPrompt::allowedClassNames();
+        $allowedClassNames = $usesLegacyVocalStructure
+            ? VocalTestPrompt::allowedClassNames()
+            : [];
 
         $classOrder = array_flip(array_map(
             [VocalTestPrompt::class, 'normalizePathName'],
@@ -316,8 +337,9 @@ class FrontController extends Controller
         $classes = ClassRoom::query()
             ->where('level_id', $level->id)
             ->where('is_active', true)
+            ->where('is_visible', true)
             ->when(
-                !$isHighSchoolSupport,
+                $usesLegacyVocalStructure,
                 fn ($query) =>
                     $query->whereIn('name', $allowedClassNames)
             )
@@ -330,9 +352,9 @@ class FrontController extends Controller
             ->get()
             ->sortBy(function (ClassRoom $class) use (
                 $classOrder,
-                $isHighSchoolSupport
+                $usesLegacyVocalStructure
             ) {
-                if ($isHighSchoolSupport) {
+                if (!$usesLegacyVocalStructure) {
                     return VocalTestPrompt::normalizePathName(
                         $class->name
                     );
@@ -347,8 +369,7 @@ class FrontController extends Controller
         $classes->each(
             function (ClassRoom $class) use (
                 $subject,
-                $level,
-                $isHighSchoolSupport
+                $level
             ) {
                 $admissionMode = strtolower(
                     trim(
@@ -419,7 +440,13 @@ class FrontController extends Controller
             $course->subject
                 && ($course->subject->status ?? 'active') === 'active'
                 && (!$course->level || (bool) ($course->level->is_active ?? true))
-                && (!$course->classRoom || (bool) ($course->classRoom->is_active ?? true)),
+                && (
+                    !$course->classRoom
+                    || (
+                        (bool) ($course->classRoom->is_active ?? true)
+                        && (bool) ($course->classRoom->is_visible ?? true)
+                    )
+                ),
             404
         );
 
@@ -451,6 +478,7 @@ class FrontController extends Controller
         $class = ClassRoom::whereKey($class_id)
             ->where('level_id', $level->id)
             ->where('is_active', true)
+            ->where('is_visible', true)
             ->whereHas(
                 'subjects',
                 fn($query) => $query->where('subjects.id', $subject->id)
@@ -599,6 +627,7 @@ class FrontController extends Controller
 
         $classes = \App\Models\ClassRoom::where('level_id', $level->id)
             ->where('is_active', true)
+            ->where('is_visible', true)
             ->withCount('subjects')
             ->get();
 
@@ -616,6 +645,7 @@ class FrontController extends Controller
         abort_unless(
             (bool) ($level->is_active ?? true)
                 && (bool) ($class->is_active ?? true)
+                && (bool) ($class->is_visible ?? true)
                 && (int) $class->level_id === (int) $level->id
                 && $level->subject
                 && ($level->subject->status ?? 'active') === 'active',
@@ -642,6 +672,7 @@ class FrontController extends Controller
             ($subject->status ?? 'active') === 'active'
                 && (bool) ($level->is_active ?? true)
                 && (bool) ($class->is_active ?? true)
+                && (bool) ($class->is_visible ?? true)
                 && (int) $class->level_id === (int) $level->id,
             404
         );
@@ -653,6 +684,31 @@ class FrontController extends Controller
             ->get();
 
         return view('front.public-courses', compact('level', 'class', 'subject', 'courses'));
+    }
+
+    /**
+     * Seules les anciennes structures Arabe / Coran utilisent encore
+     * la liste figée de VocalTestPrompt (Débutant, Intermédiaire, Avancé).
+     *
+     * TOEIC et toutes les autres matières sont dynamiques.
+     */
+    private function usesLegacyVocalStructure(
+        Subject $subject
+    ): bool {
+        $name = VocalTestPrompt::normalizePathName(
+            $subject->name
+        );
+
+        return in_array(
+            $name,
+            [
+                'arabe',
+                'coran',
+                'quran',
+                'القران',
+            ],
+            true
+        );
     }
 
     private function isHighSchoolSupport(
