@@ -8,6 +8,8 @@ use App\Models\Course;
 use App\Models\Level;
 use App\Models\Subject;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class LevelController extends Controller
@@ -149,6 +151,390 @@ class LevelController extends Controller
         });
 
         return view('admin.subjects.index', compact('subjects'));
+    }
+
+    /**
+     * Création rapide d'une hiérarchie :
+     * Matière → Niveau → Classe.
+     *
+     * Cette méthode reste tolérante aux anciens formulaires :
+     * elle accepte subject_name ou name pour le nom de matière.
+     */
+    public function storeSubjectHierarchy(Request $request)
+    {
+        $subjectName = trim((string) (
+            $request->input('subject_name')
+            ?? $request->input('name')
+            ?? ''
+        ));
+
+        $levelName = trim((string) (
+            $request->input('level_name')
+            ?? ''
+        ));
+
+        $className = trim((string) (
+            $request->input('class_name')
+            ?? ''
+        ));
+
+        if ($subjectName === '') {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'subject_name' =>
+                        'Le nom de la matière est obligatoire.',
+                ]);
+        }
+
+        $request->validate([
+            'subject_name' => ['nullable', 'string', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'subject_type' => ['nullable', 'string', 'max:100'],
+            'type' => ['nullable', 'string', 'max:100'],
+            'status' => [
+                'nullable',
+                Rule::in([
+                    'active',
+                    'coming_soon',
+                    'inactive',
+                ]),
+            ],
+            'level_name' => ['nullable', 'string', 'max:255'],
+            'class_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $subject = Subject::query()
+            ->whereRaw(
+                'LOWER(TRIM(name)) = LOWER(TRIM(?))',
+                [$subjectName]
+            )
+            ->first();
+
+        if (!$subject) {
+            $subject = new Subject();
+            $subject->name = $subjectName;
+
+            $subjectType =
+                $request->input('subject_type')
+                ?? $request->input('type');
+
+            if (
+                $subjectType !== null
+                && Schema::hasColumn('subjects', 'type')
+            ) {
+                $subject->type = $subjectType;
+            }
+
+            if (Schema::hasColumn('subjects', 'status')) {
+                $subject->status =
+                    $request->input('status', 'active');
+            }
+
+            $subject->save();
+        }
+
+        $level = null;
+
+        if ($levelName !== '') {
+            $level = Level::query()
+                ->where('subject_id', $subject->id)
+                ->whereRaw(
+                    'LOWER(TRIM(name)) = LOWER(TRIM(?))',
+                    [$levelName]
+                )
+                ->first();
+
+            if (!$level) {
+                $level = new Level();
+                $level->subject_id = $subject->id;
+                $level->name = $levelName;
+
+                if (Schema::hasColumn('levels', 'description')) {
+                    $level->description =
+                        $request->input(
+                            'level_description',
+                            'Niveau éducatif'
+                        );
+                }
+
+                if (Schema::hasColumn('levels', 'order')) {
+                    $level->order =
+                        ((int) Level::query()
+                            ->where(
+                                'subject_id',
+                                $subject->id
+                            )
+                            ->max('order')) + 1;
+                }
+
+                $level->save();
+            }
+        }
+
+        if ($className !== '') {
+            if (!$level) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'level_name' =>
+                            'Un niveau est obligatoire '
+                            . 'pour créer une classe.',
+                    ]);
+            }
+
+            $class = ClassRoom::query()
+                ->where('level_id', $level->id)
+                ->whereRaw(
+                    'LOWER(TRIM(name)) = LOWER(TRIM(?))',
+                    [$className]
+                )
+                ->first();
+
+            if (!$class) {
+                $class = new ClassRoom();
+                $class->level_id = $level->id;
+                $class->name = $className;
+
+                if (
+                    Schema::hasColumn(
+                        'class_rooms',
+                        'admission_mode'
+                    )
+                ) {
+                    $class->admission_mode =
+                        $request->input(
+                            'admission_mode',
+                            'contact'
+                        );
+                }
+
+                if (
+                    Schema::hasColumn(
+                        'class_rooms',
+                        'is_visible'
+                    )
+                ) {
+                    $class->is_visible =
+                        $request->boolean(
+                            'is_visible',
+                            true
+                        );
+                }
+
+                $class->save();
+            }
+
+            $class->subjects()->syncWithoutDetaching([
+                $subject->id,
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with(
+                'success',
+                'Structure pédagogique enregistrée avec succès.'
+            );
+    }
+
+    /**
+     * Affiche le formulaire de modification d'une matière.
+     */
+    public function editSubject(Subject $subject)
+    {
+        /*
+         * Certaines versions du projet possèdent déjà cette vue.
+         * Si elle n'existe pas, on revient proprement à la liste
+         * au lieu de provoquer une ViewNotFoundException.
+         */
+        if (view()->exists('admin.subjects.edit')) {
+            return view(
+                'admin.subjects.edit',
+                compact('subject')
+            );
+        }
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with(
+                'info',
+                'Utilisez le formulaire de modification '
+                . 'présent sur la page des matières.'
+            );
+    }
+
+    /**
+     * Met à jour une matière.
+     *
+     * Statuts supportés :
+     * - active
+     * - coming_soon
+     * - inactive
+     */
+    public function updateSubject(
+        Request $request,
+        Subject $subject
+    ) {
+        $validated = $request->validate([
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('subjects', 'name')
+                    ->ignore($subject->id),
+            ],
+            'type' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'status' => [
+                'sometimes',
+                'required',
+                Rule::in([
+                    'active',
+                    'coming_soon',
+                    'inactive',
+                ]),
+            ],
+            'description' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+        ]);
+
+        if (array_key_exists('name', $validated)) {
+            $subject->name = trim($validated['name']);
+        }
+
+        if (
+            array_key_exists('type', $validated)
+            && Schema::hasColumn('subjects', 'type')
+        ) {
+            $subject->type = $validated['type'];
+        }
+
+        if (
+            array_key_exists('status', $validated)
+            && Schema::hasColumn('subjects', 'status')
+        ) {
+            $subject->status = $validated['status'];
+        }
+
+        if (
+            array_key_exists('description', $validated)
+            && Schema::hasColumn(
+                'subjects',
+                'description'
+            )
+        ) {
+            $subject->description =
+                $validated['description'];
+        }
+
+        $subject->save();
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with(
+                'success',
+                'Matière modifiée avec succès.'
+            );
+    }
+
+    /**
+     * Supprime une matière seulement lorsqu'elle ne contient
+     * plus de niveaux, de classes liées ou de cours.
+     *
+     * Cela évite de supprimer accidentellement toute une
+     * structure pédagogique.
+     */
+    public function destroySubject(Subject $subject)
+    {
+        $hasLevels =
+            Schema::hasTable('levels')
+            && Level::query()
+                ->where('subject_id', $subject->id)
+                ->exists();
+
+        $hasCourses =
+            Schema::hasTable('courses')
+            && Course::query()
+                ->where('subject_id', $subject->id)
+                ->exists();
+
+        $hasClasses =
+            Schema::hasTable('class_room_subject')
+            && DB::table('class_room_subject')
+                ->where('subject_id', $subject->id)
+                ->exists();
+
+        if ($hasLevels || $hasCourses || $hasClasses) {
+            return redirect()
+                ->route('admin.subjects.index')
+                ->with(
+                    'error',
+                    'Cette matière contient encore des '
+                    . 'niveaux, classes ou cours. '
+                    . 'Supprimez-les d’abord.'
+                );
+        }
+
+        $subject->delete();
+
+        return redirect()
+            ->route('admin.subjects.index')
+            ->with(
+                'success',
+                'Matière supprimée avec succès.'
+            );
+    }
+
+    /**
+     * Affiche l'édition d'un niveau.
+     *
+     * Si aucune vue dédiée n'existe dans cette version,
+     * la page des niveaux reste utilisable pour la modification.
+     */
+    public function editSubjectLevel(
+        Subject $subject,
+        Level $level
+    ) {
+        abort_unless(
+            (int) $level->subject_id
+                === (int) $subject->id,
+            404,
+            'Ce niveau n’appartient pas à cette matière.'
+        );
+
+        if (view()->exists('admin.subjects.level-edit')) {
+            return view(
+                'admin.subjects.level-edit',
+                compact('subject', 'level')
+            );
+        }
+
+        if (view()->exists('admin.levels.edit')) {
+            return view(
+                'admin.levels.edit',
+                compact('subject', 'level')
+            );
+        }
+
+        return redirect()
+            ->route(
+                'admin.subjects.levels',
+                $subject
+            )
+            ->with(
+                'info',
+                'Utilisez le formulaire de modification '
+                . 'du niveau sur cette page.'
+            );
     }
 
     public function subjectLevels(Subject $subject)
@@ -298,6 +684,10 @@ class LevelController extends Controller
                 'required',
                 Rule::in(['contact', 'vocal_test']),
             ],
+            'is_visible' => [
+                'required',
+                'boolean',
+            ],
         ]);
 
         $class = ClassRoom::create([
@@ -306,6 +696,7 @@ class LevelController extends Controller
         ]);
 
         $class->admission_mode = $validated['admission_mode'];
+        $class->is_visible = (bool) $validated['is_visible'];
         $class->save();
 
         $class->subjects()->syncWithoutDetaching([
@@ -398,10 +789,15 @@ class LevelController extends Controller
                 'required',
                 Rule::in(['contact', 'vocal_test']),
             ],
+            'is_visible' => [
+                'required',
+                'boolean',
+            ],
         ]);
 
         $class->name = trim($validated['name']);
         $class->admission_mode = $validated['admission_mode'];
+        $class->is_visible = (bool) $validated['is_visible'];
         $class->save();
 
         $class->subjects()->syncWithoutDetaching([

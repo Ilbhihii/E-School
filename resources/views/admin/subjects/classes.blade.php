@@ -285,6 +285,17 @@
 
                     <h2 class="subject-class-title">
                         {{ $class->name }}
+                            @if((bool) ($class->is_visible ?? true))
+                                <span class="class-visibility-badge visible">
+                                    <i class="bi bi-eye-fill"></i>
+                                    Visible
+                                </span>
+                            @else
+                                <span class="class-visibility-badge hidden">
+                                    <i class="bi bi-eye-slash-fill"></i>
+                                    Masquée
+                                </span>
+                            @endif
                     </h2>
 
                     <p class="subject-class-description">
@@ -825,6 +836,31 @@
         padding: 1.05rem;
     }
 }
+
+.class-visibility-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 7px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.61rem;
+    font-weight: 800;
+    vertical-align: middle;
+}
+
+.class-visibility-badge.visible {
+    color: #86EFAC;
+    border: 1px solid rgba(34,197,94,0.20);
+    background: rgba(34,197,94,0.10);
+}
+
+.class-visibility-badge.hidden {
+    color: #FCD34D;
+    border: 1px solid rgba(245,158,11,0.22);
+    background: rgba(245,158,11,0.10);
+}
+
 </style>
 
 @endsection

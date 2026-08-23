@@ -10,6 +10,13 @@
             : 'contact'
     );
 
+    $selectedVisibility = (string) old(
+        'is_visible',
+        $isEdit
+            ? ((bool) ($class->is_visible ?? true) ? '1' : '0')
+            : '1'
+    );
+
     $formAction = $isEdit
         ? route(
             'admin.subjects.classes.update',
@@ -189,6 +196,90 @@
                     </div>
 
                     @error('admission_mode')
+                        <div class="class-error">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- VISIBILITÉ --}}
+                <div class="class-field">
+                    <label class="class-label">
+                        Visibilité
+                        <span>*</span>
+                    </label>
+
+                    <div class="visibility-mode-grid">
+
+                        <label
+                            class="visibility-mode-card {{
+                                $selectedVisibility === '1'
+                                    ? 'is-active visible'
+                                    : ''
+                            }}"
+                        >
+                            <input
+                                type="radio"
+                                name="is_visible"
+                                value="1"
+                                {{
+                                    $selectedVisibility === '1'
+                                        ? 'checked'
+                                        : ''
+                                }}
+                            >
+
+                            <span class="visibility-mode-icon visible">
+                                <i class="bi bi-eye-fill"></i>
+                            </span>
+
+                            <span class="visibility-mode-content">
+                                <strong>Visible</strong>
+                                <small>
+                                    La classe apparaît sur le site public.
+                                </small>
+                            </span>
+
+                            <span class="visibility-check">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+                        </label>
+
+                        <label
+                            class="visibility-mode-card {{
+                                $selectedVisibility === '0'
+                                    ? 'is-active hidden'
+                                    : ''
+                            }}"
+                        >
+                            <input
+                                type="radio"
+                                name="is_visible"
+                                value="0"
+                                {{
+                                    $selectedVisibility === '0'
+                                        ? 'checked'
+                                        : ''
+                                }}
+                            >
+
+                            <span class="visibility-mode-icon hidden">
+                                <i class="bi bi-eye-slash-fill"></i>
+                            </span>
+
+                            <span class="visibility-mode-content">
+                                <strong>Masquée</strong>
+                                <small>
+                                    La classe reste dans l’administration,
+                                    mais disparaît du site public.
+                                </small>
+                            </span>
+
+                            <span class="visibility-check">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+                        </label>
+                    </div>
+
+                    @error('is_visible')
                         <div class="class-error">{{ $message }}</div>
                     @enderror
                 </div>
@@ -446,6 +537,118 @@
     display: grid;
 }
 
+
+.visibility-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+}
+
+.visibility-mode-card {
+    position: relative;
+    min-height: 82px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,0.16);
+    border-radius: 14px;
+    background: rgba(15,23,42,0.48);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.visibility-mode-card:hover {
+    transform: translateY(-2px);
+    background: rgba(30,41,59,0.62);
+}
+
+.visibility-mode-card.is-active.visible {
+    border-color: rgba(34,197,94,0.80);
+    background: rgba(34,197,94,0.08);
+    box-shadow:
+        inset 0 0 0 1px rgba(34,197,94,0.10),
+        0 8px 25px rgba(34,197,94,0.06);
+}
+
+.visibility-mode-card.is-active.hidden {
+    border-color: rgba(245,158,11,0.80);
+    background: rgba(245,158,11,0.08);
+    box-shadow:
+        inset 0 0 0 1px rgba(245,158,11,0.10),
+        0 8px 25px rgba(245,158,11,0.06);
+}
+
+.visibility-mode-card input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.visibility-mode-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    font-size: 1rem;
+}
+
+.visibility-mode-icon.visible {
+    color: #4ADE80;
+    background: rgba(34,197,94,0.13);
+}
+
+.visibility-mode-icon.hidden {
+    color: #FBBF24;
+    background: rgba(245,158,11,0.13);
+}
+
+.visibility-mode-content {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-right: 19px;
+}
+
+.visibility-mode-content strong {
+    color: rgba(255,255,255,0.93);
+    font-size: 0.77rem;
+    font-weight: 800;
+}
+
+.visibility-mode-content small {
+    color: rgba(255,255,255,0.46);
+    font-size: 0.65rem;
+    line-height: 1.45;
+}
+
+.visibility-check {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 20px;
+    height: 20px;
+    display: none;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.65rem;
+}
+
+.visibility-mode-card.is-active.visible .visibility-check {
+    display: grid;
+    background: #16A34A;
+}
+
+.visibility-mode-card.is-active.hidden .visibility-check {
+    display: grid;
+    background: #D97706;
+}
+
 .class-form-info {
     display: flex;
     align-items: flex-start;
@@ -554,7 +757,8 @@
         margin-right: 18px;
     }
 
-    .admission-mode-grid {
+    .admission-mode-grid,
+    .visibility-mode-grid {
         grid-template-columns: 1fr;
     }
 
@@ -570,32 +774,40 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const cards = document.querySelectorAll('.admission-mode-card');
+    const setupCardGroup = (selector) => {
+        const cards = document.querySelectorAll(selector);
 
-    const refreshCards = () => {
+        const refreshCards = () => {
+            cards.forEach(card => {
+                const input = card.querySelector('input[type="radio"]');
+
+                card.classList.toggle(
+                    'is-active',
+                    Boolean(input && input.checked)
+                );
+            });
+        };
+
         cards.forEach(card => {
-            const input = card.querySelector('input[type="radio"]');
+            card.addEventListener('click', () => {
+                const input = card.querySelector('input[type="radio"]');
 
-            card.classList.toggle(
-                'is-active',
-                Boolean(input && input.checked)
-            );
+                if (input) {
+                    input.checked = true;
+                    input.dispatchEvent(
+                        new Event('change', { bubbles: true })
+                    );
+                }
+
+                refreshCards();
+            });
         });
+
+        refreshCards();
     };
 
-    cards.forEach(card => {
-        card.addEventListener('click', () => {
-            const input = card.querySelector('input[type="radio"]');
-
-            if (input) {
-                input.checked = true;
-            }
-
-            refreshCards();
-        });
-    });
-
-    refreshCards();
+    setupCardGroup('.admission-mode-card');
+    setupCardGroup('.visibility-mode-card');
 });
 </script>
 
