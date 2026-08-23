@@ -99,14 +99,13 @@
     </div>
 
     <div class="page-actions">
-        <button
-            type="button"
+        <a
+            href="{{ route('admin.subjects.classes.create', [$subject, $level]) }}"
             class="adm-btn adm-btn-primary"
-            data-toggle-add-class
         >
-            <i class="bi bi-plus-circle"></i>
-            Ajouter une classe
-        </button>
+            <i class="bi bi-plus-lg"></i>
+            Nouvelle classe
+        </a>
 
         <a
             href="{{
@@ -121,168 +120,6 @@
             Retour aux niveaux
         </a>
     </div>
-</div>
-
-<div
-    class="subject-class-add-panel"
-    id="addClassPanel"
-    @if(old('_form') !== 'class') hidden @endif
->
-    <div class="subject-class-add-head">
-        <div>
-            <h3>
-                <i class="bi bi-plus-circle me-1"></i>
-                Ajouter une classe
-            </h3>
-            <p>
-                {{ $subject->name }} → {{ $level->name }}
-            </p>
-        </div>
-
-        <button
-            type="button"
-            class="adm-btn adm-btn-ghost"
-            data-close-add-class
-        >
-            <i class="bi bi-x-lg"></i>
-            Fermer
-        </button>
-    </div>
-
-    <form
-        method="POST"
-        action="{{ route('admin.subjects.classes.store', [$subject, $level]) }}"
-    >
-        @csrf
-        <input type="hidden" name="_form" value="class">
-
-        <div class="subject-class-add-grid">
-            <div>
-                <label for="newClassName">
-                    Nom de la classe *
-                </label>
-
-                <input
-                    id="newClassName"
-                    type="text"
-                    name="name"
-                    class="subject-class-add-control"
-                    value="{{ old('_form') === 'class' ? old('name') : '' }}"
-                    placeholder="Ex. Débutant"
-                    maxlength="120"
-                    required
-                >
-
-                @if(old('_form') === 'class')
-                    @error('name')
-                        <div class="subject-class-add-error">
-                            {{ $message }}
-                        </div>
-                    @enderror
-                @endif
-            </div>
-
-            <button
-                type="submit"
-                class="adm-btn adm-btn-primary"
-            >
-                <i class="bi bi-check-lg"></i>
-                Ajouter la classe
-            </button>
-        </div>
-
-        <div class="subject-class-admission-section">
-            <div class="subject-class-admission-head">
-                <div>
-                    <strong>Parcours d'inscription *</strong>
-                    <span>
-                        Choisissez l'action associée à cette classe.
-                    </span>
-                </div>
-            </div>
-
-            <div
-                class="subject-class-admission-options"
-                role="radiogroup"
-                aria-label="Parcours d'inscription"
-            >
-                <label class="subject-class-admission-option">
-                    <input
-                        type="radio"
-                        name="admission_mode"
-                        value="contact"
-                        @checked(
-                            old('admission_mode', 'contact')
-                                === 'contact'
-                        )
-                        required
-                    >
-
-                    <span class="subject-class-admission-card">
-                        <span class="subject-class-admission-icon is-contact">
-                            <i class="bi bi-headset"></i>
-                        </span>
-
-                        <span class="subject-class-admission-copy">
-                            <strong>Prise en contact</strong>
-                            <small>
-                                Le visiteur passe par une demande de contact.
-                            </small>
-                        </span>
-
-                        <span class="subject-class-admission-check">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </span>
-                    </span>
-                </label>
-
-                <label class="subject-class-admission-option">
-                    <input
-                        type="radio"
-                        name="admission_mode"
-                        value="vocal_test"
-                        @checked(
-                            old('admission_mode')
-                                === 'vocal_test'
-                        )
-                        required
-                    >
-
-                    <span class="subject-class-admission-card">
-                        <span class="subject-class-admission-icon is-vocal">
-                            <i class="bi bi-mic-fill"></i>
-                        </span>
-
-                        <span class="subject-class-admission-copy">
-                            <strong>Test vocal</strong>
-                            <small>
-                                La classe est marquée comme parcours avec test vocal.
-                            </small>
-                        </span>
-
-                        <span class="subject-class-admission-check">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </span>
-                    </span>
-                </label>
-            </div>
-
-            @if(old('_form') === 'class')
-                @error('admission_mode')
-                    <div class="subject-class-add-error">
-                        {{ $message }}
-                    </div>
-                @enderror
-            @endif
-        </div>
-
-        <div class="subject-class-add-note">
-            <i class="bi bi-magic"></i>
-            Les 4 créneaux sont créés automatiquement :
-            Débutant → D1-D4, Intermédiaire → I1-I4,
-            Avancé → A1-A4, autre nom → G1-G4.
-        </div>
-    </form>
 </div>
 
 @if($classes->isEmpty())
@@ -306,15 +143,6 @@
                 Aucune {{ $pageEntitySingular }} n’est liée à cette
                 matière pour le niveau {{ $level->name }}.
             </p>
-
-            <button
-                type="button"
-                class="adm-btn adm-btn-primary mt-3"
-                data-toggle-add-class
-            >
-                <i class="bi bi-plus-circle"></i>
-                Ajouter la première classe
-            </button>
         </div>
     </div>
 @else
@@ -414,50 +242,10 @@
                     ],
                 };
 
-                $courseCount = $class
-                    ->courses()
-                    ->where(
-                        'subject_id',
-                        $subject->id
-                    )
-                    ->count();
-
-                /*
-                 * Les 4 créneaux sont maintenant stockés en base
-                 * dans class_slots et ne dépendent pas de l'emploi
-                 * du temps.
-                 */
-                $classSlots = $class
-                    ->classSlots
-                    ->where(
-                        'subject_id',
-                        $subject->id
-                    )
-                    ->where(
-                        'level_id',
-                        $level->id
-                    )
-                    ->where(
-                        'is_active',
-                        true
-                    )
-                    ->sortBy('position')
-                    ->values();
-
-                $slotCodes = $classSlots
-                    ->pluck('code');
-
-                $slotCourseCounts = $class
-                    ->courses()
+                $courseCount = \App\Models\Course::query()
+                    ->where('class_id', $class->id)
                     ->where('subject_id', $subject->id)
-                    ->whereIn('slot_code', $slotCodes)
-                    ->get()
-                    ->groupBy('slot_code')
-                    ->map->count();
-            @endphp
-
-            @php
-                $classIsActive = (bool) ($class->is_active ?? true);
+                    ->count();
             @endphp
 
             <article
@@ -474,76 +262,6 @@
                 "
             >
                 <div class="subject-class-cover">
-                    <div class="subject-class-admin-actions">
-                        <a
-                            href="{{ route('admin.subjects.classes.edit', [$subject, $level, $class]) }}"
-                            class="subject-class-admin-btn"
-                            title="Modifier {{ $class->name }}"
-                        >
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-
-                        <form
-                            method="POST"
-                            action="{{ route('admin.subjects.classes.destroy', [$subject, $level, $class]) }}"
-                            onsubmit="return confirm('Supprimer la classe {{ addslashes($class->name) }} ? La suppression est bloquée si elle contient encore des cours, lives, étudiants ou autres données.');"
-                        >
-                            @csrf
-                            @method('DELETE')
-
-                            <button
-                                type="submit"
-                                class="subject-class-admin-btn is-danger"
-                                title="Supprimer {{ $class->name }}"
-                            >
-                                <i class="bi bi-trash3"></i>
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="subject-class-visibility-actions">
-                        <form
-                            method="POST"
-                            action="{{ route('admin.subjects.classes.update', [$subject, $level, $class]) }}"
-                        >
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="_visibility_only" value="1">
-                            <input type="hidden" name="is_active" value="1">
-                            <button
-                                type="submit"
-                                class="subject-class-visibility-btn is-activate {{ $classIsActive ? 'is-current' : '' }}"
-                                title="Activer {{ $class->name }}"
-                            >
-                                <i class="bi bi-eye-fill"></i>
-                                Activer
-                            </button>
-                        </form>
-
-                        <form
-                            method="POST"
-                            action="{{ route('admin.subjects.classes.update', [$subject, $level, $class]) }}"
-                        >
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="_visibility_only" value="1">
-                            <input type="hidden" name="is_active" value="0">
-                            <button
-                                type="submit"
-                                class="subject-class-visibility-btn is-hide {{ !$classIsActive ? 'is-current' : '' }}"
-                                title="Masquer {{ $class->name }}"
-                            >
-                                <i class="bi bi-eye-slash-fill"></i>
-                                Masquer
-                            </button>
-                        </form>
-                    </div>
-
-                    <span class="subject-class-visibility-badge {{ $classIsActive ? 'is-active' : 'is-hidden' }}">
-                        <i class="bi {{ $classIsActive ? 'bi-check-circle-fill' : 'bi-eye-slash-fill' }}"></i>
-                        {{ $classIsActive ? 'Active' : 'Masquée' }}
-                    </span>
-
                     <div class="subject-class-cover-orb orb-one"></div>
                     <div class="subject-class-cover-orb orb-two"></div>
 
@@ -595,51 +313,70 @@
                         </div>
                     </div>
 
-                    <div class="subject-class-slots">
-                        <div class="subject-class-slots-title">
-                            <i class="bi bi-clock-history"></i>
-                            4 créneaux / groupes de la classe
-                        </div>
+                    <div class="subject-class-actions-row">
 
-                        <div class="subject-class-slots-grid">
-                            @foreach($slotCodes as $slotCode)
-                                <a
-                                    href="{{ route('admin.courses.create', [
-                                        'subject_id' => $subject->id,
-                                        'level_id' => $level->id,
-                                        'class_id' => $class->id,
-                                        'slot_code' => $slotCode,
-                                    ]) }}"
-                                    class="subject-class-slot"
-                                    title="Créer un cours pour {{ $slotCode }}"
-                                >
-                                    <strong>{{ $slotCode }}</strong>
-                                    <span>{{ $slotCourseCounts->get($slotCode, 0) }} cours</span>
-                                </a>
-                            @endforeach
-                        </div>
+                        {{-- Voir les cours --}}
+                        <a
+                            href="{{
+                                route(
+                                    'admin.subjects.courses',
+                                    [
+                                        $subject,
+                                        $level,
+                                        $class,
+                                    ]
+                                )
+                            }}"
+                            class="subject-class-action"
+                        >
+                            <span>
+                                <i class="bi bi-collection-play"></i>
+                                Voir les cours
+                            </span>
+
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+
+                        {{-- Modifier --}}
+                        <a
+                            href="{{ route('admin.subjects.classes.edit', [$subject, $level, $class]) }}"
+                            class="subject-class-icon-btn edit"
+                            title="Modifier {{ $class->name }}"
+                            aria-label="Modifier {{ $class->name }}"
+                        >
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        {{-- Supprimer --}}
+                        <form
+                            method="POST"
+                            action="{{
+                                route(
+                                    'admin.subjects.classes.destroy',
+                                    [
+                                        $subject,
+                                        $level,
+                                        $class,
+                                    ]
+                                )
+                            }}"
+                            class="subject-class-delete-form"
+                            onsubmit="return confirm('Voulez-vous vraiment supprimer cette classe ?');"
+                        >
+                            @csrf
+                            @method('DELETE')
+
+                            <button
+                                type="submit"
+                                class="subject-class-icon-btn delete"
+                                title="Supprimer {{ $class->name }}"
+                                aria-label="Supprimer {{ $class->name }}"
+                            >
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+
                     </div>
-
-                    <a
-                        href="{{
-                            route(
-                                'admin.subjects.courses',
-                                [
-                                    $subject,
-                                    $level,
-                                    $class,
-                                ]
-                            )
-                        }}"
-                        class="subject-class-action"
-                    >
-                        <span>
-                            <i class="bi bi-collection-play"></i>
-                            Voir les cours
-                        </span>
-
-                        <i class="bi bi-arrow-right"></i>
-                    </a>
                 </div>
             </article>
         @endforeach
@@ -647,234 +384,6 @@
 @endif
 
 <style>
-.subject-class-add-panel {
-    width: min(100%, 940px);
-    margin: 0 auto 1.35rem;
-    padding: 1.2rem;
-    border: 1px solid rgba(99,102,241,.22);
-    border-radius: 17px;
-    background:
-        linear-gradient(
-            145deg,
-            rgba(20,30,52,.96),
-            rgba(10,18,34,.98)
-        );
-}
-
-.subject-class-add-panel[hidden] {
-    display: none !important;
-}
-
-.subject-class-add-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 14px;
-}
-
-.subject-class-add-head h3 {
-    margin: 0;
-    color: rgba(255,255,255,.96);
-    font-size: .95rem;
-    font-weight: 820;
-}
-
-.subject-class-add-head p {
-    margin: 4px 0 0;
-    color: var(--adm-text-muted);
-    font-size: .72rem;
-}
-
-.subject-class-add-grid {
-    display: grid;
-    grid-template-columns: minmax(0,1fr) auto;
-    align-items: end;
-    gap: 12px;
-}
-
-.subject-class-add-grid label {
-    display: block;
-    margin-bottom: 6px;
-    color: rgba(255,255,255,.78);
-    font-size: .7rem;
-    font-weight: 740;
-}
-
-.subject-class-add-control {
-    width: 100%;
-    min-height: 42px;
-    padding: 9px 11px;
-    border: 1px solid rgba(148,163,184,.16);
-    border-radius: 10px;
-    outline: none;
-    color: #f8fafc;
-    background: rgba(8,15,29,.78);
-    font: inherit;
-    font-size: .78rem;
-}
-
-.subject-class-add-control:focus {
-    border-color: rgba(99,102,241,.6);
-    box-shadow: 0 0 0 3px rgba(99,102,241,.10);
-}
-
-.subject-class-add-error {
-    margin-top: 6px;
-    color: #fda4af;
-    font-size: .68rem;
-}
-
-.subject-class-admission-section {
-    margin-top: 14px;
-}
-
-.subject-class-admission-head {
-    margin-bottom: 9px;
-}
-
-.subject-class-admission-head strong {
-    display: block;
-    color: rgba(255,255,255,.84);
-    font-size: .72rem;
-    font-weight: 800;
-}
-
-.subject-class-admission-head span {
-    display: block;
-    margin-top: 3px;
-    color: var(--adm-text-muted);
-    font-size: .66rem;
-}
-
-.subject-class-admission-options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.subject-class-admission-option {
-    display: block;
-    margin: 0;
-    cursor: pointer;
-}
-
-.subject-class-admission-option > input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.subject-class-admission-card {
-    min-height: 76px;
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 11px 12px;
-    border: 1px solid rgba(148,163,184,.15);
-    border-radius: 13px;
-    color: #e2e8f0;
-    background: rgba(8,15,29,.62);
-    transition:
-        border-color .2s ease,
-        background .2s ease,
-        transform .2s ease,
-        box-shadow .2s ease;
-}
-
-.subject-class-admission-option:hover
-.subject-class-admission-card {
-    transform: translateY(-1px);
-    border-color: rgba(99,102,241,.38);
-    background: rgba(17,25,46,.88);
-}
-
-.subject-class-admission-option > input:checked
-+ .subject-class-admission-card {
-    border-color: rgba(99,102,241,.72);
-    background:
-        linear-gradient(
-            145deg,
-            rgba(37,99,235,.13),
-            rgba(124,58,237,.13)
-        );
-    box-shadow:
-        0 0 0 3px rgba(99,102,241,.09);
-}
-
-.subject-class-admission-icon {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
-    display: grid;
-    place-items: center;
-    border-radius: 11px;
-    font-size: .95rem;
-}
-
-.subject-class-admission-icon.is-contact {
-    color: #7dd3fc;
-    background: rgba(14,165,233,.13);
-}
-
-.subject-class-admission-icon.is-vocal {
-    color: #c4b5fd;
-    background: rgba(124,58,237,.15);
-}
-
-.subject-class-admission-copy {
-    min-width: 0;
-    flex: 1;
-}
-
-.subject-class-admission-copy strong {
-    display: block;
-    color: rgba(255,255,255,.94);
-    font-size: .75rem;
-    font-weight: 820;
-}
-
-.subject-class-admission-copy small {
-    display: block;
-    margin-top: 3px;
-    color: rgba(203,213,225,.56);
-    font-size: .62rem;
-    line-height: 1.4;
-}
-
-.subject-class-admission-check {
-    flex: 0 0 auto;
-    color: rgba(148,163,184,.22);
-    font-size: .9rem;
-    transition: color .2s ease;
-}
-
-.subject-class-admission-option > input:checked
-+ .subject-class-admission-card
-.subject-class-admission-check {
-    color: #818cf8;
-}
-
-.subject-class-add-note {
-    margin-top: 11px;
-    padding: 9px 11px;
-    border: 1px solid rgba(56,189,248,.12);
-    border-radius: 10px;
-    color: #cbd5e1;
-    background: rgba(56,189,248,.05);
-    font-size: .69rem;
-    line-height: 1.5;
-}
-
-@media (max-width: 700px) {
-    .subject-class-add-grid,
-    .subject-class-admission-options {
-        grid-template-columns: 1fr;
-    }
-}
-
 /* =========================================================
    EN-TÊTE
    ========================================================= */
@@ -959,79 +468,6 @@
    CARTE
    ========================================================= */
 
-
-.subject-class-visibility-actions {
-    position: absolute;
-    top: 47px;
-    left: 12px;
-    z-index: 7;
-    display: flex;
-    gap: 5px;
-}
-
-.subject-class-visibility-actions form {
-    margin: 0;
-}
-
-.subject-class-visibility-btn {
-    min-height: 27px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 7px;
-    border: 1px solid rgba(255,255,255,.18);
-    border-radius: 8px;
-    color: rgba(255,255,255,.76);
-    background: rgba(8,15,29,.48);
-    backdrop-filter: blur(8px);
-    font-size: .5rem;
-    font-weight: 850;
-    cursor: pointer;
-}
-
-.subject-class-visibility-btn.is-activate.is-current {
-    color: #dcfce7;
-    border-color: rgba(34,197,94,.32);
-    background: rgba(22,101,52,.58);
-}
-
-.subject-class-visibility-btn.is-hide.is-current {
-    color: #fef3c7;
-    border-color: rgba(245,158,11,.34);
-    background: rgba(120,53,15,.58);
-}
-
-.subject-class-visibility-btn:not(.is-current) {
-    opacity: .66;
-}
-
-.subject-class-visibility-badge {
-    position: absolute;
-    left: 12px;
-    bottom: 10px;
-    z-index: 5;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 8px;
-    border-radius: 999px;
-    font-size: .51rem;
-    font-weight: 850;
-    backdrop-filter: blur(8px);
-}
-
-.subject-class-visibility-badge.is-active {
-    color: #dcfce7;
-    border: 1px solid rgba(34,197,94,.30);
-    background: rgba(22,101,52,.62);
-}
-
-.subject-class-visibility-badge.is-hidden {
-    color: #fef3c7;
-    border: 1px solid rgba(245,158,11,.30);
-    background: rgba(120,53,15,.62);
-}
-
 .subject-class-card {
     min-width: 0;
     min-height: 355px;
@@ -1059,44 +495,6 @@
     border-color: var(--class-accent);
     box-shadow:
         0 26px 58px rgba(0,0,0,0.3);
-}
-
-
-.subject-class-admin-actions {
-    position: absolute;
-    z-index: 6;
-    top: 14px;
-    left: 14px;
-    display: flex;
-    gap: 7px;
-}
-
-.subject-class-admin-btn {
-    width: 34px;
-    height: 34px;
-    display: inline-grid;
-    place-items: center;
-    border: 1px solid rgba(255,255,255,.20);
-    border-radius: 10px;
-    color: #fff;
-    cursor: pointer;
-    background: rgba(8,15,30,.35);
-    backdrop-filter: blur(8px);
-    text-decoration: none;
-}
-
-.subject-class-admin-btn:hover {
-    color: #fff;
-    background: rgba(8,15,30,.60);
-}
-
-.subject-class-admin-btn.is-danger {
-    color: #fecdd3;
-    border-color: rgba(244,63,94,.30);
-}
-
-.subject-class-admin-actions form {
-    margin: 0;
 }
 
 .subject-class-cover {
@@ -1254,7 +652,7 @@
 
 .subject-class-action {
     min-height: 43px;
-    margin-top: auto;
+    margin-top: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1291,6 +689,97 @@
 
 .subject-class-action:hover > i {
     transform: translateX(4px);
+}
+
+
+/* =========================================================
+   ACTIONS : COURS / MODIFIER / SUPPRIMER
+   ========================================================= */
+
+.subject-class-actions-row {
+    width: 100%;
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.subject-class-actions-row .subject-class-action {
+    flex: 1;
+}
+
+.subject-class-delete-form {
+    margin: 0;
+    padding: 0;
+}
+
+.subject-class-icon-btn {
+    width: 43px;
+    height: 43px;
+    flex: 0 0 43px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border-radius: 12px;
+
+    font-size: 1rem;
+    line-height: 1;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+/* Modifier */
+.subject-class-icon-btn.edit {
+    color: #FBBF24;
+    border: 1px solid rgba(251,191,36,0.28);
+    background: rgba(245,158,11,0.10);
+}
+
+.subject-class-icon-btn.edit:hover {
+    color: #FDE68A;
+    background: rgba(245,158,11,0.20);
+    border-color: rgba(251,191,36,0.55);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245,158,11,0.12);
+}
+
+/* Supprimer */
+.subject-class-icon-btn.delete {
+    color: #FB7185;
+    border: 1px solid rgba(244,63,94,0.28);
+    background: rgba(244,63,94,0.10);
+}
+
+.subject-class-icon-btn.delete:hover {
+    color: #FDA4AF;
+    background: rgba(244,63,94,0.20);
+    border-color: rgba(244,63,94,0.55);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(244,63,94,0.12);
+}
+
+.subject-class-icon-btn:focus-visible {
+    outline: 2px solid rgba(96,165,250,0.9);
+    outline-offset: 2px;
+}
+
+@media (max-width: 575.98px) {
+    .subject-class-icon-btn {
+        width: 41px;
+        height: 41px;
+        flex-basis: 41px;
+    }
 }
 
 /* =========================================================
@@ -1336,89 +825,6 @@
         padding: 1.05rem;
     }
 }
-
-.subject-class-slots {
-    margin: 0 0 12px;
-    padding: 11px;
-    border: 1px solid var(--class-border);
-    border-radius: 12px;
-    background: var(--class-soft);
-}
-
-.subject-class-slots-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 8px;
-    color: rgba(255,255,255,.68);
-    font-size: .66rem;
-    font-weight: 750;
-}
-
-.subject-class-slots-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-}
-
-.subject-class-slot {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    padding: 8px 4px;
-    border: 1px solid rgba(255,255,255,.07);
-    border-radius: 9px;
-    color: #fff;
-    background: rgba(7,15,30,.30);
-    text-decoration: none;
-    transition: .18s ease;
-}
-
-.subject-class-slot:hover {
-    color: #fff;
-    border-color: var(--class-border);
-    background: rgba(255,255,255,.06);
-    transform: translateY(-1px);
-}
-
-.subject-class-slot strong {
-    color: var(--class-accent);
-    font-size: .78rem;
-}
-
-.subject-class-slot span {
-    color: rgba(255,255,255,.48);
-    font-size: .52rem;
-    white-space: nowrap;
-}
-
 </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const panel = document.getElementById('addClassPanel');
-    const openButtons = document.querySelectorAll('[data-toggle-add-class]');
-    const closeButton = document.querySelector('[data-close-add-class]');
-
-    openButtons.forEach(function (button) {
-        button.addEventListener('click', function () {
-            panel.hidden = false;
-            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const input = document.getElementById('newClassName');
-            if (input) {
-                window.setTimeout(function () { input.focus(); }, 250);
-            }
-        });
-    });
-
-    if (closeButton) {
-        closeButton.addEventListener('click', function () {
-            panel.hidden = true;
-        });
-    }
-});
-</script>
 
 @endsection

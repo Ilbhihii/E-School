@@ -475,6 +475,13 @@ Route::middleware(['auth', 'isAdmin'])
         // CLASSES
         // ================================
 
+        // Formulaire de création d'une classe
+        Route::get(
+            '/subjects/{subject}/levels/{level}/classes/create',
+            [LevelController::class, 'createSubjectClass']
+        )->name('subjects.classes.create');
+
+        // Enregistrer une nouvelle classe
         Route::post(
             '/subjects/{subject}/levels/{level}/classes',
             [LevelController::class, 'storeSubjectClass']
