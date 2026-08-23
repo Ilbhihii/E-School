@@ -1055,6 +1055,125 @@
     }
 </style>
 
+
+
+<style>
+    /* =========================================================
+       MATIÈRES ACCUEIL — CENTRAGE PC / TABLETTE / MOBILE
+       =========================================================
+       Flexbox est utilisé ici afin que la dernière ligne reste
+       automatiquement centrée (ex. 5 matières = 3 + 2 centrées).
+    */
+
+    .home-subjects-grid {
+        width: 100% !important;
+        max-width: 1120px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        gap: 24px !important;
+        --bs-gutter-x: 0 !important;
+        --bs-gutter-y: 0 !important;
+    }
+
+    /* Neutralise les largeurs Bootstrap uniquement dans les matières. */
+    .home-subjects-grid > [class*="col-"] {
+        flex: 0 1 320px !important;
+        width: 320px !important;
+        max-width: 320px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+    }
+
+    .home-subjects-grid > [class*="col-"] > a {
+        width: 100% !important;
+        max-width: 320px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        display: flex !important;
+    }
+
+    .home-subject-card {
+        width: 100% !important;
+        max-width: 320px !important;
+        min-height: 245px;
+        margin: 0 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .home-subject-card-title {
+        width: 100%;
+        text-align: center !important;
+        justify-content: center !important;
+    }
+
+    .home-subject-icon {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    /* Tablette : toujours centrée, deux cartes si l'espace le permet. */
+    @media (max-width: 991.98px) {
+        .home-subjects-grid {
+            max-width: 720px !important;
+            gap: 22px !important;
+        }
+
+        .home-subjects-grid > [class*="col-"],
+        .home-subjects-grid > [class*="col-"] > a,
+        .home-subject-card {
+            width: 300px !important;
+            max-width: 300px !important;
+        }
+
+        .home-subjects-grid > [class*="col-"] {
+            flex-basis: 300px !important;
+        }
+    }
+
+    /* Mobile : une carte par ligne, parfaitement centrée. */
+    @media (max-width: 575.98px) {
+        .home-subjects-grid {
+            width: calc(100% - 32px) !important;
+            max-width: 360px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            gap: 24px !important;
+        }
+
+        .home-subjects-grid > [class*="col-"] {
+            flex: 0 0 100% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+        }
+
+        .home-subjects-grid > [class*="col-"] > a,
+        .home-subject-card {
+            width: 100% !important;
+            max-width: 295px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        .home-subject-card {
+            min-height: 220px !important;
+        }
+    }
+</style>
+
 <!-- ══════════════════════════════════════════════════════
      HERO SECTION
      ══════════════════════════════════════════════════════ -->
@@ -2204,7 +2323,7 @@
                             name="phone"
                             value="{{ old('phone') }}"
                             class="home-contact-input @error('phone') is-invalid @enderror"
-                            placeholder="+33 / +212 "
+                            placeholder="06 00 00 00 00"
                             autocomplete="tel"
                             maxlength="30"
                             required
@@ -2219,7 +2338,7 @@
                             name="country"
                             value="{{ old('country') }}"
                             class="home-contact-input @error('country') is-invalid @enderror"
-                            placeholder="Pays"
+                            placeholder="Ex. Maroc"
                             autocomplete="country-name"
                             maxlength="100"
                             required
