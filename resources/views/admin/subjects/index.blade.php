@@ -517,7 +517,17 @@
 }
 
 .subject-visibility-btn:not(.is-current) {
-    opacity: .62;
+    opacity: .72;
+}
+
+.subject-visibility-btn.is-current,
+.subject-visibility-btn:disabled {
+    opacity: 1;
+    cursor: default;
+}
+
+.subject-visibility-btn:disabled:hover {
+    transform: none;
 }
 
 .subject-card-structure-link {
@@ -1467,12 +1477,16 @@ body.subject-builder-open {
                         >
                             @csrf
                             @method('PATCH')
-                            <input type="hidden" name="_visibility_only" value="1">
-                            <input type="hidden" name="is_active" value="1">
+                            <input
+                                type="hidden"
+                                name="status"
+                                value="active"
+                            >
                             <button
                                 type="submit"
                                 class="subject-visibility-btn is-activate {{ $subjectStatus === 'active' ? 'is-current' : '' }}"
                                 title="Activer {{ $subject->name }}"
+                                {{ $subjectStatus === 'active' ? 'disabled' : '' }}
                             >
                                 <i class="bi bi-eye-fill"></i>
                                 Activer
@@ -1482,15 +1496,20 @@ body.subject-builder-open {
                         <form
                             method="POST"
                             action="{{ route('admin.subjects.update', $subject) }}"
+                            onsubmit="return confirm('Masquer la matière « {{ addslashes($subject->name) }} » du site public ?');"
                         >
                             @csrf
                             @method('PATCH')
-                            <input type="hidden" name="_visibility_only" value="1">
-                            <input type="hidden" name="is_active" value="0">
+                            <input
+                                type="hidden"
+                                name="status"
+                                value="inactive"
+                            >
                             <button
                                 type="submit"
                                 class="subject-visibility-btn is-hide {{ $subjectStatus === 'inactive' ? 'is-current' : '' }}"
                                 title="Masquer {{ $subject->name }}"
+                                {{ $subjectStatus === 'inactive' ? 'disabled' : '' }}
                             >
                                 <i class="bi bi-eye-slash-fill"></i>
                                 Masquer
@@ -1697,7 +1716,7 @@ body.subject-builder-open {
                                         === 'inactive'
                                     )
                                 >
-                                    Inactive
+                                    Masquée
                                 </option>
                             </select>
 
@@ -2096,9 +2115,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (value === 'inactive') {
             return {
-                label: 'Inactive',
+                label: 'Masquée',
                 className: 'is-inactive',
-                icon: 'bi-pause-circle-fill',
+                icon: 'bi-eye-slash-fill',
             };
         }
 

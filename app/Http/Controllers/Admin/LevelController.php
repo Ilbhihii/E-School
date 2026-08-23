@@ -885,20 +885,93 @@ class LevelController extends Controller
             404
         );
 
+        /*
+         * Cette méthode accepte maintenant deux usages :
+         *
+         * 1. Modification normale :
+         *    name + description
+         *
+         * 2. Activation / masquage rapide :
+         *    is_active = 1 ou 0
+         *
+         * Ainsi, les boutons Activer / Masquer de la carte
+         * n'ont plus besoin d'envoyer le nom du niveau.
+         */
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('levels', 'name')
+                    ->ignore($level->id)
+                    ->where(
+                        fn ($query) =>
+                            $query->where(
+                                'subject_id',
+                                $subject->id
+                            )
+                    ),
+            ],
+            'description' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+            'is_active' => [
+                'sometimes',
+                'required',
+                'boolean',
+            ],
         ]);
 
-        $level->update([
-            'name' => trim($validated['name']),
-            'description' =>
-                $validated['description'] ?? $level->description,
-        ]);
+        if (array_key_exists('name', $validated)) {
+            $level->name = trim($validated['name']);
+        }
+
+        if (array_key_exists('description', $validated)) {
+            $level->description =
+                $validated['description']
+                ?? $level->description;
+        }
+
+        if (array_key_exists('is_active', $validated)) {
+            $level->is_active =
+                (bool) $validated['is_active'];
+        }
+
+        $level->save();
+
+        if (
+            array_key_exists('is_active', $validated)
+            && !array_key_exists('name', $validated)
+            && !array_key_exists(
+                'description',
+                $validated
+            )
+        ) {
+            return redirect()
+                ->route(
+                    'admin.subjects.levels',
+                    $subject
+                )
+                ->with(
+                    'success',
+                    $level->is_active
+                        ? 'Niveau activé avec succès.'
+                        : 'Niveau masqué avec succès.'
+                );
+        }
 
         return redirect()
-            ->route('admin.subjects.levels', $subject)
-            ->with('success', 'Niveau modifié avec succès.');
+            ->route(
+                'admin.subjects.levels',
+                $subject
+            )
+            ->with(
+                'success',
+                'Niveau modifié avec succès.'
+            );
     }
 
     public function destroySubjectLevel(
