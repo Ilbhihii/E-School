@@ -100,8 +100,85 @@ textarea.entity-edit-control {
     line-height: 1.55;
 }
 
+.admission-mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.admission-mode-option {
+    position: relative;
+    display: block;
+    cursor: pointer;
+}
+
+.admission-mode-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.admission-mode-card {
+    min-height: 92px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 14px;
+    border: 1px solid var(--adm-border, rgba(148,163,184,.17));
+    border-radius: 14px;
+    background: rgba(15,23,42,.56);
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.admission-mode-option:hover .admission-mode-card {
+    transform: translateY(-1px);
+    border-color: rgba(99,102,241,.45);
+}
+
+.admission-mode-option input:checked + .admission-mode-card {
+    border-color: #6366f1;
+    background: rgba(99,102,241,.12);
+    box-shadow: 0 0 0 2px rgba(99,102,241,.12);
+}
+
+.admission-mode-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.05rem;
+}
+
+.admission-mode-icon.contact {
+    color: #38bdf8;
+    background: rgba(56,189,248,.12);
+}
+
+.admission-mode-icon.vocal {
+    color: #c4b5fd;
+    background: rgba(167,139,250,.12);
+}
+
+.admission-mode-copy strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--adm-text, #f8fafc);
+    font-size: .78rem;
+}
+
+.admission-mode-copy span {
+    display: block;
+    color: var(--adm-text-muted, #94a3b8);
+    font-size: .68rem;
+    line-height: 1.45;
+}
+
 @media (max-width: 700px) {
-    .entity-edit-grid {
+    .entity-edit-grid,
+    .admission-mode-grid {
         grid-template-columns: 1fr;
     }
 
@@ -116,9 +193,9 @@ textarea.entity-edit-control {
     <div class="entity-edit-card">
         <div class="entity-edit-head">
             <div>
-                <h1>Modifier { $class->name }</h1>
+                <h1>Modifier {{ $class->name }}</h1>
                 <p>
-                    { $subject->name } → { $level->name }
+                    {{ $subject->name }} → {{ $level->name }}
                 </p>
             </div>
 
@@ -154,6 +231,65 @@ textarea.entity-edit-control {
                     >
 
                     @error('name')
+                        <div class="text-danger small mt-2">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="entity-edit-group full">
+                    <span class="entity-edit-label">
+                        Mode d’accès / inscription *
+                    </span>
+
+                    @php
+                        $selectedAdmissionMode = old(
+                            'admission_mode',
+                            $class->admission_mode ?: 'contact'
+                        );
+                    @endphp
+
+                    <div class="admission-mode-grid">
+                        <label class="admission-mode-option">
+                            <input
+                                type="radio"
+                                name="admission_mode"
+                                value="contact"
+                                {{ $selectedAdmissionMode === 'contact' ? 'checked' : '' }}
+                                required
+                            >
+
+                            <span class="admission-mode-card">
+                                <span class="admission-mode-icon contact">
+                                    <i class="bi bi-headset"></i>
+                                </span>
+                                <span class="admission-mode-copy">
+                                    <strong>Prise en contact</strong>
+                                    <span>Le visiteur est dirigé vers le formulaire de rendez-vous.</span>
+                                </span>
+                            </span>
+                        </label>
+
+                        <label class="admission-mode-option">
+                            <input
+                                type="radio"
+                                name="admission_mode"
+                                value="vocal_test"
+                                {{ $selectedAdmissionMode === 'vocal_test' ? 'checked' : '' }}
+                                required
+                            >
+
+                            <span class="admission-mode-card">
+                                <span class="admission-mode-icon vocal">
+                                    <i class="bi bi-mic-fill"></i>
+                                </span>
+                                <span class="admission-mode-copy">
+                                    <strong>Test vocal</strong>
+                                    <span>Le visiteur passe le test vocal associé à cette classe.</span>
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+
+                    @error('admission_mode')
                         <div class="text-danger small mt-2">{{ $message }}</div>
                     @enderror
                 </div>

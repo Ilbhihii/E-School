@@ -8,14 +8,17 @@ use App\Models\HighSchoolTestSubmission;
 use App\Models\Level;
 use App\Models\Subject;
 use App\Models\TestAppointment;
-use App\Models\VocalTestPrompt;
 use App\Models\VocalTestSubmission;
+use App\Services\PlanCatalogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class AppointmentController extends Controller
@@ -25,7 +28,17 @@ class AppointmentController extends Controller
      */
     public function create(Request $request)
     {
-        $type = $request->query('type', '');
+        $requestedType = trim(
+            (string) $request->query('type', '')
+        );
+
+        $type = array_key_exists(
+            $requestedType,
+            TestAppointment::getTypes()
+        )
+            ? $requestedType
+            : '';
+
         $user = auth()->user();
         $submissionToken = trim(
             (string) $request->query(
@@ -40,6 +53,7 @@ class AppointmentController extends Controller
         $interviewSubject = null;
         $interviewLevel = null;
         $interviewClass = null;
+        $selectedAdmissionMode = '';
 
         $hasAnyInterviewPath = (
             $request->filled('subject_id')
@@ -60,13 +74,36 @@ class AppointmentController extends Controller
                 $interviewSubject,
                 $interviewLevel,
                 $interviewClass,
-            ] = $this->resolveHighSchoolPath(
+            ] = $this->resolveSelectedPath(
                 (int) $request->query('subject_id'),
                 (int) $request->query('level_id'),
                 (int) $request->query('class_id')
             );
 
-            $type = TestAppointment::TYPE_TEST;
+            /*
+             * Le parcours sélectionné et le type du rendez-vous sont deux
+             * informations distinctes. Une matière choisie ne doit donc pas
+             * transformer automatiquement une prise de contact en test.
+             */
+            $selectedAdmissionMode = strtolower(
+                trim(
+                    (string) (
+                        $interviewClass->admission_mode
+                        ?: $request->query('admission_mode', '')
+                    )
+                )
+            );
+
+            if (
+                $type === ''
+                && in_array(
+                    $selectedAdmissionMode,
+                    ['vocal_test', 'test'],
+                    true
+                )
+            ) {
+                $type = TestAppointment::TYPE_TEST;
+            }
         }
 
         if ($request->filled('vocal_submission')) {
@@ -114,6 +151,7 @@ class AppointmentController extends Controller
             }
 
             $type = TestAppointment::TYPE_TEST;
+            $selectedAdmissionMode = 'vocal_test';
         }
 
         if ($request->filled('written_submission')) {
@@ -158,10 +196,79 @@ class AppointmentController extends Controller
             }
 
             $type = TestAppointment::TYPE_TEST;
+            $selectedAdmissionMode = 'test';
         }
 
         $interviewMethods =
             TestAppointment::getInterviewMethods();
+
+        /*
+         * L'offre commerciale n'est plus choisie par le visiteur.
+         * Elle est déterminée automatiquement à partir de la matière :
+         * subjects.default_plan_id -> plans.id.
+         *
+         * La durée reste sélectionnable uniquement lorsqu'une même offre
+         * possède plusieurs tarifs (1, 2, 3, 4 ou 12 mois).
+         */
+        $planSubject =
+            $interviewSubject
+            ?? $vocalSubmission?->subject
+            ?? $highSchoolSubmission?->subject;
+
+        $automaticPlan = null;
+        $availablePlans = collect();
+        $selectedPlanCode = '';
+        $selectedPlanDuration = '';
+
+        if ($planSubject) {
+            $automaticPlan =
+                $this->automaticPlanForSubject(
+                    $planSubject
+                );
+
+            if ($automaticPlan) {
+                $selectedPlanCode = (string) (
+                    $automaticPlan['code']
+                    ?? ''
+                );
+
+                $availablePlans = collect([
+                    $selectedPlanCode =>
+                        $automaticPlan,
+                ]);
+
+                $requestedDuration =
+                    $request->query('duration');
+
+                $pricing = app(
+                    PlanCatalogService::class
+                )->pricingOption(
+                    $automaticPlan,
+                    $requestedDuration
+                );
+
+                $pricingOptions = collect(
+                    $automaticPlan[
+                        'pricing_options'
+                    ] ?? []
+                );
+
+                if (
+                    $pricing
+                    && (
+                        $requestedDuration !== null
+                        || $pricingOptions->count() === 1
+                    )
+                ) {
+                    $selectedPlanDuration =
+                        (string) (
+                            $pricing[
+                                'duration_months'
+                            ] ?? ''
+                        );
+                }
+            }
+        }
 
         return view(
             'front.appointment',
@@ -174,7 +281,11 @@ class AppointmentController extends Controller
                 'interviewLevel',
                 'interviewClass',
                 'interviewMethods',
-                'submissionToken'
+                'submissionToken',
+                'selectedAdmissionMode',
+                'availablePlans',
+                'selectedPlanCode',
+                'selectedPlanDuration'
             )
         );
     }
@@ -214,8 +325,24 @@ class AppointmentController extends Controller
                 . 'high_school_test_submissions,id',
             'interview_path' =>
                 'nullable|boolean',
+            'admission_mode' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    'contact',
+                    'vocal_test',
+                    'test',
+                ]),
+            ],
             'submission_token' =>
                 'nullable|string|max:80',
+            'payment_plan' =>
+                'nullable|string|max:50',
+            'payment_duration_months' => [
+                'nullable',
+                'integer',
+                Rule::in([1, 2, 3, 4, 12]),
+            ],
         ]);
 
         /*
@@ -303,13 +430,6 @@ class AppointmentController extends Controller
                 $interviewData
             );
 
-            abort_unless(
-                $validated['type']
-                === TestAppointment::TYPE_TEST,
-                422,
-                'Le type de rendez-vous est invalide.'
-            );
-
             abort_if(
                 !empty(
                     $validated[
@@ -326,11 +446,32 @@ class AppointmentController extends Controller
                 . 'une autre soumission de test.'
             );
 
-            $this->resolveHighSchoolPath(
+            [
+                $selectedSubject,
+                $selectedLevel,
+                $selectedClass,
+            ] = $this->resolveSelectedPath(
                 (int) $validated['subject_id'],
                 (int) $validated['level_id'],
                 (int) $validated['class_id']
             );
+
+            $resolvedAdmissionMode = strtolower(
+                trim(
+                    (string) (
+                        $selectedClass->admission_mode
+                        ?: ($validated['admission_mode'] ?? '')
+                    )
+                )
+            );
+
+            $validated['admission_mode'] = in_array(
+                $resolvedAdmissionMode,
+                ['contact', 'vocal_test', 'test'],
+                true
+            )
+                ? $resolvedAdmissionMode
+                : null;
         }
 
         abort_if(
@@ -398,12 +539,29 @@ class AppointmentController extends Controller
             );
         }
 
+        $paymentSubject = null;
+
+        if ($isDirectInterview) {
+            $paymentSubject = $selectedSubject;
+        } elseif ($vocalSubmission) {
+            $paymentSubject = $vocalSubmission->subject;
+        } elseif ($highSchoolSubmission) {
+            $paymentSubject = $highSchoolSubmission->subject;
+        }
+
+        $selectedPayment = $this->resolveSelectedPayment(
+            $validated,
+            $paymentSubject,
+            (bool) $paymentSubject
+        );
+
         $appointment = DB::transaction(
             function () use (
                 $validated,
                 $vocalSubmission,
                 $highSchoolSubmission,
-                $isDirectInterview
+                $isDirectInterview,
+                $selectedPayment
             ) {
                 $appointment =
                     TestAppointment::create([
@@ -446,6 +604,18 @@ class AppointmentController extends Controller
                                     $vocalSubmission?->class_id
                                     ?? $highSchoolSubmission?->class_id
                                 ),
+                        'admission_mode' =>
+                            $isDirectInterview
+                                ? ($validated['admission_mode'] ?? null)
+                                : (
+                                    $vocalSubmission
+                                        ? 'vocal_test'
+                                        : (
+                                            $highSchoolSubmission
+                                                ? 'test'
+                                                : null
+                                        )
+                                ),
                         'interview_method' =>
                             $isDirectInterview
                                 ? $validated[
@@ -471,6 +641,24 @@ class AppointmentController extends Controller
                                     ?? null
                                 )
                                 : null,
+                        'payment_plan' =>
+                            $selectedPayment['code']
+                            ?? null,
+                        'payment_plan_name' =>
+                            $selectedPayment['name']
+                            ?? null,
+                        'payment_duration_months' =>
+                            $selectedPayment['duration_months']
+                            ?? null,
+                        'payment_amount_minor' =>
+                            $selectedPayment['amount_minor']
+                            ?? null,
+                        'payment_currency' =>
+                            $selectedPayment['currency']
+                            ?? null,
+                        'payment_currency_symbol' =>
+                            $selectedPayment['currency_symbol']
+                            ?? null,
                         'vocal_test_submission_id' =>
                             $vocalSubmission?->id,
                         'high_school_test_submission_id' =>
@@ -732,6 +920,8 @@ class AppointmentController extends Controller
             'student.payment',
             [
                 'plan' => $appointment->payment_plan_code,
+                'duration' => $appointment->payment_duration_months
+                    ?: 12,
                 'appointment' => $appointment->id,
             ]
         );
@@ -747,6 +937,171 @@ class AppointmentController extends Controller
                 'appointment' => $appointment->id,
             ]
         );
+    }
+
+    /**
+     * Offre active associée automatiquement à une matière.
+     *
+     * Source principale : subjects.default_plan_id.
+     * Les anciens parcours Arabe / Coran / Soutien Lycée gardent un
+     * fallback de compatibilité afin que la migration puisse être déployée
+     * sans interrompre le formulaire public.
+     */
+    private function automaticPlanForSubject(
+        Subject $subject
+    ): ?array {
+        $catalog = app(PlanCatalogService::class);
+
+        if (
+            Schema::hasColumn(
+                'subjects',
+                'default_plan_id'
+            )
+            && !empty($subject->default_plan_id)
+        ) {
+            $planId = (int) $subject->default_plan_id;
+
+            $assigned = $catalog
+                ->all(true)
+                ->first(function ($plan) use ($planId) {
+                    return (int) (
+                        $plan['id'] ?? 0
+                    ) === $planId;
+                });
+
+            if ($assigned) {
+                return $assigned;
+            }
+        }
+
+        $normalizedSubject = Str::lower(
+            Str::ascii(
+                trim((string) $subject->name)
+            )
+        );
+
+        if (
+            in_array(
+                $normalizedSubject,
+                ['arabe', 'coran'],
+                true
+            )
+        ) {
+            return $catalog->find(
+                'premium',
+                true
+            );
+        }
+
+        if ($normalizedSubject === 'soutien lycee') {
+            $legacy = $catalog->find(
+                'soutien_lycee',
+                true
+            );
+
+            if ($legacy) {
+                return $legacy;
+            }
+
+            return $catalog
+                ->all(true)
+                ->first(function ($plan) {
+                    return !empty(
+                        $plan[
+                            'restricted_to_high_school'
+                        ]
+                    );
+                });
+        }
+
+        return null;
+    }
+
+    /**
+     * Valide et fige l'offre automatique du parcours.
+     *
+     * Le champ payment_plan envoyé par le navigateur n'est volontairement
+     * pas utilisé comme source de vérité : l'offre est recalculée côté
+     * serveur à partir de la matière afin d'empêcher un changement manuel
+     * du plan dans le HTML ou l'URL.
+     */
+    private function resolveSelectedPayment(
+        array $validated,
+        ?Subject $subject,
+        bool $required
+    ): array {
+        if (!$required) {
+            return [];
+        }
+
+        if (!$subject) {
+            return [];
+        }
+
+        $plan = $this->automaticPlanForSubject(
+            $subject
+        );
+
+        if (!$plan) {
+            throw ValidationException::withMessages([
+                'payment_plan' =>
+                    'Aucune offre active n’est associée à cette matière. '
+                    . 'Associez une offre depuis l’administration des offres.',
+            ]);
+        }
+
+        $duration =
+            $validated['payment_duration_months']
+            ?? null;
+
+        $pricingOptions = collect(
+            $plan['pricing_options'] ?? []
+        );
+
+        if (
+            ($duration === null || $duration === '')
+            && $pricingOptions->count() === 1
+        ) {
+            $duration = (int) (
+                $pricingOptions->first()[
+                    'duration_months'
+                ] ?? 12
+            );
+        }
+
+        if ($duration === null || $duration === '') {
+            throw ValidationException::withMessages([
+                'payment_duration_months' =>
+                    'Veuillez sélectionner une durée.',
+            ]);
+        }
+
+        $catalog = app(PlanCatalogService::class);
+        $pricing = $catalog->pricingOption(
+            $plan,
+            (int) $duration
+        );
+
+        if (!$pricing) {
+            throw ValidationException::withMessages([
+                'payment_duration_months' =>
+                    'Cette durée n’est pas disponible pour cette offre.',
+            ]);
+        }
+
+        return [
+            'code' => (string) $plan['code'],
+            'name' => (string) $plan['name'],
+            'duration_months' =>
+                (int) $pricing['duration_months'],
+            'amount_minor' =>
+                (int) $pricing['amount_minor'],
+            'currency' => strtolower(
+                (string) $plan['currency']
+            ),
+            'currency_symbol' =>
+                (string) $plan['currency_symbol'],
+        ];
     }
 
     public function destroy(
@@ -892,20 +1247,13 @@ class AppointmentController extends Controller
         return $query->firstOrFail();
     }
 
-    private function resolveHighSchoolPath(
+    private function resolveSelectedPath(
         int $subjectId,
         int $levelId,
         int $classId
     ): array {
         $subject =
             Subject::findOrFail($subjectId);
-
-        abort_unless(
-            VocalTestPrompt::normalizePathName(
-                $subject->name
-            ) === 'soutien lycee',
-            404
-        );
 
         $level = Level::query()
             ->whereKey($levelId)

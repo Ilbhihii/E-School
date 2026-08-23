@@ -191,6 +191,91 @@
             </button>
         </div>
 
+        <div class="subject-class-admission-section">
+            <div class="subject-class-admission-head">
+                <div>
+                    <strong>Parcours d'inscription *</strong>
+                    <span>
+                        Choisissez l'action associée à cette classe.
+                    </span>
+                </div>
+            </div>
+
+            <div
+                class="subject-class-admission-options"
+                role="radiogroup"
+                aria-label="Parcours d'inscription"
+            >
+                <label class="subject-class-admission-option">
+                    <input
+                        type="radio"
+                        name="admission_mode"
+                        value="contact"
+                        @checked(
+                            old('admission_mode', 'contact')
+                                === 'contact'
+                        )
+                        required
+                    >
+
+                    <span class="subject-class-admission-card">
+                        <span class="subject-class-admission-icon is-contact">
+                            <i class="bi bi-headset"></i>
+                        </span>
+
+                        <span class="subject-class-admission-copy">
+                            <strong>Prise en contact</strong>
+                            <small>
+                                Le visiteur passe par une demande de contact.
+                            </small>
+                        </span>
+
+                        <span class="subject-class-admission-check">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </span>
+                    </span>
+                </label>
+
+                <label class="subject-class-admission-option">
+                    <input
+                        type="radio"
+                        name="admission_mode"
+                        value="vocal_test"
+                        @checked(
+                            old('admission_mode')
+                                === 'vocal_test'
+                        )
+                        required
+                    >
+
+                    <span class="subject-class-admission-card">
+                        <span class="subject-class-admission-icon is-vocal">
+                            <i class="bi bi-mic-fill"></i>
+                        </span>
+
+                        <span class="subject-class-admission-copy">
+                            <strong>Test vocal</strong>
+                            <small>
+                                La classe est marquée comme parcours avec test vocal.
+                            </small>
+                        </span>
+
+                        <span class="subject-class-admission-check">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </span>
+                    </span>
+                </label>
+            </div>
+
+            @if(old('_form') === 'class')
+                @error('admission_mode')
+                    <div class="subject-class-add-error">
+                        {{ $message }}
+                    </div>
+                @enderror
+            @endif
+        </div>
+
         <div class="subject-class-add-note">
             <i class="bi bi-magic"></i>
             Les 4 créneaux sont créés automatiquement :
@@ -640,6 +725,138 @@
     font-size: .68rem;
 }
 
+.subject-class-admission-section {
+    margin-top: 14px;
+}
+
+.subject-class-admission-head {
+    margin-bottom: 9px;
+}
+
+.subject-class-admission-head strong {
+    display: block;
+    color: rgba(255,255,255,.84);
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.subject-class-admission-head span {
+    display: block;
+    margin-top: 3px;
+    color: var(--adm-text-muted);
+    font-size: .66rem;
+}
+
+.subject-class-admission-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.subject-class-admission-option {
+    display: block;
+    margin: 0;
+    cursor: pointer;
+}
+
+.subject-class-admission-option > input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.subject-class-admission-card {
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 12px;
+    border: 1px solid rgba(148,163,184,.15);
+    border-radius: 13px;
+    color: #e2e8f0;
+    background: rgba(8,15,29,.62);
+    transition:
+        border-color .2s ease,
+        background .2s ease,
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+.subject-class-admission-option:hover
+.subject-class-admission-card {
+    transform: translateY(-1px);
+    border-color: rgba(99,102,241,.38);
+    background: rgba(17,25,46,.88);
+}
+
+.subject-class-admission-option > input:checked
++ .subject-class-admission-card {
+    border-color: rgba(99,102,241,.72);
+    background:
+        linear-gradient(
+            145deg,
+            rgba(37,99,235,.13),
+            rgba(124,58,237,.13)
+        );
+    box-shadow:
+        0 0 0 3px rgba(99,102,241,.09);
+}
+
+.subject-class-admission-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    font-size: .95rem;
+}
+
+.subject-class-admission-icon.is-contact {
+    color: #7dd3fc;
+    background: rgba(14,165,233,.13);
+}
+
+.subject-class-admission-icon.is-vocal {
+    color: #c4b5fd;
+    background: rgba(124,58,237,.15);
+}
+
+.subject-class-admission-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.subject-class-admission-copy strong {
+    display: block;
+    color: rgba(255,255,255,.94);
+    font-size: .75rem;
+    font-weight: 820;
+}
+
+.subject-class-admission-copy small {
+    display: block;
+    margin-top: 3px;
+    color: rgba(203,213,225,.56);
+    font-size: .62rem;
+    line-height: 1.4;
+}
+
+.subject-class-admission-check {
+    flex: 0 0 auto;
+    color: rgba(148,163,184,.22);
+    font-size: .9rem;
+    transition: color .2s ease;
+}
+
+.subject-class-admission-option > input:checked
++ .subject-class-admission-card
+.subject-class-admission-check {
+    color: #818cf8;
+}
+
 .subject-class-add-note {
     margin-top: 11px;
     padding: 9px 11px;
@@ -652,7 +869,8 @@
 }
 
 @media (max-width: 700px) {
-    .subject-class-add-grid {
+    .subject-class-add-grid,
+    .subject-class-admission-options {
         grid-template-columns: 1fr;
     }
 }

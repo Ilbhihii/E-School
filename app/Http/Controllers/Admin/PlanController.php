@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,24 +57,39 @@ class PlanController extends Controller
         $plan->whatsapp_message = 'Bonjour, je souhaite envoyer mon reçu de paiement pour l’offre {offre}. Durée : {duree}. Référence : {reference}. Montant : {montant} {devise}. Je joins le reçu à ce message.';
         $plan->features = [];
 
+        $subjects = Subject::query()
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'status',
+                'default_plan_id',
+            ]);
+
         return view(
             'admin.plans.create',
-            compact('plan')
+            compact('plan', 'subjects')
         );
     }
 
     public function store(Request $request)
     {
         $data = $this->validatedData($request);
+        $subjectIds = $this->subjectIds($request);
 
-        DB::transaction(function () use ($data) {
+        DB::transaction(function () use ($data, $subjectIds) {
             if ($data['is_recommended']) {
                 Plan::query()->update([
                     'is_recommended' => false,
                 ]);
             }
 
-            Plan::create($data);
+            $plan = Plan::create($data);
+
+            $this->syncSubjects(
+                $plan,
+                $subjectIds
+            );
         });
 
         return redirect()
@@ -86,9 +102,18 @@ class PlanController extends Controller
 
     public function edit(Plan $plan)
     {
+        $subjects = Subject::query()
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'status',
+                'default_plan_id',
+            ]);
+
         return view(
             'admin.plans.edit',
-            compact('plan')
+            compact('plan', 'subjects')
         );
     }
 
@@ -104,10 +129,15 @@ class PlanController extends Controller
             $request,
             $plan
         );
+        $subjectIds = $this->subjectIds($request);
 
         unset($data['code']);
 
-        DB::transaction(function () use ($data, $plan) {
+        DB::transaction(function () use (
+            $data,
+            $plan,
+            $subjectIds
+        ) {
             if ($data['is_recommended']) {
                 Plan::query()
                     ->where('id', '!=', $plan->id)
@@ -117,6 +147,11 @@ class PlanController extends Controller
             }
 
             $plan->update($data);
+
+            $this->syncSubjects(
+                $plan,
+                $subjectIds
+            );
         });
 
         return redirect()
@@ -306,6 +341,14 @@ class PlanController extends Controller
                 'required',
                 Rule::in(['0', '1', 0, 1]),
             ],
+            'subject_ids' => [
+                'nullable',
+                'array',
+            ],
+            'subject_ids.*' => [
+                'integer',
+                'exists:subjects,id',
+            ],
         ]);
 
         $features = collect(
@@ -401,6 +444,61 @@ class PlanController extends Controller
                 'sort_order'
             ],
         ];
+    }
+
+
+    /**
+     * Liste normalisée des matières auxquelles cette offre devient
+     * l'offre automatique. Une matière ne peut pointer que vers une
+     * seule offre grâce à subjects.default_plan_id.
+     */
+    private function subjectIds(Request $request): array
+    {
+        return collect(
+            $request->input('subject_ids', [])
+        )
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Synchroniser les matières associées à l'offre.
+     *
+     * - Une matière cochée pointe vers ce plan.
+     * - Une matière décochée qui pointait vers ce plan repasse à null.
+     * - Si une matière appartenait à une autre offre, la nouvelle
+     *   sélection la déplace automatiquement vers ce plan.
+     */
+    private function syncSubjects(
+        Plan $plan,
+        array $subjectIds
+    ): void {
+        Subject::query()
+            ->where(
+                'default_plan_id',
+                $plan->id
+            )
+            ->when(
+                !empty($subjectIds),
+                fn ($query) => $query->whereNotIn(
+                    'id',
+                    $subjectIds
+                )
+            )
+            ->update([
+                'default_plan_id' => null,
+            ]);
+
+        if (!empty($subjectIds)) {
+            Subject::query()
+                ->whereIn('id', $subjectIds)
+                ->update([
+                    'default_plan_id' => $plan->id,
+                ]);
+        }
     }
 
 

@@ -1185,16 +1185,27 @@ class LevelController extends Controller
                     'string',
                     'max:120',
                 ],
+                'admission_mode' => [
+                    'required',
+                    'in:contact,vocal_test',
+                ],
             ],
             [
                 'name.required' =>
                     'Écrivez le nom de la classe.',
+                'admission_mode.required' =>
+                    'Choisissez Prise en contact ou Test vocal.',
+                'admission_mode.in' =>
+                    'Le mode sélectionné est invalide.',
             ]
         );
 
         $newName = trim(
             $validated['name']
         );
+
+        $admissionMode =
+            $validated['admission_mode'];
 
         $normalizedNewName =
             VocalTestPrompt::normalizePathName(
@@ -1242,6 +1253,7 @@ class LevelController extends Controller
                 $subject,
                 $level,
                 $newName,
+                $admissionMode,
                 $classRoom,
                 $classSlotService
             ) {
@@ -1254,6 +1266,16 @@ class LevelController extends Controller
                                 $level->id,
                         ]);
                 }
+
+                /*
+                 * Le mode est volontairement stocké sur la classe.
+                 * On utilise une affectation directe afin de rester
+                 * compatible avec le modèle ClassRoom actuel, même
+                 * si admission_mode n'est pas encore dans $fillable.
+                 */
+                $classRoom->admission_mode =
+                    $admissionMode;
+                $classRoom->save();
 
                 $classRoom
                     ->subjects()
@@ -1282,7 +1304,11 @@ class LevelController extends Controller
                 'success',
                 'La classe « '
                 . $newName
-                . ' » et ses 4 créneaux ont été ajoutés.'
+                . ' » et ses 4 créneaux ont été ajoutés. Mode : '
+                . ($admissionMode === 'vocal_test'
+                    ? 'Test vocal'
+                    : 'Prise en contact')
+                . '.'
             );
     }
 
@@ -1566,17 +1592,34 @@ class LevelController extends Controller
             );
         }
 
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:120',
+        $validated = $request->validate(
+            [
+                'name' => [
+                    'required',
+                    'string',
+                    'max:120',
+                ],
+                'admission_mode' => [
+                    'required',
+                    'in:contact,vocal_test',
+                ],
             ],
-        ]);
+            [
+                'name.required' =>
+                    'Écrivez le nom de la classe.',
+                'admission_mode.required' =>
+                    'Choisissez Prise en contact ou Test vocal.',
+                'admission_mode.in' =>
+                    'Le mode sélectionné est invalide.',
+            ]
+        );
 
         $newName = trim(
             $validated['name']
         );
+
+        $admissionMode =
+            $validated['admission_mode'];
 
         $normalizedNewName =
             VocalTestPrompt::normalizePathName(
@@ -1607,6 +1650,7 @@ class LevelController extends Controller
         }
 
         $class->name = $newName;
+        $class->admission_mode = $admissionMode;
         $class->save();
 
         $class
@@ -1636,7 +1680,7 @@ class LevelController extends Controller
             )
             ->with(
                 'success',
-                'La classe et ses 4 créneaux ont été mis à jour.'
+                'La classe, son mode d’accès et ses 4 créneaux ont été mis à jour.'
             );
     }
 
@@ -1876,11 +1920,36 @@ class LevelController extends Controller
     private function itemNamesForSubject(
         Subject $subject
     ): array {
+        /*
+         * Soutien Lycée est maintenant entièrement dynamique.
+         * Toute classe/matière BAC créée depuis l'administration et liée
+         * à la matière doit être reconnue, pas seulement Mathématiques
+         * et Physique-Chimie.
+         */
         if ($this->isHighSchoolSupport($subject)) {
-            return [
-                'Mathématiques',
-                'Physique-Chimie',
-            ];
+            return ClassRoom::query()
+                ->whereHas(
+                    'level',
+                    fn ($query) =>
+                        $query
+                            ->where('subject_id', $subject->id)
+                            ->where('is_active', true)
+                )
+                ->where('is_active', true)
+                ->whereHas(
+                    'subjects',
+                    fn ($query) =>
+                        $query->where('subjects.id', $subject->id)
+                )
+                ->orderBy('name')
+                ->pluck('name')
+                ->filter()
+                ->unique(
+                    fn ($name) =>
+                        VocalTestPrompt::normalizePathName($name)
+                )
+                ->values()
+                ->all();
         }
 
         if (VocalTestPrompt::pathNamesForSubject($subject) !== []) {

@@ -2204,7 +2204,7 @@
                             name="phone"
                             value="{{ old('phone') }}"
                             class="home-contact-input @error('phone') is-invalid @enderror"
-                            placeholder="06 00 00 00 00"
+                            placeholder="+33 / +212 "
                             autocomplete="tel"
                             maxlength="30"
                             required
@@ -2219,7 +2219,7 @@
                             name="country"
                             value="{{ old('country') }}"
                             class="home-contact-input @error('country') is-invalid @enderror"
-                            placeholder="Ex. Maroc"
+                            placeholder="Pays"
                             autocomplete="country-name"
                             maxlength="100"
                             required

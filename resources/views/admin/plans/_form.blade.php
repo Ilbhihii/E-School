@@ -4,6 +4,22 @@
     if (!is_array($featureValues) || count($featureValues) === 0) {
         $featureValues = [''];
     }
+
+    $assignedSubjectIds = $plan->exists
+        ? collect($subjects ?? [])
+            ->where('default_plan_id', $plan->id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all()
+        : [];
+
+    $selectedSubjectIds = collect(
+        old('subject_ids', $assignedSubjectIds)
+    )
+        ->map(fn ($id) => (int) $id)
+        ->values()
+        ->all();
 @endphp
 
 @if($errors->any())
@@ -134,6 +150,81 @@
                 <i class="bi bi-lightbulb-fill"></i>
                 Exemple : 200 € / an · 90 € / 4 mois · 75 € / 3 mois · 55 € / 2 mois · 30 € / 1 mois.
             </div>
+        </div>
+    </section>
+
+    <section class="plan-form-card plan-form-card-wide plan-subject-association-card">
+        <div class="plan-card-head">
+            <span><i class="bi bi-diagram-3-fill"></i></span>
+            <div>
+                <small>Association automatique</small>
+                <h3>Matières liées à cette offre</h3>
+            </div>
+        </div>
+
+        <p class="plan-subject-association-help">
+            Lorsqu’un visiteur choisit une matière ci-dessous,
+            cette offre sera sélectionnée automatiquement sur le
+            formulaire de rendez-vous. Le visiteur ne choisira plus
+            lui-même son offre.
+        </p>
+
+        <div class="plan-subject-grid">
+            @forelse(($subjects ?? collect()) as $subject)
+                @php
+                    $subjectId = (int) $subject->id;
+                    $isChecked = in_array(
+                        $subjectId,
+                        $selectedSubjectIds,
+                        true
+                    );
+                    $belongsToAnotherPlan =
+                        !empty($subject->default_plan_id)
+                        && (int) $subject->default_plan_id
+                            !== (int) ($plan->id ?? 0);
+                @endphp
+
+                <label class="plan-subject-option {{ $isChecked ? 'is-selected' : '' }}">
+                    <input
+                        type="checkbox"
+                        name="subject_ids[]"
+                        value="{{ $subjectId }}"
+                        {{ $isChecked ? 'checked' : '' }}
+                    >
+
+                    <span class="plan-subject-option-icon">
+                        <i class="bi bi-book-half"></i>
+                    </span>
+
+                    <span class="plan-subject-option-copy">
+                        <strong>{{ $subject->name }}</strong>
+                        <small>
+                            @if($belongsToAnotherPlan)
+                                Actuellement liée à une autre offre —
+                                la cocher la déplacera vers celle-ci.
+                            @elseif(($subject->status ?? 'active') === 'active')
+                                Matière active
+                            @else
+                                Matière {{ $subject->status ?? 'inactive' }}
+                            @endif
+                        </small>
+                    </span>
+
+                    <span class="plan-subject-check">
+                        <i class="bi bi-check-lg"></i>
+                    </span>
+                </label>
+            @empty
+                <div class="plan-subject-empty">
+                    Aucune matière disponible.
+                </div>
+            @endforelse
+        </div>
+
+        <div class="plan-subject-association-note">
+            <i class="bi bi-info-circle-fill"></i>
+            Une matière ne peut avoir qu’une seule offre automatique.
+            L’association peut être changée à tout moment depuis cette page.
         </div>
     </section>
 
@@ -340,6 +431,8 @@
 .plan-status-field select{min-height:44px}.plan-status-field small{display:block;margin-top:7px;color:#64748b;font-size:.61rem;line-height:1.45}
 .plan-whatsapp-block{margin-top:14px;padding-top:14px;border-top:1px solid rgba(148,163,184,.09)}.plan-whatsapp-title{display:flex;align-items:center;gap:9px;margin-bottom:12px}.plan-whatsapp-title>i{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;color:#57d68d;background:rgba(37,211,102,.08)}.plan-whatsapp-title strong{display:block;color:#eaf3ef;font-size:.68rem}.plan-whatsapp-title small{display:block;margin-top:2px;color:#61738b;font-size:.51rem}.plan-message-textarea{width:100%;min-height:92px;padding:10px 11px;resize:vertical;color:#e9eff8;border:1px solid rgba(148,163,184,.13);border-radius:10px;outline:0;background:#08111f;font-size:.66rem;line-height:1.55}.plan-message-textarea:focus{border-color:rgba(37,211,102,.45);box-shadow:0 0 0 3px rgba(37,211,102,.07)}.plan-help-text{display:block;margin-top:6px;color:#61738b;font-size:.51rem;line-height:1.5}.plan-help-text code{color:#86efac;background:rgba(34,197,94,.07);padding:1px 4px;border-radius:4px}
 
+.plan-subject-association-card{background:linear-gradient(145deg,#0c1728,#0b1524)}.plan-subject-association-help{margin:-3px 0 13px;color:#75869d;font-size:.6rem;line-height:1.55}.plan-subject-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.plan-subject-option{position:relative;display:flex;align-items:center;gap:9px;min-height:62px;padding:10px;border:1px solid rgba(148,163,184,.10);border-radius:11px;background:#08111f;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease}.plan-subject-option:hover{transform:translateY(-1px);border-color:rgba(99,102,241,.25);background:#0a1525}.plan-subject-option input{position:absolute;opacity:0;pointer-events:none}.plan-subject-option-icon{width:33px;height:33px;display:grid;place-items:center;flex:0 0 33px;border-radius:9px;color:#9fb2ff;background:rgba(79,114,245,.10)}.plan-subject-option-copy{min-width:0;flex:1}.plan-subject-option-copy strong{display:block;color:#e8eef8;font-size:.64rem}.plan-subject-option-copy small{display:block;margin-top:3px;color:#607189;font-size:.49rem;line-height:1.35}.plan-subject-check{width:23px;height:23px;display:grid;place-items:center;flex:0 0 23px;border:1px solid rgba(148,163,184,.14);border-radius:7px;color:transparent;background:#0a1422;font-size:.56rem}.plan-subject-option:has(input:checked),.plan-subject-option.is-selected{border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.055)}.plan-subject-option:has(input:checked) .plan-subject-check,.plan-subject-option.is-selected .plan-subject-check{color:#d1fae5;border-color:rgba(34,197,94,.30);background:rgba(34,197,94,.14)}.plan-subject-option:has(input:checked) .plan-subject-option-icon,.plan-subject-option.is-selected .plan-subject-option-icon{color:#86efac;background:rgba(34,197,94,.10)}.plan-subject-association-note{display:flex;align-items:flex-start;gap:7px;margin-top:10px;padding:9px 10px;border-radius:9px;color:#708198;background:rgba(59,130,246,.045);font-size:.51rem;line-height:1.5}.plan-subject-association-note i{margin-top:1px;color:#7da2ff}.plan-subject-empty{grid-column:1/-1;padding:16px;text-align:center;color:#718198;border:1px dashed rgba(148,163,184,.13);border-radius:10px;font-size:.6rem}@media(max-width:900px){.plan-subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.plan-subject-grid{grid-template-columns:1fr}}
+
 .plan-family-block{margin-top:14px;padding:13px;border:1px solid rgba(79,114,245,.12);border-radius:12px;background:rgba(79,114,245,.035)}.plan-family-title{display:flex;align-items:center;gap:9px;margin-bottom:11px}.plan-family-title>i{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;color:#a9b7ff;background:rgba(79,114,245,.1)}.plan-family-title strong{display:block;color:#e9eff8;font-size:.68rem}.plan-family-title small{display:block;margin-top:2px;color:#64748b;font-size:.51rem}.plan-family-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;color:#6f8098;font-size:.51rem;line-height:1.45}.plan-family-note i{margin-top:1px;color:#8fa3ff}.plan-family-block.is-individual #planFamilyMembersWrap{opacity:.46}.plan-family-block.is-individual #planFamilyMembers{cursor:not-allowed}
 
 .plan-short-pricing{margin-top:14px;padding-top:14px;border-top:1px solid rgba(148,163,184,.09)}.plan-short-pricing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.plan-short-pricing-head strong{display:block;color:#e8eef8;font-size:.68rem}.plan-short-pricing-head small{display:block;margin-top:3px;color:#64748b;font-size:.52rem;line-height:1.4}.plan-short-pricing-head>span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(79,114,245,.14);border-radius:999px;color:#9fb2ff;background:rgba(79,114,245,.06);font-size:.52rem;font-weight:800}.plan-duration-price-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.plan-duration-price{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid rgba(148,163,184,.09);border-radius:11px;background:#08111f}.plan-duration-price>span strong{display:block;color:#dfe7f2;font-size:.62rem}.plan-duration-price>span small{display:block;margin-top:2px;color:#596a82;font-size:.48rem}.plan-duration-price>div{position:relative;width:118px}.plan-duration-price input{width:100%;height:37px;padding:0 38px 0 9px;color:#e9eff8;border:1px solid rgba(148,163,184,.13);border-radius:9px;outline:0;background:#0a1422;font-size:.64rem}.plan-duration-price input:focus{border-color:rgba(79,114,245,.5);box-shadow:0 0 0 3px rgba(79,114,245,.08)}.plan-duration-symbol{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:#75869d;font-size:.55rem;font-style:normal}.plan-pricing-example{display:flex;align-items:flex-start;gap:7px;margin-top:10px;padding:9px 10px;border-radius:9px;color:#8290a5;background:rgba(245,158,11,.045);font-size:.52rem;line-height:1.45}.plan-pricing-example i{margin-top:1px;color:#e6ad45}@media(max-width:620px){.plan-duration-price-grid{grid-template-columns:1fr}.plan-duration-price>div{width:130px}}
@@ -400,6 +493,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     familyType?.addEventListener('change', syncFamilyPack);
     syncFamilyPack();
+
+    document.querySelectorAll('.plan-subject-option input').forEach(function (input) {
+        const syncSubjectCard = function () {
+            input.closest('.plan-subject-option')
+                ?.classList.toggle('is-selected', input.checked);
+        };
+
+        input.addEventListener('change', syncSubjectCard);
+        syncSubjectCard();
+    });
 
     const symbols = { mad: 'DH', eur: '€', usd: '$', gbp: '£' };
     currency?.addEventListener('change', function () {

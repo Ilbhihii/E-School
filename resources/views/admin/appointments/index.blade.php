@@ -154,9 +154,12 @@
                     <th>Personne</th>
                     <th>Demande</th>
                     <th>Parcours</th>
+                    <th>Offre choisie</th>
+                    <th>Entretien</th>
                     <th>Contact</th>
+                    <th>Créneau demandé</th>
                     <th>Statut</th>
-                    <th>Date</th>
+                    <th>Reçue le</th>
                     <th class="text-end">Actions</th>
                 </tr>
             </thead>
@@ -210,19 +213,62 @@
                             $submission?->classRoom
                             ?? $appointment->classRoom;
 
+                        $admissionMode = strtolower(
+                            trim(
+                                (string) (
+                                    $appointment->admission_mode
+                                    ?: ($pathClass?->admission_mode ?? '')
+                                )
+                            )
+                        );
+
+                        if ($vocal) {
+                            $admissionMode = 'vocal_test';
+                        } elseif ($written) {
+                            $admissionMode = 'test';
+                        }
+
+                        $admissionModeLabels = [
+                            'contact' => 'Prise en contact',
+                            'vocal_test' => 'Test vocal',
+                            'test' => 'Test d’admission',
+                        ];
+
+                        $admissionModeLabel =
+                            $admissionModeLabels[$admissionMode]
+                            ?? 'Parcours sélectionné';
+
+                        $admissionModeIcons = [
+                            'contact' => 'bi-calendar2-check-fill',
+                            'vocal_test' => 'bi-mic-fill',
+                            'test' => 'bi-pencil-square',
+                        ];
+
+                        $admissionModeIcon =
+                            $admissionModeIcons[$admissionMode]
+                            ?? 'bi-diagram-3-fill';
+
                         $whatsAppNumber = preg_replace(
                             '/\D+/',
                             '',
                             (string) $appointment->phone
                         );
 
+                        /*
+                         * Ne jamais inventer une offre pour l'affichage.
+                         * Ici on montre uniquement celle réellement enregistrée
+                         * sur la demande avant sa confirmation.
+                         */
+                        $hasSelectedPaymentPlan =
+                            trim((string) $appointment->payment_plan) !== '';
+
                         $paymentPlan =
-                            $isAdmissionAppointment
+                            $hasSelectedPaymentPlan
                                 ? $appointment->payment_plan_details
                                 : null;
 
                         $canSendPayment =
-                            $isAdmissionAppointment
+                            (bool) $paymentPlan
                             && $appointment->canReceivePaymentInvitation();
 
                         $paymentUrl =
@@ -259,6 +305,12 @@
                                     $pathLevel?->name,
                                     $pathClass?->name,
                                     $appointment->interview_method_label,
+                                    $admissionModeLabel,
+                                    $paymentPlan['name'] ?? null,
+                                    $paymentPlan['duration_label'] ?? null,
+                                    $paymentPlan['amount_display'] ?? null,
+                                    $appointment->preferred_date?->format('d/m/Y'),
+                                    $appointment->preferred_time_label,
                                     $statusLabel,
                                 ]
                             )
@@ -317,45 +369,18 @@
                                 </div>
                             @elseif($isDirectInterview)
                                 <div class="appointment-request">
-                                    <span class="request-type request-type-interview">
-                                        <i class="bi bi-headset"></i>
-                                        Entretien BAC
+                                    <span class="request-type {{ $admissionMode === 'contact' ? 'request-type-contact' : 'request-type-interview' }}">
+                                        <i class="bi {{ $admissionModeIcon }}"></i>
+                                        {{ $admissionModeLabel }}
                                     </span>
 
                                     <strong>
-                                        {{ $appointment->interview_method_label }}
+                                        {{ $appointment->type_label }}
                                     </strong>
 
                                     <small>
-                                        @if($appointment->preferred_date)
-                                            {{ $appointment->preferred_date->format('d/m/Y') }}
-                                            ·
-                                        @endif
-                                        {{ $appointment->preferred_time_label }}
+                                        Demande liée à l’offre / matière sélectionnée.
                                     </small>
-
-                                    <div class="request-inline-actions">
-                                        @if($appointment->interview_method === 'whatsapp')
-                                            <a
-                                                href="https://wa.me/{{ $whatsAppNumber }}"
-                                                target="_blank"
-                                                rel="noopener"
-                                            >
-                                                <i class="bi bi-whatsapp"></i>
-                                                WhatsApp
-                                            </a>
-                                        @elseif($appointment->interview_method === 'phone_call')
-                                            <a href="tel:{{ $appointment->phone }}">
-                                                <i class="bi bi-telephone"></i>
-                                                Appeler
-                                            </a>
-                                        @else
-                                            <a href="mailto:{{ $appointment->email }}">
-                                                <i class="bi bi-camera-video"></i>
-                                                Envoyer le lien
-                                            </a>
-                                        @endif
-                                    </div>
                                 </div>
                             @elseif($isWritten)
                                 <div class="appointment-request">
@@ -450,10 +475,103 @@
                                             <i class="bi bi-chevron-right"></i>
                                             {{ $pathClass?->name ?? '—' }}
                                         </span>
+
+                                        @if($admissionMode)
+                                            <span class="appointment-admission-mode appointment-admission-mode-{{ $admissionMode }}">
+                                                <i class="bi {{ $admissionModeIcon }}"></i>
+                                                {{ $admissionModeLabel }}
+                                            </span>
+                                        @endif
                                     @else
                                         <small>Aucun niveau / classe renseigné</small>
                                     @endif
                                 </div>
+                            @endif
+                        </td>
+
+                        {{-- OFFRE COMMERCIALE CHOISIE --}}
+                        <td class="appointment-selected-plan-cell">
+                            @if($paymentPlan)
+                                <div class="appointment-selected-plan">
+                                    <span class="appointment-selected-plan-name">
+                                        <i class="bi bi-bag-check-fill"></i>
+                                        {{ $paymentPlan['name'] ?? 'Offre' }}
+                                    </span>
+
+                                    @if(!empty($paymentPlan['is_family_pack']))
+                                        <small class="appointment-family-badge">
+                                            <i class="bi bi-people-fill"></i>
+                                            Family Pack
+                                            @if(!empty($paymentPlan['family_members']))
+                                                · {{ $paymentPlan['family_members'] }} pers.
+                                            @endif
+                                        </small>
+                                    @endif
+
+                                    <strong>
+                                        {{ $paymentPlan['amount_display'] ?? '—' }}
+                                        {{ $paymentPlan['currency_symbol'] ?? '' }}
+                                    </strong>
+
+                                    <span>
+                                        <i class="bi bi-calendar3"></i>
+                                        {{ $paymentPlan['duration_label'] ?? ($paymentPlan['period'] ?? 'Durée non précisée') }}
+                                    </span>
+
+                                    @if($appointment->status === 'pending')
+                                        <small class="selected-plan-before-confirmation">
+                                            <i class="bi bi-eye-fill"></i>
+                                            Choisie avant confirmation
+                                        </small>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="appointment-empty-plan">
+                                    <span>
+                                        <i class="bi bi-dash-circle"></i>
+                                        Non renseignée
+                                    </span>
+                                    <small>Ancienne demande ou rendez-vous général</small>
+                                </div>
+                            @endif
+                        </td>
+
+                        {{-- ENTRETIEN --}}
+                        <td class="appointment-interview-cell">
+                            @if($appointment->interview_method)
+                                <span class="interview-method-pill interview-method-{{ $appointment->interview_method }}">
+                                    @if($appointment->interview_method === 'whatsapp')
+                                        <i class="bi bi-whatsapp"></i>
+                                    @elseif($appointment->interview_method === 'phone_call')
+                                        <i class="bi bi-telephone-fill"></i>
+                                    @else
+                                        <i class="bi bi-camera-video-fill"></i>
+                                    @endif
+
+                                    {{ $appointment->interview_method_label }}
+                                </span>
+
+                                <div class="interview-quick-actions">
+                                    @if($appointment->interview_method === 'whatsapp')
+                                        <a href="https://wa.me/{{ $whatsAppNumber }}" target="_blank" rel="noopener">
+                                            Contacter
+                                        </a>
+                                    @elseif($appointment->interview_method === 'phone_call')
+                                        <a href="tel:{{ $appointment->phone }}">Appeler</a>
+                                    @else
+                                        <a href="mailto:{{ $appointment->email }}">Envoyer le lien</a>
+                                    @endif
+                                </div>
+                            @elseif($vocal || $written)
+                                <span class="interview-method-empty">
+                                    <i class="bi bi-hourglass-split"></i>
+                                    À définir après le test
+                                </span>
+                            @else
+                                <span class="interview-method-empty">
+                                    <i class="bi bi-dash-circle"></i>
+                                    Non précisé
+                                </span>
                             @endif
                         </td>
 
@@ -493,6 +611,36 @@
                             </div>
                         </td>
 
+                        {{-- CRÉNEAU DEMANDÉ --}}
+                        <td class="appointment-slot-cell">
+                            @if($appointment->preferred_date || $appointment->preferred_time)
+                                <strong>
+                                    @if($appointment->preferred_date)
+                                        {{ $appointment->preferred_date->format('d/m/Y') }}
+                                    @else
+                                        Date à confirmer
+                                    @endif
+                                </strong>
+
+                                <span>
+                                    <i class="bi bi-clock"></i>
+                                    {{ $appointment->preferred_time_label }}
+                                </span>
+                            @else
+                                <span class="appointment-slot-empty">
+                                    <i class="bi bi-calendar2"></i>
+                                    À confirmer
+                                </span>
+                            @endif
+
+                            @if($appointment->notes)
+                                <small title="{{ $appointment->notes }}">
+                                    <i class="bi bi-chat-left-text"></i>
+                                    Message joint
+                                </small>
+                            @endif
+                        </td>
+
                         {{-- STATUT --}}
                         <td>
                             <span class="status-badge status-{{ $appointment->status }}">
@@ -508,7 +656,7 @@
                             </span>
                         </td>
 
-                        {{-- DATE --}}
+                        {{-- DATE DE RÉCEPTION --}}
                         <td class="appointment-date-cell">
                             <strong>
                                 {{ $appointment->created_at->format('d/m/Y') }}
@@ -578,7 +726,7 @@
                                     </form>
                                 </div>
 
-                                @if($isAdmissionAppointment && $paymentPlan)
+                                @if($paymentPlan)
                                     <div class="appointment-payment-compact">
                                         <div class="payment-mini-plan">
                                             <i class="bi bi-credit-card-2-front"></i>
@@ -587,6 +735,9 @@
                                                 {{ $paymentPlan['amount_display'] ?? '' }}
                                                 {{ $paymentPlan['currency_symbol'] ?? '' }}
                                             </strong>
+                                            <small>
+                                                {{ $paymentPlan['duration_label'] ?? '' }}
+                                            </small>
                                         </div>
 
                                         <div class="payment-mini-actions">
@@ -639,7 +790,7 @@
                     </tr>
                 @empty
                     <tr class="appointments-empty-row">
-                        <td colspan="7">
+                        <td colspan="10">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon">
                                     <i class="bi bi-inbox"></i>
@@ -661,7 +812,7 @@
                     class="appointments-empty-row"
                     hidden
                 >
-                    <td colspan="7">
+                    <td colspan="9">
                         <div class="appointments-no-result">
                             <i class="bi bi-search"></i>
                             <strong>Aucun résultat</strong>
@@ -858,7 +1009,7 @@
 
 .appointments-table {
     width: 100%;
-    min-width: 1180px;
+    min-width: 1480px;
     border-collapse: separate;
     border-spacing: 0;
     table-layout: fixed;
@@ -876,13 +1027,16 @@
     text-transform: uppercase;
 }
 
-.appointments-table th:nth-child(1) { width: 17%; }
-.appointments-table th:nth-child(2) { width: 19%; }
-.appointments-table th:nth-child(3) { width: 14%; }
-.appointments-table th:nth-child(4) { width: 16%; }
+.appointments-table th:nth-child(1) { width: 11%; }
+.appointments-table th:nth-child(2) { width: 11%; }
+.appointments-table th:nth-child(3) { width: 11%; }
+.appointments-table th:nth-child(4) { width: 11%; }
 .appointments-table th:nth-child(5) { width: 10%; }
-.appointments-table th:nth-child(6) { width: 9%; }
-.appointments-table th:nth-child(7) { width: 15%; }
+.appointments-table th:nth-child(6) { width: 10%; }
+.appointments-table th:nth-child(7) { width: 9%; }
+.appointments-table th:nth-child(8) { width: 8%; }
+.appointments-table th:nth-child(9) { width: 8%; }
+.appointments-table th:nth-child(10) { width: 11%; }
 
 .appointments-table td {
     padding: 15px 14px;
@@ -1082,6 +1236,75 @@
     color: #64748b;
 }
 
+
+
+.appointment-selected-plan,
+.appointment-empty-plan {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.appointment-selected-plan-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #c4b5fd;
+    font-size: .62rem;
+    font-weight: 800;
+}
+
+.appointment-selected-plan > strong {
+    color: #f8fafc;
+    font-size: .74rem;
+    font-weight: 900;
+}
+
+.appointment-selected-plan > span:not(.appointment-selected-plan-name) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #94a3b8;
+    font-size: .56rem;
+}
+
+.appointment-family-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: 999px;
+    color: #fcd34d;
+    background: rgba(245,158,11,.1);
+    font-size: .52rem;
+    font-weight: 800;
+}
+
+.selected-plan-before-confirmation {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #4ade80;
+    font-size: .51rem;
+    font-weight: 700;
+}
+
+.appointment-empty-plan > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+    font-size: .57rem;
+}
+
+.appointment-empty-plan > small {
+    max-width: 130px;
+    color: #475569;
+    font-size: .5rem;
+    line-height: 1.35;
+}
+
 .appointment-contact {
     display: flex;
     flex-direction: column;
@@ -1255,6 +1478,12 @@
     color: #60a5fa;
 }
 
+.payment-mini-plan small {
+    color: #64748b;
+    font-size: .5rem;
+    white-space: nowrap;
+}
+
 .payment-mini-plan strong {
     margin-left: auto;
     color: #fcd34d;
@@ -1387,6 +1616,112 @@
         padding-inline: 12px;
     }
 }
+
+.appointment-admission-mode {
+    margin-top: 2px;
+    border: 1px solid rgba(96,165,250,.12);
+}
+
+.appointment-admission-mode-contact {
+    color: #4ade80 !important;
+    background: rgba(34,197,94,.08) !important;
+}
+
+.appointment-admission-mode-vocal_test {
+    color: #c4b5fd !important;
+    background: rgba(139,92,246,.08) !important;
+}
+
+.appointment-admission-mode-test {
+    color: #fcd34d !important;
+    background: rgba(245,158,11,.08) !important;
+}
+
+.request-type-contact {
+    color: #4ade80;
+    background: rgba(34,197,94,.1);
+}
+
+.appointment-interview-cell,
+.appointment-slot-cell {
+    vertical-align: middle;
+}
+
+.interview-method-pill,
+.interview-method-empty,
+.appointment-slot-empty {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 9px;
+    font-size: .58rem;
+    font-weight: 750;
+    line-height: 1.3;
+}
+
+.interview-method-pill {
+    color: #dbeafe;
+    background: rgba(59,130,246,.09);
+}
+
+.interview-method-whatsapp {
+    color: #4ade80;
+    background: rgba(34,197,94,.09);
+}
+
+.interview-method-phone_call {
+    color: #93c5fd;
+    background: rgba(59,130,246,.09);
+}
+
+.interview-method-video_call {
+    color: #c4b5fd;
+    background: rgba(139,92,246,.09);
+}
+
+.interview-method-empty,
+.appointment-slot-empty {
+    color: #64748b;
+    background: rgba(100,116,139,.07);
+}
+
+.interview-quick-actions {
+    margin-top: 5px;
+}
+
+.interview-quick-actions a {
+    color: #93c5fd;
+    font-size: .56rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.appointment-slot-cell strong,
+.appointment-slot-cell > span,
+.appointment-slot-cell small {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.appointment-slot-cell strong {
+    color: #e2e8f0;
+    font-size: .62rem;
+}
+
+.appointment-slot-cell > span:not(.appointment-slot-empty) {
+    margin-top: 4px;
+    color: #93c5fd;
+    font-size: .58rem;
+}
+
+.appointment-slot-cell small {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: .54rem;
+}
+
 </style>
 
 <script>

@@ -115,6 +115,11 @@
                                 }
                             @endphp
 
+                            <a
+                                href="{{ route('public.schedule.index', ['schedule' => $schedule['schedule_id']]) }}"
+                                class="public-schedule-card-link"
+                                aria-label="Voir la fiche de {{ $schedule['subject'] }} — {{ $schedule['level'] }} — {{ $schedule['class_name'] }}"
+                            >
                             <article class="public-schedule-card">
                                 <div class="public-schedule-card-accent"></div>
 
@@ -206,7 +211,13 @@
                                         </span>
                                     @endif
                                 </footer>
+
+                                <div class="public-schedule-card-action">
+                                    <span>Voir la fiche du cours</span>
+                                    <i class="bi bi-arrow-right"></i>
+                                </div>
                             </article>
+                            </a>
                         @endforeach
                     </div>
                 </section>
@@ -625,6 +636,19 @@
         font-weight: 750;
     }
 
+    .public-schedule-card-link {
+        display: block;
+        height: 100%;
+        color: inherit;
+        text-decoration: none;
+        border-radius: 16px;
+        outline: none;
+    }
+
+    .public-schedule-card-link:focus-visible {
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.35);
+    }
+
     .public-schedule-card {
         position: relative;
         display: flex;
@@ -643,6 +667,28 @@
         border-color: rgba(129, 140, 248, 0.38);
         box-shadow: 0 25px 55px rgba(0, 0, 0, 0.28);
         transform: translateY(-6px);
+    }
+
+    .public-schedule-card-action {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-top: 11px;
+        margin-top: auto;
+        color: #A5B4FC;
+        font-size: 0.68rem;
+        font-weight: 800;
+        border-top: 1px solid rgba(148, 163, 184, 0.10);
+    }
+
+    .public-schedule-card-action i {
+        color: #FCD34D;
+        transition: transform 0.2s ease;
+    }
+
+    .public-schedule-card-link:hover .public-schedule-card-action i {
+        transform: translateX(4px);
     }
 
     .public-schedule-card-accent {

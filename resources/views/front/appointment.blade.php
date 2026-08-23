@@ -13,6 +13,113 @@
     $isSubmittedTest =
         !empty($vocalSubmission)
         || !empty($highSchoolSubmission);
+
+    /*
+     * Résumé du choix ayant amené le visiteur vers le rendez-vous.
+     * On conserve le formulaire existant : ces paramètres servent
+     * uniquement à afficher clairement l'offre/parcours sélectionné.
+     */
+    $selectedOfferSubject = null;
+    $selectedOfferLevel = null;
+    $selectedOfferClass = null;
+    $selectedAdmissionMode = strtolower(
+        trim((string) request()->query('admission_mode', ''))
+    );
+
+    if (
+        request()->filled('subject_id')
+        && request()->filled('level_id')
+        && request()->filled('class_id')
+    ) {
+        $candidateSubject = \App\Models\Subject::find(
+            (int) request()->query('subject_id')
+        );
+
+        $candidateLevel = \App\Models\Level::query()
+            ->whereKey((int) request()->query('level_id'))
+            ->where(
+                'subject_id',
+                (int) request()->query('subject_id')
+            )
+            ->first();
+
+        $candidateClass = \App\Models\ClassRoom::query()
+            ->whereKey((int) request()->query('class_id'))
+            ->where(
+                'level_id',
+                (int) request()->query('level_id')
+            )
+            ->whereHas(
+                'subjects',
+                fn ($query) => $query->where(
+                    'subjects.id',
+                    (int) request()->query('subject_id')
+                )
+            )
+            ->first();
+
+        if ($candidateSubject && $candidateLevel && $candidateClass) {
+            $selectedOfferSubject = $candidateSubject;
+            $selectedOfferLevel = $candidateLevel;
+            $selectedOfferClass = $candidateClass;
+        }
+    }
+
+    if (!$selectedOfferSubject && !empty($vocalSubmission)) {
+        $selectedOfferSubject = $vocalSubmission->subject;
+        $selectedOfferLevel = $vocalSubmission->level;
+        $selectedOfferClass = $vocalSubmission->classRoom;
+        $selectedAdmissionMode = 'vocal_test';
+    }
+
+    if (!$selectedOfferSubject && !empty($highSchoolSubmission)) {
+        $selectedOfferSubject = $highSchoolSubmission->subject;
+        $selectedOfferLevel = $highSchoolSubmission->level;
+        $selectedOfferClass = $highSchoolSubmission->classRoom;
+        $selectedAdmissionMode = 'test';
+    }
+
+    $hasSelectedOffer =
+        $selectedOfferSubject
+        && $selectedOfferLevel
+        && $selectedOfferClass;
+
+    $appointmentPlans = collect($availablePlans ?? []);
+    $automaticCommercialPlan = $appointmentPlans->first();
+    $automaticPricingOptions = collect(
+        $automaticCommercialPlan['pricing_options'] ?? []
+    );
+
+    $hasCommercialOfferSelection =
+        ($isDirectInterview || $isSubmittedTest)
+        && !empty($automaticCommercialPlan);
+
+    $oldPaymentDuration = (string) old(
+        'payment_duration_months',
+        $selectedPlanDuration ?? ''
+    );
+
+    if (
+        $oldPaymentDuration === ''
+        && $automaticPricingOptions->count() === 1
+    ) {
+        $oldPaymentDuration = (string) (
+            $automaticPricingOptions->first()[
+                'duration_months'
+            ] ?? 12
+        );
+    }
+
+    $selectedAutomaticPricing =
+        $oldPaymentDuration !== ''
+            ? $automaticPricingOptions->first(
+                fn ($option) =>
+                    (string) (
+                        $option['duration_months']
+                        ?? ''
+                    ) === $oldPaymentDuration
+            )
+            : null;
 @endphp
 
 <section class="interview-page">
@@ -53,7 +160,45 @@
                     @endif
                 </p>
 
-                @if($isDirectInterview)
+                @if($hasSelectedOffer)
+                    <div class="selected-path selected-offer-card">
+                        <span class="selected-path-icon">
+                            <i class="bi bi-check2-circle"></i>
+                        </span>
+
+                        <div>
+                            <small>Parcours sélectionné</small>
+
+                            <strong>
+                                {{ $selectedOfferSubject->name }}
+                            </strong>
+
+                            <span>
+                                {{ $selectedOfferLevel->name }}
+                                ·
+                                {{ $selectedOfferClass->name }}
+                            </span>
+
+                            <span class="selected-offer-mode">
+                                @if($selectedAdmissionMode === 'contact')
+                                    <i class="bi bi-calendar2-check"></i>
+                                    Prise en contact
+                                @elseif($selectedAdmissionMode === 'vocal_test')
+                                    <i class="bi bi-mic-fill"></i>
+                                    Test vocal
+                                @elseif($selectedAdmissionMode === 'test')
+                                    <i class="bi bi-pencil-square"></i>
+                                    Test d’admission
+                                @else
+                                    <i class="bi bi-mortarboard-fill"></i>
+                                    Parcours sélectionné
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+                @endif
+
+                @if($isDirectInterview && !$hasSelectedOffer)
                     <div class="selected-path">
                         <span class="selected-path-icon">
                             <i class="bi bi-journal-check"></i>
@@ -254,6 +399,12 @@
                             name="class_id"
                             value="{{ $interviewClass->id }}"
                         >
+
+                        <input
+                            type="hidden"
+                            name="admission_mode"
+                            value="{{ $selectedAdmissionMode }}"
+                        >
                     @endif
 
                     @if($type === 'test')
@@ -374,7 +525,7 @@
                                 value="{{ old('phone') }}"
                                 required
                                 autocomplete="tel"
-                                placeholder="+212 6XX XX XX XX"
+                                placeholder="+212 / +33"
                             >
                         </div>
 
@@ -433,7 +584,7 @@
                                     old(
                                         'country',
                                         $user?->country
-                                            ?? 'Maroc'
+                                            ?? ''
                                     )
                                 }}"
                                 required
@@ -443,9 +594,125 @@
                         </div>
                     </div>
 
+                    @if($hasCommercialOfferSelection)
+                        <div class="form-section-title offer-section-title">
+                            <span>1</span>
+
+                            <div>
+                                <strong>
+                                    Votre offre
+                                </strong>
+
+                                <small>
+                                    L’offre est associée automatiquement
+                                    à la matière sélectionnée.
+                                    Vous n’avez plus à la choisir.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="offer-selection-box">
+                            <input
+                                type="hidden"
+                                name="payment_plan"
+                                value="{{ $automaticCommercialPlan['code'] }}"
+                            >
+
+                            <div
+                                class="selected-commercial-offer automatic-commercial-offer"
+                                id="selectedCommercialOffer"
+                            >
+                                <span class="selected-commercial-offer-icon">
+                                    <i class="bi bi-bag-check-fill"></i>
+                                </span>
+
+                                <div>
+                                    <small>
+                                        Offre associée automatiquement
+                                    </small>
+
+                                    <strong>
+                                        {{ $automaticCommercialPlan['name'] }}
+                                        @if(!empty($automaticCommercialPlan['is_family_pack']))
+                                            — Family Pack
+                                        @endif
+                                    </strong>
+
+                                    <span id="selectedCommercialOfferPrice">
+                                        @if($selectedAutomaticPricing)
+                                            {{ $selectedAutomaticPricing['amount_display'] }}
+                                            {{ $automaticCommercialPlan['currency_symbol'] }}
+                                            ·
+                                            {{ $selectedAutomaticPricing['label'] }}
+                                        @else
+                                            Sélectionnez uniquement la durée souhaitée.
+                                        @endif
+                                    </span>
+
+                                    <em class="automatic-offer-lock">
+                                        <i class="bi bi-lock-fill"></i>
+                                        Déterminée par votre matière
+                                    </em>
+                                </div>
+                            </div>
+
+                            @if($automaticPricingOptions->count() > 1)
+                                <div class="form-grid automatic-duration-grid">
+                                    <div class="form-field full">
+                                        <label for="payment_duration_months">
+                                            Durée / formule *
+                                        </label>
+
+                                        <select
+                                            id="payment_duration_months"
+                                            name="payment_duration_months"
+                                            required
+                                        >
+                                            <option value="">
+                                                Choisissez une durée
+                                            </option>
+
+                                            @foreach($automaticPricingOptions as $pricingOption)
+                                                @php
+                                                    $durationValue = (string) (
+                                                        $pricingOption['duration_months']
+                                                        ?? ''
+                                                    );
+                                                @endphp
+
+                                                <option
+                                                    value="{{ $durationValue }}"
+                                                    data-amount="{{ $pricingOption['amount_display'] ?? '0' }}"
+                                                    data-label="{{ $pricingOption['label'] ?? '' }}"
+                                                    {{
+                                                        $oldPaymentDuration === $durationValue
+                                                            ? 'selected'
+                                                            : ''
+                                                    }}
+                                                >
+                                                    {{ $pricingOption['label'] }}
+                                                    —
+                                                    {{ $pricingOption['amount_display'] }}
+                                                    {{ $automaticCommercialPlan['currency_symbol'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            @else
+                                <input
+                                    type="hidden"
+                                    id="payment_duration_months"
+                                    name="payment_duration_months"
+                                    value="{{ $oldPaymentDuration }}"
+                                >
+                            @endif
+                        </div>
+                    @endif
+
                     @if($isDirectInterview)
                         <div class="form-section-title">
-                            <span>1</span>
+                            <span>{{ $hasCommercialOfferSelection ? 2 : 1 }}</span>
 
                             <div>
                                 <strong>
@@ -532,7 +799,7 @@
                         </div>
 
                         <div class="form-section-title">
-                            <span>2</span>
+                            <span>{{ $hasCommercialOfferSelection ? 3 : 2 }}</span>
 
                             <div>
                                 <strong>
@@ -784,6 +1051,31 @@
 .selected-path span {
     color: #FCD34D;
     font-size: .53rem;
+}
+
+.selected-offer-card {
+    border-color: rgba(59,130,246,.24);
+    background:
+        linear-gradient(
+            145deg,
+            rgba(37,99,235,.12),
+            rgba(124,58,237,.08)
+        );
+}
+
+.selected-offer-mode {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    margin-top: 6px;
+    padding: 4px 7px;
+    border-radius: 999px;
+    color: #86EFAC !important;
+    background: rgba(34,197,94,.10);
+    border: 1px solid rgba(34,197,94,.18);
+    font-size: .53rem !important;
+    font-weight: 800;
 }
 
 .interview-steps {
@@ -1238,6 +1530,68 @@ html.light-mode .form-field select:invalid {
     }
 }
 
+
+
+.offer-selection-box {
+    margin-bottom: .15rem;
+    padding: .85rem;
+    border: 1px solid rgba(99,102,241,.16);
+    border-radius: 14px;
+    background: rgba(79,70,229,.045);
+}
+
+.selected-commercial-offer {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    margin-top: .75rem;
+    padding: .72rem .8rem;
+    border: 1px solid rgba(34,197,94,.18);
+    border-radius: 12px;
+    background: rgba(34,197,94,.065);
+}
+
+.selected-commercial-offer[hidden] {
+    display: none;
+}
+
+.selected-commercial-offer-icon {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 36px;
+    border-radius: 10px;
+    color: #4ade80;
+    background: rgba(34,197,94,.12);
+}
+
+.selected-commercial-offer > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.selected-commercial-offer small {
+    color: rgba(255,255,255,.4);
+    font-size: .57rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.selected-commercial-offer strong {
+    color: #f8fafc;
+    font-size: .75rem;
+}
+
+.selected-commercial-offer span:last-child {
+    color: #86efac;
+    font-size: .68rem;
+    font-weight: 700;
+}
+
 @media (max-width:680px) {
     .interview-page {
         padding-top: 4.6rem;
@@ -1280,6 +1634,39 @@ html.light-mode .form-field select:invalid {
         min-height: 78px;
     }
 
+    .automatic-commercial-offer {
+        display: flex;
+        align-items: flex-start;
+        gap: .8rem;
+        padding: .9rem 1rem;
+        border: 1px solid rgba(34, 197, 94, .20);
+        border-radius: 14px;
+        background: linear-gradient(
+            135deg,
+            rgba(16, 185, 129, .08),
+            rgba(59, 130, 246, .06)
+        );
+    }
+
+    .automatic-commercial-offer[hidden] {
+        display: flex !important;
+    }
+
+    .automatic-offer-lock {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 6px;
+        color: #86efac;
+        font-size: .64rem;
+        font-style: normal;
+        font-weight: 700;
+    }
+
+    .automatic-duration-grid {
+        margin-top: .85rem;
+    }
+
     @media (min-width: 901px) {
         .interview-summary {
             max-width: 320px;
@@ -1296,5 +1683,53 @@ html.light-mode .form-field select:invalid {
         }
     }
 </style>
+
+
+
+@if($hasCommercialOfferSelection && $automaticPricingOptions->count() > 1)
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const durationSelect = document.getElementById(
+        'payment_duration_months'
+    );
+    const previewPrice = document.getElementById(
+        'selectedCommercialOfferPrice'
+    );
+    const currencySymbol = @json(
+        $automaticCommercialPlan['currency_symbol'] ?? ''
+    );
+
+    if (!durationSelect || !previewPrice) {
+        return;
+    }
+
+    function updateAutomaticOfferPrice() {
+        const selected = durationSelect.options[
+            durationSelect.selectedIndex
+        ];
+
+        if (!selected || !selected.value) {
+            previewPrice.textContent =
+                'Sélectionnez uniquement la durée souhaitée.';
+            return;
+        }
+
+        previewPrice.textContent =
+            (selected.dataset.amount || '0')
+            + ' '
+            + currencySymbol
+            + ' · '
+            + (selected.dataset.label || '');
+    }
+
+    durationSelect.addEventListener(
+        'change',
+        updateAutomaticOfferPrice
+    );
+
+    updateAutomaticOfferPrice();
+});
+</script>
+@endif
 
 @endsection

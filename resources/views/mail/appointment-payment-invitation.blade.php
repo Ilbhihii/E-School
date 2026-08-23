@@ -37,7 +37,7 @@
                                     <div style="color:#172033;font-size:19px;font-weight:800;">{{ $plan['name'] }}</div>
                                     <div style="margin-top:7px;color:#4f46e5;font-size:23px;font-weight:900;">
                                         {{ $plan['amount_display'] }} {{ $plan['currency_symbol'] }}
-                                        <span style="color:#94a3b8;font-size:12px;font-weight:600;">/ {{ $plan['period'] ?? 'an' }}</span>
+                                        <span style="color:#94a3b8;font-size:12px;font-weight:600;">/ {{ $plan['duration_label'] ?? ($plan['period'] ?? 'an') }}</span>
                                     </div>
                                     @if($subjectName)
                                         <div style="margin-top:13px;color:#64748b;font-size:13px;line-height:1.6;">

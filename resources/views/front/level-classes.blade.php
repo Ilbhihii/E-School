@@ -4,6 +4,13 @@
 
 @section('content')
 
+@php
+    $isHighSchoolSupport =
+        \App\Models\VocalTestPrompt::normalizePathName(
+            $subject->name
+        ) === 'soutien lycee';
+@endphp
+
 <section class="py-5">
     <div class="container">
 
@@ -45,8 +52,13 @@
             </h2>
 
             <p class="text-white-50" style="max-width: 680px; margin: 0 auto;">
-                Choisissez votre niveau. Pour les parcours d’Arabe en classe
-                Débutant, vous continuez directement sans test vocal.
+                @if($isHighSchoolSupport)
+                    Choisissez la matière du BAC qui vous intéresse.
+                    L’action proposée dépend du mode défini par l’administration.
+                @else
+                    Choisissez votre niveau. Pour les parcours d’Arabe en classe
+                    Débutant, vous continuez directement sans test vocal.
+                @endif
             </p>
         </div>
 
@@ -56,12 +68,41 @@
                     $requiresVocalTest = (bool) ($class->requires_vocal_test ?? false);
                     $withoutVocalTest = (bool) ($class->is_without_vocal_test ?? false);
 
-                    $targetRoute = $requiresVocalTest
-                        ? route('vocal-test.create', [$subject, $level, $class])
-                        : route(
-                            'front.courses',
-                            [$subject->id, $level->id, $class->id]
+                    $admissionMode = strtolower(
+                        trim((string) ($class->admission_mode ?? ''))
+                    );
+
+                    if ($admissionMode === 'contact') {
+                        $targetRoute = route(
+                            'appointment.create',
+                            [
+                                'subject_id' => $subject->id,
+                                'level_id' => $level->id,
+                                'class_id' => $class->id,
+                                'admission_mode' => 'contact',
+                            ]
                         );
+                    } elseif ($admissionMode === 'vocal_test') {
+                        $targetRoute = route(
+                            'vocal-test.create',
+                            [$subject, $level, $class]
+                        );
+                    } elseif ($isHighSchoolSupport) {
+                        $targetRoute = route(
+                            'plans',
+                            ['offer' => 'soutien_lycee']
+                        );
+                    } else {
+                        $targetRoute = $requiresVocalTest
+                            ? route(
+                                'vocal-test.create',
+                                [$subject, $level, $class]
+                            )
+                            : route(
+                                'front.courses',
+                                [$subject->id, $level->id, $class->id]
+                            );
+                    }
                 @endphp
 
                 <div class="col-md-6 col-lg-4">
@@ -80,7 +121,13 @@
                                     @endswitch
                                 );"
                             >
-                                @if($requiresVocalTest)
+                                @if($admissionMode === 'contact')
+                                    <i class="bi bi-headset" style="font-size: 1.5rem; color: white;"></i>
+                                @elseif($admissionMode === 'vocal_test')
+                                    <i class="bi bi-mic-fill" style="font-size: 1.5rem; color: white;"></i>
+                                @elseif($isHighSchoolSupport)
+                                    <i class="bi bi-stars" style="font-size: 1.5rem; color: white;"></i>
+                                @elseif($requiresVocalTest)
                                     <i class="bi bi-mic-fill" style="font-size: 1.5rem; color: white;"></i>
                                 @elseif($withoutVocalTest)
                                     <i class="bi bi-check-circle-fill" style="font-size: 1.5rem; color: white;"></i>
@@ -93,7 +140,43 @@
                                 {{ $class->name }}
                             </h5>
 
-                            @if($requiresVocalTest)
+                            @if($admissionMode === 'contact')
+                                <span
+                                    class="badge mb-2"
+                                    style="background: rgba(34,197,94,0.16); color: #86EFAC;"
+                                >
+                                    Prise en contact
+                                </span>
+
+                                <p class="text-white-50 small mb-0">
+                                    Contacter Smart School
+                                    <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
+                                </p>
+                            @elseif($admissionMode === 'vocal_test')
+                                <span
+                                    class="badge mb-2"
+                                    style="background: rgba(124,58,237,0.18); color: #C4B5FD;"
+                                >
+                                    Test vocal
+                                </span>
+
+                                <p class="text-white-50 small mb-0">
+                                    Passer le test vocal
+                                    <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
+                                </p>
+                            @elseif($isHighSchoolSupport)
+                                <span
+                                    class="badge mb-2"
+                                    style="background: rgba(245,158,11,0.16); color: #FCD34D;"
+                                >
+                                    Offre Soutien Lycée
+                                </span>
+
+                                <p class="text-white-50 small mb-0">
+                                    Voir l’offre
+                                    <i class="bi bi-arrow-right ms-1" style="color: var(--3d-gold);"></i>
+                                </p>
+                            @elseif($requiresVocalTest)
                                 <span
                                     class="badge mb-2"
                                     style="background: rgba(124,58,237,0.18); color: #C4B5FD;"
@@ -141,12 +224,3 @@
 </section>
 
 @endsection
-
-{{-- Design global V12 : présentation uniquement, aucun contenu modifié. --}}
-@push('scripts')
-<link
-    rel="stylesheet"
-    href="{{ asset('css/front-design-v12.css?v=12.0') }}"
->
-@endpush
-

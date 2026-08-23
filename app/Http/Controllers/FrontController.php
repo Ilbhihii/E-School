@@ -50,11 +50,21 @@ class FrontController extends Controller
             ->where('status', 'active')
             ->findOrFail($id);
 
-        $allowedLevelNames =
-            VocalTestPrompt::pathNamesForSubject($subject);
+        $isHighSchoolSupport =
+            $this->isHighSchoolSupport($subject);
 
-        $allowedClassNames =
-            VocalTestPrompt::allowedClassNames();
+        /*
+         * Arabe / Coran conservent leur structure validée.
+         * Soutien Lycée devient dynamique : niveau BAC + toutes les
+         * classes/matières actives créées depuis l'administration.
+         */
+        $allowedLevelNames = $isHighSchoolSupport
+            ? ['BAC']
+            : VocalTestPrompt::pathNamesForSubject($subject);
+
+        $allowedClassNames = $isHighSchoolSupport
+            ? []
+            : VocalTestPrompt::allowedClassNames();
 
         $classOrder = array_flip(
             array_map(
@@ -84,13 +94,18 @@ class FrontController extends Controller
             ->with([
                 'classes' => function ($query) use (
                     $subject,
-                    $allowedClassNames
+                    $allowedClassNames,
+                    $isHighSchoolSupport
                 ) {
                     $query
                         ->where('is_active', true)
-                        ->whereIn(
-                            'name',
-                            $allowedClassNames
+                        ->when(
+                            !$isHighSchoolSupport,
+                            fn ($classQuery) =>
+                                $classQuery->whereIn(
+                                    'name',
+                                    $allowedClassNames
+                                )
                         )
                         ->whereHas(
                             'subjects',
@@ -99,7 +114,8 @@ class FrontController extends Controller
                                     'subjects.id',
                                     $subject->id
                                 )
-                        );
+                        )
+                        ->orderBy('name');
                 },
             ])
             ->orderBy('order')
@@ -126,27 +142,35 @@ class FrontController extends Controller
             )
             ->values();
 
-        /*
-         * On ne compte que les trois classes actives :
-         * Débutant, Intermédiaire et Avancé.
-         *
-         * Les anciennes classes et les doublons présents
-         * dans la base ne sont pas inclus.
-         */
         $levels->each(
             function (Level $level) use (
                 $classOrder,
-                $subject
+                $subject,
+                $isHighSchoolSupport
             ) {
-                $validClasses = $level->classes
-                    ->sortBy(
-                        fn (ClassRoom $classRoom) =>
-                            $classOrder[
+                $validClasses = $level->classes;
+
+                if (!$isHighSchoolSupport) {
+                    $validClasses = $validClasses
+                        ->sortBy(
+                            fn (ClassRoom $classRoom) =>
+                                $classOrder[
+                                    VocalTestPrompt::normalizePathName(
+                                        $classRoom->name
+                                    )
+                                ] ?? PHP_INT_MAX
+                        );
+                } else {
+                    $validClasses = $validClasses
+                        ->sortBy(
+                            fn (ClassRoom $classRoom) =>
                                 VocalTestPrompt::normalizePathName(
                                     $classRoom->name
                                 )
-                            ] ?? PHP_INT_MAX
-                    )
+                        );
+                }
+
+                $validClasses = $validClasses
                     ->unique(
                         fn (ClassRoom $classRoom) =>
                             VocalTestPrompt::normalizePathName(
@@ -155,15 +179,47 @@ class FrontController extends Controller
                     )
                     ->values();
 
-                /*
-                 * Préparer les informations nécessaires à l'arbre
-                 * affiché directement dans subject-levels.blade.php.
-                 */
                 $validClasses->each(
                     function (ClassRoom $classRoom) use (
                         $subject,
-                        $level
+                        $level,
+                        $isHighSchoolSupport
                     ) {
+                        $admissionMode = strtolower(
+                            trim(
+                                (string) (
+                                    $classRoom->admission_mode
+                                    ?? ''
+                                )
+                            )
+                        );
+
+                        /*
+                         * Le choix fait dans l'administration est prioritaire
+                         * pour toutes les matières, pas uniquement Soutien Lycée.
+                         */
+                        if (in_array(
+                            $admissionMode,
+                            ['contact', 'vocal_test'],
+                            true
+                        )) {
+                            $classRoom->setAttribute(
+                                'requires_vocal_test',
+                                $admissionMode === 'vocal_test'
+                            );
+
+                            $classRoom->setAttribute(
+                                'is_without_vocal_test',
+                                $admissionMode === 'contact'
+                            );
+
+                            return;
+                        }
+
+                        /*
+                         * Compatibilité avec les anciennes classes dont
+                         * admission_mode est encore NULL.
+                         */
                         $classRoom->setAttribute(
                             'requires_vocal_test',
                             VocalTestPrompt::requiresVocalTest(
@@ -196,14 +252,6 @@ class FrontController extends Controller
             }
         );
 
-        /*
-         * Cette valeur est utilisée dans la partie supérieure
-         * de resources/views/front/subject-levels.blade.php.
-         *
-         * Résultat :
-         * - Arabe : 2 parcours × 3 classes = 6
-         * - Coran : 1 parcours × 3 classes = 3
-         */
         $subject->setAttribute(
             'classes_count',
             $levels->sum('available_classes_count')
@@ -237,51 +285,109 @@ class FrontController extends Controller
         $subject = Subject::query()
             ->where('status', 'active')
             ->findOrFail($subjectId);
+
         $level = Level::whereKey($levelId)
             ->where('subject_id', $subject->id)
             ->where('is_active', true)
             ->firstOrFail();
 
+        $isHighSchoolSupport =
+            $this->isHighSchoolSupport($subject);
+
         abort_unless(
-            VocalTestPrompt::isSupportedLevel($subject, $level),
+            $isHighSchoolSupport
+                || VocalTestPrompt::isSupportedLevel(
+                    $subject,
+                    $level
+                ),
             404,
             'Ce parcours ne fait pas partie de la structure actuelle.'
         );
 
-        $allowedClassNames = VocalTestPrompt::allowedClassNames();
+        $allowedClassNames = $isHighSchoolSupport
+            ? []
+            : VocalTestPrompt::allowedClassNames();
+
         $classOrder = array_flip(array_map(
             [VocalTestPrompt::class, 'normalizePathName'],
             $allowedClassNames
         ));
 
-        $classes = ClassRoom::where('level_id', $level->id)
+        $classes = ClassRoom::query()
+            ->where('level_id', $level->id)
             ->where('is_active', true)
-            ->whereIn('name', $allowedClassNames)
+            ->when(
+                !$isHighSchoolSupport,
+                fn ($query) =>
+                    $query->whereIn('name', $allowedClassNames)
+            )
             ->whereHas(
                 'subjects',
-                fn($query) => $query->where('subjects.id', $subject->id)
+                fn ($query) =>
+                    $query->where('subjects.id', $subject->id)
             )
+            ->orderBy('name')
             ->get()
-            ->sortBy(function (ClassRoom $class) use ($classOrder) {
+            ->sortBy(function (ClassRoom $class) use (
+                $classOrder,
+                $isHighSchoolSupport
+            ) {
+                if ($isHighSchoolSupport) {
+                    return VocalTestPrompt::normalizePathName(
+                        $class->name
+                    );
+                }
+
                 return $classOrder[
                     VocalTestPrompt::normalizePathName($class->name)
                 ] ?? 99;
             })
             ->values();
 
-        $classes->each(function (ClassRoom $class) use ($subject, $level) {
-            $class->requires_vocal_test = VocalTestPrompt::requiresVocalTest(
+        $classes->each(
+            function (ClassRoom $class) use (
                 $subject,
                 $level,
-                $class
-            );
+                $isHighSchoolSupport
+            ) {
+                $admissionMode = strtolower(
+                    trim(
+                        (string) (
+                            $class->admission_mode
+                            ?? ''
+                        )
+                    )
+                );
 
-            $class->is_without_vocal_test = VocalTestPrompt::isExcludedPath(
-                $subject,
-                $level,
-                $class
-            );
-        });
+                if (in_array(
+                    $admissionMode,
+                    ['contact', 'vocal_test'],
+                    true
+                )) {
+                    $class->requires_vocal_test =
+                        $admissionMode === 'vocal_test';
+
+                    $class->is_without_vocal_test =
+                        $admissionMode === 'contact';
+
+                    return;
+                }
+
+                $class->requires_vocal_test =
+                    VocalTestPrompt::requiresVocalTest(
+                        $subject,
+                        $level,
+                        $class
+                    );
+
+                $class->is_without_vocal_test =
+                    VocalTestPrompt::isExcludedPath(
+                        $subject,
+                        $level,
+                        $class
+                    );
+            }
+        );
 
         return view(
             'front.level-classes',
@@ -350,6 +456,47 @@ class FrontController extends Controller
                 fn($query) => $query->where('subjects.id', $subject->id)
             )
             ->firstOrFail();
+
+        /*
+         * Le mode choisi par l'administrateur est l'autorité de navigation
+         * pour TOUTES les matières.
+         */
+        $admissionMode = strtolower(
+            trim(
+                (string) (
+                    $class->admission_mode
+                    ?? ''
+                )
+            )
+        );
+
+        if ($admissionMode === 'contact') {
+            return redirect()->to(
+                route('appointment.create', [
+                    'subject_id' => $subject->id,
+                    'level_id' => $level->id,
+                    'class_id' => $class->id,
+                    'admission_mode' => 'contact',
+                ])
+            );
+        }
+
+        if ($admissionMode === 'vocal_test') {
+            return redirect()->route(
+                'vocal-test.create',
+                [$subject, $level, $class]
+            );
+        }
+
+        /*
+         * Compatibilité : anciennes classes Soutien Lycée sans mode défini.
+         */
+        if ($this->isHighSchoolSupport($subject)) {
+            return redirect()->route(
+                'plans',
+                ['offer' => 'soutien_lycee']
+            );
+        }
 
         if (!VocalTestPrompt::isSupportedPath($subject, $level, $class)) {
             return redirect()
@@ -506,6 +653,14 @@ class FrontController extends Controller
             ->get();
 
         return view('front.public-courses', compact('level', 'class', 'subject', 'courses'));
+    }
+
+    private function isHighSchoolSupport(
+        Subject $subject
+    ): bool {
+        return VocalTestPrompt::normalizePathName(
+            $subject->name
+        ) === 'soutien lycee';
     }
 
     public function religieux()

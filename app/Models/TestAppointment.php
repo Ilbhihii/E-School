@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PlanCatalogService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -20,11 +21,17 @@ class TestAppointment extends Model
         'subject_id',
         'level_id',
         'class_id',
+        'admission_mode',
         'interview_method',
         'preferred_date',
         'preferred_time',
         'notes',
         'payment_plan',
+        'payment_plan_name',
+        'payment_duration_months',
+        'payment_amount_minor',
+        'payment_currency',
+        'payment_currency_symbol',
         'payment_invited_at',
         'payment_invitation_count',
         'vocal_test_submission_id',
@@ -33,6 +40,8 @@ class TestAppointment extends Model
 
     protected $casts = [
         'preferred_date' => 'date',
+        'payment_duration_months' => 'integer',
+        'payment_amount_minor' => 'integer',
         'payment_invited_at' => 'datetime',
         'payment_invitation_count' => 'integer',
     ];
@@ -102,6 +111,18 @@ class TestAppointment extends Model
         );
     }
 
+    public function getAdmissionModeLabelAttribute(): string
+    {
+        $labels = [
+            'contact' => 'Prise en contact',
+            'vocal_test' => 'Test vocal',
+            'test' => 'Test d’admission',
+        ];
+
+        return $labels[$this->admission_mode]
+            ?? ($this->admission_mode ?: 'Non précisé');
+    }
+
     public function getPreferredTimeLabelAttribute(): string
     {
         if (!$this->preferred_time) {
@@ -117,19 +138,21 @@ class TestAppointment extends Model
 
     public function getPaymentPlanCodeAttribute(): string
     {
-        if (
-            in_array(
-                $this->payment_plan,
-                [
-                    'premium',
-                    'soutien_lycee',
-                ],
-                true
-            )
-        ) {
-            return $this->payment_plan;
+        $selected = trim((string) $this->payment_plan);
+
+        /*
+         * Pour les nouvelles demandes, on conserve exactement le code
+         * choisi par le visiteur, y compris les offres créées depuis
+         * l'administration (Family Pack, offres personnalisées, etc.).
+         */
+        if ($selected !== '') {
+            return $selected;
         }
 
+        /*
+         * Compatibilité avec les anciennes demandes qui n'avaient pas
+         * encore de choix d'offre enregistré.
+         */
         $subjectName =
             $this->subject?->name
             ?? $this->vocalSubmission?->subject?->name
@@ -148,50 +171,93 @@ class TestAppointment extends Model
     public function getPaymentPlanDetailsAttribute(): array
     {
         $planCode = $this->payment_plan_code;
+        $catalog = app(PlanCatalogService::class);
+        $plan = $catalog->find($planCode, false);
 
-        $configuredPlan = config(
-            'plans.offers.' . $planCode
+        $durationMonths = (int) (
+            $this->payment_duration_months ?: 12
         );
 
-        if (is_array($configuredPlan)) {
-            return array_merge(
-                [
-                    'code' => $planCode,
-                    'name' => $planCode === 'soutien_lycee'
-                        ? 'Soutien Lycée'
-                        : 'Premium',
-                    'amount_display' => $planCode === 'soutien_lycee'
-                        ? '1000'
-                        : '200',
-                    'currency_symbol' => $planCode === 'soutien_lycee'
-                        ? 'DH'
-                        : '€',
-                    'period' => 'an',
-                    'scope' => $planCode === 'soutien_lycee'
-                        ? 'Soutien Lycée uniquement'
-                        : 'Tous les parcours',
-                ],
-                $configuredPlan
+        $pricing = $plan
+            ? $catalog->pricingOption(
+                $plan,
+                $durationMonths
+            )
+            : null;
+
+        $amountMinor = $this->payment_amount_minor;
+
+        if ($amountMinor === null) {
+            $amountMinor = (int) (
+                $pricing['amount_minor']
+                ?? $plan['amount_minor']
+                ?? ($planCode === 'soutien_lycee'
+                    ? 100000
+                    : 20000)
             );
         }
 
-        return $planCode === 'soutien_lycee'
-            ? [
-                'code' => 'soutien_lycee',
-                'name' => 'Soutien Lycée',
-                'amount_display' => '1000',
-                'currency_symbol' => 'DH',
-                'period' => 'an',
-                'scope' => 'Soutien Lycée uniquement',
-            ]
-            : [
-                'code' => 'premium',
-                'name' => 'Premium',
-                'amount_display' => '200',
-                'currency_symbol' => '€',
-                'period' => 'an',
-                'scope' => 'Tous les parcours',
-            ];
+        $amountMajor = ((int) $amountMinor) / 100;
+        $amountDisplay =
+            abs($amountMajor - round($amountMajor)) < 0.00001
+                ? number_format($amountMajor, 0, ',', ' ')
+                : number_format($amountMajor, 2, ',', ' ');
+
+        $durationLabel = $durationMonths === 12
+            ? '12 mois — Annuel'
+            : ($durationMonths === 1
+                ? '1 mois'
+                : $durationMonths . ' mois');
+
+        $periodLabel = $durationMonths === 12
+            ? 'an'
+            : ($durationMonths === 1
+                ? 'mois'
+                : $durationMonths . ' mois');
+
+        return [
+            'code' => $planCode,
+            'name' => trim((string) $this->payment_plan_name) !== ''
+                ? (string) $this->payment_plan_name
+                : (string) (
+                    $plan['name']
+                    ?? ($planCode === 'soutien_lycee'
+                        ? 'Soutien Lycée'
+                        : 'Premium')
+                ),
+            'amount_minor' => (int) $amountMinor,
+            'amount_display' => $amountDisplay,
+            'currency' => trim((string) $this->payment_currency) !== ''
+                ? strtolower((string) $this->payment_currency)
+                : strtolower((string) (
+                    $plan['currency']
+                    ?? ($planCode === 'soutien_lycee'
+                        ? 'mad'
+                        : 'eur')
+                )),
+            'currency_symbol' =>
+                trim((string) $this->payment_currency_symbol) !== ''
+                    ? (string) $this->payment_currency_symbol
+                    : (string) (
+                        $plan['currency_symbol']
+                        ?? ($planCode === 'soutien_lycee'
+                            ? 'DH'
+                            : '€')
+                    ),
+            'duration_months' => $durationMonths,
+            'duration_label' => $durationLabel,
+            'period' => $periodLabel,
+            'scope' => (string) (
+                $plan['scope']
+                ?? ($planCode === 'soutien_lycee'
+                    ? 'Soutien Lycée uniquement'
+                    : 'Tous les parcours')
+            ),
+            'is_family_pack' => (bool) (
+                $plan['is_family_pack'] ?? false
+            ),
+            'family_members' => $plan['family_members'] ?? null,
+        ];
     }
 
     public function canReceivePaymentInvitation(): bool

@@ -984,35 +984,64 @@ html.light-mode .card-3d .text-white-50 {
                                                         ?? false
                                                     );
 
-                                                $targetRoute =
-                                                    $isHighSchoolSupport
-                                                        ? route(
-                                                            'high-school-test.show',
-                                                            [
-                                                                $subject,
-                                                                $level,
-                                                                $class,
-                                                            ]
+                                                $admissionMode =
+                                                    strtolower(
+                                                        trim(
+                                                            (string) (
+                                                                $class
+                                                                    ->admission_mode
+                                                                ?? ''
+                                                            )
                                                         )
-                                                        : (
-                                                            $requiresVocalTest
-                                                                ? route(
-                                                                    'vocal-test.create',
-                                                                    [
-                                                                        $subject,
-                                                                        $level,
-                                                                        $class,
-                                                                    ]
-                                                                )
-                                                                : route(
-                                                                    'front.courses',
-                                                                    [
-                                                                        $subject->id,
-                                                                        $level->id,
-                                                                        $class->id,
-                                                                    ]
-                                                                )
-                                                        );
+                                                    );
+
+                                                if ($admissionMode === 'contact') {
+                                                    $targetRoute = route(
+                                                        'appointment.create',
+                                                        [
+                                                            'subject_id' => $subject->id,
+                                                            'level_id' => $level->id,
+                                                            'class_id' => $class->id,
+                                                            'admission_mode' => 'contact',
+                                                        ]
+                                                    );
+                                                } elseif ($admissionMode === 'vocal_test') {
+                                                    $targetRoute = route(
+                                                        'vocal-test.create',
+                                                        [
+                                                            $subject,
+                                                            $level,
+                                                            $class,
+                                                        ]
+                                                    );
+                                                } elseif ($isHighSchoolSupport) {
+                                                    $targetRoute = route(
+                                                        'plans',
+                                                        [
+                                                            'offer' =>
+                                                                'soutien_lycee',
+                                                        ]
+                                                    );
+                                                } else {
+                                                    $targetRoute =
+                                                        $requiresVocalTest
+                                                            ? route(
+                                                                'vocal-test.create',
+                                                                [
+                                                                    $subject,
+                                                                    $level,
+                                                                    $class,
+                                                                ]
+                                                            )
+                                                            : route(
+                                                                'front.courses',
+                                                                [
+                                                                    $subject->id,
+                                                                    $level->id,
+                                                                    $class->id,
+                                                                ]
+                                                            );
+                                                }
 
                                                 $normalizedItemName =
                                                     \App\Models\VocalTestPrompt
@@ -1086,7 +1115,11 @@ html.light-mode .card-3d .text-white-50 {
                                                                 {{ $classGradient }};
                                                         "
                                                     >
-                                                        @if($isHighSchoolSupport)
+                                                        @if($admissionMode === 'contact')
+                                                            <i class="bi bi-headset"></i>
+                                                        @elseif($admissionMode === 'vocal_test')
+                                                            <i class="bi bi-mic-fill"></i>
+                                                        @elseif($isHighSchoolSupport)
                                                             <i
                                                                 class="
                                                                     bi
@@ -1130,20 +1163,35 @@ html.light-mode .card-3d .text-white-50 {
                                                             {{ $class->name }}
                                                         </span>
 
-                                                        @if($isHighSchoolSupport)
+                                                        @if($admissionMode === 'contact')
+                                                            <span
+                                                                class="
+                                                                    class-tree-status
+                                                                    no-test
+                                                                "
+                                                            >
+                                                                <i class="bi bi-headset"></i>
+                                                                Prise en contact
+                                                            </span>
+                                                        @elseif($admissionMode === 'vocal_test')
+                                                            <span
+                                                                class="
+                                                                    class-tree-status
+                                                                    test
+                                                                "
+                                                            >
+                                                                <i class="bi bi-mic-fill"></i>
+                                                                Test vocal
+                                                            </span>
+                                                        @elseif($isHighSchoolSupport)
                                                             <span
                                                                 class="
                                                                     class-tree-status
                                                                 "
                                                             >
-                                                                <i
-                                                                    class="
-                                                                        bi
-                                                                        bi-file-earmark-text-fill
-                                                                    "
-                                                                ></i>
-                                                                Passer le
-                                                                test écrit
+                                                                <i class="bi bi-stars"></i>
+                                                                Voir l’offre
+                                                                Soutien Lycée
                                                             </span>
                                                         @elseif($requiresVocalTest)
                                                             <span
