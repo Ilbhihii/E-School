@@ -796,15 +796,62 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
-        $request->validate([
-            'class_id' => 'nullable|exists:class_rooms,id'
+        if ($user->role !== User::ROLE_STUDENT) {
+            abort(404, 'Not a student');
+        }
+
+        /*
+         * Mise à jour des informations générales du compte.
+         * Le paiement reste géré dans le module student-payments afin
+         * de conserver tout l'historique 4 mois / annuel.
+         */
+        if ($request->has('_profile_update')) {
+            $validated = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => [
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    'unique:users,email,' . $user->id,
+                ],
+                'country' => ['nullable', 'string', 'max:120'],
+                'city' => ['nullable', 'string', 'max:120'],
+                'is_active' => ['required', 'boolean'],
+            ], [
+                'name.required' => 'Le nom complet est obligatoire.',
+                'email.required' => 'L’adresse e-mail est obligatoire.',
+                'email.email' => 'L’adresse e-mail est invalide.',
+                'email.unique' => 'Cette adresse e-mail est déjà utilisée par un autre compte.',
+            ]);
+
+            $user->name = trim($validated['name']);
+            $user->email = mb_strtolower(trim($validated['email']));
+            $user->country = filled($validated['country'] ?? null)
+                ? trim($validated['country'])
+                : null;
+            $user->city = filled($validated['city'] ?? null)
+                ? trim($validated['city'])
+                : null;
+            $user->is_active = (bool) $validated['is_active'];
+            $user->save();
+
+            return redirect()
+                ->route('admin.users.edit', $user)
+                ->with('success', 'Les informations de l’étudiant ont été mises à jour avec succès.');
+        }
+
+        /*
+         * Compatibilité avec l'ancien formulaire de classe.
+         */
+        $validated = $request->validate([
+            'class_id' => 'nullable|exists:class_rooms,id',
         ]);
 
-        $user->update([
-            'class_id' => $request->class_id
-        ]);
+        $user->class_id = $validated['class_id'] ?? null;
+        $user->save();
 
-        return back();
+        return back()->with('success', 'La classe de l’étudiant a été mise à jour.');
     }
 
     /**
@@ -1031,13 +1078,22 @@ class UserController extends Controller
             );
         }
 
+        $currentPayment = $user->currentStudentPayment()->first();
+
+        $lastPayment = $user->studentPayments()
+            ->orderByDesc('paid_at')
+            ->orderByDesc('id')
+            ->first();
+
         return view(
             'admin.users.edit',
             compact(
                 'user',
                 'assignments',
                 'selectedAssignment',
-                'assignmentHierarchy'
+                'assignmentHierarchy',
+                'currentPayment',
+                'lastPayment'
             )
         );
     }

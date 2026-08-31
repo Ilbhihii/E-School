@@ -1144,6 +1144,13 @@
 
                             <td data-label="Actions">
                                 <div class="users-actions">
+                                    <a href="{{ route('admin.users.edit', $user->id) }}"
+                                       class="users-action"
+                                       title="Modifier l’étudiant"
+                                       aria-label="Modifier {{ $user->name }}">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+
                                     <a href="{{ route('admin.student-payments.create', ['student' => $user->id]) }}"
                                        class="users-action {{ $isPaidNow ? 'success' : 'warning' }}"
                                        title="Gérer le paiement"

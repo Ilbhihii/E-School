@@ -438,14 +438,13 @@
                             </label>
 
                             <div class="input-wrap">
-                                <i class="bi bi-person"></i>
                                 <input
                                     id="name"
                                     type="text"
                                     name="name"
                                     value="{{ old('name') }}"
                                     class="student-input @error('name') is-invalid @enderror"
-                                    placeholder="Ex. Mohamed El Amrani"
+                                    placeholder=""
                                     maxlength="255"
                                     required
                                     autofocus
@@ -463,7 +462,6 @@
                             </label>
 
                             <div class="input-wrap">
-                                <i class="bi bi-envelope"></i>
                                 <input
                                     id="email"
                                     type="email"
@@ -502,14 +500,13 @@
                             </label>
 
                             <div class="input-wrap">
-                                <i class="bi bi-globe2"></i>
                                 <input
                                     id="country"
                                     type="text"
                                     name="country"
                                     value="{{ old('country', 'Maroc') }}"
                                     class="student-input @error('country') is-invalid @enderror"
-                                    placeholder="Maroc"
+                                    placeholder=""
                                     maxlength="120"
                                     required
                                 >
@@ -526,14 +523,13 @@
                             </label>
 
                             <div class="input-wrap">
-                                <i class="bi bi-pin-map"></i>
                                 <input
                                     id="city"
                                     type="text"
                                     name="city"
                                     value="{{ old('city') }}"
                                     class="student-input @error('city') is-invalid @enderror"
-                                    placeholder="Ex. Rabat"
+                                    placeholder=""
                                     maxlength="120"
                                     required
                                 >
