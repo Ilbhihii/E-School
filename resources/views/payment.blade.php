@@ -30,8 +30,8 @@
                     . (auth()->check() ? auth()->id() : 'COMPTE');
 
                 $whatsappTemplate =
-                    $selectedPlan['whatsapp_message']
-                    ?? 'Bonjour, je souhaite envoyer mon reçu de paiement pour l’offre {offre}. Durée : {duree}. Référence : {reference}. Montant : {montant} {devise}. Je joins le reçu à ce message.';
+                    $selectedPlan['whatsapp_payment_message']
+                    ?? 'Bonjour Smart School Academy, je souhaite effectuer le paiement pour l’offre {offre}. Durée : {duree}. Montant : {montant} {devise}. Référence : {reference}. Pouvez-vous m’indiquer les étapes à suivre, s’il vous plaît ?';
 
                 $whatsappMessage = strtr(
                     $whatsappTemplate,
@@ -136,125 +136,85 @@
                 <strong>{{ $paymentReference }}</strong>
             </div>
 
-            <div class="payment-methods">
-                @if(
-                    request('method') === 'paypal'
-                    && ($selectedPlan['allow_paypal'] ?? true)
-                )
-                    <div class="method-box">
-                        <h3><i class="bi bi-paypal"></i> Paiement PayPal</h3>
+            <div class="whatsapp-payment-box">
+                <div class="whatsapp-payment-head">
+                    <span class="whatsapp-payment-icon">
+                        <i class="bi bi-whatsapp"></i>
+                    </span>
+
+                    <div>
+                        <span class="whatsapp-payment-kicker">Paiement accompagné</span>
+                        <h3>Continuer le paiement sur WhatsApp</h3>
                         <p>
-                            Payez {{ $selectedPricing['amount_display'] }}
-                            {{ $selectedPlan['currency_symbol'] }} pour {{ $selectedPricing['label'] }}, puis envoyez
-                            la confirmation et la référence à l’administration.
-                        </p>
-                        <a href="{{ $selectedPlan['paypal_url'] ?: 'https://www.paypal.me/abdelghanimaloulou1' }}" target="_blank" rel="noopener" class="payment-button paypal">
-                            <i class="bi bi-paypal"></i>
-                            Continuer sur PayPal
-                        </a>
-                    </div>
-                    <a href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $durationMonths]) }}" class="change-method">
-                        <i class="bi bi-arrow-left"></i> Changer la méthode
-                    </a>
-                @elseif(
-                    request('method') === 'bank'
-                    && ($selectedPlan['allow_bank'] ?? true)
-                )
-                    <div class="method-box">
-                        <h3><i class="bi bi-bank"></i> Virement bancaire</h3>
-                        <div class="bank-block">
-                            <strong>Maroc — Banque Populaire</strong>
-                            <span>RIB : 123456789012345678901234</span>
-                            <span>Titulaire : M. Abdelghani Maloulou</span>
-                        </div>
-                        <div class="bank-block">
-                            <strong>France — EUROCOMPTE SÉRÉNITÉ</strong>
-                            <span>IBAN : FR76 1027 8089 7600 0210 7440 103</span>
-                            <span>BIC : CMCIFR2A</span>
-                        </div>
-                        <p>
-                            Indiquez la référence dans le motif du virement,
-                            puis envoyez le reçu à l’administration.
+                            Pour votre sécurité, aucun RIB ni lien PayPal n’est affiché sur cette page.
+                            Contactez directement Smart School Academy sur WhatsApp pour recevoir
+                            les instructions de paiement correspondant à votre offre.
                         </p>
                     </div>
-                    <a href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $durationMonths]) }}" class="change-method">
-                        <i class="bi bi-arrow-left"></i> Changer la méthode
-                    </a>
-                @else
-                    @if($selectedPlan['allow_paypal'] ?? true)
-                        <a href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $durationMonths, 'method' => 'paypal']) }}" class="payment-button paypal">
-                            <i class="bi bi-paypal"></i>
-                            Payer avec PayPal
-                        </a>
-                    @endif
+                </div>
 
-                    @if($selectedPlan['allow_bank'] ?? true)
-                        <a href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $durationMonths, 'method' => 'bank']) }}" class="payment-button bank">
-                            <i class="bi bi-bank"></i>
-                            Virement bancaire
-                        </a>
-                    @endif
-
-                    @if(
-                        !($selectedPlan['allow_paypal'] ?? true)
-                        && !($selectedPlan['allow_bank'] ?? true)
-                    )
-                        <a href="{{ route('appointment.create') }}" class="payment-button bank">
-                            <i class="bi bi-chat-dots-fill"></i>
-                            Contacter l’administration
-                        </a>
-                    @endif
-                @endif
-            </div>
-
-            @if($whatsappContacts->isNotEmpty())
-                <div class="whatsapp-receipt-box">
-                    <div class="whatsapp-receipt-head">
-                        <span><i class="bi bi-whatsapp"></i></span>
-                        <div>
-                            <strong>Envoyer le reçu par WhatsApp</strong>
-                            <small>
-                                Choisissez le numéro. Le message sera déjà rempli,
-                                puis joignez la photo ou le PDF de votre reçu dans WhatsApp.
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="whatsapp-receipt-actions">
+                @if($whatsappContacts->isNotEmpty())
+                    <div class="whatsapp-payment-actions">
                         @foreach($whatsappContacts as $contact)
                             <a
                                 href="{{ $contact['url'] }}"
                                 target="_blank"
                                 rel="noopener"
-                                class="payment-button whatsapp"
+                                class="payment-button whatsapp whatsapp-main"
                             >
-                                <i class="bi bi-whatsapp"></i>
-                                {{ $contact['icon'] }}
-                                WhatsApp {{ $contact['label'] }}
-                                <span>{{ $contact['number'] }}</span>
+                                <span class="whatsapp-main-left">
+                                    <i class="bi bi-whatsapp"></i>
+                                    <strong>WhatsApp {{ $contact['label'] }}</strong>
+                                </span>
+
+                                <span class="whatsapp-main-right">
+                                    {{ $contact['icon'] }}
+                                    {{ $contact['number'] }}
+                                    <i class="bi bi-arrow-up-right"></i>
+                                </span>
                             </a>
                         @endforeach
                     </div>
 
-                    <div class="whatsapp-receipt-note">
-                        <i class="bi bi-paperclip"></i>
-                        WhatsApp ouvre la conversation avec le texte prérempli.
-                        Pour des raisons de sécurité du navigateur, le reçu doit
-                        être joint manuellement avant l’envoi.
+                    <div class="whatsapp-payment-note">
+                        <i class="bi bi-chat-heart-fill"></i>
+                        <span>
+                            Le message contient déjà votre offre, la durée, le montant
+                            et la référence <strong>{{ $paymentReference }}</strong>.
+                        </span>
                     </div>
-                </div>
-            @endif
+                @else
+                    <a href="{{ route('appointment.create') }}" class="payment-button whatsapp whatsapp-main whatsapp-fallback">
+                        <span class="whatsapp-main-left">
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <strong>Contacter l’administration</strong>
+                        </span>
+                        <span class="whatsapp-main-right">
+                            Continuer
+                            <i class="bi bi-arrow-right"></i>
+                        </span>
+                    </a>
+                @endif
+            </div>
 
             <div class="payment-security">
                 <i class="bi bi-shield-check"></i>
-                Le plan est mémorisé, mais is_paid ne change pas
-                avant confirmation réelle du paiement.
+                Votre accès sera activé uniquement après confirmation du paiement par l’administration.
             </div>
         </div>
     </div>
 </div>
 
 <style>
+.payment-button{min-height:50px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;color:#fff;font-size:.77rem;font-weight:800;text-decoration:none;transition:.25s ease}.payment-button:hover{color:#fff;transform:translateY(-2px);filter:brightness(1.06)}
+.whatsapp-payment-box{margin-top:18px;padding:18px;border:1px solid rgba(37,211,102,.18);border-radius:20px;background:linear-gradient(145deg,rgba(37,211,102,.07),rgba(18,140,74,.035));text-align:left}
+.whatsapp-payment-head{display:flex;align-items:flex-start;gap:13px}.whatsapp-payment-icon{width:46px;height:46px;display:grid;place-items:center;flex:0 0 46px;border-radius:14px;background:linear-gradient(135deg,#128c4a,#25d366);color:#fff;font-size:1.35rem;box-shadow:0 10px 28px rgba(37,211,102,.16)}
+.whatsapp-payment-kicker{display:block;margin-bottom:4px;color:#86efac;font-size:.6rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.whatsapp-payment-head h3{margin:0;color:#f0fdf4;font-size:.96rem;font-weight:900}.whatsapp-payment-head p{margin:7px 0 0;color:rgba(255,255,255,.49);font-size:.66rem;line-height:1.6}
+.whatsapp-payment-actions{display:flex;flex-direction:column;gap:9px;margin-top:15px}.payment-button.whatsapp-main{min-height:54px;justify-content:space-between;padding:0 15px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(135deg,#128c4a,#25d366);box-shadow:0 12px 28px rgba(37,211,102,.13)}
+.whatsapp-main-left,.whatsapp-main-right{display:flex;align-items:center;gap:8px}.whatsapp-main-left i{font-size:1.1rem}.whatsapp-main-right{color:rgba(255,255,255,.86);font-size:.64rem;font-weight:800}.whatsapp-payment-note{display:flex;align-items:flex-start;gap:8px;margin-top:12px;padding:10px 11px;border-radius:12px;background:rgba(255,255,255,.035);color:rgba(255,255,255,.42);font-size:.59rem;line-height:1.5}.whatsapp-payment-note i{margin-top:1px;color:#86efac}.whatsapp-payment-note strong{color:#bbf7d0}
+.whatsapp-fallback{margin-top:15px}
+html.light-mode .whatsapp-payment-box{border-color:rgba(22,163,74,.18);background:linear-gradient(145deg,rgba(34,197,94,.07),rgba(22,163,74,.035))}html.light-mode .whatsapp-payment-head h3{color:#14532d}html.light-mode .whatsapp-payment-head p{color:#64748b}html.light-mode .whatsapp-payment-kicker{color:#16a34a}html.light-mode .whatsapp-payment-note{background:rgba(15,23,42,.035);color:#64748b}html.light-mode .whatsapp-payment-note strong{color:#166534}
+
 .payment-page{position:relative;min-height:100vh;padding:6.5rem 0 4rem;background:radial-gradient(circle at 15% 20%,rgba(37,99,235,.18),transparent 32%),radial-gradient(circle at 88% 75%,rgba(124,58,237,.18),transparent 34%),linear-gradient(135deg,#0f0c29,#302b63,#24243e)}
 .payment-card{max-width:650px;margin:0 auto;padding:1.7rem;border:1px solid rgba(255,255,255,.11);border-radius:27px;background:rgba(255,255,255,.065);box-shadow:0 30px 75px rgba(0,0,0,.35);backdrop-filter:blur(20px);text-align:center}
 .payment-back{display:inline-flex;align-items:center;gap:7px;float:left;color:rgba(255,255,255,.42);font-size:.68rem;text-decoration:none}.payment-back:hover{color:#fff}

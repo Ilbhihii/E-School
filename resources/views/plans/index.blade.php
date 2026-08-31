@@ -200,42 +200,25 @@
                     @endif
 
                     <div class="offer-actions">
-                        @if($plan['allow_paypal'] ?? true)
-                            <a
-                                href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $defaultPricing['duration_months'], 'method' => 'paypal']) }}"
-                                class="offer-button offer-paypal"
-                                data-payment-link
-                                data-method="paypal"
-                            >
-                                <i class="bi bi-paypal"></i>
-                                Payer avec PayPal
-                            </a>
-                        @endif
+                        <a
+                            href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $defaultPricing['duration_months']]) }}"
+                            class="offer-button offer-continue"
+                            data-payment-link
+                        >
+                            <span class="offer-continue-main">
+                                <i class="bi bi-check2-circle"></i>
+                                Choisir cette offre
+                            </span>
 
-                        @if($plan['allow_bank'] ?? true)
-                            <a
-                                href="{{ route('student.payment', ['plan' => $planCode, 'duration' => $defaultPricing['duration_months'], 'method' => 'bank']) }}"
-                                class="offer-button offer-bank"
-                                data-payment-link
-                                data-method="bank"
-                            >
-                                <i class="bi bi-bank"></i>
-                                Virement bancaire
-                            </a>
-                        @endif
+                            <span class="offer-continue-arrow">
+                                <i class="bi bi-arrow-right"></i>
+                            </span>
+                        </a>
 
-                        @if(
-                            !($plan['allow_paypal'] ?? true)
-                            && !($plan['allow_bank'] ?? true)
-                        )
-                            <a
-                                href="{{ route('appointment.create') }}"
-                                class="offer-button offer-contact"
-                            >
-                                <i class="bi bi-chat-dots-fill"></i>
-                                Contacter l’administration
-                            </a>
-                        @endif
+                        <div class="offer-whatsapp-hint">
+                            <i class="bi bi-whatsapp"></i>
+                            Paiement accompagné via WhatsApp
+                        </div>
                     </div>
                 </article>
             @endforeach
@@ -436,7 +419,7 @@
 .plans-grid {
     display: grid;
     max-width: 1080px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     align-items: stretch;
     gap: 20px;
     margin: 0 auto;
@@ -734,6 +717,63 @@
 .offer-button:focus-visible {
     outline: 3px solid rgba(132, 160, 255, 0.30);
     outline-offset: 3px;
+}
+
+.offer-continue {
+    width: 100%;
+    min-height: 50px;
+    justify-content: space-between;
+    padding: 0 14px 0 16px;
+    color: #ffffff;
+    border-color: rgba(37, 211, 102, 0.22);
+    background:
+        linear-gradient(135deg, #128c4a 0%, #16a34a 45%, #25d366 100%);
+    box-shadow: 0 12px 26px rgba(37, 211, 102, 0.16);
+}
+
+.offer-continue:hover {
+    color: #ffffff;
+    border-color: rgba(134, 239, 172, 0.36);
+    box-shadow: 0 16px 32px rgba(37, 211, 102, 0.23);
+}
+
+.offer-continue-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.offer-continue-main > i {
+    font-size: 0.92rem;
+}
+
+.offer-continue-arrow {
+    width: 27px;
+    height: 27px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.13);
+}
+
+.offer-whatsapp-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: -1px;
+    color: #6f8d7b;
+    font-size: 0.55rem;
+    font-weight: 700;
+}
+
+.offer-whatsapp-hint i {
+    color: #25d366;
+    font-size: 0.68rem;
+}
+
+html.light-mode .offer-whatsapp-hint {
+    color: #64748b;
 }
 
 .offer-paypal {
@@ -1213,6 +1253,79 @@ html.light-mode .plans-security {
 .plans-billing-control{display:flex;flex-direction:column;align-items:center;gap:10px;margin:-.25rem auto 1.35rem}.plans-billing-switch{display:inline-grid;grid-template-columns:repeat(2,minmax(138px,1fr));gap:5px;padding:5px;border:1px solid rgba(148,163,184,.14);border-radius:14px;background:rgba(8,17,31,.72);box-shadow:0 12px 30px rgba(0,0,0,.16)}.plans-billing-switch button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 15px;color:#8594aa;border:0;border-radius:10px;background:transparent;font-size:.66rem;font-weight:800;cursor:pointer;transition:all .18s ease}.plans-billing-switch button.active{color:#fff;background:linear-gradient(135deg,#4569ef,#7654e8);box-shadow:0 8px 18px rgba(79,114,245,.22)}.plans-billing-switch button:disabled{opacity:.35;cursor:not-allowed}.plans-monthly-durations{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}.plans-monthly-durations>span{margin-right:2px;color:#718198;font-size:.58rem;font-weight:700}.plans-monthly-durations button{min-height:31px;padding:0 10px;color:#91a1b7;border:1px solid rgba(148,163,184,.13);border-radius:999px;background:rgba(255,255,255,.025);font-size:.57rem;font-weight:800;cursor:pointer}.plans-monthly-durations button.active{color:#dfe7ff;border-color:rgba(79,114,245,.38);background:rgba(79,114,245,.13);box-shadow:0 6px 14px rgba(79,114,245,.1)}.plans-duration-empty{max-width:620px;margin:0 auto 1rem;padding:10px 13px;color:#d8a753;border:1px solid rgba(225,165,58,.16);border-radius:11px;background:rgba(225,165,58,.055);font-size:.62rem;text-align:center}.plans-duration-empty i{margin-right:5px}.offer-family-pack{display:flex;align-items:center;gap:9px;padding:9px 10px;margin:.72rem 0 .15rem;border:1px solid rgba(34,197,94,.14);border-radius:11px;background:rgba(34,197,94,.055)}.offer-family-pack>i{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;color:#7ce0ad;border-radius:9px;background:rgba(34,197,94,.1)}.offer-family-pack strong{display:block;color:#d9fbea;font-size:.61rem}.offer-family-pack span{display:block;margin-top:1px;color:#75a58c;font-size:.52rem}.offer-selected-duration{display:flex;align-items:center;gap:6px;margin:-.12rem 0 .85rem;color:#7f90aa;font-size:.55rem}.offer-selected-duration i{color:#8ea4ff}.offer-card[hidden]{display:none!important}.offer-card-family{border-color:rgba(34,197,94,.15)}html.light-mode .plans-billing-switch{background:rgba(255,255,255,.9)}html.light-mode .plans-billing-switch button{color:#64748b}html.light-mode .plans-billing-switch button.active{color:#fff}html.light-mode .plans-monthly-durations button{color:#64748b;background:#fff}html.light-mode .offer-family-pack{background:rgba(34,197,94,.045)}@media(max-width:575px){.plans-billing-switch{width:100%;grid-template-columns:1fr 1fr}.plans-billing-switch button{min-width:0;padding:0 8px}.plans-monthly-durations>span{width:100%;margin:0 0 2px;text-align:center}}
 
 .offer-duration-selector{margin:-.1rem 0 1rem;padding:10px 11px;border:1px solid rgba(79,114,245,.13);border-radius:12px;background:rgba(79,114,245,.045)}.offer-duration-selector label{display:block;margin-bottom:6px;color:var(--plans-soft);font-size:.6rem;font-weight:800}.offer-duration-selector select{width:100%;height:40px;padding:0 10px;color:var(--plans-text);border:1px solid rgba(148,163,184,.16);border-radius:9px;outline:0;background:#0a1525;font-size:.65rem;font-weight:700}.offer-duration-selector select:focus{border-color:rgba(99,102,241,.45);box-shadow:0 0 0 3px rgba(99,102,241,.08)}.offer-duration-selector small{display:flex;align-items:flex-start;gap:5px;margin-top:6px;color:var(--plans-muted);font-size:.52rem;line-height:1.4}.offer-duration-selector small i{margin-top:1px;color:#8fa3ff}html.light-mode .offer-duration-selector{background:rgba(79,114,245,.04)}html.light-mode .offer-duration-selector select{color:#172033;border-color:rgba(15,23,42,.12);background:#fff}
+
+/* =========================================================
+   Arrangement final des cartes d'offres
+   ========================================================= */
+@media (min-width: 901px) {
+    .plans-grid:not(.plans-grid-single) {
+        max-width: 1080px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        align-items: stretch;
+    }
+
+    .plans-grid:not(.plans-grid-single) .offer-card {
+        height: 100%;
+        min-height: 100%;
+    }
+
+    .plans-grid:not(.plans-grid-single) .offer-title p {
+        min-height: 3.1em;
+    }
+
+    .plans-grid:not(.plans-grid-single) .offer-features {
+        min-height: 205px;
+    }
+}
+
+.offer-actions {
+    grid-template-columns: 1fr !important;
+}
+
+.offer-button.offer-continue {
+    width: 100%;
+}
+
+.offer-whatsapp-hint {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .plans-grid {
+        max-width: 600px;
+        grid-template-columns: 1fr;
+    }
+
+    .offer-card {
+        width: 100%;
+    }
+
+    .offer-features {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 575px) {
+    .plans-grid {
+        gap: 14px;
+    }
+
+    .offer-card {
+        padding: 1rem;
+    }
+
+    .offer-actions {
+        padding-top: .85rem;
+    }
+
+    .offer-button.offer-continue {
+        min-height: 46px;
+    }
+}
+
 </style>
 
 <script>
