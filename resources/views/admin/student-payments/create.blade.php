@@ -1,0 +1,30 @@
+@extends('layouts.admin')
+@section('title','Enregistrer un paiement')
+@section('page_title','Nouveau paiement')
+@section('breadcrumb','Paiements étudiants / Enregistrer')
+@push('styles')
+<style>
+.pay-form-page{max-width:900px;margin:0 auto}.pay-form-hero{margin-bottom:20px;padding:25px;border:1px solid var(--ap-border);border-radius:20px;background:linear-gradient(135deg,rgba(18,30,51,.98),rgba(10,18,32,.95))}.pay-form-hero h2{margin:0 0 7px;color:#fff;font-size:1.55rem}.pay-form-hero p{margin:0;color:var(--ap-muted)}.pay-card{padding:26px;border:1px solid var(--ap-border);border-radius:20px;background:rgba(12,21,37,.94);box-shadow:var(--ap-shadow)}.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.pay-field.full{grid-column:1/-1}.pay-label{display:block;margin-bottom:7px;color:#cbd5e1;font-size:.76rem;font-weight:750}.pay-input{width:100%;height:47px;border:1px solid var(--ap-border);border-radius:11px;background:#09111e;color:#f8fafc;padding:0 13px;outline:none}.pay-textarea{height:110px;padding-top:12px;resize:vertical}.pay-input:focus{border-color:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,.09)}.pay-plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pay-plan{position:relative}.pay-plan input{position:absolute;opacity:0}.pay-plan label{display:block;padding:17px;border:1px solid var(--ap-border);border-radius:13px;background:rgba(255,255,255,.025);cursor:pointer}.pay-plan label strong,.pay-plan label span{display:block}.pay-plan label strong{color:#e2e8f0}.pay-plan label span{margin-top:5px;color:#718096;font-size:.72rem}.pay-plan input:checked+label{border-color:#3b82f6;background:rgba(37,99,235,.11);box-shadow:0 0 0 3px rgba(59,130,246,.07)}.pay-info{grid-column:1/-1;padding:14px;border:1px solid rgba(59,130,246,.2);border-radius:12px;background:rgba(59,130,246,.06);color:#93a4bc;font-size:.75rem}.pay-form-actions{display:flex;justify-content:space-between;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--ap-border)}.pay-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 17px;border:1px solid var(--ap-border);border-radius:11px;background:#0b1423;color:#cbd5e1;text-decoration:none;font-weight:750}.pay-btn.primary{border:0;background:linear-gradient(135deg,#2563eb,#6d28d9);color:#fff}@media(max-width:700px){.pay-grid,.pay-plan-grid{grid-template-columns:1fr}.pay-field.full,.pay-info{grid-column:auto}.pay-form-actions{flex-direction:column-reverse}.pay-btn{width:100%}}
+</style>
+@endpush
+@section('content')
+<div class="pay-form-page">
+    <section class="pay-form-hero"><h2>Enregistrer un paiement</h2><p>Choisissez l’étudiant et indiquez s’il règle 4 mois ou l’année complète. L’expiration est calculée automatiquement.</p></section>
+    <section class="pay-card">
+        @if($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+        <form method="POST" action="{{ route('admin.student-payments.store') }}">@csrf
+            <div class="pay-grid">
+                <div class="pay-field full"><label class="pay-label">Étudiant *</label><select class="pay-input" name="user_id" required><option value="">Sélectionner un étudiant</option>@foreach($students as $student)<option value="{{ $student->id }}" @selected((string)old('user_id', optional($selectedStudent)->id) === (string)$student->id)>{{ $student->name }} — {{ $student->email }}</option>@endforeach</select></div>
+                <div class="pay-field full"><label class="pay-label">Formule *</label><div class="pay-plan-grid"><div class="pay-plan"><input id="plan4" type="radio" name="plan_type" value="four_months" @checked(old('plan_type','four_months')==='four_months')><label for="plan4"><strong>4 mois</strong><span>Validité calculée sur 4 mois</span></label></div><div class="pay-plan"><input id="planYear" type="radio" name="plan_type" value="annual" @checked(old('plan_type')==='annual')><label for="planYear"><strong>Année complète</strong><span>Validité calculée sur 1 année</span></label></div></div></div>
+                <div class="pay-field"><label class="pay-label">Date du paiement *</label><input class="pay-input" type="date" name="paid_at" value="{{ old('paid_at', now()->toDateString()) }}" required></div>
+                <div class="pay-field"><label class="pay-label">Début de validité</label><input class="pay-input" type="date" name="starts_at" value="{{ old('starts_at', now()->toDateString()) }}"></div>
+                <div class="pay-field"><label class="pay-label">Montant (DH)</label><input class="pay-input" type="number" step="0.01" min="0" name="amount" value="{{ old('amount') }}" placeholder="Ex. 1200"></div>
+                <div class="pay-field"><label class="pay-label">Mode de paiement</label><select class="pay-input" name="payment_method"><option value="">Non précisé</option><option value="cash" @selected(old('payment_method')==='cash')>Espèces</option><option value="bank_transfer" @selected(old('payment_method')==='bank_transfer')>Virement bancaire</option><option value="paypal" @selected(old('payment_method')==='paypal')>PayPal</option><option value="other" @selected(old('payment_method')==='other')>Autre</option></select></div>
+                <div class="pay-info"><i class="bi bi-info-circle-fill"></i> Pour 4 mois, la date d’expiration = début + 4 mois. Pour l’année, expiration = début + 1 an.</div>
+                <div class="pay-field full"><label class="pay-label">Notes</label><textarea class="pay-input pay-textarea" name="notes" placeholder="Référence, remarque, reçu...">{{ old('notes') }}</textarea></div>
+            </div>
+            <div class="pay-form-actions"><a class="pay-btn" href="{{ route('admin.student-payments.index') }}"><i class="bi bi-arrow-left"></i> Annuler</a><button class="pay-btn primary" type="submit"><i class="bi bi-check-circle-fill"></i> Enregistrer le paiement</button></div>
+        </form>
+    </section>
+</div>
+@endsection

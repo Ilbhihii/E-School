@@ -103,6 +103,12 @@
                         <span class="nav-label">Utilisateurs</span>
                     </a>
 
+                    <a href="{{ route('admin.student-payments.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.student-payments.*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-credit-card-2-front-fill"></i></span>
+                        <span class="nav-label">Paiements étudiants</span>
+                    </a>
+
                     <a href="{{ route('admin.professors.index') }}"
                        class="admin-nav-link {{ request()->routeIs('admin.professors*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="bi bi-person-video3"></i></span>

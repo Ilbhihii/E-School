@@ -453,6 +453,48 @@
         background: rgba(239, 68, 68, 0.09);
     }
 
+    .users-payment-info {
+        display: flex;
+        min-width: 145px;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .users-payment-check {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        place-items: center;
+        border: 1px solid rgba(148, 163, 184, 0.20);
+        border-radius: 8px;
+        color: #64748b;
+        background: rgba(148, 163, 184, 0.05);
+    }
+
+    .users-payment-check.paid {
+        color: #86efac;
+        border-color: rgba(34, 197, 94, 0.26);
+        background: rgba(34, 197, 94, 0.09);
+    }
+
+    .users-payment-copy strong,
+    .users-payment-copy small {
+        display: block;
+    }
+
+    .users-payment-copy strong {
+        color: #e2e8f0;
+        font-size: 0.72rem;
+    }
+
+    .users-payment-copy small {
+        margin-top: 3px;
+        color: var(--ap-subtle);
+        font-size: 0.63rem;
+        white-space: nowrap;
+    }
+
     .users-test {
         min-width: 118px;
     }
@@ -957,7 +999,15 @@
                 </div>
             </div>
 
-            <span class="users-visible-count"><span id="usersVisibleCount">{{ $usersCollection->count() }}</span> affiché(s)</span>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <a href="{{ route('admin.student-payments.index') }}" class="adm-btn">
+                    <i class="bi bi-credit-card-2-front-fill"></i> Paiements
+                </a>
+                <a href="{{ route('admin.users.create') }}" class="adm-btn adm-btn-primary">
+                    <i class="bi bi-person-plus-fill"></i> Ajouter un étudiant
+                </a>
+                <span class="users-visible-count"><span id="usersVisibleCount">{{ $usersCollection->count() }}</span> affiché(s)</span>
+            </div>
         </header>
 
         <div class="users-toolbar">
@@ -992,6 +1042,7 @@
                         <th>Utilisateur</th>
                         <th>Rôle</th>
                         <th>Statut</th>
+                        <th>Paiement</th>
                         <th>Meilleur test</th>
                         <th>Inscription</th>
                         <th style="text-align: right;">Actions</th>
@@ -1010,6 +1061,11 @@
                                 : ($normalizedRole === 'prof' ? 'bi-person-workspace' : 'bi-mortarboard-fill');
                             $bestResult = (float) ($user->results()->max('percentage') ?? 0);
                             $resultWidth = max(0, min(100, round($bestResult)));
+                            $currentPayment = $user->studentPayments
+                                ->first(fn ($payment) => $payment->isCurrentlyValid());
+                            $hasPaymentHistory = $user->studentPayments->isNotEmpty();
+                            $legacyPaid = ! $hasPaymentHistory && (bool) $user->is_paid;
+                            $isPaidNow = (bool) $currentPayment || $legacyPaid;
                         @endphp
 
                         <tr class="users-row"
@@ -1047,6 +1103,26 @@
                                 @endif
                             </td>
 
+                            <td data-label="Paiement">
+                                <div class="users-payment-info">
+                                    <span class="users-payment-check {{ $isPaidNow ? 'paid' : '' }}" aria-hidden="true">
+                                        <i class="bi {{ $isPaidNow ? 'bi-check-lg' : 'bi-dash-lg' }}"></i>
+                                    </span>
+                                    <div class="users-payment-copy">
+                                        @if($currentPayment)
+                                            <strong>{{ $currentPayment->plan_label }}</strong>
+                                            <small>Jusqu’au {{ optional($currentPayment->expires_at)->format('d/m/Y') }}</small>
+                                        @elseif($legacyPaid)
+                                            <strong>Payé</strong>
+                                            <small>Ancien statut</small>
+                                        @else
+                                            <strong>Non payé</strong>
+                                            <small>À régulariser</small>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
+
                             <td data-label="Meilleur test">
                                 <div class="users-test">
                                     <div class="users-test-top">
@@ -1068,6 +1144,13 @@
 
                             <td data-label="Actions">
                                 <div class="users-actions">
+                                    <a href="{{ route('admin.student-payments.create', ['student' => $user->id]) }}"
+                                       class="users-action {{ $isPaidNow ? 'success' : 'warning' }}"
+                                       title="Gérer le paiement"
+                                       aria-label="Gérer le paiement de {{ $user->name }}">
+                                        <i class="bi bi-credit-card-fill"></i>
+                                    </a>
+
                                     <a href="{{ route('admin.users.test-results', $user->id) }}"
                                        class="users-action"
                                        title="Voir les résultats"
@@ -1117,7 +1200,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="users-empty">
+                            <td colspan="7" class="users-empty">
                                 <span class="users-empty-icon"><i class="bi bi-people"></i></span>
                                 <h4>Aucun utilisateur trouvé</h4>
                                 <p>Les comptes inscrits apparaîtront automatiquement dans cette liste.</p>

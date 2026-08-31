@@ -42,6 +42,11 @@ class User extends Authenticatable
         'country',
         'city',
         'ip_address',
+        'must_change_password',
+        'temporary_password_expires_at',
+        'temporary_password_sent_at',
+        'password_changed_at',
+        'created_by',
     ];
 
 
@@ -66,7 +71,31 @@ class User extends Authenticatable
         'is_paid' => 'boolean',
 'role' => 'string',
         'test_passed' => 'boolean',
+        'must_change_password' => 'boolean',
+        'temporary_password_expires_at' => 'datetime',
+        'temporary_password_sent_at' => 'datetime',
+        'password_changed_at' => 'datetime',
     ];
+
+    /**
+     * Historique des paiements de l'étudiant.
+     */
+    public function studentPayments()
+    {
+        return $this->hasMany(StudentPayment::class, 'user_id');
+    }
+
+    /**
+     * Paiement actuellement valide (4 mois ou année).
+     */
+    public function currentStudentPayment()
+    {
+        return $this->hasOne(StudentPayment::class, 'user_id')
+            ->where('status', StudentPayment::STATUS_PAID)
+            ->whereDate('starts_at', '<=', now()->toDateString())
+            ->whereDate('expires_at', '>=', now()->toDateString())
+            ->orderByDesc('expires_at');
+    }
 
     /**
      * Envoie l'email personnalisé de réinitialisation du mot de passe.

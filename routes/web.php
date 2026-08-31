@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
 use App\Http\Controllers\Admin\DevoirController;
+use App\Http\Controllers\Admin\StudentPaymentController;
 
 use App\Http\Controllers\PublicScheduleController;
 
@@ -548,10 +549,31 @@ Route::middleware(['auth', 'isAdmin'])
             LevelController::class
         )->except(['create', 'edit', 'show']);
 
+        // Gestion détaillée des paiements étudiants : 4 mois / année / historique
+        Route::prefix('student-payments')
+            ->name('student-payments.')
+            ->group(function () {
+                Route::get('/', [StudentPaymentController::class, 'index'])->name('index');
+                Route::get('/create', [StudentPaymentController::class, 'create'])->name('create');
+                Route::post('/', [StudentPaymentController::class, 'store'])->name('store');
+                Route::get('/student/{student}', [StudentPaymentController::class, 'show'])->name('show');
+                Route::patch('/{payment}/cancel', [StudentPaymentController::class, 'cancel'])->name('cancel');
+            });
+
         Route::get(
             'users/without-class',
             [UserController::class, 'withoutClass']
         )->name('users.without-class');
+
+        Route::get(
+            'users/create',
+            [UserController::class, 'create']
+        )->name('users.create');
+
+        Route::post(
+            'users',
+            [UserController::class, 'store']
+        )->name('users.store');
 
         Route::resource(
             'users',

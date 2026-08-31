@@ -14,12 +14,14 @@ use App\Models\ProfAssignment;
 use App\Models\ProfessorAvailability;
 use App\Models\Schedule;
 use App\Mail\AccountActivatedMailable;
+use App\Mail\StudentAccountCreatedMailable;
 use App\Services\ClassSlotService;
 use App\Services\ProfessorAssignmentService;
 use App\Services\ProfessorAutoSchedulerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -565,11 +567,110 @@ class UserController extends Controller
         );
     }
 
+
+    /**
+     * Affiche le formulaire de création assistée d'un étudiant.
+     * L'inscription publique /register reste inchangée.
+     */
+    public function create()
+    {
+        return view('admin.users.create');
+    }
+
+    /**
+     * Crée un étudiant depuis l'administration et lui envoie
+     * automatiquement ses accès temporaires par e-mail.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'country' => ['required', 'string', 'max:120'],
+            'city' => ['required', 'string', 'max:120'],
+        ], [
+            'name.required' => 'Le nom complet est obligatoire.',
+            'email.required' => 'L’adresse e-mail est obligatoire.',
+            'email.email' => 'L’adresse e-mail est invalide.',
+            'email.unique' => 'Cette adresse e-mail est déjà utilisée.',
+            'country.required' => 'Le pays est obligatoire.',
+            'city.required' => 'La ville est obligatoire.',
+        ]);
+
+        $temporaryPassword = $this->generateTemporaryPassword();
+
+        DB::beginTransaction();
+
+        try {
+            $student = new User();
+            $student->forceFill([
+                'name' => trim($validated['name']),
+                'email' => mb_strtolower(trim($validated['email'])),
+                'password' => Hash::make($temporaryPassword),
+                'role' => User::ROLE_STUDENT,
+                'country' => trim($validated['country']),
+                'city' => trim($validated['city']),
+                'is_active' => true,
+                'test_passed' => true,
+                'email_verified_at' => now(),
+                'must_change_password' => true,
+                'temporary_password_expires_at' => now()->addHours(48),
+                'temporary_password_sent_at' => now(),
+                'password_changed_at' => null,
+                'created_by' => auth()->id(),
+            ]);
+            $student->save();
+
+            Mail::to($student->email)->send(
+                new StudentAccountCreatedMailable($student, $temporaryPassword)
+            );
+
+            DB::commit();
+
+            return redirect()->route('admin.users.index')->with(
+                'success',
+                'Compte étudiant créé et accès envoyés à ' . $student->email . '.'
+            );
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('Failed to create assisted student account: ' . $e->getMessage());
+
+            return back()->withInput()->with(
+                'error',
+                'Le compte n’a pas pu être créé ou l’e-mail n’a pas pu être envoyé.'
+            );
+        }
+    }
+
+    private function generateTemporaryPassword(): string
+    {
+        $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lower = 'abcdefghijkmnopqrstuvwxyz';
+        $digits = '23456789';
+        $symbols = '!@#$%';
+
+        $chars = [
+            $upper[random_int(0, strlen($upper) - 1)],
+            $lower[random_int(0, strlen($lower) - 1)],
+            $digits[random_int(0, strlen($digits) - 1)],
+            $symbols[random_int(0, strlen($symbols) - 1)],
+        ];
+        $all = $upper . $lower . $digits . $symbols;
+        while (count($chars) < 12) {
+            $chars[] = $all[random_int(0, strlen($all) - 1)];
+        }
+        shuffle($chars);
+        return implode('', $chars);
+    }
+
     public function index()
     {
         $users = User::query()
             ->where('role', 'student')
             ->withCount('results')
+            ->with(['studentPayments' => function ($query) {
+                $query->orderByDesc('paid_at')->orderByDesc('id');
+            }])
             ->get();
 
         $totalUsers = User::query()
