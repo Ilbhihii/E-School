@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>@yield('title', 'Smart School Academy — Plateforme Éducative')</title>
+
+    @include('partials.favicon')
     <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="shortcut icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
-    <link rel="icon" href="{{ asset('images/logoSSA-removebg-preview.png') }}" type="image/png">
+
 
     <!-- ═══ PWA — PROGRESSIVE WEB APP ═══ -->
     <link rel="manifest" href="{{ asset('manifest.json') }}">
@@ -15,9 +16,7 @@
     <meta name="apple-mobile-web-app-title" content="SS Academy">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Smart School Academy">
-    <link rel="apple-touch-icon" href="{{ asset('images/logoSmartSchool.jpg') }}">
-    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('images/logoSmartSchool.jpg') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/logoSmartSchool.jpg') }}">
+
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
