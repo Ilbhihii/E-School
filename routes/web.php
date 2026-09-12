@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
 use App\Http\Controllers\Admin\DevoirController;
+use App\Http\Controllers\Admin\StudentPaymentController;
 
 use App\Http\Controllers\PublicScheduleController;
 
@@ -554,6 +555,25 @@ Route::middleware(['auth', 'isAdmin'])
             [UserController::class, 'withoutClass']
         )->name('users.without-class');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Création assistée d'un compte étudiant
+        |--------------------------------------------------------------------------
+        |
+        | Ces deux routes sont volontairement déclarées séparément car
+        | Route::resource('users', ...) exclut create et store.
+        |
+        */
+        Route::get(
+            'users/create',
+            [UserController::class, 'create']
+        )->name('users.create');
+
+        Route::post(
+            'users',
+            [UserController::class, 'store']
+        )->name('users.store');
+
         Route::resource(
             'users',
             UserController::class
@@ -580,6 +600,49 @@ Route::middleware(['auth', 'isAdmin'])
             'users/{user}/deactivate',
             [UserController::class, 'deactivate']
         )->name('users.deactivate');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Paiements étudiants
+        |--------------------------------------------------------------------------
+        |
+        | Gestion des paiements annuels / 4 mois depuis l'administration.
+        | Les contraintes numériques évitent qu'une chaîne comme "create"
+        | soit interprétée comme un identifiant de modèle.
+        |
+        */
+        Route::prefix('student-payments')
+            ->name('student-payments.')
+            ->group(function () {
+                Route::get(
+                    '/',
+                    [StudentPaymentController::class, 'index']
+                )->name('index');
+
+                Route::get(
+                    '/create',
+                    [StudentPaymentController::class, 'create']
+                )->name('create');
+
+                Route::post(
+                    '/',
+                    [StudentPaymentController::class, 'store']
+                )->name('store');
+
+                Route::get(
+                    '/{student}',
+                    [StudentPaymentController::class, 'show']
+                )
+                    ->where('student', '[0-9]+')
+                    ->name('show');
+
+                Route::patch(
+                    '/{payment}/cancel',
+                    [StudentPaymentController::class, 'cancel']
+                )
+                    ->where('payment', '[0-9]+')
+                    ->name('cancel');
+            });
 
         // Navigation hiérarchique : Matières → Niveaux → Classes → Lives
         Route::get(
