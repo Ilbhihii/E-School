@@ -39,12 +39,6 @@ class ProfController extends Controller
                 auth()->id()
             );
 
-        $slotIds = $profAssignments
-            ->pluck('class_slot_id')
-            ->filter()
-            ->unique()
-            ->values();
-
         $studentIds =
             $this->profPaths->studentIds(
                 auth()->id()
@@ -56,38 +50,11 @@ class ProfController extends Controller
         $devoirsQuery = Assignment::query()
             ->where('user_id', auth()->id());
 
-        if ($slotIds->isNotEmpty()) {
-            $devoirsQuery->whereIn(
-                'class_slot_id',
-                $slotIds
-            );
-        }
-
         $submissionsQuery = Assignment::query()
-            ->whereIn('user_id', $studentIds)
-            ->when(
-                $slotIds->isNotEmpty(),
-                fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
-                fn ($query) =>
-                    $query->whereRaw('1 = 0')
-            );
+            ->whereIn('user_id', $studentIds);
 
         $attendanceQuery = Absence::query()
-            ->whereIn('user_id', $studentIds)
-            ->when(
-                $slotIds->isNotEmpty(),
-                fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
-                fn ($query) =>
-                    $query->whereRaw('1 = 0')
-            );
+            ->whereIn('user_id', $studentIds);
 
         $studentsCount = $studentIds->count();
         $coursesCount = (clone $coursesQuery)->count();
@@ -143,15 +110,12 @@ class ProfController extends Controller
                 : 100;
 
         $livesCount = Live::query()
-            ->when(
-                $slotIds->isNotEmpty(),
-                fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
-                fn ($query) =>
-                    $query->whereRaw('1 = 0')
+            ->whereIn(
+                'class_id',
+                $profAssignments
+                    ->pluck('class_id')
+                    ->unique()
+                    ->values()
             )
             ->count();
 
@@ -189,7 +153,7 @@ class ProfController extends Controller
     /**
      * Copies des étudiants.
      * Structure :
-     * Matière → Niveau → Classe → Créneau.
+     * Matière → Niveau → Classe.
      */
     public function assignments(
         Request $request
@@ -206,9 +170,13 @@ class ProfController extends Controller
                     $request
                 );
 
-        $slotIds = $visibleScope
-            ->pluck('class_slot_id')
-            ->filter()
+        $subjectIds = $visibleScope
+            ->pluck('subject_id')
+            ->unique()
+            ->values();
+
+        $classIds = $visibleScope
+            ->pluck('class_id')
             ->unique()
             ->values();
 
@@ -227,21 +195,14 @@ class ProfController extends Controller
             ->with([
                 'user',
                 'subject',
+                'classRoom.level',
                 'classSlot.subject',
                 'classSlot.level',
                 'classSlot.classRoom',
             ])
             ->whereIn('user_id', $studentIds)
-            ->when(
-                $slotIds->isNotEmpty(),
-                fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
-                fn ($query) =>
-                    $query->whereRaw('1 = 0')
-            )
+            ->whereIn('subject_id', $subjectIds)
+            ->whereIn('class_room_id', $classIds)
             ->latest()
             ->get();
 
@@ -288,29 +249,23 @@ class ProfController extends Controller
             )
             ->firstOrFail();
 
-        abort_unless(
-            $assignment->class_slot_id
-            && $this->profPaths->ownsSlot(
-                auth()->id(),
-                (int) $assignment->class_slot_id
-            ),
-            403
-        );
+        $classRoom = ClassRoom::query()
+            ->findOrFail($assignment->class_room_id);
 
-        $scope = ProfAssignment::query()
-            ->where('prof_id', auth()->id())
-            ->where(
-                'class_slot_id',
-                $assignment->class_slot_id
-            )
-            ->firstOrFail();
+        $scope =
+            $this->profPaths->findClassAssignment(
+                auth()->id(),
+                (int) $assignment->subject_id,
+                (int) $classRoom->level_id,
+                (int) $assignment->class_room_id
+            );
+
+        abort_unless($scope, 403);
 
         abort_unless(
             $this->profPaths
-                ->studentBelongsToSlot(
-                    (int) $assignment->user_id,
-                    $scope
-                ),
+                ->studentIdsForAssignment($scope)
+                ->contains((int) $assignment->user_id),
             403
         );
 
@@ -374,9 +329,13 @@ class ProfController extends Controller
                     $request
                 );
 
-        $slotIds = $visibleScope
-            ->pluck('class_slot_id')
-            ->filter()
+        $subjectIds = $visibleScope
+            ->pluck('subject_id')
+            ->unique()
+            ->values();
+
+        $classIds = $visibleScope
+            ->pluck('class_id')
             ->unique()
             ->values();
 
@@ -400,16 +359,8 @@ class ProfController extends Controller
                 'classSlot',
             ])
             ->whereIn('user_id', $studentIds)
-            ->when(
-                $slotIds->isNotEmpty(),
-                fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
-                fn ($query) =>
-                    $query->whereRaw('1 = 0')
-            );
+            ->whereIn('subject_id', $subjectIds)
+            ->whereIn('class_id', $classIds);
 
         $allowedSorts = [
             'date',
@@ -470,14 +421,15 @@ class ProfController extends Controller
         $absence = Absence::query()
             ->findOrFail($id);
 
-        abort_unless(
-            $absence->class_slot_id
-            && $this->profPaths->ownsSlot(
+        $scope =
+            $this->profPaths->findClassAssignment(
                 auth()->id(),
-                (int) $absence->class_slot_id
-            ),
-            403
-        );
+                (int) $absence->subject_id,
+                (int) $absence->level_id,
+                (int) $absence->class_id
+            );
+
+        abort_unless($scope, 403);
 
         $absence->present =
             (int) $request->present;
@@ -491,54 +443,39 @@ class ProfController extends Controller
     }
 
     /**
-     * Étudiants du créneau exact.
+     * Étudiants de la classe pour le parcours sélectionné.
      */
     public function getStudents(
         Request $request,
         $id
     ) {
         $validated = $request->validate([
-            'subject_id' =>
-                ['required', 'integer'],
-            'level_id' =>
-                ['required', 'integer'],
-            'class_slot_id' =>
-                ['required', 'integer'],
+            'subject_id' => ['required', 'integer'],
+            'level_id' => ['required', 'integer'],
         ]);
 
         $scope =
             $this->profPaths
-                ->findExactAssignment(
+                ->findClassAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $id,
-                    (int) $validated['class_slot_id']
+                    (int) $id
                 );
 
         abort_unless($scope, 403);
 
         $studentIds =
             $this->profPaths
-                ->studentIdsForAssignment(
-                    $scope
-                );
+                ->studentIdsForAssignment($scope);
 
         $students = User::query()
-            ->where(
-                'role',
-                User::ROLE_STUDENT
-            )
+            ->where('role', User::ROLE_STUDENT)
             ->whereIn('id', $studentIds)
             ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-            ]);
+            ->get(['id', 'name']);
 
-        return response()->json(
-            $students
-        );
+        return response()->json($students);
     }
 
     public function storeAbsence(
@@ -560,11 +497,6 @@ class ProfController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
-                'required',
-                'integer',
-                'exists:class_slots,id',
-            ],
             'date' => [
                 'required',
                 'date',
@@ -581,12 +513,11 @@ class ProfController extends Controller
 
         $scope =
             $this->profPaths
-                ->findExactAssignment(
+                ->findClassAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id'],
-                    (int) $validated['class_slot_id']
+                    (int) $validated['class_id']
                 );
 
         abort_unless($scope, 403);
@@ -626,10 +557,7 @@ class ProfController extends Controller
                         (int) $validated[
                             'class_id'
                         ],
-                    'class_slot_id' =>
-                        (int) $validated[
-                            'class_slot_id'
-                        ],
+                    'class_slot_id' => null,
                     'date' =>
                         $validated['date'],
                 ],
@@ -645,10 +573,12 @@ class ProfController extends Controller
                     $studentId
                 )
                 ->where(
-                    'class_slot_id',
-                    $validated[
-                        'class_slot_id'
-                    ]
+                    'subject_id',
+                    (int) $validated['subject_id']
+                )
+                ->where(
+                    'class_id',
+                    (int) $validated['class_id']
                 )
                 ->where(
                     'present',
@@ -672,15 +602,13 @@ class ProfController extends Controller
                 'alert',
                 'Certains étudiants ont atteint '
                 . 'ou dépassé 3 absences '
-                . 'dans ce créneau.'
+                . 'dans cette classe.'
             );
         }
 
         return back()->with(
             'success',
-            'Présences enregistrées pour '
-            . ($scope->classSlot?->code ?? 'le créneau')
-            . '.'
+            'Présences enregistrées avec succès.'
         );
     }
 
@@ -828,7 +756,7 @@ class ProfController extends Controller
 
     /**
      * /prof/lives
-     * Matière → Niveau → Classe → Créneau.
+     * Matière → Niveau → Classe.
      */
     public function livesIndex(
         Request $request
@@ -845,9 +773,8 @@ class ProfController extends Controller
                     $request
                 );
 
-        $slotIds = $visibleScope
-            ->pluck('class_slot_id')
-            ->filter()
+        $classIds = $visibleScope
+            ->pluck('class_id')
             ->unique()
             ->values();
 
@@ -859,12 +786,9 @@ class ProfController extends Controller
                 'classSlot.classRoom',
             ])
             ->when(
-                $slotIds->isNotEmpty(),
+                $classIds->isNotEmpty(),
                 fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
+                    $query->whereIn('class_id', $classIds),
                 fn ($query) =>
                     $query->whereRaw('1 = 0')
             );

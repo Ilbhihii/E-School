@@ -808,10 +808,15 @@ class StudentController extends Controller
                     }
 
                     /*
-                     * Ancien devoir sans créneau : on le montre uniquement
-                     * si l'étudiant n'a qu'un seul groupe dans ce parcours.
+                     * Devoir de classe sans créneau :
+                     * il est visible pour tous les étudiants appartenant
+                     * à la même Matière → Niveau → Classe.
                      */
-                    if (!$resolved && $candidatePaths->count() === 1) {
+                    $classWideAssignment =
+                        empty($profAssignment->class_slot_id)
+                        && empty($profAssignment->course?->slot_code);
+
+                    if (!$resolved && $classWideAssignment) {
                         $resolved = $candidatePaths->first();
                     }
 
@@ -847,8 +852,13 @@ class StudentController extends Controller
 
                     $studentSubmission = $assignments->first(
                         function ($submission) use ($profAssignment) {
+                            $classWideAssignment =
+                                empty($profAssignment->class_slot_id)
+                                && empty($profAssignment->course?->slot_code);
+
                             if (
-                                !empty($submission->class_slot_id)
+                                !$classWideAssignment
+                                && !empty($submission->class_slot_id)
                                 && !empty($profAssignment->resolved_class_slot_id)
                                 && (int) $submission->class_slot_id
                                     !== (int) $profAssignment->resolved_class_slot_id
@@ -1006,7 +1016,6 @@ class StudentController extends Controller
             ->orderBy('order')
             ->orderBy('id')
             ->first();
-
 
         $file = $request
             ->file('file')

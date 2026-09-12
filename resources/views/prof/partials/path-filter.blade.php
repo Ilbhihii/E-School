@@ -1,9 +1,6 @@
 @php
-    $pathFilterAction =
-        $action ?? url()->current();
-
-    $pathFilterButton =
-        $buttonLabel ?? 'Afficher';
+    $pathFilterAction = $action ?? url()->current();
+    $pathFilterButton = $buttonLabel ?? 'Afficher';
 
     $pathFilterSubject =
         $selectedSubjectId ?? request('subject_id');
@@ -14,11 +11,7 @@
     $pathFilterClass =
         $selectedClassId ?? request('class_id');
 
-    $pathFilterSlot =
-        $selectedSlotId ?? request('class_slot_id');
-
-    $pathFilterExtra =
-        $extraQuery ?? [];
+    $pathFilterExtra = $extraQuery ?? [];
 @endphp
 
 <section class="pp-panel pps-filter-panel">
@@ -30,7 +23,7 @@
             </h2>
 
             <p class="pp-panel-subtitle">
-                Matière → Niveau → Classe → Créneau
+                Matière → Niveau → Classe
             </p>
         </div>
 
@@ -58,81 +51,43 @@
             @endforeach
 
             <div class="pp-field">
-                <label
-                    for="profPathSubject"
-                    class="pp-label"
-                >
+                <label for="profPathSubject" class="pp-label">
                     Matière
                 </label>
-
                 <select
                     name="subject_id"
                     id="profPathSubject"
                     class="adm-form-select"
                 >
-                    <option value="">
-                        Toutes les matières
-                    </option>
+                    <option value="">Toutes les matières</option>
                 </select>
             </div>
 
             <div class="pp-field">
-                <label
-                    for="profPathLevel"
-                    class="pp-label"
-                >
+                <label for="profPathLevel" class="pp-label">
                     Niveau
                 </label>
-
                 <select
                     name="level_id"
                     id="profPathLevel"
                     class="adm-form-select"
                     disabled
                 >
-                    <option value="">
-                        Tous les niveaux
-                    </option>
+                    <option value="">Tous les niveaux</option>
                 </select>
             </div>
 
             <div class="pp-field">
-                <label
-                    for="profPathClass"
-                    class="pp-label"
-                >
+                <label for="profPathClass" class="pp-label">
                     Classe
                 </label>
-
                 <select
                     name="class_id"
                     id="profPathClass"
                     class="adm-form-select"
                     disabled
                 >
-                    <option value="">
-                        Toutes les classes
-                    </option>
-                </select>
-            </div>
-
-            <div class="pp-field">
-                <label
-                    for="profPathSlot"
-                    class="pp-label"
-                >
-                    Créneau
-                </label>
-
-                <select
-                    name="class_slot_id"
-                    id="profPathSlot"
-                    class="adm-form-select"
-                    disabled
-                >
-                    <option value="">
-                        Tous les créneaux
-                    </option>
+                    <option value="">Toutes les classes</option>
                 </select>
             </div>
 
@@ -148,7 +103,6 @@
                 $pathFilterSubject
                 || $pathFilterLevel
                 || $pathFilterClass
-                || $pathFilterSlot
             )
                 <a
                     href="{{ $pathFilterAction }}"
@@ -164,252 +118,97 @@
 
 @push('scripts')
 <script>
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
-        const hierarchy =
-            @json($profHierarchy ?? []);
+document.addEventListener('DOMContentLoaded', function () {
+    const hierarchy = @json($profHierarchy ?? []);
+    const subject = document.getElementById('profPathSubject');
+    const level = document.getElementById('profPathLevel');
+    const classroom = document.getElementById('profPathClass');
 
-        const subject =
-            document.getElementById(
-                'profPathSubject'
-            );
+    if (!subject || !level || !classroom) return;
 
-        const level =
-            document.getElementById(
-                'profPathLevel'
-            );
+    const wantedSubject = @json((string) ($pathFilterSubject ?? ''));
+    const wantedLevel = @json((string) ($pathFilterLevel ?? ''));
+    const wantedClass = @json((string) ($pathFilterClass ?? ''));
 
-        const classroom =
-            document.getElementById(
-                'profPathClass'
-            );
+    const option = (value, label, selected = false) => {
+        const item = document.createElement('option');
+        item.value = String(value);
+        item.textContent = label;
+        item.selected = selected;
+        return item;
+    };
 
-        const slot =
-            document.getElementById(
-                'profPathSlot'
-            );
+    const selectedSubject = () =>
+        hierarchy.find(
+            item => String(item.id) === String(subject.value)
+        );
 
-        if (
-            !subject
-            || !level
-            || !classroom
-            || !slot
-        ) {
-            return;
-        }
+    const selectedLevel = subjectItem =>
+        subjectItem?.levels?.find(
+            item => String(item.id) === String(level.value)
+        );
 
-        const wantedSubject =
-            @json((string) ($pathFilterSubject ?? ''));
+    const fillClasses = (wanted = '') => {
+        classroom.innerHTML = '';
+        classroom.appendChild(option('', 'Toutes les classes'));
 
-        const wantedLevel =
-            @json((string) ($pathFilterLevel ?? ''));
+        const subjectItem = selectedSubject();
+        const levelItem = selectedLevel(subjectItem);
+        const classes = levelItem?.classes || [];
 
-        const wantedClass =
-            @json((string) ($pathFilterClass ?? ''));
-
-        const wantedSlot =
-            @json((string) ($pathFilterSlot ?? ''));
-
-        const option = (
-            value,
-            label,
-            selected = false
-        ) => {
-            const item =
-                document.createElement('option');
-
-            item.value = String(value);
-            item.textContent = label;
-            item.selected = selected;
-
-            return item;
-        };
-
-        const selectedSubject = () =>
-            hierarchy.find(
-                item =>
-                    String(item.id)
-                    === String(subject.value)
-            );
-
-        const selectedLevel =
-            subjectItem =>
-                subjectItem?.levels?.find(
-                    item =>
-                        String(item.id)
-                        === String(level.value)
-                );
-
-        const selectedClass = () => {
-            const subjectItem =
-                selectedSubject();
-
-            const levelItem =
-                selectedLevel(subjectItem);
-
-            return levelItem
-                ?.classes
-                ?.find(
-                    item =>
-                        String(item.id)
-                        === String(classroom.value)
-                );
-        };
-
-        const fillSlots = (
-            wanted = ''
-        ) => {
-            slot.innerHTML = '';
-
-            slot.appendChild(
-                option(
-                    '',
-                    'Tous les créneaux'
-                )
-            );
-
-            const classItem =
-                selectedClass();
-
-            const slots =
-                classItem?.slots || [];
-
-            slots.forEach(item => {
-                slot.appendChild(
-                    option(
-                        item.id,
-                        item.code,
-                        String(item.id)
-                        === String(wanted)
-                    )
-                );
-            });
-
-            slot.disabled =
-                !classItem;
-        };
-
-        const fillClasses = (
-            wanted = '',
-            wantedSlotId = ''
-        ) => {
-            classroom.innerHTML = '';
-
+        classes.forEach(item => {
             classroom.appendChild(
-                option(
-                    '',
-                    'Toutes les classes'
-                )
-            );
-
-            const subjectItem =
-                selectedSubject();
-
-            const levelItem =
-                selectedLevel(subjectItem);
-
-            const classes =
-                levelItem?.classes || [];
-
-            classes.forEach(item => {
-                classroom.appendChild(
-                    option(
-                        item.id,
-                        item.name,
-                        String(item.id)
-                        === String(wanted)
-                    )
-                );
-            });
-
-            classroom.disabled =
-                !levelItem;
-
-            fillSlots(
-                wantedSlotId
-            );
-        };
-
-        const fillLevels = (
-            wanted = '',
-            wantedClassId = '',
-            wantedSlotId = ''
-        ) => {
-            level.innerHTML = '';
-
-            level.appendChild(
-                option(
-                    '',
-                    'Tous les niveaux'
-                )
-            );
-
-            const subjectItem =
-                selectedSubject();
-
-            const levels =
-                subjectItem?.levels || [];
-
-            levels.forEach(item => {
-                level.appendChild(
-                    option(
-                        item.id,
-                        item.name,
-                        String(item.id)
-                        === String(wanted)
-                    )
-                );
-            });
-
-            level.disabled =
-                !subjectItem;
-
-            fillClasses(
-                wantedClassId,
-                wantedSlotId
-            );
-        };
-
-        hierarchy.forEach(item => {
-            subject.appendChild(
                 option(
                     item.id,
                     item.name,
-                    String(item.id)
-                    === String(wantedSubject)
+                    String(item.id) === String(wanted)
                 )
             );
         });
 
-        if (wantedSubject) {
-            subject.value =
-                wantedSubject;
+        classroom.disabled = !levelItem;
+    };
 
-            fillLevels(
-                wantedLevel,
-                wantedClass,
-                wantedSlot
+    const fillLevels = (wanted = '', wantedClass = '') => {
+        level.innerHTML = '';
+        level.appendChild(option('', 'Tous les niveaux'));
+
+        const subjectItem = selectedSubject();
+        const levels = subjectItem?.levels || [];
+
+        levels.forEach(item => {
+            level.appendChild(
+                option(
+                    item.id,
+                    item.name,
+                    String(item.id) === String(wanted)
+                )
             );
-        } else {
-            fillLevels();
-        }
+        });
 
-        subject.addEventListener(
-            'change',
-            () => fillLevels()
-        );
+        level.disabled = !subjectItem;
+        fillClasses(wantedClass);
+    };
 
-        level.addEventListener(
-            'change',
-            () => fillClasses()
+    hierarchy.forEach(item => {
+        subject.appendChild(
+            option(
+                item.id,
+                item.name,
+                String(item.id) === String(wantedSubject)
+            )
         );
+    });
 
-        classroom.addEventListener(
-            'change',
-            () => fillSlots()
-        );
+    if (wantedSubject) {
+        subject.value = wantedSubject;
+        fillLevels(wantedLevel, wantedClass);
+    } else {
+        fillLevels();
     }
-);
+
+    subject.addEventListener('change', () => fillLevels());
+    level.addEventListener('change', () => fillClasses());
+});
 </script>
 @endpush

@@ -4,7 +4,7 @@
 @section('page_title', 'Modifier le cours')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Créneau → Renvoyer'
+    'Matière → Niveau → Classe → Renvoyer'
 )
 
 @section('content')
@@ -62,7 +62,7 @@
     @method('PUT')
 
     @include(
-        'components.pedagogical-path-edit',
+        'components.pedagogical-path-class-edit',
         [
             'hierarchy' => $profHierarchy,
             'prefix' => 'profCourseEdit',
@@ -72,8 +72,6 @@
                 $selectedLevelId,
             'selectedClass' =>
                 $selectedClassId,
-            'selectedSlot' =>
-                $selectedSlotId,
         ]
     )
 

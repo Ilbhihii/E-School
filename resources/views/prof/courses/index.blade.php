@@ -262,12 +262,6 @@
                                         ?? 'Classe'
                                     }}
                                 </span>
-
-                                <i class="bi bi-chevron-right"></i>
-
-                                <span class="pps-slot-badge">
-                                    {{ $course->slot_code ?? '—' }}
-                                </span>
                             </div>
 
                             @if(

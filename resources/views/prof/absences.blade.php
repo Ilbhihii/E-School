@@ -2,7 +2,7 @@
 
 @section('title', 'Présences et absences')
 @section('page_title', 'Présences et absences')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe')
 
 @section('content')
 <section class="pp-page-head">
@@ -15,8 +15,8 @@
         <h1 class="pp-page-title">Faire l’appel</h1>
 
         <p class="pp-page-description">
-            Sélectionnez le parcours exact
-            Matière → Niveau → Classe → Créneau,
+            Sélectionnez le parcours
+            Matière → Niveau → Classe,
             puis marquez les présences.
         </p>
     </div>
@@ -41,8 +41,8 @@
             </h2>
 
             <p class="pp-panel-subtitle">
-                Les étudiants sont chargés uniquement
-                depuis le créneau sélectionné.
+                Les étudiants sont chargés depuis
+                la classe sélectionnée.
             </p>
         </div>
     </header>
@@ -118,26 +118,6 @@
                     </select>
                 </div>
 
-                <div class="pp-field">
-                    <label
-                        for="attendanceSlot"
-                        class="pp-label"
-                    >
-                        Créneau
-                    </label>
-
-                    <select
-                        name="class_slot_id"
-                        id="attendanceSlot"
-                        class="adm-form-select"
-                        disabled
-                        required
-                    >
-                        <option value="">
-                            Choisir un créneau
-                        </option>
-                    </select>
-                </div>
             </div>
 
             <div class="pp-field mt-3">
@@ -163,7 +143,7 @@
                 class="mt-4"
             >
                 <div class="pps-empty">
-                    Choisissez Matière → Niveau → Classe → Créneau.
+                    Choisissez Matière → Niveau → Classe.
                 </div>
             </div>
 
@@ -185,321 +165,216 @@
 
 @push('scripts')
 <script>
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
-        const hierarchy =
-            @json($profHierarchy);
+document.addEventListener('DOMContentLoaded', function () {
+    const hierarchy = @json($profHierarchy);
 
-        const subject =
-            document.getElementById(
-                'attendanceSubject'
-            );
+    const subject =
+        document.getElementById('attendanceSubject');
 
-        const level =
-            document.getElementById(
-                'attendanceLevel'
-            );
+    const level =
+        document.getElementById('attendanceLevel');
 
-        const classroom =
-            document.getElementById(
-                'attendanceClass'
-            );
+    const classroom =
+        document.getElementById('attendanceClass');
 
-        const slot =
-            document.getElementById(
-                'attendanceSlot'
-            );
+    const list =
+        document.getElementById('studentsList');
 
-        const list =
-            document.getElementById(
-                'studentsList'
-            );
+    const submit =
+        document.getElementById('attendanceSubmit');
 
-        const submit =
-            document.getElementById(
-                'attendanceSubmit'
-            );
+    const baseUrl =
+        @json(url('/prof/class-students'));
 
-        const baseUrl =
-            @json(
-                url('/prof/class-students')
-            );
+    const option = (value, label) => {
+        const item = document.createElement('option');
+        item.value = String(value);
+        item.textContent = label;
+        return item;
+    };
 
-        const option = (
-            value,
-            label
-        ) => {
-            const item =
-                document.createElement('option');
+    const subjectData = () =>
+        hierarchy.find(
+            item => String(item.id) === String(subject.value)
+        );
 
-            item.value = String(value);
-            item.textContent = label;
+    const levelData = () =>
+        subjectData()?.levels?.find(
+            item => String(item.id) === String(level.value)
+        );
 
-            return item;
-        };
+    function clearStudents(message = 'Choisissez une classe pour charger les étudiants.') {
+        submit.disabled = true;
 
-        const subjectData = () =>
-            hierarchy.find(
-                item =>
-                    String(item.id)
-                    === String(subject.value)
-            );
+        list.innerHTML = `
+            <div class="pps-empty">
+                ${message}
+            </div>
+        `;
+    }
 
-        const levelData = () =>
-            subjectData()
-                ?.levels
-                ?.find(
-                    item =>
-                        String(item.id)
-                        === String(level.value)
-                );
+    function fillClasses() {
+        classroom.innerHTML = '';
+        classroom.appendChild(
+            option('', 'Choisir une classe')
+        );
 
-        const classData = () =>
-            levelData()
-                ?.classes
-                ?.find(
-                    item =>
-                        String(item.id)
-                        === String(classroom.value)
-                );
-
-        function fillSlots() {
-            slot.innerHTML = '';
-            slot.appendChild(
-                option(
-                    '',
-                    'Choisir un créneau'
-                )
-            );
-
-            (classData()?.slots || [])
-                .forEach(item => {
-                    slot.appendChild(
-                        option(
-                            item.id,
-                            item.code
-                        )
-                    );
-                });
-
-            slot.disabled =
-                !classData();
-
-            clearStudents();
-        }
-
-        function fillClasses() {
-            classroom.innerHTML = '';
+        (levelData()?.classes || []).forEach(item => {
             classroom.appendChild(
-                option(
-                    '',
-                    'Choisir une classe'
-                )
-            );
-
-            (levelData()?.classes || [])
-                .forEach(item => {
-                    classroom.appendChild(
-                        option(
-                            item.id,
-                            item.name
-                        )
-                    );
-                });
-
-            classroom.disabled =
-                !levelData();
-
-            fillSlots();
-        }
-
-        function fillLevels() {
-            level.innerHTML = '';
-            level.appendChild(
-                option(
-                    '',
-                    'Choisir un niveau'
-                )
-            );
-
-            (subjectData()?.levels || [])
-                .forEach(item => {
-                    level.appendChild(
-                        option(
-                            item.id,
-                            item.name
-                        )
-                    );
-                });
-
-            level.disabled =
-                !subjectData();
-
-            fillClasses();
-        }
-
-        function clearStudents() {
-            submit.disabled = true;
-
-            list.innerHTML = `
-                <div class="pps-empty">
-                    Choisissez le créneau pour charger les étudiants.
-                </div>
-            `;
-        }
-
-        function initials(name) {
-            return String(name || 'E')
-                .trim()
-                .split(/\s+/)
-                .slice(0, 2)
-                .map(part => part.charAt(0).toUpperCase())
-                .join('');
-        }
-
-        function escapeHtml(value) {
-            const div =
-                document.createElement('div');
-
-            div.textContent = String(value || '');
-
-            return div.innerHTML;
-        }
-
-        async function loadStudents() {
-            if (
-                !subject.value
-                || !level.value
-                || !classroom.value
-                || !slot.value
-            ) {
-                clearStudents();
-                return;
-            }
-
-            list.innerHTML = `
-                <div class="pps-empty">
-                    Chargement des étudiants...
-                </div>
-            `;
-
-            const params =
-                new URLSearchParams({
-                    subject_id:
-                        subject.value,
-                    level_id:
-                        level.value,
-                    class_slot_id:
-                        slot.value,
-                });
-
-            try {
-                const response = await fetch(
-                    `${baseUrl}/${encodeURIComponent(classroom.value)}?${params.toString()}`,
-                    {
-                        headers: {
-                            'Accept':
-                                'application/json',
-                        },
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error();
-                }
-
-                const students =
-                    await response.json();
-
-                if (!students.length) {
-                    list.innerHTML = `
-                        <div class="pps-empty">
-                            Aucun étudiant assigné à ce créneau.
-                        </div>
-                    `;
-                    return;
-                }
-
-                list.innerHTML =
-                    students
-                        .map(student => `
-                            <div class="pp-attendance-row">
-                                <div class="pp-attendance-student">
-                                    <span class="pp-attendance-avatar">
-                                        ${escapeHtml(initials(student.name))}
-                                    </span>
-
-                                    <strong class="pp-attendance-name">
-                                        ${escapeHtml(student.name)}
-                                    </strong>
-                                </div>
-
-                                <div class="pp-attendance-options">
-                                    <label class="pp-attendance-option">
-                                        <input
-                                            type="radio"
-                                            name="students[${Number(student.id)}]"
-                                            value="1"
-                                            checked
-                                            required
-                                        >
-                                        <span>Présent</span>
-                                    </label>
-
-                                    <label class="pp-attendance-option">
-                                        <input
-                                            type="radio"
-                                            name="students[${Number(student.id)}]"
-                                            value="0"
-                                            required
-                                        >
-                                        <span>Absent</span>
-                                    </label>
-                                </div>
-                            </div>
-                        `)
-                        .join('');
-
-                submit.disabled = false;
-            } catch (error) {
-                list.innerHTML = `
-                    <div class="pps-empty">
-                        Impossible de charger les étudiants.
-                    </div>
-                `;
-            }
-        }
-
-        hierarchy.forEach(item => {
-            subject.appendChild(
-                option(
-                    item.id,
-                    item.name
-                )
+                option(item.id, item.name)
             );
         });
 
-        subject.addEventListener(
-            'change',
-            fillLevels
-        );
-
-        level.addEventListener(
-            'change',
-            fillClasses
-        );
-
-        classroom.addEventListener(
-            'change',
-            fillSlots
-        );
-
-        slot.addEventListener(
-            'change',
-            loadStudents
-        );
+        classroom.disabled = !levelData();
+        clearStudents();
     }
-);
+
+    function fillLevels() {
+        level.innerHTML = '';
+        level.appendChild(
+            option('', 'Choisir un niveau')
+        );
+
+        (subjectData()?.levels || []).forEach(item => {
+            level.appendChild(
+                option(item.id, item.name)
+            );
+        });
+
+        level.disabled = !subjectData();
+        fillClasses();
+    }
+
+    function initials(name) {
+        return String(name || 'E')
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map(part => part.charAt(0).toUpperCase())
+            .join('');
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = String(value || '');
+        return div.innerHTML;
+    }
+
+    async function loadStudents() {
+        if (
+            !subject.value
+            || !level.value
+            || !classroom.value
+        ) {
+            clearStudents();
+            return;
+        }
+
+        list.innerHTML = `
+            <div class="pps-empty">
+                Chargement des étudiants...
+            </div>
+        `;
+
+        const params =
+            new URLSearchParams({
+                subject_id: subject.value,
+                level_id: level.value,
+            });
+
+        try {
+            const response = await fetch(
+                `${baseUrl}/${encodeURIComponent(classroom.value)}?${params.toString()}`,
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error();
+            }
+
+            const students = await response.json();
+
+            if (!students.length) {
+                clearStudents(
+                    'Aucun étudiant assigné à cette classe.'
+                );
+                return;
+            }
+
+            list.innerHTML =
+                students
+                    .map(student => `
+                        <div class="pp-attendance-row">
+                            <div class="pp-attendance-student">
+                                <span class="pp-attendance-avatar">
+                                    ${escapeHtml(initials(student.name))}
+                                </span>
+
+                                <strong class="pp-attendance-name">
+                                    ${escapeHtml(student.name)}
+                                </strong>
+                            </div>
+
+                            <div class="pp-attendance-options">
+                                <label class="pp-attendance-option">
+                                    <input
+                                        type="radio"
+                                        name="students[${Number(student.id)}]"
+                                        value="1"
+                                        checked
+                                        required
+                                    >
+                                    <span>Présent</span>
+                                </label>
+
+                                <label class="pp-attendance-option">
+                                    <input
+                                        type="radio"
+                                        name="students[${Number(student.id)}]"
+                                        value="0"
+                                        required
+                                    >
+                                    <span>Absent</span>
+                                </label>
+                            </div>
+                        </div>
+                    `)
+                    .join('');
+
+            submit.disabled = false;
+        } catch (error) {
+            clearStudents(
+                'Impossible de charger les étudiants.'
+            );
+        }
+    }
+
+    hierarchy.forEach(item => {
+        subject.appendChild(
+            option(item.id, item.name)
+        );
+    });
+
+    subject.addEventListener(
+        'change',
+        () => fillLevels()
+    );
+
+    level.addEventListener(
+        'change',
+        () => fillClasses()
+    );
+
+    classroom.addEventListener(
+        'change',
+        loadStudents
+    );
+
+    fillLevels();
+});
 </script>
 @endpush

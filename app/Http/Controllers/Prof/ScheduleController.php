@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Prof;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassRoom;
-use App\Models\ClassSlot;
 use App\Services\ClassScheduleDisplayService;
 use App\Services\ProfessorPathService;
 use Carbon\Carbon;
@@ -33,24 +32,6 @@ class ScheduleController extends Controller
             $this->profPaths
                 ->selectedFilters($request);
 
-        $slot = !empty(
-            $filters['selectedSlotId']
-        )
-            ? ClassSlot::query()->find(
-                $filters['selectedSlotId']
-            )
-            : null;
-
-        if (
-            $slot
-            && !$this->profPaths->ownsSlot(
-                auth()->id(),
-                (int) $slot->id
-            )
-        ) {
-            abort(403);
-        }
-
         $scheduleFilters = array_filter([
             'subject_id' =>
                 $filters['selectedSubjectId'],
@@ -58,8 +39,6 @@ class ScheduleController extends Controller
                 $filters['selectedLevelId'],
             'class_id' =>
                 $filters['selectedClassId'],
-            'slot_code' =>
-                $slot?->code,
         ]);
 
         $occurrences =
@@ -181,24 +160,6 @@ class ScheduleController extends Controller
             $this->profPaths
                 ->selectedFilters($request);
 
-        $slot = !empty(
-            $filters['selectedSlotId']
-        )
-            ? ClassSlot::query()->find(
-                $filters['selectedSlotId']
-            )
-            : null;
-
-        if (
-            $slot
-            && !$this->profPaths->ownsSlot(
-                auth()->id(),
-                (int) $slot->id
-            )
-        ) {
-            abort(403);
-        }
-
         $scheduleFilters = array_filter([
             'subject_id' =>
                 $filters['selectedSubjectId'],
@@ -206,8 +167,6 @@ class ScheduleController extends Controller
                 $filters['selectedLevelId'],
             'class_id' =>
                 $filters['selectedClassId'],
-            'slot_code' =>
-                $slot?->code,
         ]);
 
         $events =

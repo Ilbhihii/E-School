@@ -4,7 +4,7 @@
 @section('page_title', 'Modifier devoir')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Créneau → Modifier'
+    'Matière → Niveau → Classe → Modifier'
 )
 
 @section('content')
@@ -21,7 +21,7 @@
 
         <p class="pp-page-description">
             Vous pouvez déplacer le devoir uniquement
-            vers un créneau qui vous est réellement affecté.
+            vers une classe qui vous est réellement affectée.
         </p>
     </div>
 
@@ -64,7 +64,7 @@
     @method('PUT')
 
     @include(
-        'components.pedagogical-path-edit',
+        'components.pedagogical-path-class-edit',
         [
             'hierarchy' => $profHierarchy,
             'prefix' => 'profDevoirEdit',
@@ -74,8 +74,6 @@
                 $selectedLevelId,
             'selectedClass' =>
                 $selectedClassId,
-            'selectedSlot' =>
-                $selectedSlotId,
         ]
     )
 
@@ -184,9 +182,6 @@
                                     }}
                                 >
                                     {{ $courseOption->title }}
-                                    @if($courseOption->slot_code)
-                                        — {{ $courseOption->slot_code }}
-                                    @endif
                                 </option>
                             @endforeach
                         </select>
@@ -265,113 +260,63 @@
 
 @push('scripts')
 <script>
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
-        const subject =
-            document.getElementById(
-                'profDevoirEditSubject'
-            );
+document.addEventListener('DOMContentLoaded', function () {
+    const subject =
+        document.getElementById('profDevoirEditSubject');
 
-        const level =
-            document.getElementById(
-                'profDevoirEditLevel'
-            );
+    const level =
+        document.getElementById('profDevoirEditLevel');
 
-        const classroom =
-            document.getElementById(
-                'profDevoirEditClass'
-            );
+    const classroom =
+        document.getElementById('profDevoirEditClass');
 
-        const slot =
-            document.getElementById(
-                'profDevoirEditSlot'
-            );
+    const course =
+        document.getElementById('profEditCourse');
 
-        const course =
-            document.getElementById(
-                'profEditCourse'
-            );
+    if (!subject || !level || !classroom || !course) {
+        return;
+    }
 
-        if (
-            !subject
-            || !level
-            || !classroom
-            || !slot
-            || !course
-        ) {
-            return;
-        }
-
-        function refreshCourses() {
-            const slotText =
-                slot.options[
-                    slot.selectedIndex
-                ]?.textContent
-                ?.trim()
-                ?.split(/\s+/)[0]
-                ?.toUpperCase()
-                ?? '';
-
-            Array.from(
-                course.options
-            ).forEach(option => {
-                if (!option.value) {
-                    option.hidden = false;
-                    option.disabled = false;
-                    return;
-                }
-
-                const matches =
-                    String(option.dataset.subject)
-                        === String(subject.value)
-                    && String(option.dataset.level)
-                        === String(level.value)
-                    && String(option.dataset.class)
-                        === String(classroom.value)
-                    && String(
-                        option.dataset.slot || ''
-                    ).toUpperCase()
-                        === slotText;
-
-                option.hidden = !matches;
-                option.disabled = !matches;
-            });
-
-            const selected =
-                course.options[
-                    course.selectedIndex
-                ];
-
-            if (
-                selected
-                && selected.value
-                && selected.disabled
-            ) {
-                course.value = '';
+    function refreshCourses() {
+        Array.from(course.options).forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
+                option.disabled = false;
+                return;
             }
-        }
 
-        [
-            subject,
-            level,
-            classroom,
-            slot,
-        ].forEach(element => {
-            element.addEventListener(
-                'change',
-                () => setTimeout(
-                    refreshCourses,
-                    0
-                )
-            );
+            const matches =
+                String(option.dataset.subject)
+                    === String(subject.value)
+                && String(option.dataset.level)
+                    === String(level.value)
+                && String(option.dataset.class)
+                    === String(classroom.value);
+
+            option.hidden = !matches;
+            option.disabled = !matches;
         });
 
-        setTimeout(
-            refreshCourses,
-            0
-        );
+        const selected =
+            course.options[course.selectedIndex];
+
+        if (
+            selected
+            && selected.value
+            && selected.disabled
+        ) {
+            course.value = '';
+        }
     }
-);
+
+    [subject, level, classroom].forEach(element => {
+        element.addEventListener(
+            'change',
+            () => setTimeout(refreshCourses, 0)
+        );
+    });
+
+    setTimeout(refreshCourses, 0);
+});
 </script>
 @endpush

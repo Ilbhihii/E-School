@@ -2,7 +2,7 @@
 
 @section('title', 'Mes lives')
 @section('page_title', 'Lives')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe')
 
 @section('content')
 @php
@@ -14,10 +14,7 @@
         ->map(
             fn ($live) => [
                 'id' => $live->id,
-                'title' => collect([
-                    $live->classSlot?->code,
-                    $live->title,
-                ])->filter()->implode(' · '),
+                'title' => $live->title,
                 'start' =>
                     $live->start_date_time
                         ?->toIso8601String(),
@@ -41,9 +38,8 @@
         <h1 class="pp-page-title">Mes lives</h1>
 
         <p class="pp-page-description">
-            Les lives sont limités aux créneaux
-            Matière → Niveau → Classe → Créneau
-            qui vous sont assignés.
+            Les lives sont limités aux classes
+            qui vous sont assignées.
         </p>
     </div>
 </section>
@@ -133,7 +129,7 @@
                             <span class="pps-path-chip">
                                 {{
                                     $live
-                                        ->classSlot
+                                        ->classRoom
                                         ?->level
                                         ?->name
                                     ?? 'Niveau'
@@ -145,23 +141,12 @@
                             <span class="pps-path-chip">
                                 {{
                                     $live
-                                        ->classSlot
-                                        ?->classRoom
+                                        ->classRoom
                                         ?->name
                                     ?? 'Classe'
                                 }}
                             </span>
 
-                            <i class="bi bi-chevron-right"></i>
-
-                            <span class="pps-slot-badge">
-                                {{
-                                    $live
-                                        ->classSlot
-                                        ?->code
-                                    ?? '—'
-                                }}
-                            </span>
                         </div>
                     </div>
                 </div>

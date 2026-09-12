@@ -2,7 +2,7 @@
 
 @section('title', 'Historique des absences')
 @section('page_title', 'Historique des absences')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe')
 
 @section('content')
 <section class="pp-page-head">
@@ -18,7 +18,7 @@
 
         <p class="pp-page-description">
             Filtrez l’historique selon la même structure
-            Matière → Niveau → Classe → Créneau.
+            Matière → Niveau → Classe.
         </p>
     </div>
 
@@ -114,16 +114,6 @@
                                 }}
                             </span>
 
-                            <i class="bi bi-chevron-right"></i>
-
-                            <span class="pps-slot-badge">
-                                {{
-                                    $absence
-                                        ->classSlot
-                                        ?->code
-                                    ?? '—'
-                                }}
-                            </span>
                         </div>
                     </span>
                 </div>

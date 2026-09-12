@@ -2,7 +2,7 @@
 
 @section('title', 'Créer un devoir')
 @section('page_title', 'Nouveau devoir')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe')
 
 @section('content')
 <section class="pp-page-head">
@@ -16,7 +16,7 @@
 
         <p class="pp-page-description">
             Choisissez d’abord le parcours exact
-            Matière → Niveau → Classe → Créneau.
+            Matière → Niveau → Classe.
         </p>
     </div>
 
@@ -42,6 +42,99 @@
     </div>
 @endif
 
+
+<style>
+.pp-assignment-number-wrap {
+    display: grid;
+    grid-template-columns: auto minmax(100px, 1fr);
+    align-items: stretch;
+    gap: 0;
+}
+
+.pp-assignment-prefix {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    border: 1px solid rgba(139, 92, 246, .32);
+    border-right: 0;
+    border-radius: 10px 0 0 10px;
+    background: linear-gradient(
+        135deg,
+        rgba(124, 77, 255, .18),
+        rgba(59, 130, 246, .10)
+    );
+    color: #c4b5fd;
+    font-size: .78rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+.pp-assignment-number-input {
+    border-radius: 0 10px 10px 0 !important;
+    font-weight: 800;
+}
+
+.pp-assignment-preview {
+    margin-top: .55rem;
+    color: rgba(255, 255, 255, .47);
+    font-size: .7rem;
+}
+
+.pp-assignment-preview strong {
+    color: #a7f3d0;
+    font-weight: 900;
+}
+
+.pp-auto-date-card {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    min-height: 58px;
+    padding: .75rem .9rem;
+    border: 1px solid rgba(34, 197, 94, .20);
+    border-radius: 11px;
+    background: linear-gradient(
+        135deg,
+        rgba(34, 197, 94, .08),
+        rgba(16, 185, 129, .035)
+    );
+}
+
+.pp-auto-date-icon {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    border-radius: 10px;
+    background: rgba(34, 197, 94, .12);
+    color: #4ade80;
+    font-size: 1rem;
+}
+
+.pp-auto-date-card strong {
+    display: block;
+    color: #f0fdf4;
+    font-size: .85rem;
+    font-weight: 900;
+}
+
+.pp-auto-date-card span {
+    display: block;
+    margin-top: .15rem;
+    color: rgba(255, 255, 255, .45);
+    font-size: .66rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 575px) {
+    .pp-assignment-number-wrap {
+        grid-template-columns: 90px 1fr;
+    }
+}
+</style>
+
 <form
     method="POST"
     action="{{ route('prof.devoir.store') }}"
@@ -60,8 +153,8 @@
                     </h2>
 
                     <p class="pp-panel-subtitle">
-                        Le devoir sera visible uniquement
-                        par les étudiants de ce créneau.
+                        Le devoir sera visible par les étudiants
+                        de la classe sélectionnée.
                     </p>
                 </div>
             </header>
@@ -130,26 +223,6 @@
                         </select>
                     </div>
 
-                    <div class="pp-field">
-                        <label
-                            for="devoirSlot"
-                            class="pp-label"
-                        >
-                            Créneau *
-                        </label>
-
-                        <select
-                            name="class_slot_id"
-                            id="devoirSlot"
-                            class="adm-form-select"
-                            disabled
-                            required
-                        >
-                            <option value="">
-                                Choisir un créneau
-                            </option>
-                        </select>
-                    </div>
                 </div>
 
                 <div class="pp-field mt-3">
@@ -181,14 +254,6 @@
                                 data-class="{{
                                     $courseOption->class_id
                                 }}"
-                                data-slot="{{
-                                    strtoupper(
-                                        trim(
-                                            (string)
-                                            $courseOption->slot_code
-                                        )
-                                    )
-                                }}"
                                 {{
                                     (string) old(
                                         'course_id',
@@ -201,16 +266,13 @@
                                 }}
                             >
                                 {{ $courseOption->title }}
-                                @if($courseOption->slot_code)
-                                    — {{ $courseOption->slot_code }}
-                                @endif
                             </option>
                         @endforeach
                     </select>
 
                     <small class="pp-help">
-                        Seuls les cours correspondant au créneau
-                        sélectionné restent disponibles.
+                        Seuls les cours correspondant à la matière,
+                        au niveau et à la classe restent disponibles.
                     </small>
                 </div>
             </div>
@@ -229,21 +291,37 @@
             <div class="pp-form-section">
                 <div class="pp-field">
                     <label
-                        for="title"
+                        for="assignment_number"
                         class="pp-label"
                     >
-                        Titre *
+                        Numéro du devoir *
                     </label>
 
-                    <input
-                        type="text"
-                        name="title"
-                        id="title"
-                        value="{{ old('title') }}"
-                        class="adm-form-control"
-                        maxlength="255"
-                        required
-                    >
+                    <div class="pp-assignment-number-wrap">
+                        <span class="pp-assignment-prefix">
+                            DEVOIR
+                        </span>
+
+                        <input
+                            type="number"
+                            name="assignment_number"
+                            id="assignment_number"
+                            value="{{ old('assignment_number', 1) }}"
+                            class="adm-form-control pp-assignment-number-input"
+                            min="1"
+                            max="999"
+                            step="1"
+                            inputmode="numeric"
+                            required
+                        >
+                    </div>
+
+                    <div class="pp-assignment-preview">
+                        Titre généré automatiquement :
+                        <strong id="assignmentTitlePreview">
+                            DEVOIR {{ old('assignment_number', 1) }}
+                        </strong>
+                    </div>
                 </div>
 
                 <div class="pp-field">
@@ -263,22 +341,26 @@
                 </div>
 
                 <div class="pp-field">
-                    <label
-                        for="due_date"
-                        class="pp-label"
-                    >
-                        Date limite *
+                    <label class="pp-label">
+                        Date limite
                     </label>
 
-                    <input
-                        type="date"
-                        name="due_date"
-                        id="due_date"
-                        value="{{ old('due_date') }}"
-                        min="{{ now()->addDay()->toDateString() }}"
-                        class="adm-form-control"
-                        required
-                    >
+                    <div class="pp-auto-date-card">
+                        <div class="pp-auto-date-icon">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+
+                        <div>
+                            <strong>
+                                {{ now()->addDays(5)->format('d/m/Y') }}
+                            </strong>
+
+                            <span>
+                                Calculée automatiquement à J+5
+                                après la publication.
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="pp-field">
@@ -324,281 +406,187 @@
 
 @push('scripts')
 <script>
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
-        const hierarchy =
-            @json($profHierarchy);
+document.addEventListener('DOMContentLoaded', function () {
+    const hierarchy = @json($profHierarchy);
 
-        const subject =
-            document.getElementById('devoirSubject');
+    const subject = document.getElementById('devoirSubject');
+    const level = document.getElementById('devoirLevel');
+    const classroom = document.getElementById('devoirClass');
+    const course = document.getElementById('course_id');
 
-        const level =
-            document.getElementById('devoirLevel');
+    const assignmentNumber =
+        document.getElementById('assignment_number');
 
-        const classroom =
-            document.getElementById('devoirClass');
+    const assignmentTitlePreview =
+        document.getElementById('assignmentTitlePreview');
 
-        const slot =
-            document.getElementById('devoirSlot');
+    const refreshAssignmentTitle = () => {
+        if (!assignmentNumber || !assignmentTitlePreview) {
+            return;
+        }
 
-        const course =
-            document.getElementById('course_id');
+        const number = Math.max(
+            1,
+            parseInt(assignmentNumber.value || '1', 10) || 1
+        );
 
-        const wantedSubject =
-            @json((string) ($selectedSubjectId ?? ''));
+        assignmentTitlePreview.textContent =
+            'DEVOIR ' + number;
+    };
 
-        const wantedLevel =
-            @json((string) ($selectedLevelId ?? ''));
+    assignmentNumber?.addEventListener(
+        'input',
+        refreshAssignmentTitle
+    );
 
-        const wantedClass =
-            @json((string) ($selectedClassId ?? ''));
+    refreshAssignmentTitle();
 
-        const wantedSlot =
-            @json((string) ($selectedSlotId ?? ''));
+    const wantedSubject =
+        @json((string) ($selectedSubjectId ?? ''));
 
-        const makeOption = (
-            value,
-            label,
-            selected = false
-        ) => {
-            const item =
-                document.createElement('option');
+    const wantedLevel =
+        @json((string) ($selectedLevelId ?? ''));
 
-            item.value = String(value);
-            item.textContent = label;
-            item.selected = selected;
+    const wantedClass =
+        @json((string) ($selectedClassId ?? ''));
 
-            return item;
-        };
+    const makeOption = (
+        value,
+        label,
+        selected = false
+    ) => {
+        const item = document.createElement('option');
+        item.value = String(value);
+        item.textContent = label;
+        item.selected = selected;
+        return item;
+    };
 
-        const subjectData = () =>
-            hierarchy.find(
-                item =>
-                    String(item.id)
-                    === String(subject.value)
-            );
+    const subjectData = () =>
+        hierarchy.find(
+            item => String(item.id) === String(subject.value)
+        );
 
-        const levelData = () =>
-            subjectData()
-                ?.levels
-                ?.find(
-                    item =>
-                        String(item.id)
-                        === String(level.value)
-                );
+    const levelData = () =>
+        subjectData()?.levels?.find(
+            item => String(item.id) === String(level.value)
+        );
 
-        const classData = () =>
-            levelData()
-                ?.classes
-                ?.find(
-                    item =>
-                        String(item.id)
-                        === String(classroom.value)
-                );
+    function refreshCourses() {
+        if (!course) return;
 
-        function refreshCourses() {
-            if (!course) {
+        Array.from(course.options).forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
+                option.disabled = false;
                 return;
             }
 
-            const slotItem =
-                classData()
-                    ?.slots
-                    ?.find(
-                        item =>
-                            String(item.id)
-                            === String(slot.value)
-                    );
+            const matches =
+                String(option.dataset.subject)
+                    === String(subject.value)
+                && String(option.dataset.level)
+                    === String(level.value)
+                && String(option.dataset.class)
+                    === String(classroom.value);
 
-            const selectedSlotCode =
-                String(
-                    slotItem?.code || ''
-                ).toUpperCase();
+            option.hidden = !matches;
+            option.disabled = !matches;
+        });
 
-            Array.from(
-                course.options
-            ).forEach(option => {
-                if (!option.value) {
-                    option.hidden = false;
-                    option.disabled = false;
-                    return;
-                }
+        const current = course.options[course.selectedIndex];
 
-                const matches =
-                    String(option.dataset.subject)
-                        === String(subject.value)
-                    && String(option.dataset.level)
-                        === String(level.value)
-                    && String(option.dataset.class)
-                        === String(classroom.value)
-                    && String(option.dataset.slot || '')
-                        .toUpperCase()
-                        === selectedSlotCode;
-
-                option.hidden = !matches;
-                option.disabled = !matches;
-            });
-
-            const current =
-                course.options[
-                    course.selectedIndex
-                ];
-
-            if (
-                current
-                && current.value
-                && current.disabled
-            ) {
-                course.value = '';
-            }
+        if (current && current.value && current.disabled) {
+            course.value = '';
         }
+    }
 
-        function fillSlots(wanted = '') {
-            slot.innerHTML = '';
+    function fillClasses(wanted = '') {
+        classroom.innerHTML = '';
+        classroom.appendChild(
+            makeOption('', 'Choisir une classe')
+        );
 
-            slot.appendChild(
-                makeOption(
-                    '',
-                    'Choisir un créneau'
-                )
-            );
-
-            const items =
-                classData()?.slots || [];
-
-            items.forEach(item => {
-                slot.appendChild(
-                    makeOption(
-                        item.id,
-                        item.code,
-                        String(item.id)
-                        === String(wanted)
-                    )
-                );
-            });
-
-            slot.disabled =
-                !classData();
-
-            refreshCourses();
-        }
-
-        function fillClasses(
-            wanted = '',
-            wantedSlotId = ''
-        ) {
-            classroom.innerHTML = '';
-
+        (levelData()?.classes || []).forEach(item => {
             classroom.appendChild(
-                makeOption(
-                    '',
-                    'Choisir une classe'
-                )
-            );
-
-            const items =
-                levelData()?.classes || [];
-
-            items.forEach(item => {
-                classroom.appendChild(
-                    makeOption(
-                        item.id,
-                        item.name,
-                        String(item.id)
-                        === String(wanted)
-                    )
-                );
-            });
-
-            classroom.disabled =
-                !levelData();
-
-            fillSlots(wantedSlotId);
-        }
-
-        function fillLevels(
-            wanted = '',
-            wantedClassId = '',
-            wantedSlotId = ''
-        ) {
-            level.innerHTML = '';
-
-            level.appendChild(
-                makeOption(
-                    '',
-                    'Choisir un niveau'
-                )
-            );
-
-            const items =
-                subjectData()?.levels || [];
-
-            items.forEach(item => {
-                level.appendChild(
-                    makeOption(
-                        item.id,
-                        item.name,
-                        String(item.id)
-                        === String(wanted)
-                    )
-                );
-            });
-
-            level.disabled =
-                !subjectData();
-
-            fillClasses(
-                wantedClassId,
-                wantedSlotId
-            );
-        }
-
-        hierarchy.forEach(item => {
-            subject.appendChild(
                 makeOption(
                     item.id,
                     item.name,
-                    String(item.id)
-                    === String(wantedSubject)
+                    String(item.id) === String(wanted)
                 )
             );
         });
 
-        if (wantedSubject) {
-            subject.value = wantedSubject;
+        classroom.disabled = !levelData();
 
-            fillLevels(
-                wantedLevel,
-                wantedClass,
-                wantedSlot
-            );
-        } else {
-            fillLevels();
+        if (wanted) {
+            classroom.value = String(wanted);
         }
-
-        subject.addEventListener(
-            'change',
-            () => fillLevels()
-        );
-
-        level.addEventListener(
-            'change',
-            () => fillClasses()
-        );
-
-        classroom.addEventListener(
-            'change',
-            () => fillSlots()
-        );
-
-        slot.addEventListener(
-            'change',
-            refreshCourses
-        );
 
         refreshCourses();
     }
-);
+
+    function fillLevels(
+        wanted = '',
+        wantedClassId = ''
+    ) {
+        level.innerHTML = '';
+        level.appendChild(
+            makeOption('', 'Choisir un niveau')
+        );
+
+        (subjectData()?.levels || []).forEach(item => {
+            level.appendChild(
+                makeOption(
+                    item.id,
+                    item.name,
+                    String(item.id) === String(wanted)
+                )
+            );
+        });
+
+        level.disabled = !subjectData();
+
+        if (wanted) {
+            level.value = String(wanted);
+        }
+
+        fillClasses(wantedClassId);
+    }
+
+    hierarchy.forEach(item => {
+        subject.appendChild(
+            makeOption(
+                item.id,
+                item.name,
+                String(item.id) === String(wantedSubject)
+            )
+        );
+    });
+
+    if (wantedSubject) {
+        subject.value = wantedSubject;
+        fillLevels(wantedLevel, wantedClass);
+    } else {
+        fillLevels();
+    }
+
+    subject.addEventListener(
+        'change',
+        () => fillLevels()
+    );
+
+    level.addEventListener(
+        'change',
+        () => fillClasses()
+    );
+
+    classroom.addEventListener(
+        'change',
+        refreshCourses
+    );
+
+    refreshCourses();
+});
 </script>
 @endpush

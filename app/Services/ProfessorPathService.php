@@ -21,16 +21,6 @@ class ProfessorPathService
                 'classSlot',
             ])
             ->where('prof_id', $professorId)
-            ->when(
-                Schema::hasColumn(
-                    'prof_assignments',
-                    'class_slot_id'
-                ),
-                fn ($query) =>
-                    $query->whereNotNull(
-                        'class_slot_id'
-                    )
-            )
             ->orderBy('subject_id')
             ->orderBy('level_id')
             ->orderBy('class_id')
@@ -41,13 +31,7 @@ class ProfessorPathService
                     $assignment->subject
                     && $assignment->level
                     && $assignment->classRoom
-                    && (
-                        !Schema::hasColumn(
-                            'prof_assignments',
-                            'class_slot_id'
-                        )
-                        || $assignment->classSlot
-                    )
+                    
             )
             ->values();
     }
@@ -193,11 +177,6 @@ class ProfessorPathService
                 $request->query('class_id')
             );
 
-        $slotId =
-            $this->positiveInt(
-                $request->query('class_slot_id')
-            );
-
         return $assignments
             ->filter(
                 function (
@@ -205,8 +184,7 @@ class ProfessorPathService
                 ) use (
                     $subjectId,
                     $levelId,
-                    $classId,
-                    $slotId
+                    $classId
                 ) {
                     if (
                         $subjectId
@@ -232,18 +210,31 @@ class ProfessorPathService
                         return false;
                     }
 
-                    if (
-                        $slotId
-                        && (int) $assignment->class_slot_id
-                            !== $slotId
-                    ) {
-                        return false;
-                    }
-
                     return true;
                 }
             )
             ->values();
+    }
+
+    public function findClassAssignment(
+        int $professorId,
+        int $subjectId,
+        int $levelId,
+        int $classId
+    ): ?ProfAssignment {
+        return ProfAssignment::query()
+            ->with([
+                'subject',
+                'level',
+                'classRoom',
+                'classSlot',
+            ])
+            ->where('prof_id', $professorId)
+            ->where('subject_id', $subjectId)
+            ->where('level_id', $levelId)
+            ->where('class_id', $classId)
+            ->orderBy('class_slot_id')
+            ->first();
     }
 
     public function findExactAssignment(
@@ -327,19 +318,6 @@ class ProfessorPathService
                 'class_id',
                 $assignment->class_id
             );
-
-        if (
-            Schema::hasColumn(
-                'class_user',
-                'class_slot_id'
-            )
-            && $assignment->class_slot_id
-        ) {
-            $query->where(
-                'class_slot_id',
-                $assignment->class_slot_id
-            );
-        }
 
         return $query
             ->pluck('user_id')
@@ -437,15 +415,7 @@ class ProfessorPathService
                         )
                     )
                 ),
-            'selectedSlotId' =>
-                $this->positiveInt(
-                    $request->query(
-                        'class_slot_id',
-                        $request->input(
-                            'class_slot_id'
-                        )
-                    )
-                ),
+            'selectedSlotId' => null,
         ];
     }
 

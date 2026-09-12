@@ -36,10 +36,15 @@ class DevoirController extends Controller
                     $request
                 );
 
-        $slotIds = $visibleScope
-            ->pluck('class_slot_id')
-            ->filter()
-            ->unique()
+        $pathPairs = $visibleScope
+            ->map(fn ($item) => [
+                'subject_id' => (int) $item->subject_id,
+                'class_id' => (int) $item->class_id,
+            ])
+            ->unique(
+                fn ($item) =>
+                    $item['subject_id'] . ':' . $item['class_id']
+            )
             ->values();
 
         $courseId =
@@ -53,6 +58,7 @@ class DevoirController extends Controller
         $query = Assignment::query()
             ->with([
                 'subject',
+                'classRoom.level',
                 'classSlot.subject',
                 'classSlot.level',
                 'classSlot.classRoom',
@@ -62,16 +68,28 @@ class DevoirController extends Controller
                 'user_id',
                 auth()->id()
             )
-            ->when(
-                $slotIds->isNotEmpty(),
-                fn ($query) =>
-                    $query->whereIn(
-                        'class_slot_id',
-                        $slotIds
-                    ),
-                fn ($query) =>
-                    $query->whereRaw('1 = 0')
-            );
+            ->where(function ($pathQuery) use ($pathPairs) {
+                if ($pathPairs->isEmpty()) {
+                    $pathQuery->whereRaw('1 = 0');
+                    return;
+                }
+
+                foreach ($pathPairs as $pair) {
+                    $pathQuery->orWhere(
+                        function ($pairQuery) use ($pair) {
+                            $pairQuery
+                                ->where(
+                                    'subject_id',
+                                    $pair['subject_id']
+                                )
+                                ->where(
+                                    'class_room_id',
+                                    $pair['class_id']
+                                );
+                        }
+                    );
+                }
+            });
 
         if ($courseId) {
             $course = Course::query()->approved()
@@ -162,21 +180,7 @@ class DevoirController extends Controller
                             && (int) $assignment->level_id
                                 === (int) $course->level_id
                             && (int) $assignment->class_id
-                                === (int) $course->class_id
-                            && strtoupper(
-                                trim(
-                                    (string)
-                                    $assignment
-                                        ->classSlot
-                                        ?->code
-                                )
-                            )
-                                === strtoupper(
-                                    trim(
-                                        (string)
-                                        $course->slot_code
-                                    )
-                                );
+                                === (int) $course->class_id;
                     }
                 );
         }
@@ -224,15 +228,6 @@ class DevoirController extends Controller
                                 ?->class_id
                         )
                     ),
-                'selectedSlotId' =>
-                    old(
-                        'class_slot_id',
-                        $request->query(
-                            'class_slot_id',
-                            $defaultAssignment
-                                ?->class_slot_id
-                        )
-                    ),
             ]
         );
     }
@@ -249,10 +244,11 @@ class DevoirController extends Controller
         );
 
         $validated = $request->validate([
-            'title' => [
+            'assignment_number' => [
                 'required',
-                'string',
-                'max:255',
+                'integer',
+                'min:1',
+                'max:999',
             ],
             'description' => [
                 'nullable',
@@ -273,20 +269,10 @@ class DevoirController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
-                'required',
-                'integer',
-                'exists:class_slots,id',
-            ],
             'course_id' => [
                 'nullable',
                 'integer',
                 'exists:courses,id',
-            ],
-            'due_date' => [
-                'required',
-                'date',
-                'after:now',
             ],
             'file' => [
                 'nullable',
@@ -298,20 +284,11 @@ class DevoirController extends Controller
 
         $scope =
             $this->profPaths
-                ->findExactAssignment(
+                ->findClassAssignment(
                     auth()->id(),
-                    (int) $validated[
-                        'subject_id'
-                    ],
-                    (int) $validated[
-                        'level_id'
-                    ],
-                    (int) $validated[
-                        'class_id'
-                    ],
-                    (int) $validated[
-                        'class_slot_id'
-                    ]
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
                 );
 
         abort_unless($scope, 403);
@@ -334,25 +311,13 @@ class DevoirController extends Controller
                 && (int) $course->level_id
                     === (int) $scope->level_id
                 && (int) $course->class_id
-                    === (int) $scope->class_id
-                && strtoupper(
-                    trim(
-                        (string)
-                        $course->slot_code
-                    )
-                )
-                    === strtoupper(
-                        trim(
-                            (string)
-                            $scope->classSlot?->code
-                        )
-                    );
+                    === (int) $scope->class_id;
 
             if (!$courseMatchesPath) {
                 throw ValidationException::withMessages([
                     'course_id' =>
                         'Le cours sélectionné ne correspond pas '
-                        . 'au créneau pédagogique choisi.',
+                        . 'à la classe pédagogique choisie.',
                 ]);
             }
         }
@@ -368,24 +333,30 @@ class DevoirController extends Controller
                     );
         }
 
+        $assignmentTitle =
+            'DEVOIR '
+            . (int) $validated['assignment_number'];
+
+        $automaticDueDate =
+            now()->addDays(5)->toDateString();
+
         Assignment::create([
             'title' =>
-                $validated['title'],
+                $assignmentTitle,
             'description' =>
                 $validated['description']
                 ?? null,
             'file' =>
                 $filePath,
             'due_date' =>
-                $validated['due_date'],
+                $automaticDueDate,
             'course_id' =>
                 $course?->id,
             'subject_id' =>
                 $scope->subject_id,
             'class_room_id' =>
                 $scope->class_id,
-            'class_slot_id' =>
-                $scope->class_slot_id,
+            'class_slot_id' => null,
             'user_id' =>
                 auth()->id(),
         ]);
@@ -400,15 +371,14 @@ class DevoirController extends Controller
                         $scope->level_id,
                     'class_id' =>
                         $scope->class_id,
-                    'class_slot_id' =>
-                        $scope->class_slot_id,
                 ]
             )
             ->with(
                 'success',
-                'Devoir créé pour le créneau '
-                . ($scope->classSlot?->code ?? '')
-                . ' avec succès.'
+                $assignmentTitle
+                . ' créé avec succès. Date limite : '
+                . now()->addDays(5)->format('d/m/Y')
+                . '.'
             );
     }
 
@@ -446,8 +416,6 @@ class DevoirController extends Controller
                 'user_id',
                 auth()->id()
             )
-            ->whereNotNull('slot_code')
-            ->where('slot_code', '!=', '')
             ->orderBy('title')
             ->get();
 
@@ -461,37 +429,22 @@ class DevoirController extends Controller
                 'selectedSubjectId' =>
                     old(
                         'subject_id',
-                        $devoir
-                            ->classSlot
-                            ?->subject_id
-                        ?? $devoir
-                            ->course
-                            ?->subject_id
+                        $devoir->subject_id
+                        ?? $devoir->course?->subject_id
                     ),
                 'selectedLevelId' =>
                     old(
                         'level_id',
-                        $devoir
-                            ->classSlot
-                            ?->level_id
-                        ?? $devoir
-                            ->course
-                            ?->level_id
+                        $devoir->course?->level_id
+                        ?? ClassRoom::query()
+                            ->whereKey($devoir->class_room_id)
+                            ->value('level_id')
                     ),
                 'selectedClassId' =>
                     old(
                         'class_id',
-                        $devoir
-                            ->classSlot
-                            ?->class_id
-                        ?? $devoir
-                            ->course
-                            ?->class_id
-                    ),
-                'selectedSlotId' =>
-                    old(
-                        'class_slot_id',
-                        $devoir->class_slot_id
+                        $devoir->class_room_id
+                        ?? $devoir->course?->class_id
                     ),
             ]
         );
@@ -532,11 +485,6 @@ class DevoirController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
-                'required',
-                'integer',
-                'exists:class_slots,id',
-            ],
             'course_id' => [
                 'nullable',
                 'integer',
@@ -556,18 +504,17 @@ class DevoirController extends Controller
 
         $scope =
             $this->profPaths
-                ->findExactAssignment(
+                ->findClassAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id'],
-                    (int) $validated['class_slot_id']
+                    (int) $validated['class_id']
                 );
 
         abort_unless(
             $scope,
             403,
-            'Ce créneau ne fait pas partie de vos affectations.'
+            'Cette classe ne fait pas partie de vos affectations.'
         );
 
         $course = null;
@@ -588,26 +535,13 @@ class DevoirController extends Controller
                 && (int) $course->level_id
                     === (int) $scope->level_id
                 && (int) $course->class_id
-                    === (int) $scope->class_id
-                && strtoupper(
-                    trim(
-                        (string) $course->slot_code
-                    )
-                )
-                    === strtoupper(
-                        trim(
-                            (string)
-                            $scope->classSlot?->code
-                        )
-                    );
+                    === (int) $scope->class_id;
 
             if (!$courseMatchesPath) {
                 throw ValidationException::withMessages([
                     'course_id' =>
                         'Le cours sélectionné ne correspond pas '
-                        . 'au créneau '
-                        . ($scope->classSlot?->code ?? '')
-                        . '.',
+                        . 'à la classe pédagogique choisie.',
                 ]);
             }
         }
@@ -644,8 +578,7 @@ class DevoirController extends Controller
         $devoir->class_room_id =
             $scope->class_id;
 
-        $devoir->class_slot_id =
-            $scope->class_slot_id;
+        $devoir->class_slot_id = null;
 
         $devoir->course_id =
             $course?->id;
@@ -662,15 +595,11 @@ class DevoirController extends Controller
                         $scope->level_id,
                     'class_id' =>
                         $scope->class_id,
-                    'class_slot_id' =>
-                        $scope->class_slot_id,
                 ]
             )
             ->with(
                 'success',
-                'Devoir mis à jour pour le créneau '
-                . ($scope->classSlot?->code ?? '')
-                . '.'
+                'Devoir mis à jour avec succès.'
             );
     }
 

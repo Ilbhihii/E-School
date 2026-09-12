@@ -4,7 +4,7 @@
 @section('page_title', 'Proposer un cours')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Créneau → Validation admin'
+    'Matière → Niveau → Classe → Validation admin'
 )
 
 @section('content')
@@ -20,8 +20,8 @@
         </h1>
 
         <p class="pp-page-description">
-            Vous pouvez proposer un cours uniquement dans les créneaux
-            qui vous ont été affectés par l’administration.
+            Vous pouvez proposer un cours uniquement pour les classes
+            qui vous ont été affectées par l’administration.
         </p>
     </div>
 
@@ -55,7 +55,7 @@
     @csrf
 
     @include(
-        'components.pedagogical-path-edit',
+        'components.pedagogical-path-class-edit',
         [
             'hierarchy' => $profHierarchy,
             'prefix' => 'profCourseCreate',
@@ -65,8 +65,6 @@
                 $selectedLevelId,
             'selectedClass' =>
                 $selectedClassId,
-            'selectedSlot' =>
-                $selectedSlotId,
         ]
     )
 

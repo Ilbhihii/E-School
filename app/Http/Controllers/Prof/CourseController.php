@@ -138,13 +138,6 @@ class CourseController extends Controller
                         'class_id'
                     )
                 ),
-            'selectedSlotId' =>
-                old(
-                    'class_slot_id',
-                    $request->query(
-                        'class_slot_id'
-                    )
-                ),
         ];
 
         return view(
@@ -167,27 +160,17 @@ class CourseController extends Controller
 
         $assignment =
             $this->profPaths
-                ->findExactAssignment(
+                ->findClassAssignment(
                     auth()->id(),
-                    (int) $validated[
-                        'subject_id'
-                    ],
-                    (int) $validated[
-                        'level_id'
-                    ],
-                    (int) $validated[
-                        'class_id'
-                    ],
-                    (int) $validated[
-                        'class_slot_id'
-                    ]
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
                 );
 
         abort_unless(
-            $assignment
-            && $assignment->classSlot,
+            $assignment,
             403,
-            'Ce créneau ne fait pas partie de vos affectations.'
+            'Cette classe ne fait pas partie de vos affectations.'
         );
 
         [$videoPath, $pdfPath] =
@@ -208,10 +191,7 @@ class CourseController extends Controller
                     $assignment->level_id,
                 'class_id' =>
                     $assignment->class_id,
-                'slot_code' =>
-                    $assignment
-                        ->classSlot
-                        ->code,
+                'slot_code' => null,
                 'video' =>
                     $videoPath,
                 'pdf' =>
@@ -328,41 +308,12 @@ class CourseController extends Controller
             );
 
         $currentAssignment =
-            ProfAssignment::query()
-                ->with('classSlot')
-                ->where(
-                    'prof_id',
-                    auth()->id()
-                )
-                ->where(
-                    'subject_id',
-                    $course->subject_id
-                )
-                ->where(
-                    'level_id',
-                    $course->level_id
-                )
-                ->where(
-                    'class_id',
-                    $course->class_id
-                )
-                ->whereHas(
-                    'classSlot',
-                    function ($query) use ($course) {
-                        $query->whereRaw(
-                            'UPPER(TRIM(code)) = ?',
-                            [
-                                strtoupper(
-                                    trim(
-                                        (string)
-                                        $course->slot_code
-                                    )
-                                ),
-                            ]
-                        );
-                    }
-                )
-                ->first();
+            $this->profPaths->findClassAssignment(
+                auth()->id(),
+                (int) $course->subject_id,
+                (int) $course->level_id,
+                (int) $course->class_id
+            );
 
         return view(
             'prof.courses.edit',
@@ -385,12 +336,6 @@ class CourseController extends Controller
                         'class_id',
                         $course->class_id
                     ),
-                'selectedSlotId' =>
-                    old(
-                        'class_slot_id',
-                        $currentAssignment
-                            ?->class_slot_id
-                    ),
             ]
         );
     }
@@ -410,27 +355,17 @@ class CourseController extends Controller
 
         $assignment =
             $this->profPaths
-                ->findExactAssignment(
+                ->findClassAssignment(
                     auth()->id(),
-                    (int) $validated[
-                        'subject_id'
-                    ],
-                    (int) $validated[
-                        'level_id'
-                    ],
-                    (int) $validated[
-                        'class_id'
-                    ],
-                    (int) $validated[
-                        'class_slot_id'
-                    ]
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
                 );
 
         abort_unless(
-            $assignment
-            && $assignment->classSlot,
+            $assignment,
             403,
-            'Ce créneau ne fait pas partie de vos affectations.'
+            'Cette classe ne fait pas partie de vos affectations.'
         );
 
         $oldVideo =
@@ -461,10 +396,7 @@ class CourseController extends Controller
             $course->class_id =
                 $assignment->class_id;
 
-            $course->slot_code =
-                $assignment
-                    ->classSlot
-                    ->code;
+            $course->slot_code = null;
 
             $course->course_link =
                 $validated['course_link']
@@ -598,11 +530,6 @@ class CourseController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
-                'required',
-                'integer',
-                'exists:class_slots,id',
-            ],
             'course_link' => [
                 'nullable',
                 'url',
@@ -627,8 +554,6 @@ class CourseController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
-            'class_slot_id.required' =>
-                'Veuillez sélectionner un créneau.',
             'video.max' =>
                 'La vidéo ne doit pas dépasser 1 Go.',
             'video.mimes' =>

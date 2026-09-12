@@ -94,12 +94,6 @@
             <span class="pps-path-chip">
                 {{ $course->classRoom?->name ?? 'Classe' }}
             </span>
-
-            <i class="bi bi-chevron-right"></i>
-
-            <span class="pps-slot-badge">
-                {{ $course->slot_code ?? '—' }}
-            </span>
         </div>
     </div>
 </section>

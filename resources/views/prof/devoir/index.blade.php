@@ -2,7 +2,7 @@
 
 @section('title', 'Mes devoirs')
 @section('page_title', 'Devoirs')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe')
 
 @section('content')
 <section class="pp-page-head">
@@ -15,8 +15,8 @@
         <h1 class="pp-page-title">Mes devoirs</h1>
 
         <p class="pp-page-description">
-            Chaque devoir est maintenant rattaché
-            à un créneau pédagogique précis.
+            Chaque devoir est rattaché
+            à une matière, un niveau et une classe.
         </p>
     </div>
 
@@ -88,7 +88,11 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $devoir
-                                            ->classSlot
+                                            ->classRoom
+                                            ?->level
+                                            ?->name
+                                        ?? $devoir
+                                            ->course
                                             ?->level
                                             ?->name
                                         ?? 'Niveau'
@@ -100,23 +104,16 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $devoir
-                                            ->classSlot
+                                            ->classRoom
+                                            ?->name
+                                        ?? $devoir
+                                            ->course
                                             ?->classRoom
                                             ?->name
                                         ?? 'Classe'
                                     }}
                                 </span>
 
-                                <i class="bi bi-chevron-right"></i>
-
-                                <span class="pps-slot-badge">
-                                    {{
-                                        $devoir
-                                            ->classSlot
-                                            ?->code
-                                        ?? '—'
-                                    }}
-                                </span>
                             </div>
 
                             <p class="pp-panel-subtitle">

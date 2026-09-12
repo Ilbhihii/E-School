@@ -2,7 +2,7 @@
 
 @section('title', 'Copies des étudiants')
 @section('page_title', 'Copies des étudiants')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe')
 
 @section('content')
 @php
@@ -26,7 +26,7 @@
 
         <p class="pp-page-description">
             Les copies sont limitées aux étudiants
-            de vos créneaux pédagogiques exacts.
+            de vos classes pédagogiques.
         </p>
     </div>
 </section>
@@ -148,8 +148,7 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $assignment
-                                            ->classSlot
-                                            ?->subject
+                                            ->subject
                                             ?->name
                                         ?? 'Matière'
                                     }}
@@ -160,7 +159,7 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $assignment
-                                            ->classSlot
+                                            ->classRoom
                                             ?->level
                                             ?->name
                                         ?? 'Niveau'
@@ -172,23 +171,12 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $assignment
-                                            ->classSlot
-                                            ?->classRoom
+                                            ->classRoom
                                             ?->name
                                         ?? 'Classe'
                                     }}
                                 </span>
 
-                                <i class="bi bi-chevron-right"></i>
-
-                                <span class="pps-slot-badge">
-                                    {{
-                                        $assignment
-                                            ->classSlot
-                                            ?->code
-                                        ?? '—'
-                                    }}
-                                </span>
                             </div>
                         </div>
                     </div>
