@@ -1007,14 +1007,6 @@ class StudentController extends Controller
             ->orderBy('id')
             ->first();
 
-        if (!$course) {
-            return back()
-                ->withInput()
-                ->with(
-                    'error',
-                    'Aucun cours n’est disponible pour ce créneau ' . $slotCode . '.'
-                );
-        }
 
         $file = $request
             ->file('file')
@@ -1024,7 +1016,7 @@ class StudentController extends Controller
             'user_id' => $user->id,
             'title' => $validated['title'],
             'file' => $file,
-            'course_id' => $course->id,
+            'course_id' => $course ? $course->id : null,
             'subject_id' => (int) $validated['subject_id'],
             'class_room_id' => (int) $validated['class_id'],
             'class_slot_id' => (int) $validated['class_slot_id'],
