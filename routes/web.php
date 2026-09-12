@@ -14,7 +14,6 @@ use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
 use App\Http\Controllers\Admin\DevoirController;
-use App\Http\Controllers\Admin\StudentPaymentController;
 
 use App\Http\Controllers\PublicScheduleController;
 
@@ -33,6 +32,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\PrivateChatController;
 
 use App\Http\Controllers\Prof\ProfController;
 use App\Http\Controllers\Prof\FirstPasswordController;
@@ -549,31 +549,10 @@ Route::middleware(['auth', 'isAdmin'])
             LevelController::class
         )->except(['create', 'edit', 'show']);
 
-        // Gestion détaillée des paiements étudiants : 4 mois / année / historique
-        Route::prefix('student-payments')
-            ->name('student-payments.')
-            ->group(function () {
-                Route::get('/', [StudentPaymentController::class, 'index'])->name('index');
-                Route::get('/create', [StudentPaymentController::class, 'create'])->name('create');
-                Route::post('/', [StudentPaymentController::class, 'store'])->name('store');
-                Route::get('/student/{student}', [StudentPaymentController::class, 'show'])->name('show');
-                Route::patch('/{payment}/cancel', [StudentPaymentController::class, 'cancel'])->name('cancel');
-            });
-
         Route::get(
             'users/without-class',
             [UserController::class, 'withoutClass']
         )->name('users.without-class');
-
-        Route::get(
-            'users/create',
-            [UserController::class, 'create']
-        )->name('users.create');
-
-        Route::post(
-            'users',
-            [UserController::class, 'store']
-        )->name('users.store');
 
         Route::resource(
             'users',
@@ -998,6 +977,27 @@ Route::middleware([
             [ChatController::class, 'profDelete']
         )->name('chat.delete');
 
+        // Conversations privées professeur ↔ étudiant
+        Route::get(
+            '/private-chats',
+            [PrivateChatController::class, 'profIndex']
+        )->name('private-chats.index');
+
+        Route::get(
+            '/private-chats/{student}/{subject}',
+            [PrivateChatController::class, 'profShow']
+        )->name('private-chats.show');
+
+        Route::post(
+            '/private-chats/{student}/{subject}',
+            [PrivateChatController::class, 'profSend']
+        )->name('private-chats.send');
+
+        Route::delete(
+            '/private-chats/{student}/{subject}',
+            [PrivateChatController::class, 'profDelete']
+        )->name('private-chats.delete');
+
         Route::get(
             '/assignments',
             [ProfController::class, 'assignments']
@@ -1334,6 +1334,27 @@ Route::middleware(['auth', 'active'])
             '/chat/delete',
             [ChatController::class, 'delete']
         )->name('chat.delete');
+
+        // Conversations privées étudiant ↔ professeur
+        Route::get(
+            '/private-chats',
+            [PrivateChatController::class, 'studentIndex']
+        )->name('private-chats.index');
+
+        Route::get(
+            '/private-chats/{professor}/{subject}',
+            [PrivateChatController::class, 'studentShow']
+        )->name('private-chats.show');
+
+        Route::post(
+            '/private-chats/{professor}/{subject}',
+            [PrivateChatController::class, 'studentSend']
+        )->name('private-chats.send');
+
+        Route::delete(
+            '/private-chats/{professor}/{subject}',
+            [PrivateChatController::class, 'studentDelete']
+        )->name('private-chats.delete');
 
         // Assignments
         Route::get(

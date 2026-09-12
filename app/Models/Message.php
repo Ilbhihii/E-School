@@ -14,6 +14,7 @@ class Message extends Model
         'subject_id',
         'user_id',
         'conversation_user_id',
+        'private_professor_id',
         'message'
     ];
 
@@ -26,6 +27,15 @@ class Message extends Model
     public function subject()
     {
         return $this->belongsTo(Subject::class);
+    }
+
+
+    public function privateProfessor()
+    {
+        return $this->belongsTo(
+            User::class,
+            'private_professor_id'
+        );
     }
 
     public function conversationUser()

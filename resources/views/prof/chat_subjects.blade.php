@@ -46,11 +46,11 @@
 
         <span class="rgc-status">
             <i class="bi bi-circle-fill"></i>
-            {{ $subjects->count() }} espace(s)
+            {{ $subjects->count() + 1 }} espace(s)
         </span>
     </section>
 
-    @if($subjects->count() > 2)
+    @if($subjects->count() + 1 > 2)
         <label class="rgc-search">
             <i class="bi bi-search"></i>
 
@@ -66,6 +66,56 @@
         class="rgc-list-grid"
         id="profDiscussionGrid"
     >
+        <a
+            href="{{ route('prof.private-chats.index') }}"
+            class="rgc-list-card is-private"
+            data-rgc-item="messages privés étudiant conversation individuelle"
+            style="
+                border-color: rgba(56,189,248,.16);
+                background:
+                    radial-gradient(circle at 100% 0%, rgba(56,189,248,.10), transparent 38%),
+                    rgba(10,20,42,.92);
+            "
+        >
+            <div class="rgc-list-card-top">
+                <span
+                    class="rgc-list-icon"
+                    style="
+                        background:rgba(56,189,248,.14);
+                        color:#7dd3fc;
+                    "
+                >
+                    <i class="bi bi-person-lock"></i>
+                </span>
+
+                <i
+                    class="
+                        bi bi-arrow-up-right
+                        rgc-list-arrow
+                    "
+                ></i>
+            </div>
+
+            <h3>Messages privés</h3>
+
+            <p>
+                Échange individuel et confidentiel
+                avec un seul étudiant de vos classes.
+            </p>
+
+            <footer>
+                <span>
+                    <i class="bi bi-person-lines-fill"></i>
+                    Choisir un étudiant
+                </span>
+
+                <span>
+                    <i class="bi bi-lock-fill"></i>
+                    Prof ↔ Étudiant
+                </span>
+            </footer>
+        </a>
+
         @forelse($subjects as $subject)
             @php
                 $name =
