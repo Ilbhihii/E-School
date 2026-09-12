@@ -41,6 +41,7 @@ use App\Http\Controllers\Prof\ProfLevelController;
 use App\Http\Controllers\Prof\ScheduleController;
 use App\Http\Controllers\Prof\DevoirController as ProfDevoirController;
 use App\Http\Controllers\Prof\CourseController as ProfCourseController;
+use App\Http\Controllers\Prof\BehaviorNoteController;
 
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TestController;
@@ -1095,6 +1096,51 @@ Route::middleware([
             '/absences/{id}',
             [ProfController::class, 'updateAbsence']
         )->name('absences.update');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Bloc-notes pédagogique
+        |--------------------------------------------------------------------------
+        |
+        | Points positifs / négatifs par étudiant.
+        | Accès limité aux parcours affectés au professeur :
+        | Matière → Niveau → Classe.
+        |
+        */
+        Route::get(
+            '/bloc-notes',
+            [BehaviorNoteController::class, 'index']
+        )->name('behavior-notes.index');
+
+        Route::get(
+            '/bloc-notes/{student}',
+            [BehaviorNoteController::class, 'show']
+        )
+            ->where('student', '[0-9]+')
+            ->name('behavior-notes.show');
+
+        Route::post(
+            '/bloc-notes/{student}',
+            [BehaviorNoteController::class, 'store']
+        )
+            ->where('student', '[0-9]+')
+            ->name('behavior-notes.store');
+
+        Route::patch(
+            '/bloc-notes/{student}/{behaviorNote}',
+            [BehaviorNoteController::class, 'update']
+        )
+            ->where('student', '[0-9]+')
+            ->where('behaviorNote', '[0-9]+')
+            ->name('behavior-notes.update');
+
+        Route::delete(
+            '/bloc-notes/{student}/{behaviorNote}',
+            [BehaviorNoteController::class, 'destroy']
+        )
+            ->where('student', '[0-9]+')
+            ->where('behaviorNote', '[0-9]+')
+            ->name('behavior-notes.destroy');
 
         Route::get(
             '/lives',

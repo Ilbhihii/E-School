@@ -151,6 +151,10 @@
                 <span class="pp-quick-icon"><i class="bi bi-person-check-fill"></i></span>
                 <span class="pp-quick-copy"><strong>Faire l’appel</strong><span>Enregistrer les présences</span></span>
             </a>
+            <a href="{{ route('prof.behavior-notes.index') }}" class="pp-quick-link" style="--quick-color:#f472b6;">
+                <span class="pp-quick-icon"><i class="bi bi-journal-plus"></i></span>
+                <span class="pp-quick-copy"><strong>Bloc-notes</strong><span>Points positifs et négatifs</span></span>
+            </a>
         </div>
     </div>
 </section>

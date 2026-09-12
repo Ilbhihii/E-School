@@ -16,12 +16,20 @@ class PushNotificationService
 
     public function __construct()
     {
-        // Tentative d'initialisation Firebase ; en cas d'échec
-        // le service fonctionne en mode silencieux (utile en dev sans credentials)
+        // Firebase est optionnel. Si les credentials ne sont pas encore
+        // configurés, l'application continue normalement sans polluer les
+        // logs de production à chaque requête. En local, l'information reste
+        // disponible au niveau DEBUG pour faciliter le diagnostic.
         try {
             $this->messaging = app(Messaging::class);
         } catch (\Throwable $e) {
-            Log::warning('Firebase non configuré : ' . $e->getMessage());
+            if (config('app.debug')) {
+                Log::debug(
+                    '[PushNotification] Firebase non configuré : '
+                    . $e->getMessage()
+                );
+            }
+
             $this->messaging = null;
         }
     }
@@ -44,10 +52,6 @@ class PushNotificationService
         array $data = []
     ): bool {
         if (!$this->isConfigured()) {
-            Log::info('[PushNotification] Firebase non configuré. Notification ignorée.', [
-                'title' => $title,
-                'body' => $body,
-            ]);
             return false;
         }
 

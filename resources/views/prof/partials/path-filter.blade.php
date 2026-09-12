@@ -12,6 +12,15 @@
         $selectedClassId ?? request('class_id');
 
     $pathFilterExtra = $extraQuery ?? [];
+
+    /*
+     * Option utilisée notamment par le Bloc-notes :
+     * dès qu'une classe est choisie, le filtre est appliqué
+     * automatiquement. Les autres pages gardent le comportement
+     * actuel car la valeur par défaut reste false.
+     */
+    $pathFilterAutoSubmit =
+        (bool) ($autoSubmit ?? false);
 @endphp
 
 <section class="pp-panel pps-filter-panel">
@@ -39,6 +48,9 @@
             action="{{ $pathFilterAction }}"
             class="pps-filter-grid"
             data-prof-path-filter
+            data-prof-path-auto-submit="{{
+                $pathFilterAutoSubmit ? '1' : '0'
+            }}"
         >
             @foreach($pathFilterExtra as $name => $value)
                 @if($value !== null && $value !== '')
@@ -207,8 +219,35 @@ document.addEventListener('DOMContentLoaded', function () {
         fillLevels();
     }
 
-    subject.addEventListener('change', () => fillLevels());
-    level.addEventListener('change', () => fillClasses());
+    subject.addEventListener(
+        'change',
+        () => fillLevels()
+    );
+
+    level.addEventListener(
+        'change',
+        () => fillClasses()
+    );
+
+    classroom.addEventListener(
+        'change',
+        () => {
+            const form =
+                classroom.closest(
+                    '[data-prof-path-filter]'
+                );
+
+            if (
+                !form
+                || form.dataset.profPathAutoSubmit !== '1'
+                || !classroom.value
+            ) {
+                return;
+            }
+
+            form.requestSubmit();
+        }
+    );
 });
 </script>
 @endpush
