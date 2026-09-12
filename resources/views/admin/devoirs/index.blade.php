@@ -64,7 +64,7 @@
                         </td>
                         <td>
                             @if($devoir->file)
-                                <a href="{{ Storage::url($devoir->file) }}" target="_blank" class="adm-btn adm-btn-ghost adm-btn-sm">
+                                <a href="{{ route('assignments.file', $devoir) }}" target="_blank" class="adm-btn adm-btn-ghost adm-btn-sm">
                                     <i class="bi bi-paperclip"></i> Fichier
                                 </a>
                             @else

@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\CourseTest;
 use App\Models\UserProgress;
 use Illuminate\Support\Facades\Auth;
+use App\Services\LearningPathService;
 
 class LearningController extends Controller
 {
@@ -38,15 +39,22 @@ class LearningController extends Controller
     }
 
     // 4. Soumettre test
-    public function submitTest(Request $request, $id)
+    public function submitTest(Request $request, $id, LearningPathService $paths)
     {
         $course = Course::approved()->with('learningTests')->findOrFail($id);
+
+        abort_unless($paths->userCanAccessCourse($request->user(), $course), 403);
 
         $score = 0;
         $total = count($course->learningTests);
 
+        if ($total === 0) {
+            return back()->with('error', 'Aucune question de validation n’est disponible pour ce cours.');
+        }
+
         foreach ($course->learningTests as $test) {
-            if ($request->input('question_'.$test->id) == $test->correct_answer) {
+            $answer = $request->input('question_'.$test->id);
+            if (is_string($answer) && in_array($answer, ['a', 'b', 'c'], true) && hash_equals((string) $test->correct_answer, $answer)) {
                 $score++;
             }
         }

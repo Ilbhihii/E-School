@@ -157,7 +157,7 @@ class StudentPaymentController extends Controller
 
             // Compatibilité avec les anciennes parties de l'application.
             $student->forceFill([
-                'is_paid' => true,
+                'is_paid' => $startsAt->lte(Carbon::today()) && $expiresAt->gte(Carbon::today()),
                 'payment_date' => $data['paid_at'],
             ])->save();
         });

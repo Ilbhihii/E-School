@@ -188,20 +188,6 @@
                     <div class="prof-nav-heading">Suivi & échanges</div>
 
                     <a
-                        href="{{ route('prof.behavior-notes.index') }}"
-                        class="prof-nav-link {{ request()->routeIs('prof.behavior-notes.*') ? 'active' : '' }}"
-                        @if(request()->routeIs('prof.behavior-notes.*')) aria-current="page" @endif
-                    >
-                        <span class="nav-icon">
-                            <i class="bi bi-journal-plus"></i>
-                        </span>
-                        <span class="nav-label">
-                            Bloc-notes
-                            <small>Points positifs & négatifs</small>
-                        </span>
-                    </a>
-
-                    <a
                         href="{{ route('prof.chat.subjects') }}"
                         class="prof-nav-link {{ request()->routeIs('prof.chat*') ? 'active' : '' }}"
                         @if(request()->routeIs('prof.chat*')) aria-current="page" @endif

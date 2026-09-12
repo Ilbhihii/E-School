@@ -113,10 +113,6 @@ class PlanController extends Controller
                 );
         }
 
-        Auth::user()->forceFill([
-            'subscription_type' => $planCode,
-        ])->save();
-
         Stripe::setApiKey(
             config('services.stripe.secret_key')
         );
@@ -135,14 +131,7 @@ class PlanController extends Controller
                 'quantity' => 1,
             ]],
             'mode' => 'payment',
-            'success_url' => route(
-                'student.payment',
-                [
-                    'plan' => $planCode,
-                    'checkout' => 'success',
-                    'duration' => $pricing['duration_months'],
-                ]
-            ),
+            'success_url' => route('payment.success') . '?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route(
                 'plans',
                 ['offer' => $planCode, 'duration' => $pricing['duration_months']]

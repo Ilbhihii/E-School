@@ -9,6 +9,9 @@ class LiveSession {
   final Map<String, dynamic>? classRoom;
   final Map<String, dynamic>? user;
   final String? teamsAppUrl;
+  final bool canJoin;
+  final String? joinEndpoint;
+  final String? accessMessage;
   final DateTime? createdAt;
 
   LiveSession({
@@ -22,6 +25,9 @@ class LiveSession {
     this.classRoom,
     this.user,
     this.teamsAppUrl,
+    this.canJoin = false,
+    this.joinEndpoint,
+    this.accessMessage,
     this.createdAt,
   });
 
@@ -37,6 +43,9 @@ class LiveSession {
       classRoom: json['class'],
       user: json['user'],
       teamsAppUrl: json['teams_app_url'],
+      canJoin: json['can_join'] == true,
+      joinEndpoint: json['join_endpoint'],
+      accessMessage: json['access_message'],
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
     );
   }

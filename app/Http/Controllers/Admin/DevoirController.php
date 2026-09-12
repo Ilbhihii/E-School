@@ -66,7 +66,7 @@ class DevoirController extends Controller
 
         $filePath = null;
         if ($request->hasFile('file')) {
-            $filePath = $request->file('file')->store('assignments', 'public');
+            $filePath = $request->file('file')->store('assignments', 'local');
         }
 
         Assignment::create([
@@ -238,7 +238,7 @@ class DevoirController extends Controller
 
         if ($request->hasFile('file')) {
             if ($devoir->file) {
-                Storage::disk('public')
+                Storage::disk(Storage::disk('local')->exists($devoir->file) ? 'local' : 'public')
                     ->delete(
                         $devoir->file
                     );
@@ -296,7 +296,7 @@ class DevoirController extends Controller
     public function destroy(Assignment $devoir)
     {
         if ($devoir->file) {
-            Storage::disk('public')->delete($devoir->file);
+            foreach (['local', 'public'] as $disk) { if (Storage::disk($disk)->exists($devoir->file)) Storage::disk($disk)->delete($devoir->file); }
         }
 
         $course_id = $devoir->course_id;

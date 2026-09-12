@@ -5,16 +5,19 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Services\LearningPathService;
+use App\Services\ContentAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CourseResourceController extends Controller
 {
     private LearningPathService $paths;
+    private ContentAccessService $contentAccess;
 
-    public function __construct(LearningPathService $paths)
+    public function __construct(LearningPathService $paths, ContentAccessService $contentAccess)
     {
         $this->paths = $paths;
+        $this->contentAccess = $contentAccess;
     }
 
     public function show(Request $request, Course $course, string $type)
@@ -25,6 +28,15 @@ class CourseResourceController extends Controller
 
         if (!$this->paths->userCanAccessCourse($request->user(), $course)) {
             return response()->json(['success' => false, 'message' => 'Accès non autorisé à ce cours.'], 403);
+        }
+
+        $deviceDecision = $this->contentAccess->acquireCourse($request, $course);
+        if (!$deviceDecision['allowed']) {
+            return response()->json([
+                'success' => false,
+                'message' => $deviceDecision['message'],
+                'reason' => $deviceDecision['code'],
+            ], 423);
         }
 
         if ($type === 'link') {

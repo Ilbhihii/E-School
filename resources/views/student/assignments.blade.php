@@ -234,10 +234,7 @@
                             @if($assignment->file)
                                 <a
                                     href="{{
-                                        asset(
-                                            'storage/'
-                                            . $assignment->file
-                                        )
+                                        route('assignments.file', $assignment)
                                     }}"
                                     target="_blank"
                                     class="sp-secondary-button"
@@ -672,10 +669,7 @@
                                 <td data-label="Fichier">
                                     <a
                                         href="{{
-                                            asset(
-                                                'storage/'
-                                                . $assignment->file
-                                            )
+                                            route('assignments.file', $assignment)
                                         }}"
                                         target="_blank"
                                         class="sp-secondary-button compact"

@@ -28,6 +28,8 @@ use App\Http\Controllers\API\CourseResourceController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login',    [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/stripe/webhook', [\App\Http\Controllers\PaymentController::class, 'stripeWebhook'])
+    ->middleware('throttle:120,1');
 
 // ─── Sujets / Matières ───
 Route::get('/subjects',               [SubjectController::class, 'index']);
@@ -85,6 +87,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ─── Lives de l'utilisateur ───
     Route::get('/user/lives', [LiveController::class, 'userLives']);
+    Route::post('/user/lives/{live}/join', [LiveController::class, 'join'])
+        ->middleware('throttle:30,1');
 
     // ─── Rendez-vous ───
     Route::get('/appointments',             [AppointmentController::class, 'index']);

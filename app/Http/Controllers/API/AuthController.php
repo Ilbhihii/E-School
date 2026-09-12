@@ -31,14 +31,13 @@ class AuthController extends Controller
 
         $user = User::create($validated);
 
-        $token = $user->createToken('flutter-app')->plainTextToken;
-
+        // Un compte inactif n'obtient pas de jeton API exploitable.
         return response()->json([
             'success' => true,
             'message' => 'Compte créé avec succès. En attente d\'activation.',
             'data' => [
                 'user'  => $this->userData($user),
-                'token' => $token,
+                'token' => null,
             ],
         ], 201);
     }
@@ -93,16 +92,17 @@ class AuthController extends Controller
         ContentAccessService $contentAccess
     )
     {
-        if (
-            $request->user()
-            && $request->user()->isStudent()
-        ) {
-            $contentAccess->releaseCurrentDevice(
-                $request
-            );
+        $user = $request->user();
+
+        if ($user && $user->isStudent()) {
+            try {
+                $contentAccess->releaseCurrentDevice($request);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
         }
 
-        $request->user()->currentAccessToken()->delete();
+        $user?->currentAccessToken()?->delete();
 
         return response()->json([
             'success' => true,

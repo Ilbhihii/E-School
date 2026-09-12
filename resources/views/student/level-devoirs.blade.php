@@ -34,7 +34,7 @@
                             @if($devoir->description)<p style="font-size:0.78rem;color:#64748B;margin-bottom:0.25rem;">{{ $devoir->description }}</p>@endif
                             @if($devoir->due_date)<small style="color:#D97706;font-size:0.72rem;"><i class="bi bi-calendar me-1"></i>À rendre avant le {{ \Carbon\Carbon::parse($devoir->due_date)->format('d/m/Y') }}</small>@endif
                         </div>
-                        @if($devoir->file)<a href="{{ asset('storage/'.$devoir->file) }}" target="_blank" class="pr-btn pr-btn-ghost pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-eye"></i> Voir</a>@endif
+                        @if($devoir->file)<a href="{{ route('assignments.file', $devoir) }}" target="_blank" class="pr-btn pr-btn-ghost pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-eye"></i> Voir</a>@endif
                     </div>
                 </div>
                 @endforeach

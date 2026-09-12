@@ -230,7 +230,7 @@
                         @endif
                     </div>
                     @if($devoir->file)
-                    <a href="{{ asset('storage/'.$devoir->file) }}" target="_blank" class="btn-course-action outline" style="padding:8px 16px;font-size:0.8rem;">
+                    <a href="{{ route('assignments.file', $devoir) }}" target="_blank" class="btn-course-action outline" style="padding:8px 16px;font-size:0.8rem;">
                         <i class="bi bi-eye"></i> Voir
                     </a>
                     @endif

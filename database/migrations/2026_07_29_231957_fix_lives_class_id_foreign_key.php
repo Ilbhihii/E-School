@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // SQLite de test ne supporte ni MODIFY ni information_schema.
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
         if (
             !Schema::hasTable('lives')
             || !Schema::hasTable('class_rooms')
@@ -52,6 +56,9 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
         if (
             !Schema::hasTable('lives')
             || !Schema::hasTable('classes')

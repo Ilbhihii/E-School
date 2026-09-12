@@ -24,6 +24,8 @@ class StudentPayment extends Model
         'starts_at',
         'expires_at',
         'payment_method',
+        'payment_provider',
+        'provider_reference',
         'status',
         'notes',
         'created_by',
@@ -72,9 +74,9 @@ class StudentPayment extends Model
 
     public function getPlanLabelAttribute(): string
     {
-        return $this->plan_type === self::PLAN_ANNUAL
-            ? 'Année complète'
-            : '4 mois';
+        if ($this->plan_type === self::PLAN_ANNUAL) return 'Année complète';
+        if ($this->plan_type === self::PLAN_FOUR_MONTHS) return '4 mois';
+        return str_replace('_', ' ', (string) $this->plan_type);
     }
 
     public function getPaymentMethodLabelAttribute(): string

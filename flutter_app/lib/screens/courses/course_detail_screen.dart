@@ -32,10 +32,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   Future<void> _loadCourseDetail() async {
     setState(() => _isLoading = true);
 
-    final response = await _api.get('/courses/${widget.course.id}');
+    final response = await _api.get('/user/courses/${widget.course.id}');
     if (response.success && response.data != null) {
       setState(() {
-        _course = Course.fromJson(response.data as Map<String, dynamic>);
+        final payload = response.data as Map<String, dynamic>;
+        _course = Course.fromJson((payload['data'] ?? payload) as Map<String, dynamic>);
         _isLoading = false;
       });
     } else {
@@ -54,9 +55,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   Future<void> _markComplete() async {
     setState(() => _isMarkingComplete = true);
 
-    final response = await _api.post('/courses/${widget.course.id}/complete', data: {
-      'score': 100,
-    });
+    final response = await _api.post('/courses/${widget.course.id}/complete');
 
     setState(() => _isMarkingComplete = false);
 

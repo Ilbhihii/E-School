@@ -55,6 +55,13 @@ class LiveAccessService
             );
         }
 
+        if (!$user->hasCurrentPaidAccess()) {
+            return $this->denied(
+                'payment_required',
+                'Un abonnement actuellement valide est nécessaire pour rejoindre cette session.'
+            );
+        }
+
         if (!$live->class_id) {
             return $this->denied(
                 'class_missing',
@@ -137,18 +144,31 @@ class LiveAccessService
         User $user,
         Live $live
     ): bool {
-        if (
-            (int) $user->class_id
-            === (int) $live->class_id
-        ) {
+        $hasAssignments = Schema::hasTable('class_user');
+        $liveSlotId = (int) ($live->class_slot_id ?? 0);
+
+        /*
+         * Un live rattaché à un créneau précis exige une affectation au
+         * même créneau. La simple appartenance à la classe ne suffit pas.
+         */
+        if ($liveSlotId > 0) {
+            if (!$hasAssignments || !Schema::hasColumn('class_user', 'class_slot_id')) {
+                return false;
+            }
+
+            return DB::table('class_user')
+                ->where('user_id', $user->id)
+                ->where('class_id', $live->class_id)
+                ->where('class_slot_id', $liveSlotId)
+                ->exists();
+        }
+
+        // Compatibilité explicite avec les anciens lives sans créneau.
+        if ((int) $user->class_id === (int) $live->class_id) {
             return true;
         }
 
-        /*
-         * Compatibilité avec les assignations individuelles déjà
-         * utilisées par StudentController.
-         */
-        if (!Schema::hasTable('class_user')) {
+        if (!$hasAssignments) {
             return false;
         }
 

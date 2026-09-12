@@ -12,6 +12,7 @@ use App\Models\ClassRoom;
 use App\Models\Classe;
 use App\Models\Absence;
 use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable
 {
@@ -95,6 +96,32 @@ class User extends Authenticatable
             ->whereDate('starts_at', '<=', now()->toDateString())
             ->whereDate('expires_at', '>=', now()->toDateString())
             ->orderByDesc('expires_at');
+    }
+
+    /**
+     * Source de vérité pour l'accès payant.
+     * Dès qu'un historique de paiements existe, les dates et le statut
+     * priment sur les anciens booléens is_paid/is_subscribed.
+     */
+    public function hasCurrentPaidAccess(): bool
+    {
+        if (!$this->isStudent()) {
+            return true;
+        }
+
+        if (Schema::hasTable('student_payments')) {
+            $payments = $this->studentPayments();
+
+            if ((clone $payments)->exists()) {
+                return (clone $payments)
+                    ->validOn(now()->toDateString())
+                    ->exists();
+            }
+        }
+
+        // Compatibilité avec les comptes historiques sans ligne de paiement.
+        return (bool) $this->is_paid
+            || (bool) ($this->getAttribute('is_subscribed') ?? false);
     }
 
     /**

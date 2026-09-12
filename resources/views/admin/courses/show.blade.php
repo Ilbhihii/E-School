@@ -121,7 +121,7 @@
                                 </td>
                                 <td style="text-align:right;">
                                     @if($devoir->file)
-                                    <a href="{{ asset('storage/'.$devoir->file) }}" target="_blank" class="adm-btn adm-btn-sm adm-btn-accent">
+                                    <a href="{{ route('assignments.file', $devoir) }}" target="_blank" class="adm-btn adm-btn-sm adm-btn-accent">
                                         <i class="bi bi-eye"></i> Voir
                                     </a>
                                     @endif

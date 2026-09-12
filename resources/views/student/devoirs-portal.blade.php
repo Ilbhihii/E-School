@@ -65,8 +65,8 @@
                     </div>
                     <div class="d-flex gap-1 flex-shrink-0">
                         @if($devoir->file)
-                        <a href="{{ asset('storage/'.$devoir->file) }}" target="_blank" class="pr-btn pr-btn-ghost pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-eye"></i></a>
-                        <a href="{{ asset('storage/'.$devoir->file) }}" download class="pr-btn pr-btn-primary pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-download"></i></a>
+                        <a href="{{ route('assignments.file', $devoir) }}" target="_blank" class="pr-btn pr-btn-ghost pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('assignments.file', $devoir) }}" download class="pr-btn pr-btn-primary pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-download"></i></a>
                         @endif
                     </div>
                 </div>
@@ -138,7 +138,7 @@
                         <td><small style="color:#64748B;">{{ $a->created_at->format('d/m/Y') }}<br>{{ $a->created_at->format('H:i') }}</small></td>
                         <td>@if($a->course && $a->course->subject)<span class="pr-badge pr-badge-purple" style="font-size:0.65rem;">{{ $a->course->subject->name }}</span>@else<small style="color:#64748B;">-</small>@endif</td>
                         <td><div style="font-weight:500;font-size:0.82rem;color:#F1F5F9;">{{ Str::limit($a->title, 30) }}</div></td>
-                        <td><a href="{{ asset('storage/'.$a->file) }}" target="_blank" class="pr-btn pr-btn-ghost pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-eye"></i> Voir</a></td>
+                        <td><a href="{{ route('assignments.file', $a) }}" target="_blank" class="pr-btn pr-btn-ghost pr-btn-sm" style="font-size:0.7rem;"><i class="bi bi-eye"></i> Voir</a></td>
                         <td style="text-align:center;">
                             @if($a->grade !== null)
                                 <span class="pr-badge {{ $a->grade >= 10 ? 'pr-badge-success' : 'pr-badge-danger' }}" style="font-weight:700;">{{ $a->grade }}/20</span>

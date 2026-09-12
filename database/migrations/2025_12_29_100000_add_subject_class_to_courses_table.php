@@ -8,27 +8,28 @@ return new class extends Migration
 {
     public function up()
     {
-        if (!Schema::hasTable('courses')) {
-            return;
-        }
-
+        if (!Schema::hasTable('courses')) return;
         Schema::table('courses', function (Blueprint $table) {
             if (!Schema::hasColumn('courses', 'subject_id')) {
+                // subject existe déjà à ce stade ; conserver la contrainte.
                 $table->foreignId('subject_id')->constrained()->cascadeOnDelete()->after('description');
             }
             if (!Schema::hasColumn('courses', 'class_id')) {
-                $table->foreignId('class_id')->nullable()->constrained('class_rooms')->cascadeOnDelete()->after('subject_id');
+                // class_rooms est créée plus tard : ne pas créer une FK prématurée.
+                $table->unsignedBigInteger('class_id')->nullable()->after('subject_id');
             }
         });
     }
 
     public function down()
     {
+        if (!Schema::hasTable('courses')) return;
         Schema::table('courses', function (Blueprint $table) {
-            $table->dropForeign(['subject_id']);
-            $table->dropForeign(['class_id']);
-            $table->dropColumn(['subject_id', 'class_id']);
+            if (Schema::hasColumn('courses', 'class_id')) $table->dropColumn('class_id');
+            if (Schema::hasColumn('courses', 'subject_id')) {
+                try { $table->dropForeign(['subject_id']); } catch (\Throwable $e) {}
+                $table->dropColumn('subject_id');
+            }
         });
     }
 };
-

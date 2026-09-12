@@ -89,21 +89,15 @@ class _QuizScreenState extends State<QuizScreen>
 
     setState(() => _isSaving = true);
 
-    // Calculer un score basé sur le nombre de questions complétées
-    // (sans correction automatique — les réponses correctes sont cachées)
-    final score = (_selectedAnswers.length / _totalQuestions) * 100;
-
-    // Sauvegarder la progression du cours
-    final response = await _api.post(
-      '/courses/${widget.courseId}/complete',
-      data: {'score': score.round()},
-    );
+    // Les réponses correctes restent côté serveur. Cette action marque
+    // uniquement la consultation comme terminée ; elle ne fabrique pas de note.
+    final response = await _api.post('/courses/${widget.courseId}/complete');
 
     if (!mounted) return;
 
     setState(() {
       _isSubmitted = true;
-      _finalScore = score;
+      _finalScore = 0;
       _isSaving = false;
     });
 
@@ -327,132 +321,45 @@ class _QuizScreenState extends State<QuizScreen>
   }
 
   Widget _buildResults() {
-    final grade = _finalScore >= 80
-        ? 'Excellent !'
-        : _finalScore >= 60
-            ? 'Bien !'
-            : _finalScore >= 40
-                ? 'Peut mieux faire'
-                : 'À revoir';
-
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const SizedBox(height: 40),
-
-          // ─── Cercle de score ───
-          Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const SweepGradient(
-                colors: [
-                  AppTheme.gold,
-                  AppTheme.success,
-                  AppTheme.navyBlue,
-                  AppTheme.gold,
-                ],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle_rounded, size: 84, color: AppTheme.success),
+            const SizedBox(height: 24),
+            Text(
+              'Réponses enregistrées',
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.gold.withOpacity(0.2),
-                  blurRadius: 40,
-                  spreadRadius: 5,
-                ),
-              ],
             ),
-            child: Center(
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.surfaceDark,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${_finalScore.round()}%',
-                      style: GoogleFonts.poppins(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.gold,
-                      ),
-                    ),
-                    Text(
-                      'Score',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
+            const SizedBox(height: 8),
+            Text(
+              'Cette étape marque le cours comme consulté. Aucune note n’est calculée sur l’appareil.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.check_rounded),
+                label: const Text('Terminer'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.gold,
+                  foregroundColor: AppTheme.primaryDark,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
-          ),
-
-          const SizedBox(height: 24),
-          Text(
-            grade,
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${_selectedAnswers.length} questions répondues',
-            style: GoogleFonts.inter(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-            ),
-          ),
-
-          const SizedBox(height: 40),
-
-          // ─── Actions ───
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context, _finalScore),
-              icon: const Icon(Icons.check_rounded),
-              label: const Text('Terminer'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.gold,
-                foregroundColor: AppTheme.primaryDark,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _currentQuestion = 0;
-                  _selectedAnswers.clear();
-                  _isSubmitted = false;
-                  _isSaving = false;
-                  _finalScore = 0;
-                });
-              },
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Revoir mes réponses'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.textSecondary,
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

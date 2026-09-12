@@ -16,8 +16,8 @@ class CheckSubscription
             return redirect()->route('login');
         }
 
-        // Si abonné → accès autorisé
-        if ($user->is_subscribed) {
+        // Un paiement historique doit être actuellement valide.
+        if ($user->hasCurrentPaidAccess()) {
             return $next($request);
         }
 

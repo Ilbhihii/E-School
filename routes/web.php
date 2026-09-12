@@ -15,8 +15,6 @@ use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
 use App\Http\Controllers\Admin\DevoirController;
 use App\Http\Controllers\Admin\StudentPaymentController;
-use App\Http\Controllers\Admin\HomeworkReminderController;
-use App\Http\Controllers\Admin\BehaviorNoteController as AdminBehaviorNoteController;
 
 use App\Http\Controllers\PublicScheduleController;
 
@@ -52,6 +50,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\VocalTestController;
 use App\Http\Controllers\HighSchoolTestController;
 use App\Http\Controllers\CourseResourceController;
+use App\Http\Controllers\AssignmentFileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -154,6 +153,12 @@ Route::middleware('auth')->group(function () {
         ->where('index', '[0-9]+')
         ->name('high-school-test.image');
 });
+
+
+Route::middleware('auth')->get(
+    '/assignments/{assignment}/file',
+    AssignmentFileController::class
+)->name('assignments.file');
 
 Route::get(
     '/classes',
@@ -646,24 +651,6 @@ Route::middleware(['auth', 'isAdmin'])
                     ->name('cancel');
             });
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Bloc-notes pédagogique — consultation administration
-        |--------------------------------------------------------------------------
-        */
-        Route::get(
-            '/bloc-notes-eleves',
-            [AdminBehaviorNoteController::class, 'index']
-        )->name('behavior-notes.index');
-
-        Route::get(
-            '/bloc-notes-eleves/etudiant/{student}',
-            [AdminBehaviorNoteController::class, 'student']
-        )
-            ->where('student', '[0-9]+')
-            ->name('behavior-notes.student');
-
         // Navigation hiérarchique : Matières → Niveaux → Classes → Lives
         Route::get(
             '/lives/subjects/{subject}/levels/{level}/classes/{class}',
@@ -755,17 +742,6 @@ Route::middleware(['auth', 'isAdmin'])
             '/chat/delete',
             [ChatController::class, 'adminDelete']
         )->name('chat.delete');
-
-        // Suivi automatique des devoirs non remis
-        Route::get(
-            '/homework-reminders',
-            [HomeworkReminderController::class, 'index']
-        )->name('homework-reminders.index');
-
-        Route::post(
-            '/homework-reminders/run',
-            [HomeworkReminderController::class, 'run']
-        )->name('homework-reminders.run');
 
         // Absences
         Route::get(
@@ -1106,6 +1082,15 @@ Route::middleware([
             '/absences',
             [ProfController::class, 'absences']
         )->name('absences');
+
+        // Compatibilité avec les anciennes vues du tableau de bord professeur.
+        // L'ancien lien `prof.behavior-notes.index` pointait vers un module
+        // qui n'a pas de contrôleur dédié dans cette version. On le rattache
+        // à la page des absences afin d'éviter une RouteNotFoundException.
+        Route::get(
+            '/behavior-notes',
+            [ProfController::class, 'absences']
+        )->name('behavior-notes.index');
 
         Route::get(
             '/class-students/{id}',
@@ -1528,6 +1513,11 @@ Route::post(
     '/checkout',
     [PaymentController::class, 'checkout']
 )->name('student.checkout');
+
+Route::get(
+    '/payment-success',
+    [PaymentController::class, 'checkoutSuccess']
+)->middleware('auth')->name('payment.success');
 /*
 |--------------------------------------------------------------------------
 | ADMIN — GESTION DES OFFRES

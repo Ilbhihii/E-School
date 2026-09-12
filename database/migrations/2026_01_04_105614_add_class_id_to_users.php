@@ -6,25 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 class AddClassIdToUsers extends Migration
 {
-public function up()
-{
-    Schema::table('users', function (Blueprint $table) {
-        if (!Schema::hasColumn('users', 'class_id')) {
-            // ajouter class_id
-            $table->foreignId('class_id')
-                  ->nullable()
-                  ->constrained('class_rooms')
-                  ->onDelete('set null');
-        }
-    });
-}
+    public function up()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (!Schema::hasColumn('users', 'class_id')) {
+                // class_rooms n'existe pas encore à cette étape de l'historique.
+                $table->unsignedBigInteger('class_id')->nullable()->index();
+            }
+        });
+    }
 
-public function down()
-{
-    Schema::table('users', function (Blueprint $table) {
-        $table->dropForeign(['class_id']);
-        $table->dropColumn('class_id');
-    });
-}
-
+    public function down()
+    {
+        Schema::table('users', function (Blueprint $table) {
+            if (Schema::hasColumn('users', 'class_id')) $table->dropColumn('class_id');
+        });
+    }
 }

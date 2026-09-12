@@ -30,6 +30,7 @@ class ApiConfig {
   // ─── Cours ───
   static const String courses           = '/courses';
   static String courseById(int id)      => '/courses/$id';
+  static String authorizedCourseById(int id) => '/user/courses/$id';
   static String courseComplete(int id)  => '/courses/$id/complete';
 
   // ─── Lives ───

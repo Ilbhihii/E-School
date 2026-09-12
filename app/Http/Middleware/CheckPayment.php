@@ -7,10 +7,8 @@ use Illuminate\Http\Request;
 
 class CheckPayment
 {
-    public function handle(
-        Request $request,
-        Closure $next
-    ) {
+    public function handle(Request $request, Closure $next)
+    {
         $user = $request->user();
 
         if (!$user) {
@@ -21,21 +19,10 @@ class CheckPayment
             return $next($request);
         }
 
-        $hasPaidAccess =
-            (bool) $user->is_paid
-            || (bool) (
-                $user->getAttribute('is_subscribed')
-                ?? false
-            );
-
-        if (!$hasPaidAccess) {
+        if (!$user->isStudent() || !$user->hasCurrentPaidAccess()) {
             return redirect()
                 ->route('plans')
-                ->with(
-                    'error',
-                    'Un abonnement actif est nécessaire '
-                    . 'pour accéder aux lives.'
-                );
+                ->with('error', 'Un abonnement actuellement valide est nécessaire pour accéder à ce contenu.');
         }
 
         return $next($request);

@@ -19,17 +19,6 @@ class Kernel extends ConsoleKernel
          * Aucun nettoyage automatique des lives.
          * Un live terminé reste visible avec le statut « Terminé ».
          */
-
-        /*
-         * Vérification quotidienne des devoirs non remis.
-         * Le service évite les doublons grâce à assignment_reminders.
-         */
-        $schedule
-            ->command('homework:check-missing')
-            ->dailyAt(
-                config('homework_reminders.schedule_time', '08:00')
-            )
-            ->withoutOverlapping();
     }
 
     /**

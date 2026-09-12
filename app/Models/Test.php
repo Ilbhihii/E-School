@@ -9,6 +9,10 @@ class Test extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'is_ai_generated' => 'boolean',
+    ];
+
     protected $fillable = [
         'title',
         'subject_id',

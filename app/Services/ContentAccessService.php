@@ -326,25 +326,31 @@ class ContentAccessService
             return $deviceId;
         }
 
-        $deviceId = trim(
-            (string) $request
-                ->session()
-                ->get(
-                    $cookieName,
-                    ''
-                )
-        );
+        $deviceId = trim((string) $request->header('X-Device-Id', ''));
+
+        if ($deviceId === '' && $request->hasSession()) {
+            $deviceId = trim(
+                (string) $request->session()->get($cookieName, '')
+            );
+        }
 
         if ($deviceId === '') {
-            $deviceId =
-                (string) Str::uuid();
+            /*
+             * Pour une API sans session/cookie, utiliser une identité stable
+             * fournie par l'application via X-Device-Id. En dernier recours,
+             * on lie le verrou au token Sanctum courant, ce qui reste stable
+             * pendant la session d'authentification.
+             */
+            $token = $request->user()?->currentAccessToken();
+            $tokenId = $token?->id;
 
-            $request
-                ->session()
-                ->put(
-                    $cookieName,
-                    $deviceId
-                );
+            $deviceId = $tokenId
+                ? 'sanctum-token-' . $tokenId
+                : (string) Str::uuid();
+
+            if ($request->hasSession()) {
+                $request->session()->put($cookieName, $deviceId);
+            }
         }
 
         Cookie::queue(

@@ -1019,7 +1019,7 @@ class StudentController extends Controller
 
         $file = $request
             ->file('file')
-            ->store('assignments', 'public');
+            ->store('assignments', 'local');
 
         Assignment::create([
             'user_id' => $user->id,

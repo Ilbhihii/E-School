@@ -101,68 +101,40 @@ class _LivesScreenState extends State<LivesScreen>
     }
   }
 
-  void _joinLive(LiveSession live) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rejoindre le live'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(live.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            if (live.provider != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.navyBlue.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  live.provider!.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.navyBlue,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              live.streamUrl != null
-                  ? 'Lien de diffusion :\n${live.streamUrl}'
-                  : 'Aucun lien de diffusion disponible.',
-              style: GoogleFonts.inter(
-                color: AppTheme.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Fermer'),
-          ),
-          if (live.streamUrl != null)
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Clipboard.setData(ClipboardData(text: live.streamUrl!));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lien copié dans le presse-papier')),
-                );
-              },
-              icon: const Icon(Icons.copy_rounded, size: 18),
-              label: const Text('Copier le lien'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.gold,
-                foregroundColor: AppTheme.primaryDark,
-              ),
-            ),
-        ],
-      ),
+  Future<void> _joinLive(LiveSession live) async {
+    if (!live.canJoin || live.joinEndpoint == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(live.accessMessage ?? 'Ce live n’est pas accessible.')),
+      );
+      return;
+    }
+
+    final uri = Uri.parse(live.joinEndpoint!);
+    final response = await _api.post(uri.path.replaceFirst('/api', ''));
+    if (!mounted) return;
+
+    if (!response.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.message ?? 'Accès au live refusé.')),
+      );
+      return;
+    }
+
+    final payload = response.data as Map<String, dynamic>;
+    final data = (payload['data'] ?? payload) as Map<String, dynamic>;
+    final streamUrl = data['stream_url'] as String?;
+
+    if (streamUrl == null || streamUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lien du live indisponible.')),
+      );
+      return;
+    }
+
+    await Clipboard.setData(ClipboardData(text: streamUrl));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lien du live copié dans le presse-papier')),
     );
   }
 

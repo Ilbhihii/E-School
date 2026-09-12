@@ -227,13 +227,6 @@
                         </div>
                         <span class="action-title">Planning</span>
                     </a>
-
-                    <a href="{{ route('admin.behavior-notes.index') }}" class="adm-action-card">
-                        <div class="action-icon" style="background:rgba(139,92,246,0.2);color:#C4B5FD;">
-                            <i class="bi bi-journal-check"></i>
-                        </div>
-                        <span class="action-title">Bloc-notes élèves</span>
-                    </a>
                 </div>
             </div>
         </div>

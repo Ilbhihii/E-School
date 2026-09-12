@@ -12,6 +12,12 @@ return new class extends Migration
             Schema::hasTable('schedules')
             && Schema::hasColumn('schedules', 'prof_id')
         ) {
+            if (DB::getDriverName() === 'sqlite') {
+                Schema::table('schedules', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->unsignedBigInteger('prof_id')->nullable()->change();
+                });
+                return;
+            }
             /*
              * Le professeur n'est plus obligatoire lors de la création
              * du créneau. Il pourra être associé séparément.
@@ -45,9 +51,15 @@ return new class extends Migration
                         'prof_id' => $professorId,
                     ]);
 
-                DB::statement(
-                    'ALTER TABLE schedules MODIFY prof_id BIGINT UNSIGNED NOT NULL'
-                );
+                if (DB::getDriverName() === 'sqlite') {
+                    Schema::table('schedules', function (\Illuminate\Database\Schema\Blueprint $table) {
+                        $table->unsignedBigInteger('prof_id')->nullable(false)->change();
+                    });
+                } else {
+                    DB::statement(
+                        'ALTER TABLE schedules MODIFY prof_id BIGINT UNSIGNED NOT NULL'
+                    );
+                }
             }
         }
     }
