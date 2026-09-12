@@ -8,6 +8,7 @@ use App\Models\ClassRoom;
 use App\Models\Course;
 use App\Models\ProfAssignment;
 use App\Services\ProfessorPathService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -193,6 +194,37 @@ class DevoirController extends Controller
             ->orderBy('title')
             ->get();
 
+        $weekSuggestions = [];
+
+        $profAssignments
+            ->map(fn ($assignment) => [
+                'subject_id' =>
+                    (int) $assignment->subject_id,
+                'class_id' =>
+                    (int) $assignment->class_id,
+            ])
+            ->unique(
+                fn ($item) =>
+                    $item['subject_id']
+                    . ':'
+                    . $item['class_id']
+            )
+            ->each(
+                function ($item) use (&$weekSuggestions) {
+                    $key =
+                        $item['subject_id']
+                        . ':'
+                        . $item['class_id'];
+
+                    $weekSuggestions[$key] =
+                        $this->resolveCurrentWeekNumber(
+                            auth()->id(),
+                            $item['subject_id'],
+                            $item['class_id']
+                        );
+                }
+            );
+
         return view(
             'prof.devoir.create',
             [
@@ -201,6 +233,8 @@ class DevoirController extends Controller
                 'courseId' => $courseId ?: null,
                 'profHierarchy' =>
                     $profHierarchy,
+                'weekSuggestions' =>
+                    $weekSuggestions,
                 'selectedSubjectId' =>
                     old(
                         'subject_id',
@@ -244,12 +278,6 @@ class DevoirController extends Controller
         );
 
         $validated = $request->validate([
-            'assignment_number' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:999',
-            ],
             'description' => [
                 'nullable',
                 'string',
@@ -333,9 +361,15 @@ class DevoirController extends Controller
                     );
         }
 
+        $weekNumber =
+            $this->resolveCurrentWeekNumber(
+                auth()->id(),
+                (int) $scope->subject_id,
+                (int) $scope->class_id
+            );
+
         $assignmentTitle =
-            'DEVOIR '
-            . (int) $validated['assignment_number'];
+            'SEMAINE ' . $weekNumber;
 
         $automaticDueDate =
             now()->addDays(5)->toDateString();
@@ -343,6 +377,8 @@ class DevoirController extends Controller
         Assignment::create([
             'title' =>
                 $assignmentTitle,
+            'week_number' =>
+                $weekNumber,
             'description' =>
                 $validated['description']
                 ?? null,
@@ -419,10 +455,32 @@ class DevoirController extends Controller
             ->orderBy('title')
             ->get();
 
+        $weekNumber =
+            $this->resolveStoredWeekNumber(
+                $devoir
+            );
+
+        $automaticDueDate =
+            $devoir->due_date
+                ? \Carbon\Carbon::parse(
+                    $devoir->due_date
+                )
+                : (
+                    $devoir->created_at
+                        ? $devoir->created_at
+                            ->copy()
+                            ->addDays(5)
+                        : now()->addDays(5)
+                );
+
         return view(
             'prof.devoir.edit',
             [
                 'devoir' => $devoir,
+                'weekNumber' =>
+                    $weekNumber,
+                'automaticDueDate' =>
+                    $automaticDueDate,
                 'courses' => $courses,
                 'profHierarchy' =>
                     $profHierarchy,
@@ -461,11 +519,6 @@ class DevoirController extends Controller
         );
 
         $validated = $request->validate([
-            'title' => [
-                'required',
-                'string',
-                'max:255',
-            ],
             'description' => [
                 'nullable',
                 'string',
@@ -489,10 +542,6 @@ class DevoirController extends Controller
                 'nullable',
                 'integer',
                 'exists:courses,id',
-            ],
-            'due_date' => [
-                'required',
-                'date',
             ],
             'file' => [
                 'nullable',
@@ -562,15 +611,50 @@ class DevoirController extends Controller
                     );
         }
 
+        $pathChanged =
+            (int) $devoir->subject_id
+                !== (int) $scope->subject_id
+            || (int) $devoir->class_room_id
+                !== (int) $scope->class_id;
+
+        $weekNumber =
+            $pathChanged
+                ? $this->resolveCurrentWeekNumber(
+                    auth()->id(),
+                    (int) $scope->subject_id,
+                    (int) $scope->class_id,
+                    (int) $devoir->id
+                )
+                : $this->resolveStoredWeekNumber(
+                    $devoir
+                );
+
+        $assignmentTitle =
+            'SEMAINE ' . $weekNumber;
+
         $devoir->title =
-            $validated['title'];
+            $assignmentTitle;
+
+        $devoir->week_number =
+            $weekNumber;
 
         $devoir->description =
             $validated['description']
             ?? null;
 
-        $devoir->due_date =
-            $validated['due_date'];
+        /*
+         * La date limite est fixée une seule fois à la création
+         * (date de création + 5 jours).
+         * Une modification du devoir ne prolonge donc pas
+         * automatiquement le délai.
+         */
+        if (!$devoir->due_date) {
+            $devoir->due_date =
+                ($devoir->created_at
+                    ? $devoir->created_at->copy()->addDays(5)
+                    : now()->addDays(5)
+                )->toDateString();
+        }
 
         $devoir->subject_id =
             $scope->subject_id;
@@ -599,8 +683,158 @@ class DevoirController extends Controller
             )
             ->with(
                 'success',
-                'Devoir mis à jour avec succès.'
+                $assignmentTitle
+                . ' mis à jour avec succès. Date limite conservée : '
+                . (
+                    $devoir->due_date
+                        ? \Carbon\Carbon::parse(
+                            $devoir->due_date
+                        )->format('d/m/Y')
+                        : 'non définie'
+                )
+                . '.'
             );
+    }
+
+    /**
+     * Numéro pédagogique de la semaine en cours pour une
+     * matière + classe données.
+     *
+     * Deux devoirs créés pendant la même semaine pour le même
+     * parcours reçoivent le même numéro de semaine.
+     * Une nouvelle semaine reçoit le numéro suivant.
+     */
+    private function resolveCurrentWeekNumber(
+        int $professorId,
+        int $subjectId,
+        int $classId,
+        ?int $ignoreAssignmentId = null
+    ): int {
+        $startOfWeek =
+            now()->copy()->startOfWeek();
+
+        $endOfWeek =
+            now()->copy()->endOfWeek();
+
+        $baseQuery = Assignment::query()
+            ->where('user_id', $professorId)
+            ->where('subject_id', $subjectId)
+            ->where('class_room_id', $classId);
+
+        if ($ignoreAssignmentId) {
+            $baseQuery->whereKeyNot(
+                $ignoreAssignmentId
+            );
+        }
+
+        $currentWeekNumber =
+            (clone $baseQuery)
+                ->whereBetween(
+                    'created_at',
+                    [$startOfWeek, $endOfWeek]
+                )
+                ->whereNotNull('week_number')
+                ->orderByDesc('week_number')
+                ->value('week_number');
+
+        if ($currentWeekNumber) {
+            return max(
+                1,
+                (int) $currentWeekNumber
+            );
+        }
+
+        $maxStoredWeek =
+            (clone $baseQuery)
+                ->whereNotNull('week_number')
+                ->max('week_number');
+
+        if ($maxStoredWeek) {
+            return (int) $maxStoredWeek + 1;
+        }
+
+        /*
+         * Compatibilité avec les anciens devoirs créés avant
+         * l'ajout de week_number : on compte les semaines
+         * calendaires distinctes déjà utilisées.
+         */
+        $previousWeekCount =
+            (clone $baseQuery)
+                ->where(
+                    'created_at',
+                    '<',
+                    $startOfWeek
+                )
+                ->pluck('created_at')
+                ->filter()
+                ->map(
+                    fn ($date) =>
+                        Carbon::parse($date)
+                            ->startOfWeek()
+                            ->toDateString()
+                )
+                ->unique()
+                ->count();
+
+        return max(
+            1,
+            $previousWeekCount + 1
+        );
+    }
+
+    /**
+     * Retourne le numéro déjà attribué à un devoir.
+     * Pour un ancien devoir sans week_number, le numéro est
+     * déduit de son titre ou de sa position chronologique.
+     */
+    private function resolveStoredWeekNumber(
+        Assignment $devoir
+    ): int {
+        if ((int) $devoir->week_number > 0) {
+            return (int) $devoir->week_number;
+        }
+
+        if (
+            preg_match(
+                '/^SEMAINE\s+(\d+)$/iu',
+                trim((string) $devoir->title),
+                $matches
+            )
+        ) {
+            return max(1, (int) $matches[1]);
+        }
+
+        $assignmentDate =
+            $devoir->created_at
+                ? Carbon::parse($devoir->created_at)
+                : now();
+
+        $endOfAssignmentWeek =
+            $assignmentDate
+                ->copy()
+                ->endOfWeek();
+
+        $weekCount = Assignment::query()
+            ->where('user_id', $devoir->user_id)
+            ->where('subject_id', $devoir->subject_id)
+            ->where('class_room_id', $devoir->class_room_id)
+            ->where(
+                'created_at',
+                '<=',
+                $endOfAssignmentWeek
+            )
+            ->pluck('created_at')
+            ->filter()
+            ->map(
+                fn ($date) =>
+                    Carbon::parse($date)
+                        ->startOfWeek()
+                        ->toDateString()
+            )
+            ->unique()
+            ->count();
+
+        return max(1, $weekCount);
     }
 
     public function destroy(

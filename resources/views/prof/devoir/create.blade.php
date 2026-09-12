@@ -44,46 +44,66 @@
 
 
 <style>
-.pp-assignment-number-wrap {
-    display: grid;
-    grid-template-columns: auto minmax(100px, 1fr);
-    align-items: stretch;
-    gap: 0;
-}
-
-.pp-assignment-prefix {
+.pp-week-auto-card {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0 1rem;
-    border: 1px solid rgba(139, 92, 246, .32);
-    border-right: 0;
-    border-radius: 10px 0 0 10px;
+    gap: .85rem;
+    min-height: 68px;
+    padding: .85rem .95rem;
+    border: 1px solid rgba(139, 92, 246, .22);
+    border-radius: 12px;
     background: linear-gradient(
         135deg,
-        rgba(124, 77, 255, .18),
-        rgba(59, 130, 246, .10)
+        rgba(124, 58, 237, .11),
+        rgba(59, 130, 246, .045)
     );
+}
+
+.pp-week-auto-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    border-radius: 11px;
+    background: rgba(124, 58, 237, .14);
     color: #c4b5fd;
-    font-size: .78rem;
+    font-size: 1rem;
+}
+
+.pp-week-auto-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.pp-week-auto-copy strong {
+    display: block;
+    color: #f5f3ff;
+    font-size: .92rem;
     font-weight: 900;
-    letter-spacing: .08em;
+    letter-spacing: .025em;
 }
 
-.pp-assignment-number-input {
-    border-radius: 0 10px 10px 0 !important;
-    font-weight: 800;
+.pp-week-auto-copy span {
+    display: block;
+    margin-top: .2rem;
+    color: rgba(255, 255, 255, .45);
+    font-size: .66rem;
+    line-height: 1.45;
 }
 
-.pp-assignment-preview {
-    margin-top: .55rem;
-    color: rgba(255, 255, 255, .47);
-    font-size: .7rem;
-}
-
-.pp-assignment-preview strong {
-    color: #a7f3d0;
+.pp-week-auto-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .35rem .55rem;
+    border-radius: 999px;
+    color: #ddd6fe;
+    background: rgba(124, 58, 237, .12);
+    border: 1px solid rgba(139, 92, 246, .18);
+    font-size: .58rem;
     font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .045em;
 }
 
 .pp-auto-date-card {
@@ -128,11 +148,6 @@
     line-height: 1.45;
 }
 
-@media (max-width: 575px) {
-    .pp-assignment-number-wrap {
-        grid-template-columns: 90px 1fr;
-    }
-}
 </style>
 
 <form
@@ -289,40 +304,33 @@
             </header>
 
             <div class="pp-form-section">
-                <div class="pp-field">
-                    <label
-                        for="assignment_number"
-                        class="pp-label"
-                    >
-                        Numéro du devoir *
-                    </label>
+                    <div class="pp-field">
+                        <label class="pp-label">
+                            Semaine pédagogique
+                        </label>
 
-                    <div class="pp-assignment-number-wrap">
-                        <span class="pp-assignment-prefix">
-                            DEVOIR
-                        </span>
+                        <div class="pp-week-auto-card">
+                            <div class="pp-week-auto-icon">
+                                <i class="bi bi-calendar-week-fill"></i>
+                            </div>
 
-                        <input
-                            type="number"
-                            name="assignment_number"
-                            id="assignment_number"
-                            value="{{ old('assignment_number', 1) }}"
-                            class="adm-form-control pp-assignment-number-input"
-                            min="1"
-                            max="999"
-                            step="1"
-                            inputmode="numeric"
-                            required
-                        >
+                            <div class="pp-week-auto-copy">
+                                <strong id="assignmentWeekPreview">
+                                    SEMAINE —
+                                </strong>
+
+                                <span id="assignmentWeekHint">
+                                    Choisissez la matière, le niveau
+                                    et la classe. Le numéro sera attribué
+                                    automatiquement à la publication.
+                                </span>
+                            </div>
+
+                            <span class="pp-week-auto-badge">
+                                Automatique
+                            </span>
+                        </div>
                     </div>
-
-                    <div class="pp-assignment-preview">
-                        Titre généré automatiquement :
-                        <strong id="assignmentTitlePreview">
-                            DEVOIR {{ old('assignment_number', 1) }}
-                        </strong>
-                    </div>
-                </div>
 
                 <div class="pp-field">
                     <label
@@ -414,32 +422,54 @@ document.addEventListener('DOMContentLoaded', function () {
     const classroom = document.getElementById('devoirClass');
     const course = document.getElementById('course_id');
 
-    const assignmentNumber =
-        document.getElementById('assignment_number');
+    const weekSuggestions =
+        @json($weekSuggestions ?? []);
 
-    const assignmentTitlePreview =
-        document.getElementById('assignmentTitlePreview');
+    const assignmentWeekPreview =
+        document.getElementById('assignmentWeekPreview');
 
-    const refreshAssignmentTitle = () => {
-        if (!assignmentNumber || !assignmentTitlePreview) {
+    const assignmentWeekHint =
+        document.getElementById('assignmentWeekHint');
+
+    function refreshWeekPreview() {
+        if (
+            !assignmentWeekPreview
+            || !assignmentWeekHint
+        ) {
             return;
         }
 
-        const number = Math.max(
-            1,
-            parseInt(assignmentNumber.value || '1', 10) || 1
-        );
+        if (!subject.value || !classroom.value) {
+            assignmentWeekPreview.textContent =
+                'SEMAINE —';
 
-        assignmentTitlePreview.textContent =
-            'DEVOIR ' + number;
-    };
+            assignmentWeekHint.textContent =
+                'Choisissez la matière, le niveau et la classe. '
+                + 'Le numéro sera attribué automatiquement '
+                + 'à la publication.';
 
-    assignmentNumber?.addEventListener(
-        'input',
-        refreshAssignmentTitle
-    );
+            return;
+        }
 
-    refreshAssignmentTitle();
+        const key =
+            String(subject.value)
+            + ':'
+            + String(classroom.value);
+
+        const weekNumber =
+            parseInt(
+                weekSuggestions[key] || 1,
+                10
+            );
+
+        assignmentWeekPreview.textContent =
+            'SEMAINE ' + weekNumber;
+
+        assignmentWeekHint.textContent =
+            'Titre généré automatiquement pour cette classe. '
+            + 'Un devoir créé dans une nouvelle semaine '
+            + 'passera au numéro suivant.';
+    }
 
     const wantedSubject =
         @json((string) ($selectedSubjectId ?? ''));
@@ -524,6 +554,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         refreshCourses();
+        refreshWeekPreview();
     }
 
     function fillLevels(
@@ -587,6 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 
     refreshCourses();
+    refreshWeekPreview();
 });
 </script>
 @endpush
