@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
 use App\Http\Controllers\Admin\DevoirController;
 use App\Http\Controllers\Admin\StudentPaymentController;
+use App\Http\Controllers\Admin\HomeworkReminderController;
+use App\Http\Controllers\Admin\BehaviorNoteController as AdminBehaviorNoteController;
 
 use App\Http\Controllers\PublicScheduleController;
 
@@ -41,7 +43,6 @@ use App\Http\Controllers\Prof\ProfLevelController;
 use App\Http\Controllers\Prof\ScheduleController;
 use App\Http\Controllers\Prof\DevoirController as ProfDevoirController;
 use App\Http\Controllers\Prof\CourseController as ProfCourseController;
-use App\Http\Controllers\Prof\BehaviorNoteController;
 
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TestController;
@@ -645,6 +646,24 @@ Route::middleware(['auth', 'isAdmin'])
                     ->name('cancel');
             });
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Bloc-notes pédagogique — consultation administration
+        |--------------------------------------------------------------------------
+        */
+        Route::get(
+            '/bloc-notes-eleves',
+            [AdminBehaviorNoteController::class, 'index']
+        )->name('behavior-notes.index');
+
+        Route::get(
+            '/bloc-notes-eleves/etudiant/{student}',
+            [AdminBehaviorNoteController::class, 'student']
+        )
+            ->where('student', '[0-9]+')
+            ->name('behavior-notes.student');
+
         // Navigation hiérarchique : Matières → Niveaux → Classes → Lives
         Route::get(
             '/lives/subjects/{subject}/levels/{level}/classes/{class}',
@@ -736,6 +755,17 @@ Route::middleware(['auth', 'isAdmin'])
             '/chat/delete',
             [ChatController::class, 'adminDelete']
         )->name('chat.delete');
+
+        // Suivi automatique des devoirs non remis
+        Route::get(
+            '/homework-reminders',
+            [HomeworkReminderController::class, 'index']
+        )->name('homework-reminders.index');
+
+        Route::post(
+            '/homework-reminders/run',
+            [HomeworkReminderController::class, 'run']
+        )->name('homework-reminders.run');
 
         // Absences
         Route::get(
@@ -1096,51 +1126,6 @@ Route::middleware([
             '/absences/{id}',
             [ProfController::class, 'updateAbsence']
         )->name('absences.update');
-
-        /*
-        |--------------------------------------------------------------------------
-        | Bloc-notes pédagogique
-        |--------------------------------------------------------------------------
-        |
-        | Points positifs / négatifs par étudiant.
-        | Accès limité aux parcours affectés au professeur :
-        | Matière → Niveau → Classe.
-        |
-        */
-        Route::get(
-            '/bloc-notes',
-            [BehaviorNoteController::class, 'index']
-        )->name('behavior-notes.index');
-
-        Route::get(
-            '/bloc-notes/{student}',
-            [BehaviorNoteController::class, 'show']
-        )
-            ->where('student', '[0-9]+')
-            ->name('behavior-notes.show');
-
-        Route::post(
-            '/bloc-notes/{student}',
-            [BehaviorNoteController::class, 'store']
-        )
-            ->where('student', '[0-9]+')
-            ->name('behavior-notes.store');
-
-        Route::patch(
-            '/bloc-notes/{student}/{behaviorNote}',
-            [BehaviorNoteController::class, 'update']
-        )
-            ->where('student', '[0-9]+')
-            ->where('behaviorNote', '[0-9]+')
-            ->name('behavior-notes.update');
-
-        Route::delete(
-            '/bloc-notes/{student}/{behaviorNote}',
-            [BehaviorNoteController::class, 'destroy']
-        )
-            ->where('student', '[0-9]+')
-            ->where('behaviorNote', '[0-9]+')
-            ->name('behavior-notes.destroy');
 
         Route::get(
             '/lives',

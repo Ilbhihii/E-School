@@ -172,6 +172,22 @@
                         <span class="nav-icon"><i class="bi bi-person-x-fill"></i></span>
                         <span class="nav-label">Absences</span>
                     </a>
+
+
+                    <a href="{{ route('admin.behavior-notes.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.behavior-notes.*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-journal-check"></i></span>
+                        <span class="nav-label">
+                            Bloc-notes élèves
+                            <small>Observations des professeurs</small>
+                        </span>
+                    </a>
+
+                    <a href="{{ route('admin.homework-reminders.index') }}"
+                       class="admin-nav-link {{ request()->routeIs('admin.homework-reminders.*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="bi bi-envelope-exclamation-fill"></i></span>
+                        <span class="nav-label">Suivi devoirs</span>
+                    </a>
                 </div>
 
                 <div class="admin-nav-section">
