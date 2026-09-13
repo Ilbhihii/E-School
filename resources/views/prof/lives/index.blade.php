@@ -2,7 +2,7 @@
 
 @section('title', 'Mes lives')
 @section('page_title', 'Lives')
-@section('breadcrumb', 'Matière → Niveau → Classe')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @section('content')
 @php
@@ -49,6 +49,7 @@
     [
         'action' => route('prof.lives.index'),
         'buttonLabel' => 'Afficher les lives',
+        'showGroup' => true,
     ]
 )
 
@@ -144,6 +145,16 @@
                                         ->classRoom
                                         ?->name
                                     ?? 'Classe'
+                                }}
+                            </span>
+                            <i class="bi bi-chevron-right"></i>
+
+                            <span class="pps-path-chip">
+                                {{
+                                    $live
+                                        ->classSlot
+                                        ?->code
+                                    ?? 'Groupe'
                                 }}
                             </span>
 

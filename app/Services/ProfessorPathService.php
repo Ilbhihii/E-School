@@ -318,6 +318,18 @@ class ProfessorPathService
                 'class_id',
                 $assignment->class_id
             );
+        if (
+            !empty($assignment->class_slot_id)
+            && Schema::hasColumn(
+                'class_user',
+                'class_slot_id'
+            )
+        ) {
+            $query->where(
+                'class_slot_id',
+                $assignment->class_slot_id
+            );
+        }
 
         return $query
             ->pluck('user_id')
@@ -415,7 +427,15 @@ class ProfessorPathService
                         )
                     )
                 ),
-            'selectedSlotId' => null,
+            'selectedSlotId' =>
+                $this->positiveInt(
+                    $request->query(
+                        'class_slot_id',
+                        $request->input(
+                            'class_slot_id'
+                        )
+                    )
+                ),
         ];
     }
 

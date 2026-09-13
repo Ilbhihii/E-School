@@ -2,7 +2,7 @@
 
 @section('title', 'Copies des étudiants')
 @section('page_title', 'Copies des étudiants')
-@section('breadcrumb', 'Matière → Niveau → Classe')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @section('content')
 @php
@@ -36,6 +36,7 @@
     [
         'action' => route('prof.assignments'),
         'buttonLabel' => 'Afficher les copies',
+        'showGroup' => true,
     ]
 )
 
@@ -174,6 +175,16 @@
                                             ->classRoom
                                             ?->name
                                         ?? 'Classe'
+                                    }}
+                                </span>
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-path-chip">
+                                    {{
+                                        $assignment
+                                            ->classSlot
+                                            ?->code
+                                        ?? 'Groupe'
                                     }}
                                 </span>
 

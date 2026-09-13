@@ -15,6 +15,7 @@ class Assignment extends Model
         'week_number',
         'description',
         'file',
+        'extra_files',
         'due_date',
         'course_id',
         'subject_id',
@@ -28,6 +29,7 @@ class Assignment extends Model
     protected $casts = [
         'week_number' => 'integer',
         'due_date' => 'date',
+        'extra_files' => 'array',
     ];
 
     protected static function booted(): void

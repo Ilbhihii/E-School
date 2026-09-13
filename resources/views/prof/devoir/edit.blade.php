@@ -4,7 +4,7 @@
 @section('page_title', 'Modifier devoir')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Modifier'
+    'Matière → Niveau → Classe → Groupe → Modifier'
 )
 
 @section('content')
@@ -274,7 +274,7 @@
                                     data-class="{{
                                         $courseOption->class_id
                                     }}"
-                                    data-slot="{{
+                                data-slot="{{
                                         strtoupper(
                                             trim(
                                                 (string)
@@ -347,6 +347,39 @@
                     class="adm-form-control"
                 >
             </div>
+
+                <div class="pp-field">
+                    <label class="pp-label">
+                        Autres fichiers
+                    </label>
+
+                    <button
+                        type="button"
+                        class="adm-btn adm-btn-ghost"
+                        data-extra-files-target="devoirEditExtraFiles"
+                    >
+                        <i class="bi bi-plus-circle"></i>
+                        Ajouter d'autres fichiers (optionnel)
+                    </button>
+
+                    <input
+                        type="file"
+                        name="attachments[]"
+                        id="devoirEditExtraFiles"
+                        multiple
+                        accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
+                        style="display:none"
+                    >
+
+                    <div
+                        data-extra-files-list="devoirEditExtraFiles"
+                        style="margin-top:7px"
+                    ></div>
+
+                    <small class="pp-help">
+                        1 à 10 fichiers · 100 Mo maximum par fichier.
+                    </small>
+                </div>
         </div>
     </section>
 
@@ -372,6 +405,21 @@
 @endsection
 
 @push('scripts')
+<script>
+window.profDevoirGroupData = {
+    hierarchy: @json($profHierarchy),
+    selectedSlotId:
+        @json((string) ($selectedSlotId ?? old('class_slot_id', ''))),
+    subjectId: 'profDevoirEditSubject',
+    levelId: 'profDevoirEditLevel',
+    classId: 'profDevoirEditClass',
+    courseId: 'profEditCourse',
+    slotSelector: '[name="class_slot_id"]'
+};
+</script>
+<script src="{{ asset('js/prof-devoir-group-v1.js') }}?v=1"></script>
+<script src="{{ asset('js/prof-extra-files-v2-1.js') }}?v=21"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const subject =

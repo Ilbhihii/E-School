@@ -138,6 +138,13 @@ class CourseController extends Controller
                         'class_id'
                     )
                 ),
+                'selectedSlotId' =>
+                old(
+                    'class_slot_id',
+                    $request->query(
+                        'class_slot_id'
+                    )
+                ),
         ];
 
         return view(
@@ -160,11 +167,12 @@ class CourseController extends Controller
 
         $assignment =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id']
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless(
@@ -176,6 +184,12 @@ class CourseController extends Controller
         [$videoPath, $pdfPath] =
             $this->storeFiles(
                 $request
+            );
+
+        $extraFiles =
+            $this->storeExtraFiles(
+                $request,
+                'course-resources/extra'
             );
 
         try {
@@ -191,11 +205,14 @@ class CourseController extends Controller
                     $assignment->level_id,
                 'class_id' =>
                     $assignment->class_id,
-                'slot_code' => null,
+                'slot_code' =>
+                    $assignment->classSlot?->code,
                 'video' =>
                     $videoPath,
                 'pdf' =>
                     $pdfPath,
+                'extra_files' =>
+                    $extraFiles,
                 'course_link' =>
                     $validated['course_link']
                     ?? null,
@@ -314,6 +331,42 @@ class CourseController extends Controller
                 (int) $course->level_id,
                 (int) $course->class_id
             );
+        if (
+            $course->slot_code
+            && $currentAssignment
+            && strtoupper(
+                trim(
+                    (string) $currentAssignment
+                        ->classSlot?->code
+                )
+            ) !== strtoupper(
+                trim((string) $course->slot_code)
+            )
+        ) {
+            $currentAssignment =
+                $this->profPaths
+                    ->assignments(auth()->id())
+                    ->first(
+                        fn ($item) =>
+                            (int) $item->subject_id
+                                === (int) $course->subject_id
+                            && (int) $item->level_id
+                                === (int) $course->level_id
+                            && (int) $item->class_id
+                                === (int) $course->class_id
+                            && strtoupper(
+                                trim(
+                                    (string) $item
+                                        ->classSlot?->code
+                                )
+                            ) === strtoupper(
+                                trim(
+                                    (string) $course
+                                        ->slot_code
+                                )
+                            )
+                    );
+        }
 
         return view(
             'prof.courses.edit',
@@ -336,6 +389,12 @@ class CourseController extends Controller
                         'class_id',
                         $course->class_id
                     ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $currentAssignment
+                            ?->class_slot_id
+                    ),
             ]
         );
     }
@@ -355,11 +414,12 @@ class CourseController extends Controller
 
         $assignment =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id']
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless(
@@ -379,6 +439,12 @@ class CourseController extends Controller
                 $request
             );
 
+        $newExtraFiles =
+            $this->storeExtraFiles(
+                $request,
+                'course-resources/extra'
+            );
+
         try {
             $course->title =
                 $validated['title'];
@@ -396,7 +462,8 @@ class CourseController extends Controller
             $course->class_id =
                 $assignment->class_id;
 
-            $course->slot_code = null;
+            $course->slot_code =
+                $assignment->classSlot?->code;
 
             $course->course_link =
                 $validated['course_link']
@@ -410,6 +477,16 @@ class CourseController extends Controller
             if ($newPdf) {
                 $course->pdf =
                     $newPdf;
+            }
+
+            if (!empty($newExtraFiles)) {
+                $course->extra_files =
+                    array_values(
+                        array_merge(
+                            $course->extra_files ?? [],
+                            $newExtraFiles
+                        )
+                    );
             }
 
             /*
@@ -530,6 +607,11 @@ class CourseController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'course_link' => [
                 'nullable',
                 'url',
@@ -547,6 +629,40 @@ class CourseController extends Controller
                 'mimes:pdf',
                 'max:1048576',
             ],
+            'attachments' => [
+                'nullable',
+                'array',
+                'max:10',
+            ],
+            'attachments.*' => [
+                'file',
+                'max:102400',
+                function ($attribute, $value, $fail) {
+                    $extension = mb_strtolower(
+                        trim((string) $value->getClientOriginalExtension())
+                    );
+
+                    $blocked = [
+                        'php', 'php3', 'php4', 'php5', 'phtml', 'phar',
+                        'cgi', 'pl', 'py', 'sh', 'bash',
+                        'bat', 'cmd', 'com', 'exe', 'msi', 'dll',
+                        'ps1', 'vbs', 'scr',
+                        'js', 'mjs', 'html', 'htm', 'svg',
+                        'jar', 'apk',
+                    ];
+
+                    if (
+                        $extension !== ''
+                        && in_array($extension, $blocked, true)
+                    ) {
+                        $fail(
+                            'Ce type de fichier n’est pas autorisé '
+                            . 'pour des raisons de sécurité.'
+                        );
+                    }
+                },
+            ],
+
         ], [
             'subject_id.required' =>
                 'Veuillez sélectionner une matière.',
@@ -554,6 +670,8 @@ class CourseController extends Controller
                 'Veuillez sélectionner un niveau.',
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
+            'class_slot_id.required' =>
+                'Veuillez sélectionner un groupe.',
             'video.max' =>
                 'La vidéo ne doit pas dépasser 1 Go.',
             'video.mimes' =>
@@ -562,6 +680,8 @@ class CourseController extends Controller
                 'Le document PDF ne doit pas dépasser 1 Go.',
             'pdf.mimes' =>
                 'Le document sélectionné doit être un fichier PDF.',
+            'attachments.*.max' =>
+                'Chaque fichier supplémentaire ne doit pas dépasser 100 Mo.',
         ]);
     }
 
@@ -643,4 +763,37 @@ class CourseController extends Controller
         Storage::disk('public')
             ->delete($oldPath);
     }
+
+    private function storeExtraFiles(
+        Request $request,
+        string $directory
+    ): array {
+        $stored = [];
+
+        foreach (
+            $request->file(
+                'attachments',
+                []
+            )
+            as $file
+        ) {
+            $path = $file->store(
+                $directory,
+                'local'
+            );
+
+            $stored[] = [
+                'path' => $path,
+                'name' =>
+                    $file->getClientOriginalName(),
+                'mime' =>
+                    $file->getMimeType(),
+                'size' =>
+                    (int) $file->getSize(),
+            ];
+        }
+
+        return $stored;
+    }
+
 }

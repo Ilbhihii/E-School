@@ -90,7 +90,17 @@ class DevoirController extends Controller
                         }
                     );
                 }
-            });
+            })
+            ->when(
+                $request->filled('class_slot_id'),
+                fn ($query) =>
+                    $query->where(
+                        'class_slot_id',
+                        (int) $request->query(
+                            'class_slot_id'
+                        )
+                    )
+            );
 
         if ($courseId) {
             $course = Course::query()->approved()
@@ -112,6 +122,67 @@ class DevoirController extends Controller
             ->appends(
                 $request->query()
             );
+
+        $profAssignmentsForGroups =
+            $this->profPaths->assignments(
+                auth()->id()
+            );
+
+        $devoirs->getCollection()
+            ->each(
+                function ($devoir) use (
+                    $profAssignmentsForGroups
+                ) {
+                    $resolved =
+                        $devoir->classSlot?->code
+                        ?? $devoir->course?->slot_code;
+
+                    if (!$resolved) {
+                        $levelId =
+                            $devoir
+                                ->classRoom
+                                ?->level_id
+                            ?? $devoir
+                                ->course
+                                ?->level_id;
+
+                        $matches =
+                            $profAssignmentsForGroups
+                                ->filter(
+                                    fn ($assignment) =>
+                                        (int) $assignment
+                                            ->subject_id
+                                            === (int) $devoir
+                                                ->subject_id
+                                        && (int) $assignment
+                                            ->level_id
+                                            === (int) $levelId
+                                        && (int) $assignment
+                                            ->class_id
+                                            === (int) $devoir
+                                                ->class_room_id
+                                        && $assignment
+                                            ->classSlot
+                                )
+                                ->unique(
+                                    'class_slot_id'
+                                )
+                                ->values();
+
+                        if ($matches->count() === 1) {
+                            $resolved =
+                                $matches
+                                    ->first()
+                                    ?->classSlot
+                                    ?->code;
+                        }
+                    }
+
+                    $devoir->resolved_group_code =
+                        $resolved;
+                }
+            );
+
 
         $courses = Course::query()->approved()
             ->where(
@@ -262,6 +333,15 @@ class DevoirController extends Controller
                                 ?->class_id
                         )
                     ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $request->query(
+                            'class_slot_id',
+                            $defaultAssignment
+                                ?->class_slot_id
+                        )
+                    ),
             ]
         );
     }
@@ -297,6 +377,11 @@ class DevoirController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'course_id' => [
                 'nullable',
                 'integer',
@@ -308,15 +393,50 @@ class DevoirController extends Controller
                 'mimes:pdf',
                 'max:5120',
             ],
+            'attachments' => [
+                'nullable',
+                'array',
+                'max:10',
+            ],
+            'attachments.*' => [
+                'file',
+                'max:102400',
+                function ($attribute, $value, $fail) {
+                    $extension = mb_strtolower(
+                        trim((string) $value->getClientOriginalExtension())
+                    );
+
+                    $blocked = [
+                        'php', 'php3', 'php4', 'php5', 'phtml', 'phar',
+                        'cgi', 'pl', 'py', 'sh', 'bash',
+                        'bat', 'cmd', 'com', 'exe', 'msi', 'dll',
+                        'ps1', 'vbs', 'scr',
+                        'js', 'mjs', 'html', 'htm', 'svg',
+                        'jar', 'apk',
+                    ];
+
+                    if (
+                        $extension !== ''
+                        && in_array($extension, $blocked, true)
+                    ) {
+                        $fail(
+                            'Ce type de fichier n’est pas autorisé '
+                            . 'pour des raisons de sécurité.'
+                        );
+                    }
+                },
+            ],
+
         ]);
 
         $scope =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id']
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless($scope, 403);
@@ -374,6 +494,12 @@ class DevoirController extends Controller
         $automaticDueDate =
             now()->addDays(5)->toDateString();
 
+        $extraFiles =
+            $this->storeExtraFiles(
+                $request,
+                'assignments/extra'
+            );
+
         Assignment::create([
             'title' =>
                 $assignmentTitle,
@@ -384,6 +510,8 @@ class DevoirController extends Controller
                 ?? null,
             'file' =>
                 $filePath,
+            'extra_files' =>
+                $extraFiles,
             'due_date' =>
                 $automaticDueDate,
             'course_id' =>
@@ -392,7 +520,8 @@ class DevoirController extends Controller
                 $scope->subject_id,
             'class_room_id' =>
                 $scope->class_id,
-            'class_slot_id' => null,
+            'class_slot_id' =>
+                $scope->class_slot_id,
             'user_id' =>
                 auth()->id(),
         ]);
@@ -407,6 +536,8 @@ class DevoirController extends Controller
                         $scope->level_id,
                     'class_id' =>
                         $scope->class_id,
+                    'class_slot_id' =>
+                        $scope->class_slot_id,
                 ]
             )
             ->with(
@@ -504,6 +635,11 @@ class DevoirController extends Controller
                         $devoir->class_room_id
                         ?? $devoir->course?->class_id
                     ),
+                'selectedSlotId' =>
+                    old(
+                        'class_slot_id',
+                        $devoir->class_slot_id
+                    ),
             ]
         );
     }
@@ -538,6 +674,11 @@ class DevoirController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'course_id' => [
                 'nullable',
                 'integer',
@@ -549,15 +690,50 @@ class DevoirController extends Controller
                 'mimes:pdf',
                 'max:5120',
             ],
+            'attachments' => [
+                'nullable',
+                'array',
+                'max:10',
+            ],
+            'attachments.*' => [
+                'file',
+                'max:102400',
+                function ($attribute, $value, $fail) {
+                    $extension = mb_strtolower(
+                        trim((string) $value->getClientOriginalExtension())
+                    );
+
+                    $blocked = [
+                        'php', 'php3', 'php4', 'php5', 'phtml', 'phar',
+                        'cgi', 'pl', 'py', 'sh', 'bash',
+                        'bat', 'cmd', 'com', 'exe', 'msi', 'dll',
+                        'ps1', 'vbs', 'scr',
+                        'js', 'mjs', 'html', 'htm', 'svg',
+                        'jar', 'apk',
+                    ];
+
+                    if (
+                        $extension !== ''
+                        && in_array($extension, $blocked, true)
+                    ) {
+                        $fail(
+                            'Ce type de fichier n’est pas autorisé '
+                            . 'pour des raisons de sécurité.'
+                        );
+                    }
+                },
+            ],
+
         ]);
 
         $scope =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id']
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless(
@@ -611,11 +787,28 @@ class DevoirController extends Controller
                     );
         }
 
+        $newExtraFiles =
+            $this->storeExtraFiles(
+                $request,
+                'assignments/extra'
+            );
+
+        if (!empty($newExtraFiles)) {
+            $devoir->extra_files =
+                array_values(
+                    array_merge(
+                        $devoir->extra_files ?? [],
+                        $newExtraFiles
+                    )
+                );
+        }
         $pathChanged =
             (int) $devoir->subject_id
                 !== (int) $scope->subject_id
             || (int) $devoir->class_room_id
-                !== (int) $scope->class_id;
+                !== (int) $scope->class_id
+            || (int) $devoir->class_slot_id
+                !== (int) $scope->class_slot_id;
 
         $weekNumber =
             $pathChanged
@@ -662,7 +855,8 @@ class DevoirController extends Controller
         $devoir->class_room_id =
             $scope->class_id;
 
-        $devoir->class_slot_id = null;
+        $devoir->class_slot_id =
+            $scope->class_slot_id;
 
         $devoir->course_id =
             $course?->id;
@@ -679,6 +873,8 @@ class DevoirController extends Controller
                         $scope->level_id,
                     'class_id' =>
                         $scope->class_id,
+                    'class_slot_id' =>
+                        $scope->class_slot_id,
                 ]
             )
             ->with(
@@ -871,4 +1067,37 @@ class DevoirController extends Controller
                 'Devoir supprimé !'
             );
     }
+
+    private function storeExtraFiles(
+        Request $request,
+        string $directory
+    ): array {
+        $stored = [];
+
+        foreach (
+            $request->file(
+                'attachments',
+                []
+            )
+            as $file
+        ) {
+            $path = $file->store(
+                $directory,
+                'local'
+            );
+
+            $stored[] = [
+                'path' => $path,
+                'name' =>
+                    $file->getClientOriginalName(),
+                'mime' =>
+                    $file->getMimeType(),
+                'size' =>
+                    (int) $file->getSize(),
+            ];
+        }
+
+        return $stored;
+    }
+
 }

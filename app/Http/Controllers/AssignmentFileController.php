@@ -32,6 +32,69 @@ class AssignmentFileController extends Controller
         abort(404);
     }
 
+    public function attachment(
+        Request $request,
+        Assignment $assignment,
+        int $index,
+        LearningPathService $paths
+    ) {
+        $user = $request->user();
+
+        abort_unless(
+            $user
+            && $this->canView(
+                $user,
+                $assignment,
+                $paths
+            ),
+            403
+        );
+
+        $files =
+            $assignment->extra_files ?? [];
+
+        abort_unless(
+            array_key_exists(
+                $index,
+                $files
+            ),
+            404
+        );
+
+        $file = $files[$index];
+        $path = $file['path'] ?? null;
+
+        abort_unless($path, 404);
+
+        foreach (
+            ['local', 'public']
+            as $diskName
+        ) {
+            $disk =
+                Storage::disk($diskName);
+
+            if (!$disk->exists($path)) {
+                continue;
+            }
+
+            return response()->download(
+                $disk->path($path),
+                $file['name']
+                    ?? basename($path),
+                [
+                    'Content-Type' =>
+                        $disk->mimeType($path)
+                        ?: 'application/octet-stream',
+                    'Cache-Control' =>
+                        'private, no-store, max-age=0',
+                    'X-Content-Type-Options' =>
+                        'nosn',
+                ]
+            );
+        }
+
+        abort(404);
+    }
     private function canView(User $user, Assignment $assignment, LearningPathService $paths): bool
     {
         if ($user->isAdmin() || (int) $assignment->user_id === (int) $user->id) return true;

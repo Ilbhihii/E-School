@@ -210,6 +210,27 @@
         </div>
         @endif
 
+        @if(!empty($course->extra_files))
+        <div class="content-section">
+            <div class="section-title-bar"
+                 style="background:rgba(99,102,241,0.1);color:#C4B5FD;">
+                <i class="bi bi-paperclip"></i>
+                Fichiers supplémentaires
+            </div>
+
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+                @foreach($course->extra_files as $index => $extraFile)
+                    <a
+                        href="{{ route('course.extra-file', [$course, $index]) }}"
+                        class="btn-course-action outline"
+                    >
+                        <i class="bi bi-download"></i>
+                        {{ $extraFile['name'] ?? ('Fichier ' . ($index + 1)) }}
+                    </a>
+                @endforeach
+            </div>
+        </div>
+        @endif
         @if(isset($course->devoirs) && $course->devoirs->count() > 0)
         <div class="content-section">
             <div class="section-title-bar" style="background:rgba(16,185,129,0.1);color:#6EE7B7;">

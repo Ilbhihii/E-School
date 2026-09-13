@@ -16,7 +16,7 @@
 
         <p class="pp-page-description">
             Choisissez d’abord le parcours exact
-            Matière → Niveau → Classe.
+            Matière → Niveau → Classe → Groupe.
         </p>
     </div>
 
@@ -238,6 +238,27 @@
                         </select>
                     </div>
 
+                    <div class="pp-field">
+                        <label
+                            for="devoirGroup"
+                            class="pp-label"
+                        >
+                            Groupe *
+                        </label>
+
+                        <select
+                            name="class_slot_id"
+                            id="devoirGroup"
+                            class="adm-form-select"
+                            disabled
+                            required
+                        >
+                            <option value="">
+                                Choisir un groupe
+                            </option>
+                        </select>
+                    </div>
+
                 </div>
 
                 <div class="pp-field mt-3">
@@ -268,6 +289,14 @@
                                 }}"
                                 data-class="{{
                                     $courseOption->class_id
+                                }}"
+                                data-slot="{{
+                                    strtoupper(
+                                        trim(
+                                            (string)
+                                            $courseOption->slot_code
+                                        )
+                                    )
                                 }}"
                                 {{
                                     (string) old(
@@ -387,6 +416,39 @@
                         class="adm-form-control"
                     >
                 </div>
+
+                <div class="pp-field">
+                    <label class="pp-label">
+                        Autres fichiers
+                    </label>
+
+                    <button
+                        type="button"
+                        class="adm-btn adm-btn-ghost"
+                        data-extra-files-target="devoirExtraFiles"
+                    >
+                        <i class="bi bi-plus-circle"></i>
+                        Ajouter d'autres fichiers (optionnel)
+                    </button>
+
+                    <input
+                        type="file"
+                        name="attachments[]"
+                        id="devoirExtraFiles"
+                        multiple
+                        accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
+                        style="display:none"
+                    >
+
+                    <div
+                        data-extra-files-list="devoirExtraFiles"
+                        style="margin-top:7px"
+                    ></div>
+
+                    <small class="pp-help">
+                        1 à 10 fichiers · 100 Mo maximum par fichier.
+                    </small>
+                </div>
             </div>
         </section>
     </div>
@@ -413,6 +475,21 @@
 @endsection
 
 @push('scripts')
+<script>
+window.profDevoirGroupData = {
+    hierarchy: @json($profHierarchy),
+    selectedSlotId:
+        @json((string) ($selectedSlotId ?? old('class_slot_id', ''))),
+    subjectId: 'devoirSubject',
+    levelId: 'devoirLevel',
+    classId: 'devoirClass',
+    courseId: 'course_id',
+    slotSelector: '#devoirGroup'
+};
+</script>
+<script src="{{ asset('js/prof-devoir-group-v1.js') }}?v=1"></script>
+<script src="{{ asset('js/prof-extra-files-v2-1.js') }}?v=21"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const hierarchy = @json($profHierarchy);

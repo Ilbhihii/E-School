@@ -2,7 +2,7 @@
 
 @section('title', 'Mes devoirs')
 @section('page_title', 'Devoirs')
-@section('breadcrumb', 'Matière → Niveau → Classe')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @section('content')
 <section class="pp-page-head">
@@ -16,7 +16,7 @@
 
         <p class="pp-page-description">
             Chaque devoir est rattaché
-            à une matière, un niveau et une classe.
+            à une matière, un niveau, une classe et un groupe.
         </p>
     </div>
 
@@ -36,6 +36,7 @@
     [
         'action' => route('prof.devoir.index'),
         'buttonLabel' => 'Afficher les devoirs',
+        'showGroup' => true,
         'extraQuery' => [
             'course_id' => $courseId ?? null,
         ],
@@ -111,6 +112,21 @@
                                             ?->classRoom
                                             ?->name
                                         ?? 'Classe'
+                                    }}
+                                </span>
+                                <i class="bi bi-chevron-right"></i>
+
+                                <span class="pps-path-chip">
+                                    {{
+                                        $devoir
+                                            ->resolved_group_code
+                                        ?? $devoir
+                                            ->classSlot
+                                            ?->code
+                                        ?? $devoir
+                                            ->course
+                                            ?->slot_code
+                                        ?? 'Groupe non défini'
                                     }}
                                 </span>
 

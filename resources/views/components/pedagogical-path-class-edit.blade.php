@@ -5,10 +5,15 @@
     $pathSubjectName = $subjectName ?? 'subject_id';
     $pathLevelName = $levelName ?? 'level_id';
     $pathClassName = $className ?? 'class_id';
+    $pathSlotName = $slotName ?? 'class_slot_id';
 
     $pathSelectedSubject = (string) ($selectedSubject ?? '');
     $pathSelectedLevel = (string) ($selectedLevel ?? '');
     $pathSelectedClass = (string) ($selectedClass ?? '');
+    $pathSelectedSlot = (string) (
+        $selectedSlot
+        ?? ($selectedSlotId ?? old($pathSlotName, request($pathSlotName, '')))
+    );
 
     $pathRequired = $required ?? true;
 @endphp
@@ -27,7 +32,7 @@
         </h4>
 
         <span style="color:var(--adm-text-muted);font-size:.72rem;">
-            Matière → Niveau → Classe
+            Matière → Niveau → Classe → Groupe
         </span>
     </div>
 
@@ -54,10 +59,12 @@
             <span>Niveau</span>
             <i class="bi bi-chevron-right"></i>
             <span>Classe</span>
+            <i class="bi bi-chevron-right"></i>
+            <span>Groupe</span>
         </div>
 
         <div class="row g-3">
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="adm-form-group" style="margin-bottom:0;">
                     <label for="{{ $pathPrefix }}Subject" class="adm-form-label">
                         Matière
@@ -76,7 +83,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="adm-form-group" style="margin-bottom:0;">
                     <label for="{{ $pathPrefix }}Level" class="adm-form-label">
                         Niveau
@@ -96,7 +103,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="adm-form-group" style="margin-bottom:0;">
                     <label for="{{ $pathPrefix }}Class" class="adm-form-label">
                         Classe
@@ -115,6 +122,26 @@
                     </select>
                 </div>
             </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="adm-form-group" style="margin-bottom:0;">
+                    <label for="{{ $pathPrefix }}Slot" class="adm-form-label">
+                        Groupe
+                        @if($pathRequired)
+                            <span style="color:var(--adm-danger);">*</span>
+                        @endif
+                    </label>
+                    <select
+                        id="{{ $pathPrefix }}Slot"
+                        name="{{ $pathSlotName }}"
+                        class="adm-form-select"
+                        disabled
+                        @if($pathRequired) required @endif
+                    >
+                        <option value="">Choisir un groupe</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         @error($pathSubjectName)
@@ -128,6 +155,10 @@
         @error($pathClassName)
             <div class="adm-form-error mt-2">{{ $message }}</div>
         @enderror
+
+        @error($pathSlotName)
+            <div class="adm-form-error mt-2">{{ $message }}</div>
+        @enderror
     </div>
 </div>
 
@@ -138,15 +169,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const subject = document.getElementById(@json($pathPrefix . 'Subject'));
     const level = document.getElementById(@json($pathPrefix . 'Level'));
     const classroom = document.getElementById(@json($pathPrefix . 'Class'));
+    const slot = document.getElementById(@json($pathPrefix . 'Slot'));
     const preview = document.getElementById(@json($pathPrefix . 'Preview'));
 
-    if (!subject || !level || !classroom) {
+    if (!subject || !level || !classroom || !slot) {
         return;
     }
 
     const wantedSubject = @json($pathSelectedSubject);
     const wantedLevel = @json($pathSelectedLevel);
     const wantedClass = @json($pathSelectedClass);
+    const wantedSlot = @json($pathSelectedSlot);
 
     const makeOption = (value, label, selected = false) => {
         const item = document.createElement('option');
@@ -159,7 +192,9 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     const subjectData = () =>
-        hierarchy.find(item => String(item.id) === String(subject.value));
+        hierarchy.find(
+            item => String(item.id) === String(subject.value)
+        );
 
     const levelData = () =>
         subjectData()?.levels?.find(
@@ -169,6 +204,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const classData = () =>
         levelData()?.classes?.find(
             item => String(item.id) === String(classroom.value)
+        );
+
+    const slotData = () =>
+        classData()?.slots?.find(
+            item => String(item.id) === String(slot.value)
         );
 
     const escapeHtml = value =>
@@ -185,20 +225,57 @@ document.addEventListener('DOMContentLoaded', function () {
             subjectData()?.name || 'Matière',
             levelData()?.name || 'Niveau',
             classData()?.name || 'Classe',
+            slotData()?.code || 'Groupe',
         ];
 
         preview.innerHTML = labels
             .map(
                 (label, index) =>
-                    (index === 0 ? '' : '<i class="bi bi-chevron-right"></i>')
-                    + '<span>' + escapeHtml(label) + '</span>'
+                    (
+                        index === 0
+                            ? ''
+                            : '<i class="bi bi-chevron-right"></i>'
+                    )
+                    + '<span>'
+                    + escapeHtml(label)
+                    + '</span>'
             )
             .join('');
     }
 
-    function fillClasses(wanted = '') {
+    function fillSlots(wanted = '') {
+        slot.innerHTML = '';
+        slot.appendChild(
+            makeOption('', 'Choisir un groupe')
+        );
+
+        (classData()?.slots || []).forEach(item => {
+            slot.appendChild(
+                makeOption(
+                    item.id,
+                    item.code || 'Groupe',
+                    String(item.id) === String(wanted)
+                )
+            );
+        });
+
+        slot.disabled = !classData();
+
+        if (wanted) {
+            slot.value = String(wanted);
+        }
+
+        updatePreview();
+    }
+
+    function fillClasses(
+        wanted = '',
+        wantedSlotId = ''
+    ) {
         classroom.innerHTML = '';
-        classroom.appendChild(makeOption('', 'Choisir une classe'));
+        classroom.appendChild(
+            makeOption('', 'Choisir une classe')
+        );
 
         (levelData()?.classes || []).forEach(item => {
             classroom.appendChild(
@@ -211,13 +288,23 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         classroom.disabled = !levelData();
-        if (wanted) classroom.value = String(wanted);
-        updatePreview();
+
+        if (wanted) {
+            classroom.value = String(wanted);
+        }
+
+        fillSlots(wantedSlotId);
     }
 
-    function fillLevels(wanted = '', wantedClass = '') {
+    function fillLevels(
+        wanted = '',
+        wantedClass = '',
+        wantedSlotId = ''
+    ) {
         level.innerHTML = '';
-        level.appendChild(makeOption('', 'Choisir un niveau'));
+        level.appendChild(
+            makeOption('', 'Choisir un niveau')
+        );
 
         (subjectData()?.levels || []).forEach(item => {
             level.appendChild(
@@ -230,8 +317,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         level.disabled = !subjectData();
-        if (wanted) level.value = String(wanted);
-        fillClasses(wantedClass);
+
+        if (wanted) {
+            level.value = String(wanted);
+        }
+
+        fillClasses(
+            wantedClass,
+            wantedSlotId
+        );
     }
 
     hierarchy.forEach(item => {
@@ -246,14 +340,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (wantedSubject) {
         subject.value = wantedSubject;
-        fillLevels(wantedLevel, wantedClass);
+
+        fillLevels(
+            wantedLevel,
+            wantedClass,
+            wantedSlot
+        );
     } else {
         fillLevels();
     }
 
-    subject.addEventListener('change', () => fillLevels());
-    level.addEventListener('change', () => fillClasses());
-    classroom.addEventListener('change', updatePreview);
+    subject.addEventListener(
+        'change',
+        () => fillLevels()
+    );
+
+    level.addEventListener(
+        'change',
+        () => fillClasses()
+    );
+
+    classroom.addEventListener(
+        'change',
+        () => fillSlots()
+    );
+
+    slot.addEventListener(
+        'change',
+        updatePreview
+    );
 
     updatePreview();
 });

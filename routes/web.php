@@ -160,6 +160,13 @@ Route::middleware('auth')->get(
     AssignmentFileController::class
 )->name('assignments.file');
 
+Route::middleware('auth')->get(
+    '/assignments/{assignment}/extra-file/{index}',
+    [AssignmentFileController::class, 'attachment']
+)
+    ->where('index', '[0-9]+')
+    ->name('assignments.extra-file');
+
 Route::get(
     '/classes',
     [HomeController::class, 'classes']
@@ -207,6 +214,13 @@ Route::get(
     ->where('type', 'video|pdf|link')
     ->middleware('throttle:60,1')
     ->name('course.resource');
+
+Route::middleware('auth')->get(
+    '/course/{course}/extra-file/{index}',
+    [CourseResourceController::class, 'attachment']
+)
+    ->where('index', '[0-9]+')
+    ->name('course.extra-file');
 
 // Navigation publique : Niveaux → Classes → Matières → Cours
 Route::get(

@@ -231,6 +231,17 @@
                         </div>
 
                         <footer>
+                            @if(!empty($assignment->extra_files))
+                                @foreach($assignment->extra_files as $index => $extraFile)
+                                    <a
+                                        href="{{ route('assignments.extra-file', [$assignment, $index]) }}"
+                                        class="sp-secondary-button"
+                                    >
+                                        <i class="bi bi-paperclip"></i>
+                                        {{ $extraFile['name'] ?? ('Fichier ' . ($index + 1)) }}
+                                    </a>
+                                @endforeach
+                            @endif
                             @if($assignment->file)
                                 <a
                                     href="{{

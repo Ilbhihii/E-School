@@ -4,7 +4,7 @@
 @section('page_title', 'Proposer un cours')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Validation admin'
+    'Matière → Niveau → Classe → Groupe → Validation admin'
 )
 
 @section('content')
@@ -169,6 +169,39 @@
             </div>
 
             <div class="pp-field">
+                <label class="pp-label">
+                    Autres fichiers
+                </label>
+
+                <button
+                    type="button"
+                    class="adm-btn adm-btn-ghost"
+                    data-extra-files-target="courseExtraFiles"
+                >
+                    <i class="bi bi-plus-circle"></i>
+                    Ajouter d'autres fichiers (optionnel)
+                </button>
+
+                <input
+                    type="file"
+                    name="attachments[]"
+                    id="courseExtraFiles"
+                    multiple
+                    accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
+                    style="display:none"
+                >
+
+                <div
+                    data-extra-files-list="courseExtraFiles"
+                    style="margin-top:7px"
+                ></div>
+
+                <small class="pp-help">
+                    Vous pouvez sélectionner 1, 2 ou plusieurs fichiers.
+                    10 fichiers maximum · 100 Mo maximum par fichier.
+                </small>
+            </div>
+            <div class="pp-field">
                 <label
                     for="courseLink"
                     class="pp-label"
@@ -215,6 +248,7 @@
         </div>
     </section>
 </form>
+<script src="{{ asset('js/prof-extra-files-v2-1.js') }}?v=21"></script>
 <script src="{{ asset('js/course-upload-1gb-v1.js') }}?v=1"></script>
 
 @endsection

@@ -23,6 +23,7 @@ class Course extends Model
         'slot_code',
         'video',
         'pdf',
+        'extra_files',
         'video_url',
         'order',
         'is_free',
@@ -40,6 +41,7 @@ class Course extends Model
         'is_free' => 'boolean',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
+        'extra_files' => 'array',
     ];
 
     public function subject()

@@ -153,7 +153,7 @@ class ProfController extends Controller
     /**
      * Copies des étudiants.
      * Structure :
-     * Matière → Niveau → Classe.
+     * Matière → Niveau → Classe → Groupe.
      */
     public function assignments(
         Request $request
@@ -203,6 +203,16 @@ class ProfController extends Controller
             ->whereIn('user_id', $studentIds)
             ->whereIn('subject_id', $subjectIds)
             ->whereIn('class_room_id', $classIds)
+            ->when(
+                $request->filled('class_slot_id'),
+                fn ($query) =>
+                    $query->where(
+                        'class_slot_id',
+                        (int) $request->query(
+                            'class_slot_id'
+                        )
+                    )
+            )
             ->latest()
             ->get();
 
@@ -253,12 +263,20 @@ class ProfController extends Controller
             ->findOrFail($assignment->class_room_id);
 
         $scope =
-            $this->profPaths->findClassAssignment(
-                auth()->id(),
-                (int) $assignment->subject_id,
-                (int) $classRoom->level_id,
-                (int) $assignment->class_room_id
-            );
+            $assignment->class_slot_id
+                ? $this->profPaths->findExactAssignment(
+                    auth()->id(),
+                    (int) $assignment->subject_id,
+                    (int) $classRoom->level_id,
+                    (int) $assignment->class_room_id,
+                    (int) $assignment->class_slot_id
+                )
+                : $this->profPaths->findClassAssignment(
+                    auth()->id(),
+                    (int) $assignment->subject_id,
+                    (int) $classRoom->level_id,
+                    (int) $assignment->class_room_id
+                );
 
         abort_unless($scope, 403);
 
@@ -756,7 +774,7 @@ class ProfController extends Controller
 
     /**
      * /prof/lives
-     * Matière → Niveau → Classe.
+     * Matière → Niveau → Classe → Groupe.
      */
     public function livesIndex(
         Request $request
@@ -791,6 +809,16 @@ class ProfController extends Controller
                     $query->whereIn('class_id', $classIds),
                 fn ($query) =>
                     $query->whereRaw('1 = 0')
+            )
+            ->when(
+                $request->filled('class_slot_id'),
+                fn ($query) =>
+                    $query->where(
+                        'class_slot_id',
+                        (int) $request->query(
+                            'class_slot_id'
+                        )
+                    )
             );
 
         $totalLives =
@@ -844,7 +872,7 @@ class ProfController extends Controller
         );
     }
 
-    // ═══ Matières → Niveaux → Classes → Créneaux ═══
+    // ═══ Matières → Niveaux → Classes → Groupes ═══
 
     public function subjectsList()
     {

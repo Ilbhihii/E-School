@@ -143,7 +143,18 @@
                 </a>
             @endif
 
-            @if(empty($resourceUrls))
+            @if(!empty($course->extra_files))
+                @foreach($course->extra_files as $index => $extraFile)
+                    <a
+                        href="{{ route('course.extra-file', [$course, $index]) }}"
+                        class="adm-btn adm-btn-ghost"
+                    >
+                        <i class="bi bi-paperclip"></i>
+                        {{ $extraFile['name'] ?? ('Fichier ' . ($index + 1)) }}
+                    </a>
+                @endforeach
+            @endif
+            @if(empty($resourceUrls) && empty($course->extra_files))
                 <div class="pps-empty w-100">
                     Aucune ressource jointe.
                 </div>
