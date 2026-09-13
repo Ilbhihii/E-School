@@ -1,8 +1,8 @@
 @extends('layouts.prof')
 
-@section('title', 'Mes classes et créneaux')
+@section('title', 'Mes classes et groupes')
 @section('page_title', $level->name)
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @section('content')
 <section class="pp-page-head">
@@ -12,11 +12,11 @@
         </span>
 
         <h1 class="pp-page-title">
-            Classes & créneaux
+            Classes & groupes
         </h1>
 
         <p class="pp-page-description">
-            Chaque classe affiche uniquement les créneaux
+            Chaque classe affiche uniquement les groupes
             qui vous ont été affectés par l’administration.
         </p>
     </div>
@@ -52,7 +52,7 @@
                             {{ $subject->name }}
                             → {{ $level->name }}
                             → {{ $class->name }}
-                            → Créneau
+                            → Groupe
                         </p>
                     </div>
 
@@ -61,7 +61,7 @@
                             $class->assignedSlots
                                 ->count()
                         }}
-                        créneau(x)
+                        groupe(x)
                     </span>
                 </header>
 
@@ -178,7 +178,7 @@
                         </div>
                     @else
                         <div class="pps-empty">
-                            Aucun créneau ne vous est assigné
+                            Aucun groupe ne vous est assigné
                             dans cette classe.
                         </div>
                     @endif

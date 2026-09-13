@@ -4,7 +4,7 @@
 @section('page_title', 'Lives')
 @section(
     'breadcrumb',
-    'Matière → Niveau → Classe → Créneau'
+    'Matière → Niveau → Classe → Groupe'
 )
 
 @push('head')
@@ -110,7 +110,7 @@
                     <div>
                         <h3>Filtrer mon programme</h3>
                         <p>
-                            Matière → Niveau → Classe → Créneau
+                            Matière → Niveau → Classe → Groupe
                         </p>
                     </div>
                 </div>
@@ -199,7 +199,7 @@
                 </label>
 
                 <label class="slh-field">
-                    <span>Créneau</span>
+                    <span>Groupe</span>
 
                     <div class="slh-select">
                         <i class="bi bi-clock-fill"></i>
@@ -210,7 +210,7 @@
                             disabled
                         >
                             <option value="">
-                                Tous les créneaux
+                                Tous les groupes
                             </option>
                         </select>
                     </div>
@@ -268,7 +268,7 @@
             </span>
 
             <div>
-                <small>Mes créneaux</small>
+                <small>Mes groupes</small>
                 <strong>
                     {{
                         $visiblePaths
@@ -886,7 +886,7 @@ document.addEventListener(
             addOption(
                 slot,
                 '',
-                'Tous les créneaux'
+                'Tous les groupes'
             );
 
             const options =

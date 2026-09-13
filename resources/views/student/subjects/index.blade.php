@@ -2,7 +2,7 @@
 
 @section('title', 'Mes matières')
 @section('page_title', 'Mes matières')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/student-subjects-v5.css') }}">
@@ -19,8 +19,8 @@
     <section class="learning-page-intro">
         <div class="learning-page-intro-copy">
             <span class="learning-section-kicker"><i class="bi bi-diagram-3-fill"></i> Mon parcours exact</span>
-            <h2>Mes cours par créneau</h2>
-            <p>Chaque accès suit maintenant Matière → Niveau → Classe → Créneau.</p>
+            <h2>Mes cours par groupe</h2>
+            <p>Chaque accès suit maintenant Matière → Niveau → Classe → Groupe.</p>
         </div>
         <div class="learning-intro-stats">
             <div class="learning-intro-stat"><span><i class="bi bi-journal-bookmark-fill"></i></span><div><strong>{{ $visibleAssignments->pluck('subject_id')->unique()->count() }}</strong><small>matières</small></div></div>
@@ -32,13 +32,13 @@
     <section class="learning-filter-panel">
         <div class="learning-panel-heading">
             <div class="learning-panel-icon"><i class="bi bi-funnel-fill"></i></div>
-            <div><h3>Filtrer mon parcours</h3><p>Matière → Niveau → Classe → Créneau.</p></div>
+            <div><h3>Filtrer mon parcours</h3><p>Matière → Niveau → Classe → Groupe.</p></div>
         </div>
         <form method="GET" action="{{ route('student.subjects.index') }}" class="student-four-filter">
             <div class="learning-field"><label>Matière</label><div class="learning-select-wrap"><i class="bi bi-journal-bookmark-fill"></i><select name="subject_id" id="subjectPathSubject"><option value="">Toutes les matières</option>@foreach($subjects as $subject)<option value="{{ $subject['id'] }}" {{ (string)$selectedSubjectId === (string)$subject['id'] ? 'selected' : '' }}>{{ $subject['name'] }}</option>@endforeach</select></div></div>
             <div class="learning-field"><label>Niveau</label><div class="learning-select-wrap"><i class="bi bi-layers-fill"></i><select name="level_id" id="subjectPathLevel" disabled><option value="">Tous les niveaux</option></select></div></div>
             <div class="learning-field"><label>Classe</label><div class="learning-select-wrap"><i class="bi bi-building-fill"></i><select name="class_id" id="subjectPathClass" disabled><option value="">Toutes les classes</option></select></div></div>
-            <div class="learning-field"><label>Créneau</label><div class="learning-select-wrap"><i class="bi bi-clock-fill"></i><select name="class_slot_id" id="subjectPathSlot" disabled><option value="">Tous les créneaux</option></select></div></div>
+            <div class="learning-field"><label>Groupe</label><div class="learning-select-wrap"><i class="bi bi-clock-fill"></i><select name="class_slot_id" id="subjectPathSlot" disabled><option value="">Tous les groupes</option></select></div></div>
             <div style="display:flex;gap:8px"><button type="submit" class="learning-primary-button" style="border:0"><i class="bi bi-search"></i> Afficher</button><a href="{{ route('student.subjects.index') }}" class="learning-reset-button"><i class="bi bi-arrow-counterclockwise"></i></a></div>
         </form>
     </section>
@@ -66,7 +66,7 @@
     @elseif($assignments->isNotEmpty())
         <section class="learning-empty-state"><span class="learning-empty-icon"><i class="bi bi-funnel"></i></span><h3>Aucun résultat</h3><p>Modifiez le parcours sélectionné.</p><a href="{{ route('student.subjects.index') }}" class="learning-primary-button">Tout afficher</a></section>
     @else
-        <section class="learning-empty-state"><span class="learning-empty-icon"><i class="bi bi-clock-history"></i></span><h3>Aucun créneau assigné</h3><p>L’administration doit vous affecter à un créneau D1/D2/I1/A1…</p></section>
+        <section class="learning-empty-state"><span class="learning-empty-icon"><i class="bi bi-clock-history"></i></span><h3>Aucun groupe assigné</h3><p>L’administration doit vous affecter à un groupe D1/D2/I1/A1…</p></section>
     @endif
 </div>
 @endsection
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function fillSlots(wanted = '') {
         slot.innerHTML = '';
-        addOption(slot, '', 'Tous les créneaux');
+        addOption(slot, '', 'Tous les groupes');
 
         const options = (((slotsByPath[String(subject.value)] || {})[String(level.value)] || {})[String(classroom.value)] || []);
         options.forEach(item => addOption(

@@ -597,7 +597,7 @@ class UserController extends Controller
             'city.required' => 'La ville est obligatoire.',
         ]);
 
-        $temporaryPassword = $this->generateTemporaryPassword();
+        $temporaryPassword = $this->generateTemporaryPassword($validated['name']);
 
         DB::beginTransaction();
 
@@ -642,25 +642,63 @@ class UserController extends Controller
         }
     }
 
-    private function generateTemporaryPassword(): string
+    /**
+     * Génère un mot de passe temporaire simple à partir du nom complet.
+     *
+     * Exemple :
+     * "ilyas bhihi" => "isb@2026"
+     *
+     * Règle :
+     * - 1re lettre du prénom ;
+     * - dernière lettre du prénom ;
+     * - 1re lettre du nom de famille ;
+     * - @ + année courante.
+     */
+    private function generateTemporaryPassword(string $fullName): string
     {
-        $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-        $lower = 'abcdefghijkmnopqrstuvwxyz';
-        $digits = '23456789';
-        $symbols = '!@#$%';
+        $normalized = Str::ascii($fullName);
+        $normalized = strtolower($normalized);
 
-        $chars = [
-            $upper[random_int(0, strlen($upper) - 1)],
-            $lower[random_int(0, strlen($lower) - 1)],
-            $digits[random_int(0, strlen($digits) - 1)],
-            $symbols[random_int(0, strlen($symbols) - 1)],
-        ];
-        $all = $upper . $lower . $digits . $symbols;
-        while (count($chars) < 12) {
-            $chars[] = $all[random_int(0, strlen($all) - 1)];
-        }
-        shuffle($chars);
-        return implode('', $chars);
+        // Garder uniquement lettres, espaces et tirets
+        $normalized = preg_replace(
+            '/[^a-z\s\-]/',
+            '',
+            $normalized
+        ) ?? '';
+
+        // Les tirets deviennent des espaces
+        $normalized = str_replace(
+            '-',
+            ' ',
+            $normalized
+        );
+
+        // Supprimer les espaces multiples
+        $normalized = preg_replace(
+            '/\s+/',
+            ' ',
+            trim($normalized)
+        ) ?? '';
+
+        $parts = $normalized !== ''
+            ? explode(' ', $normalized)
+            : [];
+
+        $firstName = $parts[0] ?? 'user';
+
+        $lastName = count($parts) > 1
+            ? $parts[count($parts) - 1]
+            : $firstName;
+
+        $firstLetter = substr($firstName, 0, 1) ?: 'u';
+        $lastLetter = substr($firstName, -1) ?: 'r';
+        $familyLetter = substr($lastName, 0, 1) ?: 'u';
+
+        return $firstLetter
+            . $lastLetter
+            . $familyLetter
+            . '@'
+            . now()->format('Y');
     }
 
     public function index()

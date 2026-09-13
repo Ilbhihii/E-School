@@ -217,6 +217,31 @@
                 </div>
 
                 <div class="admin-nav-section">
+                    <div class="admin-nav-heading">Système</div>
+
+                    <a
+                        href="{{ route('admin.maintenance.edit') }}"
+                        class="admin-nav-link {{
+                            request()->routeIs('admin.maintenance.*')
+                                ? 'active'
+                                : ''
+                        }}"
+                        @if(request()->routeIs('admin.maintenance.*'))
+                            aria-current="page"
+                        @endif
+                    >
+                        <span class="nav-icon">
+                            <i class="bi bi-tools"></i>
+                        </span>
+
+                        <span class="nav-label">
+                            Maintenance
+                            <small>Annonce & interruption</small>
+                        </span>
+                    </a>
+                </div>
+
+                <div class="admin-nav-section">
                     <div class="admin-nav-heading">Mon compte</div>
 
                     <a href="{{ route('admin.profile') }}"

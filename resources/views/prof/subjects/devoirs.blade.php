@@ -1,8 +1,8 @@
 @extends('layouts.prof')
 
-@section('title', 'Devoirs du créneau')
+@section('title', 'Devoirs du groupe')
 @section('page_title', 'Devoirs')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Devoirs')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Devoirs')
 
 @section('content')
 <section class="pp-page-head">
@@ -61,7 +61,7 @@
             @empty
                 <div class="col-12">
                     <div class="pps-empty">
-                        Aucun devoir dans ce créneau.
+                        Aucun devoir dans ce groupe.
                     </div>
                 </div>
             @endforelse

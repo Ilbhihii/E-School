@@ -2,7 +2,7 @@
 
 @section('title', 'Mes matières')
 @section('page_title', 'Matières')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @section('content')
 <section class="pp-page-head">
@@ -16,7 +16,7 @@
 
         <p class="pp-page-description">
             Accédez à vos affectations selon la structure
-            Matière → Niveau → Classe → Créneau.
+            Matière → Niveau → Classe → Groupe.
         </p>
     </div>
 </section>
@@ -49,7 +49,7 @@
 
                                     <span class="pps-slot-badge">
                                         {{ $subject->assigned_slots_count }}
-                                        créneau(x)
+                                        groupe(x)
                                     </span>
                                 </div>
 

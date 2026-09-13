@@ -1,6 +1,9 @@
 @php
     $builderId = $builderId ?? 'profAssignmentBuilder';
     $initialAssignments = $initialAssignments ?? [];
+    $professorAvailabilities = $professorAvailabilities ?? [];
+    $professorSelectId = $professorSelectId ?? null;
+    $fixedProfessorId = $fixedProfessorId ?? null;
 
     if (!is_array($initialAssignments) || empty($initialAssignments)) {
         $initialAssignments = [[
@@ -8,6 +11,7 @@
             'level_id' => '',
             'class_id' => '',
             'class_slot_id' => '',
+            'preferred_availability_id' => '',
             'weekly_sessions' => 1,
         ]];
     }
@@ -22,9 +26,12 @@
             <strong>
                 Parcours pédagogiques
             </strong>
+
             <small>
-                Chaque ligne correspond à une affectation exacte :
-                Matière → Niveau → Classe → Créneau + nombre de séances/semaine.
+                Chaque ligne correspond à :
+                Matière → Niveau → Classe → Groupe,
+                puis à un créneau horaire prioritaire issu
+                des disponibilités du professeur.
             </small>
         </div>
 
@@ -45,11 +52,14 @@
 
     <div class="prof-multi-help">
         <i class="bi bi-info-circle"></i>
+
         <span>
-            Vous pouvez ajouter plusieurs matières, niveaux, classes et
-            créneaux au même professeur. Pour chaque créneau, choisissez de
-            1 à 7 séances par semaine. Exemple : I2 avec 2 séances/semaine
-            pourra être placé le mardi ET le samedi selon les disponibilités.
+            <strong>Groupe</strong> correspond à D1, D2, I1, A2…
+            Le champ <strong>Créneau disponible</strong> est alimenté
+            automatiquement depuis les disponibilités du professeur.
+            Le créneau choisi est prioritaire ; le planificateur conserve
+            ses contrôles de conflits et peut compléter les autres séances
+            avec d'autres disponibilités libres.
         </span>
     </div>
 </div>
@@ -151,11 +161,6 @@
     gap: 10px;
 }
 
-.prof-multi-field-sessions {
-    grid-column: 1 / -1;
-    max-width: 270px;
-}
-
 .prof-multi-field label {
     display: block;
     margin-bottom: 5px;
@@ -225,82 +230,232 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const hierarchy = @json($assignmentHierarchy);
     const initialRows = @json($initialAssignments);
-    const rowsContainer = root.querySelector('[data-assignment-rows]');
-    const addButton = root.querySelector('[data-add-assignment]');
+    const availabilityMap = @json($professorAvailabilities);
+    const professorSelectId = @json($professorSelectId);
+    const fixedProfessorId = @json($fixedProfessorId);
 
-    const text = value => value == null ? '' : String(value);
+    const rowsContainer = root.querySelector(
+        '[data-assignment-rows]'
+    );
 
-    const makeOption = (value, label, selectedValue = '') => {
-        const option = document.createElement('option');
+    const addButton = root.querySelector(
+        '[data-add-assignment]'
+    );
+
+    const professorSelect = professorSelectId
+        ? document.getElementById(professorSelectId)
+        : null;
+
+    const text = value =>
+        value == null ? '' : String(value);
+
+    const currentProfessorId = () => {
+        if (fixedProfessorId) {
+            return text(fixedProfessorId);
+        }
+
+        return text(professorSelect?.value || '');
+    };
+
+    const availabilitiesForCurrentProfessor = () => {
+        const id = currentProfessorId();
+
+        if (!id) {
+            return [];
+        }
+
+        return availabilityMap[id] || [];
+    };
+
+    const makeOption = (
+        value,
+        label,
+        selectedValue = ''
+    ) => {
+        const option =
+            document.createElement('option');
+
         option.value = text(value);
         option.textContent = label;
-        option.selected = text(value) === text(selectedValue);
+        option.selected =
+            text(value) === text(selectedValue);
+
         return option;
     };
 
-    const resetSelect = (select, placeholder, disabled = true) => {
+    const resetSelect = (
+        select,
+        placeholder,
+        disabled = true
+    ) => {
         select.replaceChildren(
             makeOption('', placeholder)
         );
+
         select.disabled = disabled;
     };
 
-    const subjectById = id => hierarchy.find(
-        subject => text(subject.id) === text(id)
-    );
+    const subjectById = id =>
+        hierarchy.find(
+            subject =>
+                text(subject.id) === text(id)
+        );
 
-    const levelById = (subject, id) => {
+    const levelById = (
+        subject,
+        id
+    ) => {
         if (!subject) {
             return null;
         }
 
         return (subject.levels || []).find(
-            level => text(level.id) === text(id)
+            level =>
+                text(level.id) === text(id)
         );
     };
 
-    const classById = (level, id) => {
+    const classById = (
+        level,
+        id
+    ) => {
         if (!level) {
             return null;
         }
 
         return (level.classes || []).find(
-            classRoom => text(classRoom.id) === text(id)
+            classRoom =>
+                text(classRoom.id) === text(id)
         );
     };
 
     const optionLabel = select => {
-        if (!select.value || select.selectedIndex < 0) {
+        if (
+            !select
+            || !select.value
+            || select.selectedIndex < 0
+        ) {
             return '';
         }
 
-        return select.options[select.selectedIndex].textContent.trim();
+        return select
+            .options[select.selectedIndex]
+            .textContent
+            .trim();
+    };
+
+    const fillAvailability = (
+        row,
+        selectedId = ''
+    ) => {
+        const select = row.querySelector(
+            '.js-prof-availability'
+        );
+
+        const professorId =
+            currentProfessorId();
+
+        const slots =
+            availabilitiesForCurrentProfessor();
+
+        if (!professorId) {
+            resetSelect(
+                select,
+                'Sélectionnez d’abord un professeur',
+                true
+            );
+
+            return;
+        }
+
+        if (!slots.length) {
+            resetSelect(
+                select,
+                'Aucune disponibilité enregistrée',
+                true
+            );
+
+            return;
+        }
+
+        resetSelect(
+            select,
+            'Sélectionner un créneau',
+            false
+        );
+
+        slots.forEach(slot => {
+            select.appendChild(
+                makeOption(
+                    slot.id,
+                    slot.label,
+                    selectedId
+                )
+            );
+        });
+
+        select.disabled = false;
+        select.value = text(selectedId);
+
+        if (
+            selectedId
+            && !select.value
+        ) {
+            select.value = '';
+        }
     };
 
     const updatePath = row => {
-        const subject = row.querySelector('.js-prof-subject');
-        const level = row.querySelector('.js-prof-level');
-        const classRoom = row.querySelector('.js-prof-class');
-        const slot = row.querySelector('.js-prof-slot');
-        const sessions = row.querySelector('.js-prof-weekly-sessions');
-        const preview = row.querySelector('.prof-multi-path');
+        const subject = row.querySelector(
+            '.js-prof-subject'
+        );
+        const level = row.querySelector(
+            '.js-prof-level'
+        );
+        const classRoom = row.querySelector(
+            '.js-prof-class'
+        );
+        const group = row.querySelector(
+            '.js-prof-slot'
+        );
+        const availability = row.querySelector(
+            '.js-prof-availability'
+        );
+        const sessions = row.querySelector(
+            '.js-prof-weekly-sessions'
+        );
+        const preview = row.querySelector(
+            '.prof-multi-path'
+        );
 
-        const labels = [
+        const pathLabels = [
             optionLabel(subject),
             optionLabel(level),
             optionLabel(classRoom),
-            optionLabel(slot),
+            optionLabel(group),
         ].filter(Boolean);
+
+        const availabilityLabel =
+            optionLabel(availability);
 
         const sessionCount = Math.max(
             1,
             Number(sessions?.value || 1)
         );
 
-        preview.textContent = labels.length
-            ? labels.join(' → ')
-                + ` · ${sessionCount} séance${sessionCount > 1 ? 's' : ''}/sem.`
-            : 'Matière → Niveau → Classe → Créneau';
+        let label = pathLabels.length
+            ? pathLabels.join(' → ')
+            : 'Matière → Niveau → Classe → Groupe';
+
+        if (availabilityLabel) {
+            label += ' · ' + availabilityLabel;
+        }
+
+        label +=
+            ` · ${sessionCount} séance`
+            + `${sessionCount > 1 ? 's' : ''}/sem.`;
+
+        preview.textContent = label;
 
         preview.classList.toggle(
             'is-complete',
@@ -308,42 +463,68 @@ document.addEventListener('DOMContentLoaded', function () {
                 subject.value
                 && level.value
                 && classRoom.value
-                && slot.value
+                && group.value
             )
         );
     };
 
-    const fillSlots = (row, selectedId = '') => {
-        const subjectSelect = row.querySelector('.js-prof-subject');
-        const levelSelect = row.querySelector('.js-prof-level');
-        const classSelect = row.querySelector('.js-prof-class');
-        const slotSelect = row.querySelector('.js-prof-slot');
+    const fillSlots = (
+        row,
+        selectedId = ''
+    ) => {
+        const subjectSelect = row.querySelector(
+            '.js-prof-subject'
+        );
+        const levelSelect = row.querySelector(
+            '.js-prof-level'
+        );
+        const classSelect = row.querySelector(
+            '.js-prof-class'
+        );
+        const slotSelect = row.querySelector(
+            '.js-prof-slot'
+        );
 
-        const subject = subjectById(subjectSelect.value);
-        const level = levelById(subject, levelSelect.value);
-        const classRoom = classById(level, classSelect.value);
+        const subject =
+            subjectById(subjectSelect.value);
+
+        const level =
+            levelById(
+                subject,
+                levelSelect.value
+            );
+
+        const classRoom =
+            classById(
+                level,
+                classSelect.value
+            );
 
         resetSelect(
             slotSelect,
             classRoom
-                ? 'Sélectionner un créneau'
+                ? 'Sélectionner un groupe'
                 : 'Choisissez d’abord une classe',
             !classRoom
         );
 
         if (classRoom) {
-            (classRoom.slots || []).forEach(slot => {
-                slotSelect.appendChild(
-                    makeOption(
-                        slot.id,
-                        slot.code || slot.name || 'Créneau',
-                        selectedId
-                    )
-                );
-            });
+            (classRoom.slots || [])
+                .forEach(slot => {
+                    slotSelect.appendChild(
+                        makeOption(
+                            slot.id,
+                            slot.code
+                                || slot.name
+                                || 'Groupe',
+                            selectedId
+                        )
+                    );
+                });
 
             slotSelect.disabled = false;
-            slotSelect.value = text(selectedId);
+            slotSelect.value =
+                text(selectedId);
         }
 
         updatePath(row);
@@ -354,13 +535,27 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedClassId = '',
         selectedSlotId = ''
     ) => {
-        const subjectSelect = row.querySelector('.js-prof-subject');
-        const levelSelect = row.querySelector('.js-prof-level');
-        const classSelect = row.querySelector('.js-prof-class');
-        const slotSelect = row.querySelector('.js-prof-slot');
+        const subjectSelect = row.querySelector(
+            '.js-prof-subject'
+        );
+        const levelSelect = row.querySelector(
+            '.js-prof-level'
+        );
+        const classSelect = row.querySelector(
+            '.js-prof-class'
+        );
+        const slotSelect = row.querySelector(
+            '.js-prof-slot'
+        );
 
-        const subject = subjectById(subjectSelect.value);
-        const level = levelById(subject, levelSelect.value);
+        const subject =
+            subjectById(subjectSelect.value);
+
+        const level =
+            levelById(
+                subject,
+                levelSelect.value
+            );
 
         resetSelect(
             classSelect,
@@ -377,21 +572,26 @@ document.addEventListener('DOMContentLoaded', function () {
         );
 
         if (level) {
-            (level.classes || []).forEach(classRoom => {
-                classSelect.appendChild(
-                    makeOption(
-                        classRoom.id,
-                        classRoom.name,
-                        selectedClassId
-                    )
-                );
-            });
+            (level.classes || [])
+                .forEach(classRoom => {
+                    classSelect.appendChild(
+                        makeOption(
+                            classRoom.id,
+                            classRoom.name,
+                            selectedClassId
+                        )
+                    );
+                });
 
             classSelect.disabled = false;
-            classSelect.value = text(selectedClassId);
+            classSelect.value =
+                text(selectedClassId);
 
             if (selectedClassId) {
-                fillSlots(row, selectedSlotId);
+                fillSlots(
+                    row,
+                    selectedSlotId
+                );
             }
         }
 
@@ -404,12 +604,21 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedClassId = '',
         selectedSlotId = ''
     ) => {
-        const subjectSelect = row.querySelector('.js-prof-subject');
-        const levelSelect = row.querySelector('.js-prof-level');
-        const classSelect = row.querySelector('.js-prof-class');
-        const slotSelect = row.querySelector('.js-prof-slot');
+        const subjectSelect = row.querySelector(
+            '.js-prof-subject'
+        );
+        const levelSelect = row.querySelector(
+            '.js-prof-level'
+        );
+        const classSelect = row.querySelector(
+            '.js-prof-class'
+        );
+        const slotSelect = row.querySelector(
+            '.js-prof-slot'
+        );
 
-        const subject = subjectById(subjectSelect.value);
+        const subject =
+            subjectById(subjectSelect.value);
 
         resetSelect(
             levelSelect,
@@ -432,18 +641,20 @@ document.addEventListener('DOMContentLoaded', function () {
         );
 
         if (subject) {
-            (subject.levels || []).forEach(level => {
-                levelSelect.appendChild(
-                    makeOption(
-                        level.id,
-                        level.name,
-                        selectedLevelId
-                    )
-                );
-            });
+            (subject.levels || [])
+                .forEach(level => {
+                    levelSelect.appendChild(
+                        makeOption(
+                            level.id,
+                            level.name,
+                            selectedLevelId
+                        )
+                    );
+                });
 
             levelSelect.disabled = false;
-            levelSelect.value = text(selectedLevelId);
+            levelSelect.value =
+                text(selectedLevelId);
 
             if (selectedLevelId) {
                 fillClasses(
@@ -458,26 +669,68 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     const reindex = () => {
-        const rows = [...rowsContainer.querySelectorAll('.prof-multi-row')];
+        const rows = [
+            ...rowsContainer.querySelectorAll(
+                '.prof-multi-row'
+            ),
+        ];
 
         rows.forEach((row, index) => {
-            row.dataset.index = String(index);
-            row.querySelector('.prof-multi-row-number').textContent = String(index + 1);
-            row.querySelector('.js-prof-subject').name = `assignments[${index}][subject_id]`;
-            row.querySelector('.js-prof-level').name = `assignments[${index}][level_id]`;
-            row.querySelector('.js-prof-class').name = `assignments[${index}][class_id]`;
-            row.querySelector('.js-prof-slot').name = `assignments[${index}][class_slot_id]`;
-            row.querySelector('.js-prof-weekly-sessions').name = `assignments[${index}][weekly_sessions]`;
+            row.dataset.index =
+                String(index);
+
+            row.querySelector(
+                '.prof-multi-row-number'
+            ).textContent =
+                String(index + 1);
+
+            row.querySelector(
+                '.js-prof-subject'
+            ).name =
+                `assignments[${index}][subject_id]`;
+
+            row.querySelector(
+                '.js-prof-level'
+            ).name =
+                `assignments[${index}][level_id]`;
+
+            row.querySelector(
+                '.js-prof-class'
+            ).name =
+                `assignments[${index}][class_id]`;
+
+            row.querySelector(
+                '.js-prof-slot'
+            ).name =
+                `assignments[${index}][class_slot_id]`;
+
+            row.querySelector(
+                '.js-prof-availability'
+            ).name =
+                `assignments[${index}]`
+                + `[preferred_availability_id]`;
+
+            row.querySelector(
+                '.js-prof-weekly-sessions'
+            ).name =
+                `assignments[${index}]`
+                + `[weekly_sessions]`;
         });
 
         rows.forEach(row => {
-            row.querySelector('[data-remove-assignment]').disabled = rows.length <= 1;
+            row.querySelector(
+                '[data-remove-assignment]'
+            ).disabled =
+                rows.length <= 1;
         });
     };
 
     const addRow = (data = {}) => {
-        const row = document.createElement('div');
-        row.className = 'prof-multi-row';
+        const row =
+            document.createElement('div');
+
+        row.className =
+            'prof-multi-row';
 
         row.innerHTML = `
             <div class="prof-multi-row-head">
@@ -499,27 +752,54 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="prof-multi-grid">
                 <div class="prof-multi-field">
                     <label>Matière *</label>
-                    <select class="adm-form-select js-prof-subject" required></select>
+                    <select
+                        class="adm-form-select js-prof-subject"
+                        required
+                    ></select>
                 </div>
 
                 <div class="prof-multi-field">
                     <label>Niveau *</label>
-                    <select class="adm-form-select js-prof-level" required disabled></select>
+                    <select
+                        class="adm-form-select js-prof-level"
+                        required
+                        disabled
+                    ></select>
                 </div>
 
                 <div class="prof-multi-field">
                     <label>Classe *</label>
-                    <select class="adm-form-select js-prof-class" required disabled></select>
+                    <select
+                        class="adm-form-select js-prof-class"
+                        required
+                        disabled
+                    ></select>
                 </div>
 
                 <div class="prof-multi-field">
-                    <label>Créneau / groupe *</label>
-                    <select class="adm-form-select js-prof-slot" required disabled></select>
+                    <label>Groupe *</label>
+                    <select
+                        class="adm-form-select js-prof-slot"
+                        required
+                        disabled
+                    ></select>
                 </div>
 
-                <div class="prof-multi-field prof-multi-field-sessions">
+                <div class="prof-multi-field">
+                    <label>Créneau disponible</label>
+                    <select
+                        class="adm-form-select js-prof-availability"
+                        disabled
+                    ></select>
+                </div>
+
+                <div class="prof-multi-field">
                     <label>Séances par semaine *</label>
-                    <select class="adm-form-select js-prof-weekly-sessions" required>
+
+                    <select
+                        class="adm-form-select js-prof-weekly-sessions"
+                        required
+                    >
                         <option value="1">1 séance / semaine</option>
                         <option value="2">2 séances / semaine</option>
                         <option value="3">3 séances / semaine</option>
@@ -532,22 +812,39 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
 
             <div class="prof-multi-path">
-                Matière → Niveau → Classe → Créneau
+                Matière → Niveau → Classe → Groupe
             </div>
         `;
 
         rowsContainer.appendChild(row);
 
-        const subjectSelect = row.querySelector('.js-prof-subject');
-        const levelSelect = row.querySelector('.js-prof-level');
-        const classSelect = row.querySelector('.js-prof-class');
-        const slotSelect = row.querySelector('.js-prof-slot');
-        const sessionsSelect = row.querySelector('.js-prof-weekly-sessions');
+        const subjectSelect = row.querySelector(
+            '.js-prof-subject'
+        );
+        const levelSelect = row.querySelector(
+            '.js-prof-level'
+        );
+        const classSelect = row.querySelector(
+            '.js-prof-class'
+        );
+        const slotSelect = row.querySelector(
+            '.js-prof-slot'
+        );
+        const availabilitySelect = row.querySelector(
+            '.js-prof-availability'
+        );
+        const sessionsSelect = row.querySelector(
+            '.js-prof-weekly-sessions'
+        );
 
-        sessionsSelect.value = text(data.weekly_sessions || 1);
+        sessionsSelect.value =
+            text(data.weekly_sessions || 1);
 
         subjectSelect.appendChild(
-            makeOption('', 'Sélectionner une matière')
+            makeOption(
+                '',
+                'Sélectionner une matière'
+            )
         );
 
         hierarchy.forEach(subject => {
@@ -560,22 +857,30 @@ document.addEventListener('DOMContentLoaded', function () {
             );
         });
 
-        subjectSelect.value = text(data.subject_id || '');
+        subjectSelect.value =
+            text(data.subject_id || '');
 
         resetSelect(
             levelSelect,
             'Choisissez d’abord une matière',
             true
         );
+
         resetSelect(
             classSelect,
             'Choisissez d’abord un niveau',
             true
         );
+
         resetSelect(
             slotSelect,
             'Choisissez d’abord une classe',
             true
+        );
+
+        fillAvailability(
+            row,
+            data.preferred_availability_id || ''
         );
 
         if (subjectSelect.value) {
@@ -587,42 +892,84 @@ document.addEventListener('DOMContentLoaded', function () {
             );
         }
 
-        subjectSelect.addEventListener('change', () => {
-            fillLevels(row);
-        });
+        subjectSelect.addEventListener(
+            'change',
+            () => fillLevels(row)
+        );
 
-        levelSelect.addEventListener('change', () => {
-            fillClasses(row);
-        });
+        levelSelect.addEventListener(
+            'change',
+            () => fillClasses(row)
+        );
 
-        classSelect.addEventListener('change', () => {
-            fillSlots(row);
-        });
+        classSelect.addEventListener(
+            'change',
+            () => fillSlots(row)
+        );
 
-        slotSelect.addEventListener('change', () => {
-            updatePath(row);
-        });
+        slotSelect.addEventListener(
+            'change',
+            () => updatePath(row)
+        );
 
-        sessionsSelect.addEventListener('change', () => {
-            updatePath(row);
-        });
+        availabilitySelect.addEventListener(
+            'change',
+            () => updatePath(row)
+        );
 
-        row.querySelector('[data-remove-assignment]')
-            .addEventListener('click', () => {
+        sessionsSelect.addEventListener(
+            'change',
+            () => updatePath(row)
+        );
+
+        row.querySelector(
+            '[data-remove-assignment]'
+        ).addEventListener(
+            'click',
+            () => {
                 row.remove();
                 reindex();
-            });
+            }
+        );
 
         updatePath(row);
         reindex();
     };
 
-    addButton.addEventListener('click', () => addRow());
+    addButton.addEventListener(
+        'click',
+        () => addRow()
+    );
 
-    if (Array.isArray(initialRows) && initialRows.length) {
-        initialRows.forEach(row => addRow(row || {}));
+    if (
+        Array.isArray(initialRows)
+        && initialRows.length
+    ) {
+        initialRows.forEach(
+            row => addRow(row || {})
+        );
     } else {
         addRow();
+    }
+
+    if (professorSelect) {
+        professorSelect.addEventListener(
+            'change',
+            () => {
+                rowsContainer
+                    .querySelectorAll(
+                        '.prof-multi-row'
+                    )
+                    .forEach(row => {
+                        fillAvailability(
+                            row,
+                            ''
+                        );
+
+                        updatePath(row);
+                    });
+            }
+        );
     }
 });
 </script>

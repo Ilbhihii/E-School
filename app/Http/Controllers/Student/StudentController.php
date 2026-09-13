@@ -828,6 +828,12 @@ class StudentController extends Controller
                         (int) $resolved->class_slot_id;
                     $profAssignment->resolved_slot_code =
                         $resolved->slot_code;
+                    $profAssignment->resolved_subject_id =
+                        (int) $resolved->subject_id;
+                    $profAssignment->resolved_level_id =
+                        (int) $resolved->level_id;
+                    $profAssignment->resolved_class_id =
+                        (int) $resolved->class_id;
                     $profAssignment->resolved_level_name =
                         $resolved->level->name;
                     $profAssignment->resolved_class_name =
@@ -959,81 +965,370 @@ class StudentController extends Controller
                 ->withInput()
                 ->with(
                     'error',
-                    'Aucun parcours Matière → Niveau → Classe → Créneau n’est assigné à votre compte.'
+                    'Aucun parcours Matière → Niveau → Classe → Groupe '
+                    . 'n’est assigné à votre compte.'
                 );
         }
 
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
-            'level_id' => ['required', 'integer', 'exists:levels,id'],
-            'class_id' => ['required', 'integer', 'exists:class_rooms,id'],
-            'class_slot_id' => ['required', 'integer', 'exists:class_slots,id'],
+            'prof_assignment_id' => [
+                'nullable',
+                'integer',
+                'exists:assignments,id',
+            ],
+            'title' => [
+                'required_without:prof_assignment_id',
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'subject_id' => [
+                'required_without:prof_assignment_id',
+                'nullable',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required_without:prof_assignment_id',
+                'nullable',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required_without:prof_assignment_id',
+                'nullable',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'class_slot_id' => [
+                'required_without:prof_assignment_id',
+                'nullable',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'file' => [
                 'required',
                 'file',
-                'mimes:pdf,doc,docx',
-                'max:10240',
+                'max:102400',
             ],
+        ], [
+            'file.max' =>
+                'Le fichier ne doit pas dépasser 100 Mo.',
         ]);
 
-        $selectedPath = $assignmentRows->first(
-            fn ($row) =>
-                (int) $row->subject_id === (int) $validated['subject_id']
-                && (int) $row->level_id === (int) $validated['level_id']
-                && (int) $row->class_id === (int) $validated['class_id']
-                && (int) $row->class_slot_id === (int) $validated['class_slot_id']
+        /*
+         * On autorise une large liste de formats usuels, mais on bloque
+         * les formats exécutables / scripts qui ne doivent jamais être
+         * téléversés comme devoir.
+         */
+        $uploadedFile = $request->file('file');
+
+        $extension = mb_strtolower(
+            trim(
+                (string) $uploadedFile
+                    ->getClientOriginalExtension()
+            )
         );
+
+        $blockedExtensions = [
+            'php',
+            'php3',
+            'php4',
+            'php5',
+            'phtml',
+            'phar',
+            'cgi',
+            'pl',
+            'py',
+            'sh',
+            'bash',
+            'bat',
+            'cmd',
+            'com',
+            'exe',
+            'msi',
+            'dll',
+            'ps1',
+            'vbs',
+            'scr',
+            'js',
+            'mjs',
+            'html',
+            'htm',
+            'svg',
+            'jar',
+            'apk',
+        ];
+
+        if (
+            $extension !== ''
+            && in_array(
+                $extension,
+                $blockedExtensions,
+                true
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'file' =>
+                    'Ce type de fichier n’est pas autorisé '
+                    . 'pour des raisons de sécurité.',
+            ]);
+        }
+
+        $selectedPath = null;
+        $sourceAssignment = null;
+
+        /*
+         * Cas 1 : l'étudiant a cliqué sur "Soumettre" depuis un devoir
+         * publié par son professeur.
+         *
+         * Le serveur reconstruit lui-même le titre et le parcours :
+         * l'étudiant n'a donc rien à retaper.
+         */
+        if (!empty($validated['prof_assignment_id'])) {
+            $sourceAssignment = Assignment::query()
+                ->with([
+                    'user',
+                    'course',
+                    'classSlot',
+                ])
+                ->whereKey(
+                    (int) $validated['prof_assignment_id']
+                )
+                ->whereHas(
+                    'user',
+                    fn ($query) =>
+                        $query->where('role', 'prof')
+                )
+                ->first();
+
+            if (!$sourceAssignment) {
+                throw ValidationException::withMessages([
+                    'prof_assignment_id' =>
+                        'Le devoir sélectionné est introuvable.',
+                ]);
+            }
+
+            if (empty($sourceAssignment->file)) {
+                throw ValidationException::withMessages([
+                    'prof_assignment_id' =>
+                        'Ce devoir n’est pas encore disponible.',
+                ]);
+            }
+
+            if (
+                $sourceAssignment->due_date
+                && now()->gt(
+                    Carbon::parse(
+                        $sourceAssignment->due_date
+                    )
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    'prof_assignment_id' =>
+                        'La date limite de ce devoir est dépassée.',
+                ]);
+            }
+
+            $subjectId = (int) (
+                $sourceAssignment->subject_id
+                ?: $sourceAssignment->course?->subject_id
+            );
+
+            $classId = (int) (
+                $sourceAssignment->class_room_id
+                ?: $sourceAssignment->course?->class_id
+            );
+
+            $candidatePaths = $assignmentRows
+                ->where(
+                    'subject_id',
+                    $subjectId
+                )
+                ->where(
+                    'class_id',
+                    $classId
+                )
+                ->values();
+
+            if (
+                !empty(
+                    $sourceAssignment->class_slot_id
+                )
+            ) {
+                $selectedPath =
+                    $candidatePaths->firstWhere(
+                        'class_slot_id',
+                        (int) $sourceAssignment
+                            ->class_slot_id
+                    );
+            }
+
+            if (
+                !$selectedPath
+                && !empty(
+                    $sourceAssignment
+                        ->course?->slot_code
+                )
+            ) {
+                $sourceSlotCode = strtoupper(
+                    trim(
+                        (string) $sourceAssignment
+                            ->course
+                            ->slot_code
+                    )
+                );
+
+                $selectedPath =
+                    $candidatePaths->first(
+                        fn ($row) =>
+                            strtoupper(
+                                trim(
+                                    (string) $row
+                                        ->slot_code
+                                )
+                            ) === $sourceSlotCode
+                    );
+            }
+
+            /*
+             * Un devoir publié pour toute la classe, sans groupe précis,
+             * utilise le groupe attribué à l'étudiant.
+             */
+            if (
+                !$selectedPath
+                && empty(
+                    $sourceAssignment->class_slot_id
+                )
+                && empty(
+                    $sourceAssignment
+                        ->course?->slot_code
+                )
+            ) {
+                $selectedPath =
+                    $candidatePaths->first();
+            }
+
+            if (!$selectedPath) {
+                throw ValidationException::withMessages([
+                    'prof_assignment_id' =>
+                        'Ce devoir ne correspond pas '
+                        . 'à votre parcours pédagogique.',
+                ]);
+            }
+
+            $validated['title'] =
+                $sourceAssignment->title;
+
+            $validated['subject_id'] =
+                (int) $selectedPath->subject_id;
+
+            $validated['level_id'] =
+                (int) $selectedPath->level_id;
+
+            $validated['class_id'] =
+                (int) $selectedPath->class_id;
+
+            $validated['class_slot_id'] =
+                (int) $selectedPath->class_slot_id;
+        }
+
+        /*
+         * Cas 2 : envoi libre depuis le bouton "Envoyer un devoir".
+         */
+        if (!$selectedPath) {
+            $selectedPath = $assignmentRows->first(
+                fn ($row) =>
+                    (int) $row->subject_id
+                        === (int) $validated['subject_id']
+                    && (int) $row->level_id
+                        === (int) $validated['level_id']
+                    && (int) $row->class_id
+                        === (int) $validated['class_id']
+                    && (int) $row->class_slot_id
+                        === (int) $validated['class_slot_id']
+            );
+        }
 
         if (!$selectedPath) {
             throw ValidationException::withMessages([
                 'class_slot_id' =>
-                    'Ce créneau ne fait pas partie de votre parcours pédagogique.',
+                    'Ce groupe ne fait pas partie '
+                    . 'de votre parcours pédagogique.',
             ]);
         }
 
-        $slotCode = strtoupper(trim((string) $selectedPath->slot_code));
+        $slotCode = strtoupper(
+            trim(
+                (string) $selectedPath->slot_code
+            )
+        );
 
-        $course = Course::query()->approved()
-            ->where('subject_id', (int) $validated['subject_id'])
-            ->where('class_id', (int) $validated['class_id'])
+        $course = Course::query()
+            ->approved()
+            ->where(
+                'subject_id',
+                (int) $validated['subject_id']
+            )
+            ->where(
+                'class_id',
+                (int) $validated['class_id']
+            )
             ->where(function ($query) use ($validated) {
                 $query
-                    ->where('level_id', (int) $validated['level_id'])
+                    ->where(
+                        'level_id',
+                        (int) $validated['level_id']
+                    )
                     ->orWhereNull('level_id');
             })
             ->when(
-                Schema::hasColumn('courses', 'slot_code'),
-                fn ($query) => $query->whereRaw(
-                    'UPPER(TRIM(slot_code)) = ?',
-                    [$slotCode]
-                )
+                Schema::hasColumn(
+                    'courses',
+                    'slot_code'
+                ),
+                fn ($query) =>
+                    $query->whereRaw(
+                        'UPPER(TRIM(slot_code)) = ?',
+                        [$slotCode]
+                    )
             )
             ->orderByRaw(
-                'CASE WHEN level_id = ? THEN 0 ELSE 1 END',
+                'CASE WHEN level_id = ? '
+                . 'THEN 0 ELSE 1 END',
                 [(int) $validated['level_id']]
             )
             ->orderBy('order')
             ->orderBy('id')
             ->first();
 
-        $file = $request
-            ->file('file')
-            ->store('assignments', 'local');
+        $file = $uploadedFile
+            ->store(
+                'assignments',
+                'local'
+            );
 
         Assignment::create([
             'user_id' => $user->id,
-            'title' => $validated['title'],
+            'title' => trim(
+                (string) $validated['title']
+            ),
             'file' => $file,
-            'course_id' => $course ? $course->id : null,
-            'subject_id' => (int) $validated['subject_id'],
-            'class_room_id' => (int) $validated['class_id'],
-            'class_slot_id' => (int) $validated['class_slot_id'],
+            'course_id' =>
+                $course ? $course->id : null,
+            'subject_id' =>
+                (int) $validated['subject_id'],
+            'class_room_id' =>
+                (int) $validated['class_id'],
+            'class_slot_id' =>
+                (int) $validated['class_slot_id'],
         ]);
 
         return back()->with(
             'success',
-            'Devoir envoyé avec succès pour le créneau ' . $slotCode . ' !'
+            'Devoir envoyé avec succès pour le groupe '
+            . $slotCode
+            . ' !'
         );
     }
 

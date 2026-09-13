@@ -2,7 +2,7 @@
 
 @section('title', 'Cours — ' . $subject->name)
 @section('page_title', 'Cours de ' . $subject->name)
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Cours')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Cours')
 
 @push('styles')
     <link

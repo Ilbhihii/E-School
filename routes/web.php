@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\LiveController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ProfessorController;
 use App\Http\Controllers\Admin\ProfessorAvailabilityController;
+use App\Http\Controllers\Admin\MaintenanceController;
 use App\Http\Controllers\Admin\AdminScheduleController;
 use App\Http\Controllers\Admin\HighSchoolTestReviewController;
 use App\Http\Controllers\Admin\ContactLeadController;
@@ -377,6 +378,16 @@ Route::middleware(['auth', 'isAdmin'])
             '/dashboard',
             [DashboardController::class, 'index']
         )->name('dashboard');
+
+        Route::get(
+            '/maintenance',
+            [MaintenanceController::class, 'edit']
+        )->name('maintenance.edit');
+
+        Route::put(
+            '/maintenance',
+            [MaintenanceController::class, 'update']
+        )->name('maintenance.update');
 
         Route::prefix('professors')
             ->name('professors.')

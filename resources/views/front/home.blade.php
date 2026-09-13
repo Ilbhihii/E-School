@@ -4,6 +4,98 @@
 
 @section('content')
 
+@if(isset($maintenanceNotice) && $maintenanceNotice)
+    <div
+        style="
+            max-width:1200px;
+            margin:18px auto;
+            padding:0 20px;
+        "
+    >
+        <div
+            style="
+                display:flex;
+                align-items:flex-start;
+                gap:14px;
+                padding:18px 20px;
+                border:1px solid rgba(139,92,246,.35);
+                border-radius:16px;
+                color:#fff;
+                background:
+                    linear-gradient(
+                        135deg,
+                        rgba(79,70,229,.95),
+                        rgba(109,40,217,.95)
+                    );
+                box-shadow:
+                    0 18px 40px rgba(79,70,229,.20);
+            "
+        >
+            <div style="font-size:28px;">
+                🛠️
+            </div>
+
+            <div>
+                <strong
+                    style="
+                        display:block;
+                        font-size:17px;
+                        margin-bottom:4px;
+                    "
+                >
+                    Maintenance programmée
+                </strong>
+
+                <div style="opacity:.95;">
+                    {{ $maintenanceNotice->message }}
+                </div>
+
+                @if(
+                    $maintenanceNotice->start_at
+                    && $maintenanceNotice->end_at
+                )
+                    <div
+                        style="
+                            margin-top:8px;
+                            font-size:13px;
+                            opacity:.85;
+                        "
+                    >
+                        Du
+                        <strong>
+                            {{
+                                $maintenanceNotice
+                                    ->start_at
+                                    ->format('d/m/Y à H:i')
+                            }}
+                        </strong>
+
+                        au
+
+                        <strong>
+                            {{
+                                $maintenanceNotice
+                                    ->end_at
+                                    ->format('d/m/Y à H:i')
+                            }}
+                        </strong>
+
+                        · Durée estimée :
+
+                        <strong>
+                            {{
+                                $maintenanceNotice
+                                    ->duration_minutes
+                            }}
+                            min
+                        </strong>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+@endif
+
 <style>
     /* Cartes harmonisées pour les matières actives */
     .home-subjects-grid {

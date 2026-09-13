@@ -1,8 +1,8 @@
 @extends('layouts.prof')
 
-@section('title', 'Lives du créneau')
+@section('title', 'Lives du groupe')
 @section('page_title', 'Lives')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Lives')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Lives')
 
 @section('content')
 <section class="pp-page-head">
@@ -31,7 +31,7 @@
             }}"
             class="adm-btn adm-btn-ghost"
         >
-            Retour aux créneaux
+            Retour aux groupes
         </a>
     </div>
 </section>
@@ -64,7 +64,7 @@
             </article>
         @empty
             <div class="pps-empty">
-                Aucun live dans ce créneau.
+                Aucun live dans ce groupe.
             </div>
         @endforelse
     </div>

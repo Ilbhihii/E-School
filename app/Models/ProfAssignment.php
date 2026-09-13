@@ -25,6 +25,7 @@ class ProfAssignment extends Model
         'class_id',
         'subject_id',
         'class_slot_id',
+        'preferred_availability_id',
         'weekly_sessions',
         'day_of_week',
         'start_time',
@@ -33,54 +34,44 @@ class ProfAssignment extends Model
 
     protected $casts = [
         'class_slot_id' => 'integer',
+        'preferred_availability_id' => 'integer',
         'weekly_sessions' => 'integer',
         'day_of_week' => 'integer',
     ];
 
     public function prof(): BelongsTo
     {
-        return $this->belongsTo(
-            User::class,
-            'prof_id'
-        );
+        return $this->belongsTo(User::class, 'prof_id');
     }
 
     public function level(): BelongsTo
     {
-        return $this->belongsTo(
-            Level::class,
-            'level_id'
-        );
+        return $this->belongsTo(Level::class, 'level_id');
     }
 
     public function classRoom(): BelongsTo
     {
-        return $this->belongsTo(
-            ClassRoom::class,
-            'class_id'
-        );
+        return $this->belongsTo(ClassRoom::class, 'class_id');
     }
 
     public function subject(): BelongsTo
     {
-        return $this->belongsTo(
-            Subject::class,
-            'subject_id'
-        );
+        return $this->belongsTo(Subject::class, 'subject_id');
     }
 
     public function classSlot(): BelongsTo
     {
+        return $this->belongsTo(ClassSlot::class, 'class_slot_id');
+    }
+
+    public function preferredAvailability(): BelongsTo
+    {
         return $this->belongsTo(
-            ClassSlot::class,
-            'class_slot_id'
+            ProfessorAvailability::class,
+            'preferred_availability_id'
         );
     }
 
-    /**
-     * Une affectation pédagogique peut maintenant posséder plusieurs
-     * séances hebdomadaires (ex. I2 le mardi ET le samedi).
-     */
     public function schedules(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -93,40 +84,29 @@ class ProfAssignment extends Model
 
     public function getWeeklySessionsAttribute($value): int
     {
-        $count = (int) ($value ?: 1);
-
-        return max(1, min(7, $count));
+        return max(1, min(7, (int) ($value ?: 1)));
     }
 
     public function getDayLabelAttribute(): string
     {
-        return self::DAYS[
-            (int) $this->day_of_week
-        ] ?? 'Horaire non défini';
+        return self::DAYS[(int) $this->day_of_week]
+            ?? 'Horaire non défini';
     }
 
     public function getTimeRangeLabelAttribute(): string
     {
-        if (
-            !$this->start_time
-            || !$this->end_time
-        ) {
+        if (!$this->start_time || !$this->end_time) {
             return 'Horaire non défini';
         }
 
-        return Carbon::parse(
-            $this->start_time
-        )->format('H:i')
+        return Carbon::parse($this->start_time)->format('H:i')
             . ' – '
-            . Carbon::parse(
-                $this->end_time
-            )->format('H:i');
+            . Carbon::parse($this->end_time)->format('H:i');
     }
 
     public function getHasScheduleAttribute(): bool
     {
-        return
-            !empty($this->day_of_week)
+        return !empty($this->day_of_week)
             && !empty($this->start_time)
             && !empty($this->end_time);
     }

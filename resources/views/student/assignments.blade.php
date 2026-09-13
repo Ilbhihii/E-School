@@ -2,13 +2,29 @@
 
 @section('title', 'Mes devoirs')
 @section('page_title', 'Mes devoirs')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Devoirs')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Devoirs')
 
 @push('styles')
     <link
         rel="stylesheet"
         href="{{ asset('css/student-pages-v6.css') }}"
     >
+    <style>
+        .assignment-auto-locked {
+            pointer-events: none;
+            opacity: .88;
+            cursor: not-allowed;
+        }
+
+        .sp-auto-fill-notice {
+            border-color: rgba(99, 102, 241, .22);
+            background: rgba(99, 102, 241, .07);
+        }
+
+        .sp-auto-fill-notice strong {
+            color: #c4b5fd;
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -46,6 +62,7 @@
         <a
             href="#sendAssignmentPanel"
             class="sp-primary-button"
+            data-manual-assignment-submit
         >
             <i class="bi bi-cloud-arrow-up-fill"></i>
             Envoyer un devoir
@@ -203,7 +220,7 @@
                                     {{ $assignment->subject?->name ?? $assignment->course?->subject?->name ?? 'Matière' }}
                                     → {{ $assignment->resolved_level_name ?? $assignment->course?->level?->name ?? 'Niveau' }}
                                     → {{ $assignment->resolved_class_name ?? $assignment->course?->classRoom?->name ?? 'Classe' }}
-                                    → {{ $assignment->resolved_slot_code ?? $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Créneau' }}
+                                    → {{ $assignment->resolved_slot_code ?? $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Groupe' }}
                                 </span>
 
                                 <span class="{{ $isOverdue ? 'late' : '' }}">
@@ -278,6 +295,27 @@
                                 <a
                                     href="#sendAssignmentPanel"
                                     class="sp-primary-button compact"
+                                    data-submit-prof-assignment
+                                    data-assignment-id="{{ $assignment->id }}"
+                                    data-assignment-title="{{ $assignment->title }}"
+                                    data-subject-id="{{
+                                        $assignment->resolved_subject_id
+                                        ?? $assignment->subject_id
+                                        ?? $assignment->course?->subject_id
+                                    }}"
+                                    data-level-id="{{
+                                        $assignment->resolved_level_id
+                                        ?? $assignment->course?->level_id
+                                    }}"
+                                    data-class-id="{{
+                                        $assignment->resolved_class_id
+                                        ?? $assignment->class_room_id
+                                        ?? $assignment->course?->class_id
+                                    }}"
+                                    data-slot-id="{{
+                                        $assignment->resolved_class_slot_id
+                                        ?? $assignment->class_slot_id
+                                    }}"
                                 >
                                     <i class="bi bi-send-fill"></i>
                                     Soumettre
@@ -304,15 +342,15 @@
                     <h3>Envoyer un devoir</h3>
 
                     <p>
-                        Ajoutez un titre, puis choisissez
-                        Matière → Niveau → Classe → Créneau avant
-                        d’importer votre fichier.
+                        Cliquez sur « Soumettre » depuis un devoir :
+                        le titre, la matière, le niveau, la classe et
+                        le groupe seront remplis automatiquement.
                     </p>
                 </div>
             </div>
 
             <span class="sp-status-badge blue">
-                PDF, DOC ou DOCX · 10 Mo
+                Documents, images, audio et vidéo · 100 Mo
             </span>
         </header>
 
@@ -323,6 +361,13 @@
             class="sp-upload-form"
         >
             @csrf
+
+            <input
+                type="hidden"
+                name="prof_assignment_id"
+                id="assignmentSourceProfessorId"
+                value="{{ old('prof_assignment_id') }}"
+            >
 
             @php
                 $defaultSubjectId = old('subject_id');
@@ -341,11 +386,26 @@
                     <i class="bi bi-exclamation-triangle-fill"></i>
 
                     <span>
-                        Aucun parcours Matière → Niveau → Classe → Créneau
+                        Aucun parcours Matière → Niveau → Classe → Groupe
                         n’est assigné à votre compte.
                     </span>
                 </div>
             @endif
+
+            <div
+                class="sp-assignment-form-warning sp-auto-fill-notice"
+                id="assignmentAutoFillNotice"
+                hidden
+            >
+                <i class="bi bi-magic"></i>
+
+                <span>
+                    Devoir sélectionné :
+                    <strong id="assignmentAutoFillTitle">—</strong>.
+                    Le titre et le parcours sont remplis automatiquement.
+                    Il ne reste qu’à choisir votre fichier.
+                </span>
+            </div>
 
             <div class="sp-upload-title-field">
                 <div class="sp-field">
@@ -499,7 +559,7 @@
                 </div>
 
                 <div class="sp-field">
-                    <label for="assignmentSlot">Créneau</label>
+                    <label for="assignmentSlot">Groupe</label>
                     <div class="sp-select-wrap">
                         <i class="bi bi-clock-fill"></i>
                         <select name="class_slot_id" id="assignmentSlot" required disabled>
@@ -546,14 +606,14 @@
                 </strong>
 
                 <small id="assignmentFileName">
-                    PDF, DOC ou DOCX — maximum 10 Mo
+                    PDF, DOCX, JPG, PNG, MP3, MP4… — maximum 100 Mo
                 </small>
 
                 <input
                     type="file"
                     name="file"
                     id="assignmentFile"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
                     required
                 >
             </label>
@@ -656,7 +716,7 @@
                                 <td data-label="Parcours">
                                     {{ $assignment->course?->level?->name ?? 'Niveau' }}
                                     → {{ $assignment->course?->classRoom?->name ?? 'Classe' }}
-                                    → {{ $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Créneau' }}
+                                    → {{ $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Groupe' }}
                                 </td>
 
                                 <td data-label="Date d’envoi">
@@ -764,8 +824,10 @@ window.studentAssignmentPathData = {
     selectedSubjectId: @json((string) $defaultSubjectId),
     selectedLevelId: @json((string) old('level_id')),
     selectedClassId: @json((string) old('class_id')),
-    selectedSlotId: @json((string) old('class_slot_id'))
+    selectedSlotId: @json((string) old('class_slot_id')),
+    selectedProfAssignmentId:
+        @json((string) old('prof_assignment_id'))
 };
 </script>
-<script src="{{ asset('js/student-assignments-path-v10.js?v=10') }}"></script>
+<script src="{{ asset('js/student-assignments-path-v11.js?v=11') }}"></script>
 @endpush

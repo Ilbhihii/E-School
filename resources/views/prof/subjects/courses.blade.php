@@ -2,7 +2,7 @@
 
 @section('title', 'Cours')
 @section('page_title', 'Cours')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Cours')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Cours')
 
 @section('content')
 <section class="pp-page-head">
@@ -31,7 +31,7 @@
             }}"
             class="adm-btn adm-btn-ghost"
         >
-            Retour aux créneaux
+            Retour aux groupes
         </a>
     </div>
 </section>
@@ -68,7 +68,7 @@
             @empty
                 <div class="col-12">
                     <div class="pps-empty">
-                        Aucun cours dans ce créneau.
+                        Aucun cours dans ce groupe.
                     </div>
                 </div>
             @endforelse

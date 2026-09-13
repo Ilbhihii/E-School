@@ -2,7 +2,7 @@
 
 @section('title', 'Emploi du temps')
 @section('page_title', 'Emploi du temps')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Planning')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Planning')
 
 @push('head')
 <link
@@ -48,7 +48,7 @@
             <h2>Mon emploi du temps</h2>
             <p>
                 Consultez vos séances par semaine ou par mois,
-                uniquement pour votre Matière → Niveau → Classe → Créneau.
+                uniquement pour votre Matière → Niveau → Classe → Groupe.
             </p>
         </div>
 
@@ -69,7 +69,7 @@
 
             <div>
                 <h3>Filtrer l’emploi du temps</h3>
-                <p>Matière → Niveau → Classe → Créneau.</p>
+                <p>Matière → Niveau → Classe → Groupe.</p>
             </div>
 
             @if(
@@ -150,7 +150,7 @@
             </div>
 
             <div class="sp-field">
-                <label>Créneau</label>
+                <label>Groupe</label>
                 <div class="sp-select-wrap">
                     <i class="bi bi-clock-fill"></i>
                     <select
@@ -158,7 +158,7 @@
                         id="scheduleSlot"
                         disabled
                     >
-                        <option value="">Tous les créneaux</option>
+                        <option value="">Tous les groupes</option>
                     </select>
                 </div>
             </div>
@@ -199,7 +199,7 @@
                 <i class="bi bi-clock-fill"></i>
             </span>
             <div>
-                <small>Créneaux visibles</small>
+                <small>Groupes visibles</small>
                 <strong>
                     {{
                         $visiblePaths
@@ -227,7 +227,7 @@
                     <i class="bi bi-chevron-right"></i>
                     {{ $selectedClass?->name ?? 'Toutes les classes' }}
                     <i class="bi bi-chevron-right"></i>
-                    {{ $selectedSlot?->code ?? 'Tous les créneaux' }}
+                    {{ $selectedSlot?->code ?? 'Tous les groupes' }}
                 </strong>
             </div>
         </div>
@@ -439,7 +439,7 @@ document.addEventListener(
             addOption(
                 slot,
                 '',
-                'Tous les créneaux'
+                'Tous les groupes'
             );
 
             const options = (

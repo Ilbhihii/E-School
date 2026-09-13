@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation professeurs')
 @section(
     'breadcrumb',
-    'Professeur → Matière → Niveau → Classe → Créneau'
+    'Professeur → Matière → Niveau → Classe → Groupe → Créneau'
 )
 
 @section('content')
@@ -54,6 +54,10 @@
             'level_id' => old('level_id', ''),
             'class_id' => old('class_id', ''),
             'class_slot_id' => old('class_slot_id', ''),
+            'preferred_availability_id' => old(
+                'preferred_availability_id',
+                ''
+            ),
             'weekly_sessions' => old('weekly_sessions', 1),
         ]];
     }
@@ -131,6 +135,10 @@
                             'builderId' => 'profCreateAssignmentBuilder',
                             'assignmentHierarchy' => $assignmentHierarchy,
                             'initialAssignments' => $initialAssignments,
+                            'professorAvailabilities' =>
+                                $professorAvailabilities,
+                            'professorSelectId' =>
+                                'prof_assignment_prof_id',
                         ]
                     )
 
@@ -173,7 +181,7 @@
                                     <th>Matière</th>
                                     <th>Niveau</th>
                                     <th>Classe</th>
-                                    <th>Créneau</th>
+                                    <th>Groupe</th>
                                     <th>Séances / sem.</th>
                                     <th>Horaires</th>
                                     <th style="text-align:right;">

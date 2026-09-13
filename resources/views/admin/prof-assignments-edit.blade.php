@@ -19,8 +19,8 @@
         </h1>
 
         <div class="subtitle">
-            {{ $professor->name }} — ajoutez, modifiez ou retirez
-            ses parcours pédagogiques actifs.
+            {{ $professor->name }} — modifiez ses groupes,
+            créneaux disponibles et séances hebdomadaires.
         </div>
     </div>
 
@@ -78,11 +78,11 @@
                 </div>
 
                 <div class="prof-edit-note">
-                    <i class="bi bi-shield-check"></i>
+                    <i class="bi bi-clock-history"></i>
                     <span>
-                        La sauvegarde remplace uniquement les affectations
-                        des matières actuellement actives. Les anciennes
-                        matières inactives restent conservées en historique.
+                        Les créneaux proposés proviennent uniquement des
+                        disponibilités enregistrées pour ce professeur.
+                        Le groupe D1/D2/I1/A2… reste indépendant du créneau.
                     </span>
                 </div>
             </div>
@@ -117,6 +117,10 @@
                             'builderId' => 'profEditAssignmentBuilder',
                             'assignmentHierarchy' => $assignmentHierarchy,
                             'initialAssignments' => $initialAssignments,
+                            'professorAvailabilities' =>
+                                $professorAvailabilities,
+                            'fixedProfessorId' =>
+                                $professor->id,
                         ]
                     )
 
@@ -148,28 +152,23 @@
     align-items: center;
     gap: 11px;
 }
-
 .prof-edit-profile .adm-avatar {
     width: 46px;
     height: 46px;
     background: linear-gradient(135deg,#7C3AED,#A78BFA);
 }
-
 .prof-edit-profile strong,
 .prof-edit-profile small {
     display: block;
 }
-
 .prof-edit-profile strong {
     font-size: .78rem;
 }
-
 .prof-edit-profile small {
     margin-top: 3px;
     color: var(--adm-text-muted);
     font-size: .61rem;
 }
-
 .prof-edit-note {
     display: flex;
     align-items: flex-start;
@@ -183,12 +182,10 @@
     font-size: .59rem;
     line-height: 1.55;
 }
-
 .prof-edit-note i {
     margin-top: 1px;
     color: #60A5FA;
 }
-
 .prof-edit-actions {
     display: flex;
     justify-content: flex-end;

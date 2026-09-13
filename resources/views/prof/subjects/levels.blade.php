@@ -2,7 +2,7 @@
 
 @section('title', 'Mes niveaux')
 @section('page_title', $subject->name)
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe')
 
 @section('content')
 <section class="pp-page-head">
@@ -11,7 +11,7 @@
         <h1 class="pp-page-title">{{ $subject->name }}</h1>
         <p class="pp-page-description">
             Sélectionnez un niveau pour voir les classes
-            et les créneaux qui vous sont affectés.
+            et les groupes qui vous sont affectés.
         </p>
     </div>
 
@@ -49,7 +49,7 @@
 
                                     <span class="pps-slot-badge">
                                         {{ $level->assigned_slots_count }}
-                                        créneau(x)
+                                        groupe(x)
                                     </span>
                                 </div>
 
