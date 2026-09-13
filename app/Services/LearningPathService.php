@@ -673,7 +673,6 @@ class LearningPathService
         return
             $user->isStudent()
             && (bool) $user->is_active
-            && $user->hasCurrentPaidAccess()
             && $this
                 ->studentCanAccessCourse(
                     $user,

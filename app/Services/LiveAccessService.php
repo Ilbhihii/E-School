@@ -55,13 +55,6 @@ class LiveAccessService
             );
         }
 
-        if (!$user->hasCurrentPaidAccess()) {
-            return $this->denied(
-                'payment_required',
-                'Un abonnement actuellement valide est nécessaire pour rejoindre cette session.'
-            );
-        }
-
         if (!$live->class_id) {
             return $this->denied(
                 'class_missing',

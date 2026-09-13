@@ -38,4 +38,12 @@ class ClassRoom extends Model
             'class_id'
         );
     }
+
+    public function lives()
+    {
+        return $this->hasMany(
+            Live::class,
+            'class_id'
+        );
+    }
 }

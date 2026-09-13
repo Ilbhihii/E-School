@@ -1293,7 +1293,7 @@ Route::middleware(['auth'])
             '/subjects/{subject}/levels/{level}/classes/{class}/courses',
             [StudentController::class, 'subjectCourses']
         )
-            ->middleware(['active', 'paid'])
+            ->middleware(['active'])
             ->name('subjects.courses');
 
         Route::get(
@@ -1379,7 +1379,6 @@ Route::middleware(['auth', 'active'])
             '/course/{id}',
             [StudentController::class, 'showCourse']
         )
-            ->middleware('paid')
             ->name('course.show');
 
         /*
