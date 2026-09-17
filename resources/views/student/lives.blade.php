@@ -73,6 +73,16 @@
                     Votre programme, vos séances et vos accès live
                     réunis dans une seule interface.
                 </p>
+
+                {{-- STUDENT_AUTO_TIMEZONE_V1_VIEW --}}
+                <span
+                    class="badge rounded-pill text-bg-dark mt-2"
+                    title="Fuseau horaire détecté automatiquement"
+                >
+                    <i class="bi bi-globe2"></i>
+                    Heure locale :
+                    {{ auth()->user()->effectiveTimezone() }}
+                </span>
             </div>
         </div>
 
@@ -472,7 +482,7 @@
                                     <strong>
                                         {{
                                             $live
-                                                ->start_date_time
+                                                ->viewer_start_date_time
                                                 ?->format('H:i')
                                             ?? '--:--'
                                         }}
@@ -689,9 +699,9 @@
                                 <i class="bi bi-calendar3"></i>
 
                                 {{
-                                    $live->start_date_time
+                                    $live->viewer_start_date_time
                                         ? $live
-                                            ->start_date_time
+                                            ->viewer_start_date_time
                                             ->format('d/m/Y')
                                         : 'Date à confirmer'
                                 }}
@@ -701,18 +711,18 @@
                                 <i class="bi bi-clock"></i>
 
                                 {{
-                                    $live->start_date_time
+                                    $live->viewer_start_date_time
                                         ? $live
-                                            ->start_date_time
+                                            ->viewer_start_date_time
                                             ->format('H:i')
                                         : '--:--'
                                 }}
 
-                                @if($live->end_date_time)
+                                @if($live->viewer_end_date_time)
                                     –
                                     {{
                                         $live
-                                            ->end_date_time
+                                            ->viewer_end_date_time
                                             ->format('H:i')
                                     }}
                                 @endif

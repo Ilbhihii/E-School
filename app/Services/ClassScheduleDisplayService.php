@@ -226,7 +226,51 @@ class ClassScheduleDisplayService
             );
         }
 
-        return $this->occurrences($query->get(), $from, $to, $limit);
+        /*
+         * STUDENT_AUTO_TIMEZONE_V1
+         *
+         * Les horaires sont construits dans le fuseau de référence
+         * de l'école, puis convertis dans le fuseau de l'étudiant.
+         *
+         * setTimezone() conserve le même instant réel : les règles
+         * d'heure d'été/hiver sont donc appliquées selon la DATE
+         * de chaque occurrence.
+         */
+        $sourceTimezone = (string) config(
+            'app.timezone',
+            'Africa/Casablanca'
+        );
+
+        $studentTimezone =
+            $student->effectiveTimezone();
+
+        $sourceFrom = $from
+            ->copy()
+            ->setTimezone($sourceTimezone);
+
+        $sourceTo = $to
+            ->copy()
+            ->setTimezone($sourceTimezone);
+
+        return $this
+            ->occurrences(
+                $query->get(),
+                $sourceFrom,
+                $sourceTo,
+                $limit
+            )
+            ->map(
+                fn (array $occurrence) =>
+                    $this->localizeOccurrence(
+                        $occurrence,
+                        $studentTimezone
+                    )
+            )
+            ->sortBy(
+                fn (array $occurrence) =>
+                    $occurrence['start']->timestamp
+            )
+            ->values();
     }
 
     /**
@@ -240,10 +284,42 @@ class ClassScheduleDisplayService
         ?int $limit = null,
         array $filters = []
     ): Collection {
-        $from = ($from ?: now())->copy();
-        $to = $from->copy()->addDays(
-            max(1, $days)
+        /*
+         * TIMEZONE_SOURCE_CONVERSION_V2_2_PROF
+         *
+         * Les règles du planning sont définies dans le fuseau
+         * de référence de l'école. On construit donc d'abord les
+         * occurrences en Africa/Casablanca puis on les convertit
+         * vers le fuseau du professeur.
+         */
+        $sourceTimezone = (string) config(
+            'app.timezone',
+            'Africa/Casablanca'
         );
+
+        $viewerTimezone =
+            $professor->effectiveTimezone();
+
+        $viewerFrom = (
+            $from
+                ?: now($viewerTimezone)
+        )
+            ->copy()
+            ->setTimezone($viewerTimezone);
+
+        $viewerTo = $viewerFrom
+            ->copy()
+            ->addDays(
+                max(1, $days)
+            );
+
+        $from = $viewerFrom
+            ->copy()
+            ->setTimezone($sourceTimezone);
+
+        $to = $viewerTo
+            ->copy()
+            ->setTimezone($sourceTimezone);
 
         if (
             !Schema::hasTable(
@@ -440,12 +516,17 @@ class ClassScheduleDisplayService
             );
         }
 
-        return $this->occurrences(
-            $query->get(),
-            $from,
-            $to,
-            $limit
-        )->map(function (array $occurrence) use ($professor) {
+        return $this
+            ->localizeOccurrencesForUser(
+                $this->occurrences(
+                    $query->get(),
+                    $from,
+                    $to,
+                    $limit
+                ),
+                $professor
+            )
+            ->map(function (array $occurrence) use ($professor) {
             /*
              * Un même créneau peut être partagé par plusieurs professeurs.
              * Dans l'espace du professeur connecté, on affiche donc son
@@ -700,6 +781,174 @@ class ClassScheduleDisplayService
             ])->filter()->implode(' → '),
             'teacher' => optional($schedule->prof)->name ?: 'Professeur à confirmer',
         ];
+    }
+
+    /**
+     * Recalcule tous les libellés dépendants de la date/heure
+     * après conversion du fuseau.
+     */
+    private function localizeOccurrence(
+        array $occurrence,
+        string $timezone
+    ): array {
+        $start = $occurrence['start']
+            ->copy()
+            ->setTimezone($timezone);
+
+        $end = $occurrence['end']
+            ->copy()
+            ->setTimezone($timezone);
+
+        $dayTimeLabel =
+            ucfirst(
+                $start
+                    ->locale('fr')
+                    ->isoFormat('dddd')
+            )
+            . ' · '
+            . $start->format('H:i')
+            . ' – '
+            . $end->format('H:i');
+
+        $occurrence['start'] = $start;
+        $occurrence['end'] = $end;
+        $occurrence['date_key'] =
+            $start->format('Y-m-d');
+        $occurrence['date_label'] =
+            ucfirst(
+                $start
+                    ->locale('fr')
+                    ->isoFormat('dddd D MMMM')
+            );
+        $occurrence['day_short'] =
+            ucfirst(
+                $start
+                    ->locale('fr')
+                    ->isoFormat('ddd')
+            );
+        $occurrence['day_number'] =
+            $start->format('d');
+        $occurrence['time_label'] =
+            $start->format('H:i')
+            . ' – '
+            . $end->format('H:i');
+        $occurrence['slot_label'] =
+            $dayTimeLabel;
+        $occurrence['start_label'] =
+            $start->format('H:i');
+        $occurrence['end_label'] =
+            $end->format('H:i');
+        $occurrence['timezone'] =
+            $timezone;
+
+        $occurrence['full_path'] =
+            collect([
+                $occurrence['subject']
+                    ?? null,
+                $occurrence['level']
+                    ?? null,
+                $occurrence['class_name']
+                    ?? null,
+                $dayTimeLabel,
+            ])
+                ->filter()
+                ->implode(' → ');
+
+        return $occurrence;
+    }
+
+    /**
+     * AUTO_TIMEZONE_ALL_ROLES_V2
+     *
+     * Convertit une collection d'occurrences datées vers le fuseau
+     * réel de l'utilisateur connecté.
+     */
+    private function localizeOccurrencesForUser(
+        Collection $items,
+        User $user
+    ): Collection {
+        $timezone = $user->effectiveTimezone();
+
+        return $items
+            ->map(
+                fn (array $occurrence) =>
+                    $this->localizeOccurrenceForTimezone(
+                        $occurrence,
+                        $timezone
+                    )
+            )
+            ->sortBy(
+                fn (array $occurrence) =>
+                    $occurrence['start']->timestamp
+            )
+            ->values();
+    }
+
+    private function localizeOccurrenceForTimezone(
+        array $occurrence,
+        string $timezone
+    ): array {
+        $start = $occurrence['start']
+            ->copy()
+            ->setTimezone($timezone);
+
+        $end = $occurrence['end']
+            ->copy()
+            ->setTimezone($timezone);
+
+        $dayTimeLabel =
+            ucfirst(
+                $start
+                    ->locale('fr')
+                    ->isoFormat('dddd')
+            )
+            . ' · '
+            . $start->format('H:i')
+            . ' – '
+            . $end->format('H:i');
+
+        $occurrence['start'] = $start;
+        $occurrence['end'] = $end;
+        $occurrence['date_key'] =
+            $start->format('Y-m-d');
+        $occurrence['date_label'] =
+            ucfirst(
+                $start
+                    ->locale('fr')
+                    ->isoFormat('dddd D MMMM')
+            );
+        $occurrence['day_short'] =
+            ucfirst(
+                $start
+                    ->locale('fr')
+                    ->isoFormat('ddd')
+            );
+        $occurrence['day_number'] =
+            $start->format('d');
+        $occurrence['time_label'] =
+            $start->format('H:i')
+            . ' – '
+            . $end->format('H:i');
+        $occurrence['slot_label'] =
+            $dayTimeLabel;
+        $occurrence['start_label'] =
+            $start->format('H:i');
+        $occurrence['end_label'] =
+            $end->format('H:i');
+        $occurrence['timezone'] =
+            $timezone;
+
+        $occurrence['full_path'] =
+            collect([
+                $occurrence['subject'] ?? null,
+                $occurrence['level'] ?? null,
+                $occurrence['class_name'] ?? null,
+                $dayTimeLabel,
+            ])
+                ->filter()
+                ->implode(' → ');
+
+        return $occurrence;
     }
 
     private function formatDurationLabel(int $minutes): string

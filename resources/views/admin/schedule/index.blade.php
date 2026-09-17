@@ -135,6 +135,27 @@
                 Emploi du temps des classes
             </h2>
             <p>Planifiez le parcours complet Matière → Niveau → Classe → Créneau.</p>
+
+            <div
+                style="
+                    margin-top:8px;
+                    display:flex;
+                    gap:8px;
+                    flex-wrap:wrap;
+                    font-size:.68rem;
+                "
+            >
+                <span class="adm-badge adm-badge-primary">
+                    <i class="bi bi-globe2"></i>
+                    Fuseau local détecté :
+                    {{ auth()->user()->effectiveTimezone() }}
+                </span>
+
+                <span class="adm-badge adm-badge-warning">
+                    Création du planning :
+                    heure de référence Africa/Casablanca
+                </span>
+            </div>
         </div>
 
         <div class="schedule-hero-actions schedule-view-switcher">

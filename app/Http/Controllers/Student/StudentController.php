@@ -157,6 +157,15 @@ class StudentController extends Controller
     ) {
         $user = auth()->user();
 
+        /*
+         * STUDENT_AUTO_TIMEZONE_V1
+         *
+         * "Aujourd'hui" doit être celui de l'étudiant,
+         * pas forcément celui du Maroc.
+         */
+        $studentTimezone =
+            $user->effectiveTimezone();
+
         $assignmentRows = $this->paths
             ->studentAssignmentRows($user->id)
             ->filter(
@@ -291,7 +300,9 @@ class StudentController extends Controller
          * Le calendrier est chargé pour une large fenêtre afin que les vues
          * semaine / mois puissent être parcourues sans seconde interface.
          */
-        $calendarStart = now()->subMonth()->startOfMonth();
+        $calendarStart = now($studentTimezone)
+            ->subMonth()
+            ->startOfMonth();
 
         $scheduleOccurrences = $scheduleService->forStudent(
             $user,
@@ -301,7 +312,8 @@ class StudentController extends Controller
             $scheduleFilters
         );
 
-        $todayKey = now()->toDateString();
+        $todayKey = now($studentTimezone)
+            ->toDateString();
 
         $todayOccurrences = $scheduleOccurrences
             ->where('date_key', $todayKey)
@@ -310,12 +322,17 @@ class StudentController extends Controller
         $todayLives = $lives
             ->filter(
                 fn (Live $live) =>
-                    $live->start_date_time
-                    && $live->start_date_time->toDateString() === $todayKey
+                    $live->viewer_start_date_time
+                    && $live
+                        ->viewer_start_date_time
+                        ->toDateString()
+                        === $todayKey
             )
             ->sortBy(
                 fn (Live $live) =>
-                    $live->start_date_time?->timestamp
+                    $live
+                        ->viewer_start_date_time
+                        ?->timestamp
                     ?? PHP_INT_MAX
             )
             ->values();
@@ -384,8 +401,11 @@ class StudentController extends Controller
 
         $liveCalendarEvents = $lives
             ->map(function (Live $live) {
-                $start = $live->start_date_time;
-                $end = $live->end_date_time;
+                $start =
+                    $live->viewer_start_date_time;
+
+                $end =
+                    $live->viewer_end_date_time;
 
                 if (!$start || !$end) {
                     return null;

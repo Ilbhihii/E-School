@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#080d18">
 
@@ -303,6 +304,26 @@
                 </div>
 
                 <div class="admin-topbar-actions">
+                    <span
+                        data-ssa-timezone-badge
+                        title="Fuseau horaire détecté automatiquement"
+                        style="
+                            display:inline-flex;
+                            align-items:center;
+                            gap:6px;
+                            padding:7px 10px;
+                            border:1px solid rgba(148,163,184,.16);
+                            border-radius:999px;
+                            font-size:.68rem;
+                            color:#cbd5e1;
+                            background:rgba(15,23,42,.55);
+                            white-space:nowrap;
+                        "
+                    >
+                        <i class="bi bi-globe2"></i>
+                        {{ auth()->user()->effectiveTimezone() }}
+                    </span>
+
                     <a href="{{ route('home') }}"
                        class="admin-site-link"
                        title="Voir le site public"
@@ -367,6 +388,74 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ asset('js/admin-portal.js') }}?v={{ file_exists(public_path('js/admin-portal.js')) ? filemtime(public_path('js/admin-portal.js')) : time() }}"></script>
+
+    {{-- AUTO_TIMEZONE_ALL_ROLES_V2 --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const serverTimezone = @json($authenticatedAdmin->effectiveTimezone());
+
+        let detectedTimezone = '';
+
+        try {
+            detectedTimezone =
+                Intl.DateTimeFormat()
+                    .resolvedOptions()
+                    .timeZone || '';
+        } catch (error) {
+            return;
+        }
+
+        if (!detectedTimezone) {
+            return;
+        }
+
+        if (detectedTimezone === serverTimezone) {
+            sessionStorage.removeItem(
+                'ssa-timezone-sync:' + detectedTimezone
+            );
+
+            return;
+        }
+
+        const syncKey =
+            'ssa-timezone-sync:' + detectedTimezone;
+
+        try {
+            const response = await fetch(
+                @json(route('timezone.update')),
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN':
+                            document
+                                .querySelector(
+                                    'meta[name="csrf-token"]'
+                                )
+                                ?.getAttribute('content')
+                                || '',
+                    },
+                    body: JSON.stringify({
+                        timezone: detectedTimezone,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            if (!sessionStorage.getItem(syncKey)) {
+                sessionStorage.setItem(syncKey, '1');
+                window.location.reload();
+            }
+        } catch (error) {
+            // On garde le fuseau déjà enregistré en cas d'échec réseau.
+        }
+    });
+    </script>
 
     @stack('scripts')
 </body>

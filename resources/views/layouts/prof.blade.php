@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#090d18">
 
@@ -56,6 +57,7 @@
 @php
     $profRouteName = request()->route()?->getName() ?? 'prof.unknown';
     $profRouteClass = str_replace(['.', '_'], '-', $profRouteName);
+    $authenticatedProfessor = auth()->user();
 @endphp
 
 <body class="prof-portal route-{{ $profRouteClass }}">
@@ -275,6 +277,26 @@
                 </div>
 
                 <div class="prof-topbar-actions">
+                    <span
+                        data-ssa-timezone-badge
+                        title="Fuseau horaire détecté automatiquement"
+                        style="
+                            display:inline-flex;
+                            align-items:center;
+                            gap:6px;
+                            padding:7px 10px;
+                            border:1px solid rgba(148,163,184,.16);
+                            border-radius:999px;
+                            font-size:.68rem;
+                            color:#cbd5e1;
+                            background:rgba(15,23,42,.55);
+                            white-space:nowrap;
+                        "
+                    >
+                        <i class="bi bi-globe2"></i>
+                        {{ auth()->user()->effectiveTimezone() }}
+                    </span>
+
                     <a href="{{ route('home') }}" class="prof-icon-button" title="Accueil principal" aria-label="Accueil principal">
                         <i class="bi bi-house-door"></i>
                     </a>
@@ -367,6 +389,74 @@
     </div>
 
     <script src="{{ asset('js/prof-portal.js') }}?v={{ file_exists(public_path('js/prof-portal.js')) ? filemtime(public_path('js/prof-portal.js')) : time() }}"></script>
+    {{-- AUTO_TIMEZONE_ALL_ROLES_V2 --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const serverTimezone = @json($authenticatedProfessor->effectiveTimezone());
+
+        let detectedTimezone = '';
+
+        try {
+            detectedTimezone =
+                Intl.DateTimeFormat()
+                    .resolvedOptions()
+                    .timeZone || '';
+        } catch (error) {
+            return;
+        }
+
+        if (!detectedTimezone) {
+            return;
+        }
+
+        if (detectedTimezone === serverTimezone) {
+            sessionStorage.removeItem(
+                'ssa-timezone-sync:' + detectedTimezone
+            );
+
+            return;
+        }
+
+        const syncKey =
+            'ssa-timezone-sync:' + detectedTimezone;
+
+        try {
+            const response = await fetch(
+                @json(route('timezone.update')),
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN':
+                            document
+                                .querySelector(
+                                    'meta[name="csrf-token"]'
+                                )
+                                ?.getAttribute('content')
+                                || '',
+                    },
+                    body: JSON.stringify({
+                        timezone: detectedTimezone,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            if (!sessionStorage.getItem(syncKey)) {
+                sessionStorage.setItem(syncKey, '1');
+                window.location.reload();
+            }
+        } catch (error) {
+            // On garde le fuseau déjà enregistré en cas d'échec réseau.
+        }
+    });
+    </script>
+
     @stack('scripts')
 </body>
 </html>

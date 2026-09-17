@@ -151,6 +151,38 @@ class Live extends Model
     }
 
     /**
+     * STUDENT_AUTO_TIMEZONE_V1
+     *
+     * Version locale des heures du Live pour l'utilisateur connecté.
+     * La source reste en Africa/Casablanca / APP_TIMEZONE.
+     */
+    public function getViewerStartDateTimeAttribute()
+    {
+        $start = $this->start_date_time;
+
+        return $start
+            ? $start
+                ->copy()
+                ->setTimezone(
+                    $this->viewerTimezone()
+                )
+            : null;
+    }
+
+    public function getViewerEndDateTimeAttribute()
+    {
+        $end = $this->end_date_time;
+
+        return $end
+            ? $end
+                ->copy()
+                ->setTimezone(
+                    $this->viewerTimezone()
+                )
+            : null;
+    }
+
+    /**
      * Valeurs possibles :
      * - unscheduled : aucune date
      * - upcoming    : pas encore commencée
@@ -276,6 +308,26 @@ class Live extends Model
             '#^https://#i',
             'msteams://',
             $url
+        );
+    }
+
+    private function viewerTimezone(): string
+    {
+        $user = auth()->user();
+
+        if (
+            $user
+            && method_exists(
+                $user,
+                'effectiveTimezone'
+            )
+        ) {
+            return $user->effectiveTimezone();
+        }
+
+        return (string) config(
+            'app.timezone',
+            'Africa/Casablanca'
         );
     }
 

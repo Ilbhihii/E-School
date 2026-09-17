@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="color-scheme" content="dark">
 
     <title>@yield('title', 'Espace Étudiant') — Smart School Academy</title>
@@ -481,7 +482,73 @@
         </div>
     </div>
 <script src="{{ asset('js/student-admin-prof-v4.js') }}"></script>
+@stack('scripts')
+    {{-- AUTO_TIMEZONE_ALL_ROLES_V2 --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const serverTimezone = @json($student->effectiveTimezone());
 
-    @stack('scripts')
+        let detectedTimezone = '';
+
+        try {
+            detectedTimezone =
+                Intl.DateTimeFormat()
+                    .resolvedOptions()
+                    .timeZone || '';
+        } catch (error) {
+            return;
+        }
+
+        if (!detectedTimezone) {
+            return;
+        }
+
+        if (detectedTimezone === serverTimezone) {
+            sessionStorage.removeItem(
+                'ssa-timezone-sync:' + detectedTimezone
+            );
+
+            return;
+        }
+
+        const syncKey =
+            'ssa-timezone-sync:' + detectedTimezone;
+
+        try {
+            const response = await fetch(
+                @json(route('timezone.update')),
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN':
+                            document
+                                .querySelector(
+                                    'meta[name="csrf-token"]'
+                                )
+                                ?.getAttribute('content')
+                                || '',
+                    },
+                    body: JSON.stringify({
+                        timezone: detectedTimezone,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            if (!sessionStorage.getItem(syncKey)) {
+                sessionStorage.setItem(syncKey, '1');
+                window.location.reload();
+            }
+        } catch (error) {
+            // On garde le fuseau déjà enregistré en cas d'échec réseau.
+        }
+    });
+    </script>
 </body>
 </html>

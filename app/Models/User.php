@@ -43,6 +43,7 @@ class User extends Authenticatable
         'is_paid',
         'country',
         'city',
+        'timezone',
         'ip_address',
         'must_change_password',
         'temporary_password_expires_at',
@@ -200,6 +201,36 @@ public function parents()
         'can_view_assignments',
         'can_view_results',
     ])->withTimestamps();
+}
+
+/**
+ * STUDENT_AUTO_TIMEZONE_V1
+ *
+ * Fuseau effectif de l'utilisateur.
+ * Si le navigateur n'a pas encore synchronisé le fuseau,
+ * on garde le fuseau de référence de l'application.
+ */
+public function effectiveTimezone(): string
+{
+    $fallback = (string) config(
+        'app.timezone',
+        'Africa/Casablanca'
+    );
+
+    $timezone = trim(
+        (string) (
+            $this->getAttribute('timezone')
+            ?: $fallback
+        )
+    );
+
+    try {
+        new \DateTimeZone($timezone);
+
+        return $timezone;
+    } catch (\Throwable $exception) {
+        return $fallback;
+    }
 }
 
 /**

@@ -183,12 +183,58 @@ class AdminScheduleController extends Controller
 
     public function events(Request $request): JsonResponse
     {
-        $rangeStart = Carbon::parse($request->query('start', now()->startOfWeek()))
-            ->startOfDay();
+        /*
+         * AUTO_TIMEZONE_ALL_ROLES_V2_EVENTS
+         *
+         * L'admin voit les événements DATÉS dans son fuseau local.
+         * La source métier reste Africa/Casablanca.
+         */
+        $viewerTimezone =
+            $request->user()?->effectiveTimezone()
+            ?? (string) config(
+                'app.timezone',
+                'Africa/Casablanca'
+            );
 
-        // FullCalendar envoie une date de fin exclusive.
-        $rangeEnd = Carbon::parse($request->query('end', now()->addWeeks(6)))
+        $sourceTimezone = (string) config(
+            'app.timezone',
+            'Africa/Casablanca'
+        );
+
+        /*
+         * TIMEZONE_SOURCE_CONVERSION_V2_2_ADMIN
+         *
+         * FullCalendar envoie la plage dans le fuseau du navigateur.
+         * Les règles du planning sont, elles, enregistrées dans le
+         * fuseau de référence Africa/Casablanca.
+         */
+        $viewerRangeStart = Carbon::parse(
+            $request->query(
+                'start',
+                now($viewerTimezone)
+                    ->startOfWeek()
+                    ->toIso8601String()
+            )
+        )->setTimezone($viewerTimezone);
+
+        $viewerRangeEnd = Carbon::parse(
+            $request->query(
+                'end',
+                now($viewerTimezone)
+                    ->addWeeks(6)
+                    ->toIso8601String()
+            )
+        )
+            ->setTimezone($viewerTimezone)
             ->subSecond();
+
+        $rangeStart = $viewerRangeStart
+            ->copy()
+            ->setTimezone($sourceTimezone);
+
+        $rangeEnd = $viewerRangeEnd
+            ->copy()
+            ->setTimezone($sourceTimezone);
 
         $query = Schedule::query()
             ->active()
@@ -217,19 +263,39 @@ class AdminScheduleController extends Controller
 
         foreach ($query->get() as $schedule) {
             foreach ($this->occurrenceDates($schedule, $rangeStart, $rangeEnd) as $date) {
-                $start = $date->copy()->setTimeFromTimeString(
-                    Carbon::parse($schedule->start_time)->format('H:i:s')
-                );
+                $start = $date
+                    ->copy()
+                    ->setTimezone($sourceTimezone)
+                    ->setTimeFromTimeString(
+                        Carbon::parse(
+                            $schedule->start_time
+                        )->format('H:i:s')
+                    );
 
-                $end = $date->copy()->setTimeFromTimeString(
-                    Carbon::parse($schedule->end_time)->format('H:i:s')
-                );
+                $end = $date
+                    ->copy()
+                    ->setTimezone($sourceTimezone)
+                    ->setTimeFromTimeString(
+                        Carbon::parse(
+                            $schedule->end_time
+                        )->format('H:i:s')
+                    );
+
+                $viewerStart =
+                    $start
+                        ->copy()
+                        ->setTimezone($viewerTimezone);
+
+                $viewerEnd =
+                    $end
+                        ->copy()
+                        ->setTimezone($viewerTimezone);
 
                 $events[] = [
                     'id' => $schedule->id . '-' . $date->format('Ymd'),
                     'title' => $this->eventTitle($schedule),
-                    'start' => $start->toIso8601String(),
-                    'end' => $end->toIso8601String(),
+                    'start' => $viewerStart->toIso8601String(),
+                    'end' => $viewerEnd->toIso8601String(),
                     'backgroundColor' => $this->eventColor($schedule),
                     'borderColor' => $this->eventColor($schedule),
                     'textColor' => '#ffffff',
@@ -239,6 +305,7 @@ class AdminScheduleController extends Controller
                         'slot_code' => $schedule->slot_code,
                         'teacher' => optional($schedule->prof)->name ?: 'Professeur non défini',
                         'recurrence' => $schedule->recurrence,
+                        'timezone' => $viewerTimezone,
                     ],
                 ];
             }

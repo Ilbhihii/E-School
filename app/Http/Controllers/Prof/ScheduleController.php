@@ -45,7 +45,9 @@ class ScheduleController extends Controller
             $scheduleService
                 ->forProfessor(
                     auth()->user(),
-                    now()->startOfDay(),
+                    now(
+                        auth()->user()->effectiveTimezone()
+                    )->startOfDay(),
                     35,
                     null,
                     $scheduleFilters

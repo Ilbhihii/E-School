@@ -46,6 +46,7 @@ use App\Http\Controllers\Prof\CourseController as ProfCourseController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\FrontController;
+use App\Http\Controllers\UserTimezoneController;
 use App\Http\Controllers\LiveAccessController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\VocalTestController;
@@ -297,6 +298,17 @@ Route::post(
     '/logout',
     [AuthenticatedSessionController::class, 'destroy']
 )->name('logout');
+
+/*
+ * AUTO_TIMEZONE_ALL_ROLES_V2_1
+ * Route commune : étudiant + professeur + administrateur.
+ */
+Route::middleware('auth')->post(
+    '/timezone',
+    [UserTimezoneController::class, 'update']
+)
+    ->middleware('throttle:10,1')
+    ->name('timezone.update');
 
 /*
 |--------------------------------------------------------------------------
