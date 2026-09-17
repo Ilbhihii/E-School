@@ -621,7 +621,7 @@
                 </span>
                 <div>
                     <h2>Informations du compte</h2>
-                    <p>Nom, e-mail, localisation et accès à la plateforme.</p>
+                    <p>Nom, e-mail, téléphone, localisation et accès à la plateforme.</p>
                 </div>
             </div>
         </header>
@@ -669,6 +669,28 @@
                             >
                         </div>
                         @error('email')
+                            <div class="se-field-error">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="se-label" for="phone">
+                            <i class="bi bi-telephone"></i>Numéro de téléphone
+                        </label>
+                        <div class="se-input-wrap">
+                            <input
+                                id="phone"
+                                type="tel"
+                                name="phone"
+                                value="{{ old('phone', $user->phone) }}"
+                                class="se-input"
+                                maxlength="30"
+                                inputmode="tel"
+                                autocomplete="tel"
+                                placeholder="+212 6 12 34 56 78"
+                            >
+                        </div>
+                        @error('phone')
                             <div class="se-field-error">{{ $message }}</div>
                         @enderror
                     </div>

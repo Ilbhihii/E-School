@@ -1123,6 +1123,11 @@ Route::middleware([
         )->name('class.students');
 
         Route::post(
+            '/absences/teams-preview',
+            [ProfController::class, 'teamsAttendancePreview']
+        )->name('absences.teams-preview');
+
+        Route::post(
             '/absences/store',
             [ProfController::class, 'storeAbsence']
         )->name('absences.store');
@@ -1548,3 +1553,30 @@ Route::get(
 |--------------------------------------------------------------------------
 */
 require __DIR__ . '/admin_plans.php';
+
+/*
+|--------------------------------------------------------------------------
+| Tests flexibles — admin
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get(
+        '/tests-flexibles',
+        [\App\Http\Controllers\Admin\FlexibleTestController::class, 'index']
+    )->name('flexible-tests.index');
+
+    Route::get(
+        '/tests-flexibles/create',
+        [\App\Http\Controllers\Admin\FlexibleTestController::class, 'create']
+    )->name('flexible-tests.create');
+
+    Route::post(
+        '/tests-flexibles',
+        [\App\Http\Controllers\Admin\FlexibleTestController::class, 'store']
+    )->name('flexible-tests.store');
+
+    Route::get(
+        '/tests-flexibles/{flexibleTest}/fichiers/{index}',
+        [\App\Http\Controllers\Admin\FlexibleTestController::class, 'downloadFile']
+    )->whereNumber('index')->name('flexible-tests.file');
+});

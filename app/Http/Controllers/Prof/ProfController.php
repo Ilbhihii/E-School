@@ -17,7 +17,9 @@ use App\Services\ProfessorPathService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProfController extends Controller
 {
@@ -496,6 +498,688 @@ class ProfController extends Controller
         return response()->json($students);
     }
 
+    /**
+     * Analyse un rapport de présence Microsoft Teams sans enregistrer
+     * immédiatement les absences.
+     *
+     * Le résultat préremplit l'appel et le professeur garde la validation
+     * finale avec le bouton "Enregistrer les présences".
+     */
+    public function teamsAttendancePreview(
+        Request $request
+    ) {
+        $validated = $request->validate([
+            'subject_id' => [
+                'required',
+                'integer',
+                'exists:subjects,id',
+            ],
+            'level_id' => [
+                'required',
+                'integer',
+                'exists:levels,id',
+            ],
+            'class_id' => [
+                'required',
+                'integer',
+                'exists:class_rooms,id',
+            ],
+            'date' => [
+                'required',
+                'date',
+            ],
+            'teams_report' => [
+                'required',
+                'file',
+                'max:10240',
+            ],
+        ], [
+            'teams_report.required' =>
+                'Ajoutez le rapport de présence téléchargé depuis Microsoft Teams.',
+            'teams_report.file' =>
+                'Le rapport Teams envoyé n’est pas un fichier valide.',
+            'teams_report.max' =>
+                'Le rapport Teams ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $extension = Str::lower(
+            (string) $request
+                ->file('teams_report')
+                ->getClientOriginalExtension()
+        );
+
+        if (!in_array($extension, ['csv', 'txt'], true)) {
+            throw ValidationException::withMessages([
+                'teams_report' =>
+                    'Utilisez le fichier .CSV téléchargé directement depuis Microsoft Teams.',
+            ]);
+        }
+
+        $scope =
+            $this->profPaths
+                ->findClassAssignment(
+                    auth()->id(),
+                    (int) $validated['subject_id'],
+                    (int) $validated['level_id'],
+                    (int) $validated['class_id']
+                );
+
+        abort_unless($scope, 403);
+
+        $allowedStudentIds =
+            $this->profPaths
+                ->studentIdsForAssignment($scope)
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+        $students = User::query()
+            ->where('role', User::ROLE_STUDENT)
+            ->whereIn('id', $allowedStudentIds)
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+            ]);
+
+        $participants =
+            $this->parseTeamsAttendanceReport(
+                $request
+                    ->file('teams_report')
+                    ->getRealPath()
+            );
+
+        if (empty($participants)) {
+            throw ValidationException::withMessages([
+                'teams_report' =>
+                    'Aucun participant n’a été trouvé dans ce rapport Teams. '
+                    . 'Téléchargez le rapport de présence après la réunion, puis réessayez.',
+            ]);
+        }
+
+        $matchedParticipantIndexes = [];
+
+        $rows = $students
+            ->map(function (User $student) use (
+                $participants,
+                &$matchedParticipantIndexes
+            ) {
+                $match = $this->matchTeamsParticipant(
+                    $student,
+                    $participants,
+                    $matchedParticipantIndexes
+                );
+
+                if ($match !== null) {
+                    $matchedParticipantIndexes[] =
+                        (int) $match['index'];
+                }
+
+                return [
+                    'id' => (int) $student->id,
+                    'name' => (string) $student->name,
+                    'email' => (string) $student->email,
+                    'present' => $match !== null,
+                    'teams_matched' => $match !== null,
+                    'teams_name' =>
+                        $match['participant']['name']
+                        ?? null,
+                    'teams_email' =>
+                        $match['participant']['email']
+                        ?? null,
+                    'duration' =>
+                        $match['participant']['duration']
+                        ?? null,
+                    'match_method' =>
+                        $match['method']
+                        ?? null,
+                ];
+            })
+            ->values();
+
+        $matchedIndexes = collect($matchedParticipantIndexes)
+            ->unique()
+            ->map(fn ($index) => (int) $index)
+            ->all();
+
+        $unmatchedTeams = collect($participants)
+            ->filter(
+                fn ($participant, $index) =>
+                    !in_array(
+                        (int) $index,
+                        $matchedIndexes,
+                        true
+                    )
+            )
+            ->map(
+                fn ($participant) => [
+                    'name' =>
+                        $participant['name']
+                        ?? '',
+                    'email' =>
+                        $participant['email']
+                        ?? '',
+                    'duration' =>
+                        $participant['duration']
+                        ?? '',
+                ]
+            )
+            ->values();
+
+        return response()->json([
+            'students' => $rows,
+            'summary' => [
+                'students_total' =>
+                    $students->count(),
+                'present_count' =>
+                    $rows
+                        ->where('present', true)
+                        ->count(),
+                'absent_count' =>
+                    $rows
+                        ->where('present', false)
+                        ->count(),
+                'teams_participants' =>
+                    count($participants),
+                'unmatched_teams_count' =>
+                    $unmatchedTeams->count(),
+            ],
+            'unmatched_teams' => $unmatchedTeams,
+            'message' =>
+                'Rapport Teams analysé. Vérifiez les statuts puis cliquez sur '
+                . '« Enregistrer les présences » pour valider définitivement.',
+        ]);
+    }
+
+    /**
+     * Lit les formats CSV/TSV actuellement utilisés par les rapports Teams.
+     * Le rapport contient généralement plusieurs sections :
+     * 1. Summary
+     * 2. Participants
+     * 3. In-Meeting Activities
+     *
+     * Nous utilisons uniquement la section Participants pour éviter
+     * les doublons liés aux reconnexions.
+     */
+    private function parseTeamsAttendanceReport(
+        string $path
+    ): array {
+        $raw = file_get_contents($path);
+
+        if ($raw === false || $raw === '') {
+            return [];
+        }
+
+        if (str_starts_with($raw, "\xFF\xFE")) {
+            $raw = mb_convert_encoding(
+                substr($raw, 2),
+                'UTF-8',
+                'UTF-16LE'
+            );
+        } elseif (str_starts_with($raw, "\xFE\xFF")) {
+            $raw = mb_convert_encoding(
+                substr($raw, 2),
+                'UTF-8',
+                'UTF-16BE'
+            );
+        } else {
+            $raw = preg_replace(
+                '/^\xEF\xBB\xBF/',
+                '',
+                $raw
+            ) ?? $raw;
+        }
+
+        $lines = preg_split(
+            '/\r\n|\n|\r/',
+            $raw
+        ) ?: [];
+
+        $headerIndex = null;
+        $delimiter = ',';
+        $headers = [];
+
+        foreach ($lines as $index => $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $candidateDelimiter =
+                $this->detectTeamsCsvDelimiter($line);
+
+            $cells = str_getcsv(
+                $line,
+                $candidateDelimiter
+            );
+
+            $normalized = array_map(
+                fn ($value) =>
+                    $this->normalizeTeamsHeader(
+                        (string) $value
+                    ),
+                $cells
+            );
+
+            $hasName =
+                in_array('name', $normalized, true)
+                || in_array('full name', $normalized, true)
+                || in_array('nom', $normalized, true)
+                || in_array('nom complet', $normalized, true);
+
+            $hasParticipantFields =
+                in_array('email', $normalized, true)
+                || in_array('e mail', $normalized, true)
+                || in_array('participant id upn', $normalized, true)
+                || in_array('first join', $normalized, true)
+                || in_array('premiere connexion', $normalized, true)
+                || in_array('in meeting duration', $normalized, true)
+                || in_array('duree', $normalized, true);
+
+            if ($hasName && $hasParticipantFields) {
+                $headerIndex = (int) $index;
+                $delimiter = $candidateDelimiter;
+                $headers = $normalized;
+                break;
+            }
+        }
+
+        if ($headerIndex === null) {
+            return [];
+        }
+
+        $nameIndex =
+            $this->teamsHeaderIndex(
+                $headers,
+                [
+                    'name',
+                    'full name',
+                    'nom',
+                    'nom complet',
+                ]
+            );
+
+        $emailIndex =
+            $this->teamsHeaderIndex(
+                $headers,
+                [
+                    'email',
+                    'e mail',
+                    'adresse e mail',
+                    'adresse email',
+                ]
+            );
+
+        $upnIndex =
+            $this->teamsHeaderIndex(
+                $headers,
+                [
+                    'participant id upn',
+                    'participant id',
+                    'id du participant upn',
+                    'identifiant du participant upn',
+                    'id participant',
+                ]
+            );
+
+        $durationIndex =
+            $this->teamsHeaderIndex(
+                $headers,
+                [
+                    'in meeting duration',
+                    'duration',
+                    'duree dans la reunion',
+                    'duree de la reunion',
+                    'duree',
+                ]
+            );
+
+        if ($nameIndex === null) {
+            return [];
+        }
+
+        $participants = [];
+
+        for (
+            $index = $headerIndex + 1;
+            $index < count($lines);
+            $index++
+        ) {
+            $line = trim(
+                (string) $lines[$index]
+            );
+
+            if ($line === '') {
+                if (!empty($participants)) {
+                    break;
+                }
+
+                continue;
+            }
+
+            $sectionLabel =
+                $this->normalizeTeamsHeader(
+                    $line
+                );
+
+            if (
+                !empty($participants)
+                && (
+                    str_starts_with(
+                        $sectionLabel,
+                        '3 in meeting'
+                    )
+                    || str_starts_with(
+                        $sectionLabel,
+                        '3 activites'
+                    )
+                    || str_starts_with(
+                        $sectionLabel,
+                        '3 activities'
+                    )
+                )
+            ) {
+                break;
+            }
+
+            $cells = str_getcsv(
+                $line,
+                $delimiter
+            );
+
+            $name = trim(
+                (string) (
+                    $cells[$nameIndex]
+                    ?? ''
+                )
+            );
+
+            if ($name === '') {
+                continue;
+            }
+
+            $email = $emailIndex !== null
+                ? trim(
+                    (string) (
+                        $cells[$emailIndex]
+                        ?? ''
+                    )
+                )
+                : '';
+
+            $upn = $upnIndex !== null
+                ? trim(
+                    (string) (
+                        $cells[$upnIndex]
+                        ?? ''
+                    )
+                )
+                : '';
+
+            $duration = $durationIndex !== null
+                ? trim(
+                    (string) (
+                        $cells[$durationIndex]
+                        ?? ''
+                    )
+                )
+                : '';
+
+            $email = Str::lower($email);
+            $upn = Str::lower($upn);
+
+            $participants[] = [
+                'name' => $name,
+                'email' =>
+                    filter_var(
+                        $email,
+                        FILTER_VALIDATE_EMAIL
+                    )
+                        ? $email
+                        : '',
+                'upn' =>
+                    filter_var(
+                        $upn,
+                        FILTER_VALIDATE_EMAIL
+                    )
+                        ? $upn
+                        : $upn,
+                'duration' => $duration,
+                'normalized_name' =>
+                    $this->normalizeTeamsPersonName(
+                        $name
+                    ),
+                'sorted_name' =>
+                    $this->normalizeTeamsPersonName(
+                        $name,
+                        true
+                    ),
+            ];
+        }
+
+        return $participants;
+    }
+
+    private function detectTeamsCsvDelimiter(
+        string $line
+    ): string {
+        $delimiters = [
+            "\t",
+            ';',
+            ',',
+        ];
+
+        $best = ',';
+        $bestCount = -1;
+
+        foreach ($delimiters as $delimiter) {
+            $count = substr_count(
+                $line,
+                $delimiter
+            );
+
+            if ($count > $bestCount) {
+                $best = $delimiter;
+                $bestCount = $count;
+            }
+        }
+
+        return $best;
+    }
+
+    private function normalizeTeamsHeader(
+        string $value
+    ): string {
+        $value = Str::lower(
+            Str::ascii(
+                trim($value)
+            )
+        );
+
+        $value = preg_replace(
+            '/[^a-z0-9]+/',
+            ' ',
+            $value
+        ) ?? $value;
+
+        return trim(
+            preg_replace(
+                '/\s+/',
+                ' ',
+                $value
+            ) ?? $value
+        );
+    }
+
+    private function teamsHeaderIndex(
+        array $headers,
+        array $candidates
+    ): ?int {
+        foreach ($candidates as $candidate) {
+            $index = array_search(
+                $candidate,
+                $headers,
+                true
+            );
+
+            if ($index !== false) {
+                return (int) $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeTeamsPersonName(
+        string $value,
+        bool $sortWords = false
+    ): string {
+        $value = preg_replace(
+            '/\([^)]*\)/u',
+            ' ',
+            $value
+        ) ?? $value;
+
+        $value = Str::lower(
+            Str::ascii($value)
+        );
+
+        $value = preg_replace(
+            '/[^a-z0-9]+/',
+            ' ',
+            $value
+        ) ?? $value;
+
+        $words = array_values(
+            array_filter(
+                preg_split(
+                    '/\s+/',
+                    trim($value)
+                ) ?: []
+            )
+        );
+
+        if ($sortWords) {
+            sort(
+                $words,
+                SORT_STRING
+            );
+        }
+
+        return implode(
+            ' ',
+            $words
+        );
+    }
+
+    private function matchTeamsParticipant(
+        User $student,
+        array $participants,
+        array $alreadyMatched
+    ): ?array {
+        $studentEmail = Str::lower(
+            trim(
+                (string) $student->email
+            )
+        );
+
+        if ($studentEmail !== '') {
+            foreach ($participants as $index => $participant) {
+                if (
+                    in_array(
+                        (int) $index,
+                        $alreadyMatched,
+                        true
+                    )
+                ) {
+                    continue;
+                }
+
+                if (
+                    $studentEmail
+                    === (
+                        $participant['email']
+                        ?? ''
+                    )
+                    || $studentEmail
+                    === (
+                        $participant['upn']
+                        ?? ''
+                    )
+                ) {
+                    return [
+                        'index' => (int) $index,
+                        'method' => 'email',
+                        'participant' =>
+                            $participant,
+                    ];
+                }
+            }
+        }
+
+        $studentName =
+            $this->normalizeTeamsPersonName(
+                (string) $student->name
+            );
+
+        $studentSortedName =
+            $this->normalizeTeamsPersonName(
+                (string) $student->name,
+                true
+            );
+
+        $candidateIndexes = [];
+
+        foreach ($participants as $index => $participant) {
+            if (
+                in_array(
+                    (int) $index,
+                    $alreadyMatched,
+                    true
+                )
+            ) {
+                continue;
+            }
+
+            $sameNormal =
+                $studentName !== ''
+                && $studentName
+                    === (
+                        $participant['normalized_name']
+                        ?? ''
+                    );
+
+            $sameSorted =
+                $studentSortedName !== ''
+                && $studentSortedName
+                    === (
+                        $participant['sorted_name']
+                        ?? ''
+                    );
+
+            if ($sameNormal || $sameSorted) {
+                $candidateIndexes[] =
+                    (int) $index;
+            }
+        }
+
+        /*
+         * Un nom n'est utilisé automatiquement que s'il donne
+         * une seule correspondance. Cela évite les faux positifs
+         * quand deux étudiants portent le même nom.
+         */
+        if (count($candidateIndexes) === 1) {
+            $index = $candidateIndexes[0];
+
+            return [
+                'index' => $index,
+                'method' => 'name',
+                'participant' =>
+                    $participants[$index],
+            ];
+        }
+
+        return null;
+    }
     public function storeAbsence(
         Request $request
     ) {

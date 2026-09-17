@@ -1013,7 +1013,7 @@
         <div class="users-toolbar">
             <label class="users-search" for="usersSearch">
                 <i class="bi bi-search"></i>
-                <input id="usersSearch" class="users-control" type="search" placeholder="Rechercher par nom ou e-mail..." autocomplete="off">
+                <input id="usersSearch" class="users-control" type="search" placeholder="Rechercher par nom, e-mail ou téléphone..." autocomplete="off">
             </label>
 
             <select id="usersRoleFilter" class="users-control" aria-label="Filtrer par rôle">
@@ -1069,7 +1069,7 @@
                         @endphp
 
                         <tr class="users-row"
-                            data-search="{{ mb_strtolower($user->name . ' ' . $user->email) }}"
+                            data-search="{{ mb_strtolower($user->name . ' ' . $user->email . ' ' . ($user->phone ?? '')) }}"
                             data-role="{{ $normalizedRole }}"
                             data-status="{{ $user->is_active ? 'active' : 'inactive' }}">
                             <td data-label="Utilisateur">
@@ -1078,6 +1078,9 @@
                                     <div class="users-person-copy">
                                         <strong>{{ $user->name }}</strong>
                                         <small>{{ $user->email }}</small>
+                                        @if(filled($user->phone))
+                                            <small><i class="bi bi-telephone-fill me-1"></i>{{ $user->phone }}</small>
+                                        @endif
                                     </div>
                                 </div>
                             </td>

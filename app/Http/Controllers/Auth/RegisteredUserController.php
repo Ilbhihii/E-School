@@ -40,6 +40,8 @@ class RegisteredUserController extends Controller
                 : '',
             'email' => $pendingRegistration['email']
                 ?? '',
+            'phone' => $pendingRegistration['phone']
+                ?? '',
             'country' => $pendingRegistration['country']
                 ?? '',
             'city' => $pendingRegistration['city']
@@ -68,9 +70,14 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'phone' => ['required', 'string', 'max:30', 'confirmed'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'country' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
+        ], [
+            'phone.required' => 'Le numéro de téléphone est obligatoire.',
+            'phone.confirmed' => 'La confirmation du numéro de téléphone ne correspond pas.',
+            'phone.max' => 'Le numéro de téléphone est trop long.',
         ]);
 
         $ip = $request->ip();
@@ -115,6 +122,7 @@ class RegisteredUserController extends Controller
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
+                    'phone' => trim((string) $request->phone),
                     'password' => Hash::make(
                         $request->password
                     ),

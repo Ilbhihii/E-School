@@ -586,6 +586,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:30'],
             'country' => ['required', 'string', 'max:120'],
             'city' => ['required', 'string', 'max:120'],
         ], [
@@ -606,6 +607,7 @@ class UserController extends Controller
             $student->forceFill([
                 'name' => trim($validated['name']),
                 'email' => mb_strtolower(trim($validated['email'])),
+                'phone' => filled($validated['phone'] ?? null) ? trim($validated['phone']) : null,
                 'password' => Hash::make($temporaryPassword),
                 'role' => User::ROLE_STUDENT,
                 'country' => trim($validated['country']),
@@ -853,6 +855,7 @@ class UserController extends Controller
                     'max:255',
                     'unique:users,email,' . $user->id,
                 ],
+                'phone' => ['nullable', 'string', 'max:30'],
                 'country' => ['nullable', 'string', 'max:120'],
                 'city' => ['nullable', 'string', 'max:120'],
                 'is_active' => ['required', 'boolean'],
@@ -865,6 +868,7 @@ class UserController extends Controller
 
             $user->name = trim($validated['name']);
             $user->email = mb_strtolower(trim($validated['email']));
+            $user->phone = filled($validated['phone'] ?? null) ? trim($validated['phone']) : null;
             $user->country = filled($validated['country'] ?? null)
                 ? trim($validated['country'])
                 : null;

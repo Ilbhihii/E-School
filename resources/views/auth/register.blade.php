@@ -62,6 +62,41 @@
                required>
     </div>
 
+    <!-- PHONE & CONFIRM PHONE -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 auth-field">
+            <label class="auth-label-3d">Numéro de téléphone</label>
+            <i class="bi bi-telephone"></i>
+            <input
+                type="tel"
+                name="phone"
+                class="auth-input-3d"
+                placeholder="+212 6 12 34 56 78"
+                value="{{ old('phone', $registrationPrefill['phone'] ?? '') }}"
+                maxlength="30"
+                inputmode="tel"
+                autocomplete="tel"
+                required
+            >
+        </div>
+
+        <div class="col-6 auth-field">
+            <label class="auth-label-3d">Confirmer le numéro</label>
+            <i class="bi bi-telephone-check"></i>
+            <input
+                type="tel"
+                name="phone_confirmation"
+                class="auth-input-3d"
+                placeholder="Retapez le numéro"
+                value="{{ old('phone_confirmation') }}"
+                maxlength="30"
+                inputmode="tel"
+                autocomplete="tel"
+                required
+            >
+        </div>
+    </div>
+
     <!-- PASSWORD -->
     <div class="mb-3 auth-field">
         <label class="auth-label-3d">Mot de passe</label>

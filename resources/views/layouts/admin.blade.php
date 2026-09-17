@@ -177,10 +177,11 @@
                 <div class="admin-nav-section">
                     <div class="admin-nav-heading">Évaluations</div>
 
+
                     <a href="{{ route('admin.vocal-tests.prompts.index') }}"
                        class="admin-nav-link {{ request()->routeIs('admin.vocal-tests.prompts*') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="bi bi-mic-fill"></i></span>
-                        <span class="nav-label">Tests vocaux</span>
+                        <span class="nav-icon"><i class="bi bi-ui-checks-grid"></i></span>
+                        <span class="nav-label">Tests <small>Vocal · Écrit · QCM</small></span>
                     </a>
 
                     <a href="{{ route('admin.vocal-tests.submissions.index') }}"

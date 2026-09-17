@@ -22,14 +22,26 @@ class ScheduledMaintenance
             return $next($request);
         }
 
+        /*
+         * L'annonce reste pilotée normalement par la case
+         * "Afficher l'annonce".
+         *
+         * Mais dès qu'une maintenance bloquante est réellement en cours,
+         * l'accueil doit impérativement informer le visiteur.
+         */
+        $blockingNow = $maintenance->isBlockingNow();
+
         View::share(
             'maintenanceNotice',
-            $maintenance->isAnnouncementVisible()
+            (
+                $maintenance->isAnnouncementVisible()
+                || $blockingNow
+            )
                 ? $maintenance
                 : null
         );
 
-        if (!$maintenance->isBlockingNow()) {
+        if (!$blockingNow) {
             return $next($request);
         }
 
@@ -39,6 +51,18 @@ class ScheduledMaintenance
             $user
             && method_exists($user, 'isAdmin')
             && $user->isAdmin()
+        ) {
+            return $next($request);
+        }
+
+        /*
+         * L'accueil public reste visible pendant la maintenance.
+         * Il reçoit maintenanceNotice via View::share() ci-dessus,
+         * donc le bandeau d'information est affiché.
+         */
+        if (
+            $request->routeIs('home')
+            || $request->is('/')
         ) {
             return $next($request);
         }

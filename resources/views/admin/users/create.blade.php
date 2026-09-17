@@ -478,6 +478,26 @@
                                 <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        <div class="col-12">
+                            <label class="field-label" for="phone">Numéro de téléphone</label>
+                            <div class="input-wrap">
+                                <input
+                                    id="phone"
+                                    type="tel"
+                                    name="phone"
+                                    value="{{ old('phone') }}"
+                                    class="student-input @error('phone') is-invalid @enderror"
+                                    placeholder="+212 6 12 34 56 78"
+                                    maxlength="30"
+                                    inputmode="tel"
+                                    autocomplete="tel"
+                                >
+                            </div>
+                            @error('phone')
+                                <div class="field-error">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 

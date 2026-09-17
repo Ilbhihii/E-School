@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Level;
 use App\Models\ClassRoom;
+use App\Models\FlexibleTest;
 use App\Models\Subject;
 use App\Models\VocalTestPrompt;
 use Illuminate\Http\Request;
@@ -14,50 +15,55 @@ class VocalTestPromptController extends Controller
 {
     public function index()
     {
-        $prompts = VocalTestPrompt::with(['subject', 'level', 'classRoom'])
+        /*
+         * Page unique des tests :
+         * - nouveaux tests flexibles (Vocal / Écrit / QCM)
+         * - anciens VocalTestPrompt qui n'ont pas encore d'équivalent flexible.
+         */
+        $flexibleTests = FlexibleTest::query()
+            ->with(['subject', 'level', 'classRoom'])
+            ->latest()
+            ->get();
+
+        $flexibleVocalKeys = $flexibleTests
+            ->where('response_type', FlexibleTest::RESPONSE_VOCAL)
+            ->mapWithKeys(function (FlexibleTest $test) {
+                $key = implode(':', [
+                    (int) $test->subject_id,
+                    (int) $test->level_id,
+                    (int) $test->class_id,
+                ]);
+
+                return [$key => true];
+            });
+
+        $prompts = VocalTestPrompt::query()
+            ->with(['subject', 'level', 'classRoom'])
             ->orderBy('subject_id')
             ->orderBy('level_id')
             ->orderBy('class_id')
-            ->paginate(20);
+            ->get()
+            ->reject(function (VocalTestPrompt $prompt) use ($flexibleVocalKeys) {
+                $key = implode(':', [
+                    (int) $prompt->subject_id,
+                    (int) $prompt->level_id,
+                    (int) $prompt->class_id,
+                ]);
 
-        return view('admin.vocal-tests.prompts.index', compact('prompts'));
+                return $flexibleVocalKeys->has($key);
+            })
+            ->values();
+
+        return view(
+            'admin.vocal-tests.prompts.index',
+            compact('prompts', 'flexibleTests')
+        );
     }
 
     public function create()
     {
-        /*
-         * Hiérarchie du formulaire :
-         *
-         * Matière
-         * └── Niveaux appartenant à cette matière
-         *     └── Classes appartenant au niveau
-         *         et liées à la matière
-         */
-        $promptHierarchy =
-            $this->buildPromptHierarchy();
-
-        $subjects = collect($promptHierarchy)
-            ->map(
-                fn (array $subject) =>
-                    (object) [
-                        'id' => $subject['id'],
-                        'name' => $subject['name'],
-                    ]
-            )
-            ->values();
-
-        $modes = VocalTestPrompt::getModes();
-
-        return view(
-            'admin.vocal-tests.prompts.create',
-            compact(
-                'subjects',
-                'promptHierarchy',
-                'modes'
-            )
-        );
+        return redirect()->route('admin.flexible-tests.create');
     }
-
     public function store(Request $request)
     {
         $validated = $request->validate([
