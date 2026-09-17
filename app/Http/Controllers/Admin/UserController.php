@@ -1301,6 +1301,10 @@ class UserController extends Controller
                 'class_user.subject_id',
                 'class_user.class_slot_id',
                 'class_user.schedule_id',
+                'class_user.student_slot_code',
+                'class_user.student_day_of_week',
+                'class_user.student_start_time',
+                'class_user.student_end_time',
                 'class_rooms.level_id',
                 'users.name as student_name',
                 'class_rooms.name as class_name',
@@ -1311,6 +1315,15 @@ class UserController extends Controller
             ->orderByDesc('class_user.id')
             ->get();
 
+        /*
+         * STUDENT_ALL_DAYS_TIME_SLOTS_V2
+         *
+         * Le créneau étudiant est maintenant indépendant de
+         * ProfessorAvailability et de schedules.
+         *
+         * Les anciennes lignes avec schedule_id restent lisibles
+         * en secours tant qu'elles n'ont pas été modifiées.
+         */
         $studentSchedulesById = Schedule::query()
             ->whereIn(
                 'id',
@@ -1327,19 +1340,95 @@ class UserController extends Controller
         $assignments->each(function ($assignment) use (
             $studentSchedulesById
         ) {
+            $assignment->student_slot_key = null;
+            $assignment->schedule_label = null;
+
+            if (
+                $assignment->student_day_of_week
+                && $assignment->student_start_time
+                && $assignment->student_end_time
+            ) {
+                $dayLabels = [
+                    1 => 'Lundi',
+                    2 => 'Mardi',
+                    3 => 'Mercredi',
+                    4 => 'Jeudi',
+                    5 => 'Vendredi',
+                    6 => 'Samedi',
+                    7 => 'Dimanche',
+                ];
+
+                $slotStarts = [
+                    1 => '09:00',
+                    2 => '10:30',
+                    3 => '12:00',
+                    4 => '13:30',
+                    5 => '15:00',
+                    6 => '16:30',
+                    7 => '18:00',
+                    8 => '19:30',
+                    9 => '21:00',
+                ];
+
+                $start = substr(
+                    (string) $assignment->student_start_time,
+                    0,
+                    5
+                );
+
+                $end = substr(
+                    (string) $assignment->student_end_time,
+                    0,
+                    5
+                );
+
+                $slotNumber = array_search(
+                    $start,
+                    $slotStarts,
+                    true
+                );
+
+                if ($slotNumber !== false) {
+                    $assignment->student_slot_key =
+                        (int) $assignment->student_day_of_week
+                        . ':'
+                        . (int) $slotNumber;
+                }
+
+                $assignment->schedule_label =
+                    trim(
+                        (string) $assignment->student_slot_code
+                    )
+                    . ' — '
+                    . (
+                        $dayLabels[
+                            (int) $assignment->student_day_of_week
+                        ] ?? 'Jour'
+                    )
+                    . ' · '
+                    . $start
+                    . ' – '
+                    . $end;
+
+                return;
+            }
+
+            /*
+             * Compatibilité avec les anciennes assignations V1.
+             */
             $schedule = $assignment->schedule_id
                 ? $studentSchedulesById->get(
                     (int) $assignment->schedule_id
                 )
                 : null;
 
-            $assignment->schedule_label = $schedule
-                ? $schedule->day_label
+            if ($schedule) {
+                $assignment->schedule_label =
+                    $schedule->day_label
                     . ' · '
-                    . $schedule->time_range_label
-                : null;
+                    . $schedule->time_range_label;
+            }
         });
-
         return view(
             'admin.assign-class',
             compact(
@@ -1382,8 +1471,8 @@ class UserController extends Controller
             ],
             'schedule_id' => [
                 'nullable',
-                'integer',
-                'exists:schedules,id',
+                'string',
+                'regex:/^[1-7]:[1-9]$/',
             ],
         ], [
             'class_slot_id.required' =>
@@ -1491,7 +1580,7 @@ class UserController extends Controller
         $studentSchedule =
             $this->resolveStudentSchedule(
                 $request->filled('schedule_id')
-                    ? (int) $request->schedule_id
+                    ? (string) $request->schedule_id
                     : null,
                 $subject,
                 $level,
@@ -1507,7 +1596,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Ce créneau horaire ne correspond pas au groupe sélectionné.',
+                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 09:00 et Dimanche 22:00.',
                 ]);
         }
 
@@ -1551,7 +1640,30 @@ class UserController extends Controller
                 'schedule_id'
             )
         ) {
-            $values['schedule_id'] = $studentSchedule?->id;
+            /*
+             * Le créneau étudiant V2 ne doit pas polluer
+             * l'emploi du temps/professeur.
+             */
+            $values['schedule_id'] = null;
+        }
+
+        if (
+            Schema::hasColumn(
+                'class_user',
+                'student_slot_code'
+            )
+        ) {
+            $values['student_slot_code'] =
+                $studentSchedule?->slot_code;
+
+            $values['student_day_of_week'] =
+                $studentSchedule?->day_of_week;
+
+            $values['student_start_time'] =
+                $studentSchedule?->start_time;
+
+            $values['student_end_time'] =
+                $studentSchedule?->end_time;
         }
 
         DB::table('class_user')
@@ -1612,8 +1724,8 @@ class UserController extends Controller
             ],
             'schedule_id' => [
                 'nullable',
-                'integer',
-                'exists:schedules,id',
+                'string',
+                'regex:/^[1-7]:[1-9]$/',
             ],
         ]);
 
@@ -1718,7 +1830,7 @@ class UserController extends Controller
         $studentSchedule =
             $this->resolveStudentSchedule(
                 $request->filled('schedule_id')
-                    ? (int) $request->schedule_id
+                    ? (string) $request->schedule_id
                     : null,
                 $subject,
                 $level,
@@ -1734,7 +1846,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Ce créneau horaire ne correspond pas au groupe sélectionné.',
+                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 09:00 et Dimanche 22:00.',
                 ]);
         }
 
@@ -1777,7 +1889,30 @@ class UserController extends Controller
                 'schedule_id'
             )
         ) {
-            $values['schedule_id'] = $studentSchedule?->id;
+            /*
+             * Le créneau étudiant V2 ne doit pas polluer
+             * l'emploi du temps/professeur.
+             */
+            $values['schedule_id'] = null;
+        }
+
+        if (
+            Schema::hasColumn(
+                'class_user',
+                'student_slot_code'
+            )
+        ) {
+            $values['student_slot_code'] =
+                $studentSchedule?->slot_code;
+
+            $values['student_day_of_week'] =
+                $studentSchedule?->day_of_week;
+
+            $values['student_start_time'] =
+                $studentSchedule?->start_time;
+
+            $values['student_end_time'] =
+                $studentSchedule?->end_time;
         }
 
         DB::table('class_user')
@@ -1830,145 +1965,254 @@ class UserController extends Controller
     }
 
     /**
-     * Créneaux horaires disponibles pour chaque Groupe (ClassSlot).
+     * STUDENT_ALL_DAYS_TIME_SLOTS_V2
      *
-     * Groupe = class_slot_id.
-     * Créneau horaire = schedule_id.
+     * Génère les créneaux étudiants pour chaque matière active.
+     *
+     * AUCUNE dépendance avec :
+     * - les disponibilités des professeurs ;
+     * - ProfessorAvailability ;
+     * - les lignes schedules.
+     *
+     * Chaque matière obtient automatiquement 63 possibilités :
+     * 7 jours x 9 créneaux.
      */
     private function studentScheduleMap(
         array $assignmentHierarchy
     ): array {
-        $slotDefinitions = collect();
+        $dayLabels = [
+            1 => 'Lundi',
+            2 => 'Mardi',
+            3 => 'Mercredi',
+            4 => 'Jeudi',
+            5 => 'Vendredi',
+            6 => 'Samedi',
+            7 => 'Dimanche',
+        ];
 
-        foreach ($assignmentHierarchy as $subject) {
-            foreach (($subject['levels'] ?? []) as $level) {
-                foreach (($level['classes'] ?? []) as $classRoom) {
-                    foreach (($classRoom['slots'] ?? []) as $slot) {
-                        $slotDefinitions->push([
-                            'slot_id' =>
-                                (int) $slot['id'],
-                            'slot_code' =>
-                                strtoupper(
-                                    trim(
-                                        (string) (
-                                            $slot['code']
-                                            ?? $slot['name']
-                                            ?? ''
-                                        )
-                                    )
-                                ),
-                            'subject_id' =>
-                                (int) $subject['id'],
-                            'level_id' =>
-                                (int) $level['id'],
-                            'class_id' =>
-                                (int) $classRoom['id'],
-                        ]);
+        $dayCodes = [
+            1 => 'LU',
+            2 => 'MA',
+            3 => 'ME',
+            4 => 'JE',
+            5 => 'VE',
+            6 => 'SA',
+            7 => 'DI',
+        ];
+
+        /*
+         * 09:00 -> 22:00 pour CHAQUE jour.
+         * Les 8 premiers créneaux durent 1h30.
+         * Le dernier ferme exactement à 22:00.
+         */
+        $timeSlots = [
+            1 => ['09:00', '10:30'],
+            2 => ['10:30', '12:00'],
+            3 => ['12:00', '13:30'],
+            4 => ['13:30', '15:00'],
+            5 => ['15:00', '16:30'],
+            6 => ['16:30', '18:00'],
+            7 => ['18:00', '19:30'],
+            8 => ['19:30', '21:00'],
+            9 => ['21:00', '22:00'],
+        ];
+
+        return collect($assignmentHierarchy)
+            ->mapWithKeys(function (array $subject) use (
+                $dayLabels,
+                $dayCodes,
+                $timeSlots
+            ) {
+                $subjectName =
+                    (string) ($subject['name'] ?? '');
+
+                /*
+                 * IMPORTANT :
+                 * strtoupper AVANT preg_replace.
+                 * Arabe => AR (et non AX).
+                 */
+                $normalized =
+                    preg_replace(
+                        '/[^A-Z0-9]/',
+                        '',
+                        strtoupper(
+                            Str::ascii($subjectName)
+                        )
+                    );
+
+                $subjectCode =
+                    substr(
+                        (string) $normalized,
+                        0,
+                        2
+                    );
+
+                if ($subjectCode === '') {
+                    $subjectCode = 'MT';
+                } elseif (strlen($subjectCode) === 1) {
+                    $subjectCode .= 'X';
+                }
+
+                $options = [];
+
+                foreach ($dayLabels as $day => $dayLabel) {
+                    foreach ($timeSlots as $number => $time) {
+                        [$start, $end] = $time;
+
+                        $displayCode =
+                            $dayCodes[$day]
+                            . $subjectCode
+                            . $number;
+
+                        $options[] = [
+                            /*
+                             * On conserve la clé "id" pour le JS
+                             * existant, mais ce n'est PAS un
+                             * schedules.id.
+                             */
+                            'id' =>
+                                $day . ':' . $number,
+                            'code' =>
+                                $displayCode,
+                            'label' =>
+                                $displayCode
+                                . ' — '
+                                . $dayLabel
+                                . ' · '
+                                . $start
+                                . ' – '
+                                . $end,
+                            'day' =>
+                                $dayLabel,
+                            'time' =>
+                                $start . ' – ' . $end,
+                        ];
                     }
                 }
-            }
-        }
-
-        if ($slotDefinitions->isEmpty()) {
-            return [];
-        }
-
-        $schedules = Schedule::query()
-            ->active()
-            ->where(
-                'recurrence',
-                Schedule::RECURRENCE_WEEKLY
-            )
-            ->whereNotNull('slot_code')
-            ->orderBy('day_of_week')
-            ->orderBy('start_time')
-            ->get();
-
-        return $slotDefinitions
-            ->mapWithKeys(function (
-                array $slot
-            ) use ($schedules) {
-                $matches = $schedules
-                    ->filter(function (
-                        Schedule $schedule
-                    ) use ($slot) {
-                        return
-                            (int) $schedule->subject_id
-                                === $slot['subject_id']
-                            && (int) $schedule->level_id
-                                === $slot['level_id']
-                            && (int) $schedule->class_id
-                                === $slot['class_id']
-                            && strtoupper(
-                                trim(
-                                    (string) $schedule->slot_code
-                                )
-                            ) === $slot['slot_code'];
-                    })
-                    ->map(
-                        fn (Schedule $schedule) => [
-                            'id' =>
-                                (int) $schedule->id,
-                            'label' =>
-                                $schedule->day_label
-                                . ' · '
-                                . $schedule->time_range_label,
-                        ]
-                    )
-                    ->values()
-                    ->all();
 
                 return [
-                    (string) $slot['slot_id'] =>
-                        $matches,
+                    (string) $subject['id'] =>
+                        $options,
                 ];
             })
             ->all();
     }
 
     /**
-     * Vérifie qu'un créneau horaire appartient exactement
-     * au parcours + Groupe sélectionnés.
+     * Convertit la clé synthétique "jour:créneau"
+     * en données enregistrables dans class_user.
+     *
+     * Exemple :
+     * matière Arabe + "1:1"
+     * => LUAR1 — Lundi · 09:00 – 10:30.
      */
     private function resolveStudentSchedule(
-        ?int $scheduleId,
+        ?string $scheduleKey,
         Subject $subject,
         Level $level,
         ClassRoom $classRoom,
         ClassSlot $slot
-    ): ?Schedule {
-        if (!$scheduleId) {
+    ): ?object {
+        if (!$scheduleKey) {
             return null;
         }
 
-        return Schedule::query()
-            ->active()
-            ->whereKey($scheduleId)
-            ->where(
-                'recurrence',
-                Schedule::RECURRENCE_WEEKLY
+        if (
+            !preg_match(
+                '/^([1-7]):([1-9])$/',
+                $scheduleKey,
+                $matches
             )
-            ->where(
-                'subject_id',
-                $subject->id
-            )
-            ->where(
-                'level_id',
-                $level->id
-            )
-            ->where(
-                'class_id',
-                $classRoom->id
-            )
-            ->whereRaw(
-                'UPPER(TRIM(slot_code)) = ?',
-                [
-                    strtoupper(
-                        trim((string) $slot->code)
-                    ),
-                ]
-            )
-            ->first();
+        ) {
+            return null;
+        }
+
+        $day = (int) $matches[1];
+        $number = (int) $matches[2];
+
+        $dayLabels = [
+            1 => 'Lundi',
+            2 => 'Mardi',
+            3 => 'Mercredi',
+            4 => 'Jeudi',
+            5 => 'Vendredi',
+            6 => 'Samedi',
+            7 => 'Dimanche',
+        ];
+
+        $dayCodes = [
+            1 => 'LU',
+            2 => 'MA',
+            3 => 'ME',
+            4 => 'JE',
+            5 => 'VE',
+            6 => 'SA',
+            7 => 'DI',
+        ];
+
+        $timeSlots = [
+            1 => ['09:00', '10:30'],
+            2 => ['10:30', '12:00'],
+            3 => ['12:00', '13:30'],
+            4 => ['13:30', '15:00'],
+            5 => ['15:00', '16:30'],
+            6 => ['16:30', '18:00'],
+            7 => ['18:00', '19:30'],
+            8 => ['19:30', '21:00'],
+            9 => ['21:00', '22:00'],
+        ];
+
+        if (!isset($timeSlots[$number])) {
+            return null;
+        }
+
+        [$start, $end] =
+            $timeSlots[$number];
+
+        $normalized =
+            preg_replace(
+                '/[^A-Z0-9]/',
+                '',
+                strtoupper(
+                    Str::ascii(
+                        (string) $subject->name
+                    )
+                )
+            );
+
+        $subjectCode =
+            substr(
+                (string) $normalized,
+                0,
+                2
+            );
+
+        if ($subjectCode === '') {
+            $subjectCode = 'MT';
+        } elseif (strlen($subjectCode) === 1) {
+            $subjectCode .= 'X';
+        }
+
+        $slotCode =
+            $dayCodes[$day]
+            . $subjectCode
+            . $number;
+
+        return (object) [
+            'id' => null,
+            'slot_code' =>
+                $slotCode,
+            'day_of_week' =>
+                $day,
+            'day_label' =>
+                $dayLabels[$day],
+            'start_time' =>
+                $start . ':00',
+            'end_time' =>
+                $end . ':00',
+            'time_range_label' =>
+                $start . ' – ' . $end,
+        ];
     }
     /**
      * Hiérarchie de la page /admin/prof-assignments.

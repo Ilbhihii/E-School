@@ -21,7 +21,7 @@
 
         <div class="subtitle">
             Choisissez le parcours pédagogique, puis le Groupe.
-            Le Groupe (A1, A2, D1, I1…) est distinct du créneau horaire réel (jour + heure).
+            Le Groupe reste indépendant. Le créneau horaire est filtré automatiquement selon la matière sélectionnée, du lundi au dimanche entre 09:00 et 22:00.
         </div>
     </div>
 </div>
@@ -377,14 +377,13 @@
                                     disabled
                                 >
                                     <option value="">
-                                        Choisissez d’abord un groupe
+                                        Choisissez d’abord une matière
                                     </option>
                                 </select>
 
                                 <small class="assignment-help">
-                                    Jour + heure réellement planifiés.
-                                    S'il n'existe encore aucun horaire pour ce
-                                    groupe, vous pouvez laisser « Horaire à définir ».
+                                    Dès que vous choisissez une matière, seuls ses créneaux sont proposés.
+                                    Plage autorisée : lundi à dimanche, de 09:00 à 22:00.
                                 </small>
 
                                 @error('schedule_id')
@@ -513,7 +512,7 @@
                                     </td>
 
                                     <td>
-                                        @if($assignment->schedule_id && $assignment->schedule_label)
+                                        @if($assignment->schedule_label)
                                             <span class="assignment-time-slot">
                                                 <i class="bi bi-clock"></i>
                                                 {{ $assignment->schedule_label }}
@@ -538,7 +537,7 @@
                                                     {{ $assignment->level_id ?: 'null' }},
                                                     {{ $assignment->class_id }},
                                                     {{ $assignment->class_slot_id ?: 'null' }},
-                                                    {{ $assignment->schedule_id ?: 'null' }},
+                                                    @json($assignment->student_slot_key ?? ''),
                                                     {{ $assignment->pivot_id }}
                                                 )"
                                             >
@@ -792,12 +791,12 @@
                         disabled
                     >
                         <option value="">
-                            Choisissez d’abord un groupe
+                            Choisissez d’abord une matière
                         </option>
                     </select>
 
                     <small class="assignment-help">
-                        Jour + heure du cours. Peut rester à définir.
+                        Créneaux de la matière sélectionnée uniquement, du lundi au dimanche entre 09:00 et 22:00.
                     </small>
                 </div>
             </div>
@@ -1064,6 +1063,7 @@
 }
 </style>
 
+<!-- STUDENT_ALL_DAYS_TIME_SLOTS_V2_VIEW -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const hierarchy = @json($assignmentHierarchy);
@@ -1123,33 +1123,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 String(classRoom.id) === String(classId)
         ) || null;
 
+    /*
+     * Le créneau étudiant dépend UNIQUEMENT de la matière.
+     * Le Groupe est volontairement indépendant.
+     */
     const fillTimeSlots = (
-        groupSelect,
+        subjectSelect,
         timeSelect,
         selectedTimeId = ''
     ) => {
-        const groupId = String(
-            groupSelect.value || ''
+        const subjectId = String(
+            subjectSelect.value || ''
         );
 
-        if (!groupId) {
+        if (!subjectId) {
             resetSelect(
                 timeSelect,
-                'Choisissez d’abord un groupe',
+                'Choisissez d’abord une matière',
                 true
             );
             return;
         }
 
         const times =
-            scheduleMap[groupId] || [];
+            scheduleMap[subjectId] || [];
 
         timeSelect.replaceChildren(
             createOption(
                 '',
                 times.length
-                    ? 'Horaire à définir / aucun créneau principal'
-                    : 'Aucun horaire planifié pour ce groupe'
+                    ? 'Horaire à définir'
+                    : 'Aucun créneau planifié pour cette matière'
             )
         );
 
@@ -1158,14 +1162,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 createOption(
                     item.id,
                     item.label,
-                    selectedTimeId
+                    selectedTimeId,
+                    {
+                        code: item.code || '',
+                        day: item.day || '',
+                        time: item.time || '',
+                    }
                 )
             );
         });
 
         /*
-         * Même sans horaire existant, le select reste utilisable
-         * avec la valeur vide : le Groupe peut être assigné seul.
+         * Même sans créneau existant, l'assignation au Groupe
+         * reste possible avec "Horaire à définir".
          */
         timeSelect.disabled = false;
         timeSelect.value =
@@ -1214,13 +1223,12 @@ document.addEventListener('DOMContentLoaded', () => {
             !classRoom
         );
 
-        resetSelect(
-            timeSelect,
-            'Choisissez d’abord un groupe',
-            true
-        );
-
         if (!classRoom) {
+            fillTimeSlots(
+                subjectSelect,
+                timeSelect,
+                selectedTimeId
+            );
             return;
         }
 
@@ -1232,6 +1240,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 groupSelect,
                 'Aucun groupe pour cette classe',
                 true
+            );
+
+            fillTimeSlots(
+                subjectSelect,
+                timeSelect,
+                selectedTimeId
             );
             return;
         }
@@ -1260,13 +1274,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? String(selectedGroupId)
                 : '';
 
-        if (selectedGroupId) {
-            fillTimeSlots(
-                groupSelect,
-                timeSelect,
-                selectedTimeId
-            );
-        }
+        fillTimeSlots(
+            subjectSelect,
+            timeSelect,
+            selectedTimeId
+        );
     };
 
     const fillClasses = (
@@ -1302,10 +1314,10 @@ document.addEventListener('DOMContentLoaded', () => {
             true
         );
 
-        resetSelect(
+        fillTimeSlots(
+            subjectSelect,
             timeSelect,
-            'Choisissez d’abord un groupe',
-            true
+            selectedTimeId
         );
 
         if (!level) {
@@ -1375,10 +1387,10 @@ document.addEventListener('DOMContentLoaded', () => {
             true
         );
 
-        resetSelect(
+        fillTimeSlots(
+            subjectSelect,
             timeSelect,
-            'Choisissez d’abord un groupe',
-            true
+            selectedTimeId
         );
 
         if (!subject) {
@@ -1565,15 +1577,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     );
 
+    /*
+     * Le changement de Groupe ne recharge PAS les créneaux :
+     * Groupe et créneau sont deux informations séparées.
+     */
     mainGroup.addEventListener(
         'change',
-        () => {
-            fillTimeSlots(
-                mainGroup,
-                mainTime
-            );
-            updatePath();
-        }
+        updatePath
     );
 
     mainTime.addEventListener(
@@ -1610,6 +1620,11 @@ document.addEventListener('DOMContentLoaded', () => {
             oldClassId,
             oldGroupId,
             oldTimeId
+        );
+    } else {
+        fillTimeSlots(
+            mainSubject,
+            mainTime
         );
     }
 
@@ -1682,14 +1697,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     );
 
+    /*
+     * Le Groupe ne modifie pas le créneau étudiant.
+     */
     editGroup.addEventListener(
         'change',
-        () => {
-            fillTimeSlots(
-                editGroup,
-                editTime
-            );
-        }
+        () => {}
     );
 
     window.openStudentAssignmentEdit = (
