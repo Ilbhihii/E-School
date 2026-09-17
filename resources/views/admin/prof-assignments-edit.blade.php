@@ -41,8 +41,10 @@
 @endif
 
 @php
-    $initialAssignments = old(
-        'assignments',
+    $professorAvailabilities =
+        $professorAvailabilities ?? [];
+
+    $initialAssignments = old(        'assignments',
         $selectedAssignments
     );
 @endphp

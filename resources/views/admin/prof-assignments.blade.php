@@ -46,6 +46,9 @@
 @endif
 
 @php
+    $professorAvailabilities =
+        $professorAvailabilities ?? [];
+
     $initialAssignments = old('assignments');
 
     if (!is_array($initialAssignments) || empty($initialAssignments)) {

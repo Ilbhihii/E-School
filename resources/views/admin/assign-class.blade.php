@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation étudiants')
 @section(
     'breadcrumb',
-    'Étudiants → Matière → Niveau → Classe → Créneau'
+    'Étudiants → Matière → Niveau → Classe → Groupe → Créneau horaire'
 )
 
 @section('content')
@@ -20,8 +20,8 @@
         </h1>
 
         <div class="subtitle">
-            Choisissez la matière, le niveau et la classe.
-            Le créneau est généré automatiquement depuis la structure Matière → Niveau → Classe. Aucun emploi du temps n’est nécessaire pour assigner l’étudiant.
+            Choisissez le parcours pédagogique, puis le Groupe.
+            Le Groupe (A1, A2, D1, I1…) est distinct du créneau horaire réel (jour + heure).
         </div>
     </div>
 </div>
@@ -67,7 +67,7 @@
                     </h4>
 
                     <p class="assignment-card-subtitle">
-                        Matière → Niveau → Classe → Créneau
+                        Matière → Niveau → Classe → Groupe → Créneau horaire
                     </p>
                 </div>
             </div>
@@ -151,8 +151,14 @@
 
                             <i class="bi bi-chevron-right"></i>
 
-                            <span id="studentPathSchedule">
-                                Créneau
+                            <span id="studentPathGroup">
+                                Groupe
+                            </span>
+
+                            <i class="bi bi-chevron-right"></i>
+
+                            <span id="studentPathTime">
+                                Créneau horaire
                             </span>
                         </div>
 
@@ -303,7 +309,7 @@
                                     class="adm-form-label"
                                     for="assignment_class_slot_id"
                                 >
-                                    Créneau / groupe
+                                    Groupe
                                     <span class="assignment-required">*</span>
                                 </label>
 
@@ -333,14 +339,55 @@
                                 </div>
 
                                 <small class="assignment-help">
-                                    Ces créneaux sont créés avec la classe :
+                                    Groupe pédagogique :
                                     Débutant → D1 à D4,
                                     Intermédiaire → I1 à I4,
                                     Avancé → A1 à A4.
-                                    Ils existent même si aucun horaire n’est encore défini.
                                 </small>
 
                                 @error('class_slot_id')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="assignment-step assignment-time-step">
+                            <span class="assignment-step-number">
+                                5
+                            </span>
+
+                            <div class="adm-form-group mb-0">
+                                <label
+                                    class="adm-form-label"
+                                    for="assignment_schedule_id"
+                                >
+                                    Créneau horaire
+                                    <span class="assignment-optional">
+                                        (optionnel)
+                                    </span>
+                                </label>
+
+                                <select
+                                    name="schedule_id"
+                                    id="assignment_schedule_id"
+                                    class="adm-form-select
+                                        @error('schedule_id') error @enderror"
+                                    disabled
+                                >
+                                    <option value="">
+                                        Choisissez d’abord un groupe
+                                    </option>
+                                </select>
+
+                                <small class="assignment-help">
+                                    Jour + heure réellement planifiés.
+                                    S'il n'existe encore aucun horaire pour ce
+                                    groupe, vous pouvez laisser « Horaire à définir ».
+                                </small>
+
+                                @error('schedule_id')
                                     <div class="adm-form-error">
                                         {{ $message }}
                                     </div>
@@ -392,7 +439,8 @@
                                 <th>Matière</th>
                                 <th>Niveau</th>
                                 <th>Classe</th>
-                                <th>Créneau</th>
+                                <th>Groupe</th>
+                                <th>Créneau horaire</th>
                                 <th style="text-align:right;">
                                     Actions
                                 </th>
@@ -459,7 +507,20 @@
                                             </span>
                                         @else
                                             <span class="assignment-slot-missing">
-                                                Créneau non défini
+                                                Groupe non défini
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    <td>
+                                        @if($assignment->schedule_id && $assignment->schedule_label)
+                                            <span class="assignment-time-slot">
+                                                <i class="bi bi-clock"></i>
+                                                {{ $assignment->schedule_label }}
+                                            </span>
+                                        @else
+                                            <span class="assignment-slot-missing">
+                                                Horaire à définir
                                             </span>
                                         @endif
                                     </td>
@@ -477,6 +538,7 @@
                                                     {{ $assignment->level_id ?: 'null' }},
                                                     {{ $assignment->class_id }},
                                                     {{ $assignment->class_slot_id ?: 'null' }},
+                                                    {{ $assignment->schedule_id ?: 'null' }},
                                                     {{ $assignment->pivot_id }}
                                                 )"
                                             >
@@ -521,7 +583,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6">
+                                    <td colspan="7">
                                         <div class="adm-empty">
                                             <div
                                                 class="adm-empty-icon"
@@ -692,7 +754,7 @@
                         class="adm-form-label"
                         for="edit_assignment_class_slot_id"
                     >
-                        Créneau
+                        Groupe
                     </label>
 
                     <select
@@ -708,7 +770,34 @@
                     </select>
 
                     <small class="assignment-help">
-                        Créneau structurel de la classe. Il ne dépend pas encore du jour ni de l’heure.
+                        Groupe pédagogique : A1, A2, D1, I1…
+                    </small>
+                </div>
+
+                <div class="adm-form-group">
+                    <label
+                        class="adm-form-label"
+                        for="edit_assignment_schedule_id"
+                    >
+                        Créneau horaire
+                        <span class="assignment-optional">
+                            (optionnel)
+                        </span>
+                    </label>
+
+                    <select
+                        name="schedule_id"
+                        id="edit_assignment_schedule_id"
+                        class="adm-form-select"
+                        disabled
+                    >
+                        <option value="">
+                            Choisissez d’abord un groupe
+                        </option>
+                    </select>
+
+                    <small class="assignment-help">
+                        Jour + heure du cours. Peut rester à définir.
                     </small>
                 </div>
             </div>
@@ -949,11 +1038,36 @@
     letter-spacing: 0.04em;
 }
 
+.assignment-optional {
+    color: var(--adm-text-muted);
+    font-size: .56rem;
+    font-weight: 600;
+}
+
+.assignment-time-step {
+    border-color: rgba(168,85,247,0.14);
+    background: rgba(126,34,206,0.035);
+}
+
+.assignment-time-slot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    color: #C4B5FD;
+    border: 1px solid rgba(167,139,250,0.18);
+    border-radius: 9px;
+    background: rgba(124,58,237,0.08);
+    font-size: .60rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const hierarchy = @json($assignmentHierarchy);
+    const scheduleMap = @json($studentScheduleMap ?? []);
 
     const createOption = (
         value,
@@ -975,38 +1089,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return option;
     };
 
-    const findSubject = subjectId =>
-        hierarchy.find(
-            subject =>
-                String(subject.id) === String(subjectId)
-        );
-
-    const findLevel = (subject, levelId) => {
-        if (!subject) {
-            return null;
-        }
-
-        return subject.levels.find(
-            level =>
-                String(level.id) === String(levelId)
-        );
-    };
-
-    const findClass = (
-        subject,
-        level,
-        classId
-    ) => {
-        if (!subject || !level) {
-            return null;
-        }
-
-        return level.classes.find(
-            classRoom =>
-                String(classRoom.id) === String(classId)
-        );
-    };
-
     const resetSelect = (
         select,
         placeholder,
@@ -1019,75 +1101,192 @@ document.addEventListener('DOMContentLoaded', () => {
         select.disabled = disabled;
     };
 
-    const fillSlots = (
+    const findSubject = subjectId =>
+        hierarchy.find(
+            subject =>
+                String(subject.id) === String(subjectId)
+        );
+
+    const findLevel = (subject, levelId) =>
+        subject?.levels?.find(
+            level =>
+                String(level.id) === String(levelId)
+        ) || null;
+
+    const findClass = (
+        subject,
+        level,
+        classId
+    ) =>
+        level?.classes?.find(
+            classRoom =>
+                String(classRoom.id) === String(classId)
+        ) || null;
+
+    const fillTimeSlots = (
+        groupSelect,
+        timeSelect,
+        selectedTimeId = ''
+    ) => {
+        const groupId = String(
+            groupSelect.value || ''
+        );
+
+        if (!groupId) {
+            resetSelect(
+                timeSelect,
+                'Choisissez d’abord un groupe',
+                true
+            );
+            return;
+        }
+
+        const times =
+            scheduleMap[groupId] || [];
+
+        timeSelect.replaceChildren(
+            createOption(
+                '',
+                times.length
+                    ? 'Horaire à définir / aucun créneau principal'
+                    : 'Aucun horaire planifié pour ce groupe'
+            )
+        );
+
+        times.forEach(item => {
+            timeSelect.appendChild(
+                createOption(
+                    item.id,
+                    item.label,
+                    selectedTimeId
+                )
+            );
+        });
+
+        /*
+         * Même sans horaire existant, le select reste utilisable
+         * avec la valeur vide : le Groupe peut être assigné seul.
+         */
+        timeSelect.disabled = false;
+        timeSelect.value =
+            selectedTimeId
+                ? String(selectedTimeId)
+                : '';
+
+        if (
+            selectedTimeId
+            && !timeSelect.value
+        ) {
+            timeSelect.value = '';
+        }
+    };
+
+    const fillGroups = (
         subjectSelect,
         levelSelect,
         classSelect,
-        scheduleSelect,
-        selectedScheduleId = ''
+        groupSelect,
+        timeSelect,
+        selectedGroupId = '',
+        selectedTimeId = ''
     ) => {
-        const subject = findSubject(subjectSelect.value);
-        const level = findLevel(subject, levelSelect.value);
-        const classRoom = findClass(
-            subject,
-            level,
-            classSelect.value
+        const subject =
+            findSubject(subjectSelect.value);
+
+        const level =
+            findLevel(
+                subject,
+                levelSelect.value
+            );
+
+        const classRoom =
+            findClass(
+                subject,
+                level,
+                classSelect.value
+            );
+
+        resetSelect(
+            groupSelect,
+            classRoom
+                ? 'Sélectionner un groupe'
+                : 'Choisissez d’abord une classe',
+            !classRoom
         );
 
         resetSelect(
-            scheduleSelect,
-            classRoom
-                ? 'Sélectionner un créneau'
-                : 'Choisissez d’abord une classe',
-            !classRoom
+            timeSelect,
+            'Choisissez d’abord un groupe',
+            true
         );
 
         if (!classRoom) {
             return;
         }
 
-        const slots = classRoom.slots || [];
+        const groups =
+            classRoom.slots || [];
 
-        if (slots.length === 0) {
+        if (!groups.length) {
             resetSelect(
-                scheduleSelect,
-                'Aucun créneau généré pour cette classe',
+                groupSelect,
+                'Aucun groupe pour cette classe',
                 true
             );
-
             return;
         }
 
-        slots.forEach(slot => {
-            scheduleSelect.appendChild(
+        groups.forEach(group => {
+            groupSelect.appendChild(
                 createOption(
-                    slot.id,
-                    slot.code || slot.name,
-                    selectedScheduleId,
+                    group.id,
+                    group.code
+                        || group.name
+                        || 'Groupe',
+                    selectedGroupId,
                     {
-                        code: slot.code || slot.name,
+                        code:
+                            group.code
+                            || group.name
+                            || '',
                     }
                 )
             );
         });
 
-        scheduleSelect.disabled = false;
-        scheduleSelect.value =
-            selectedScheduleId
-                ? String(selectedScheduleId)
+        groupSelect.disabled = false;
+        groupSelect.value =
+            selectedGroupId
+                ? String(selectedGroupId)
                 : '';
+
+        if (selectedGroupId) {
+            fillTimeSlots(
+                groupSelect,
+                timeSelect,
+                selectedTimeId
+            );
+        }
     };
 
     const fillClasses = (
         subjectSelect,
         levelSelect,
         classSelect,
-        scheduleSelect,
+        groupSelect,
+        timeSelect,
         selectedClassId = '',
-        selectedScheduleId = ''
+        selectedGroupId = '',
+        selectedTimeId = ''
     ) => {
-        const subject = findSubject(subjectSelect.value);
-        const level = findLevel(subject, levelSelect.value);
+        const subject =
+            findSubject(subjectSelect.value);
+
+        const level =
+            findLevel(
+                subject,
+                levelSelect.value
+            );
 
         resetSelect(
             classSelect,
@@ -1098,8 +1297,14 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         resetSelect(
-            scheduleSelect,
+            groupSelect,
             'Choisissez d’abord une classe',
+            true
+        );
+
+        resetSelect(
+            timeSelect,
+            'Choisissez d’abord un groupe',
             true
         );
 
@@ -1107,7 +1312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        level.classes.forEach(classRoom => {
+        (level.classes || []).forEach(classRoom => {
             classSelect.appendChild(
                 createOption(
                     classRoom.id,
@@ -1124,12 +1329,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 : '';
 
         if (selectedClassId) {
-            fillSlots(
+            fillGroups(
                 subjectSelect,
                 levelSelect,
                 classSelect,
-                scheduleSelect,
-                selectedScheduleId
+                groupSelect,
+                timeSelect,
+                selectedGroupId,
+                selectedTimeId
             );
         }
     };
@@ -1138,12 +1345,15 @@ document.addEventListener('DOMContentLoaded', () => {
         subjectSelect,
         levelSelect,
         classSelect,
-        scheduleSelect,
+        groupSelect,
+        timeSelect,
         selectedLevelId = '',
         selectedClassId = '',
-        selectedScheduleId = ''
+        selectedGroupId = '',
+        selectedTimeId = ''
     ) => {
-        const subject = findSubject(subjectSelect.value);
+        const subject =
+            findSubject(subjectSelect.value);
 
         resetSelect(
             levelSelect,
@@ -1160,8 +1370,14 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         resetSelect(
-            scheduleSelect,
+            groupSelect,
             'Choisissez d’abord une classe',
+            true
+        );
+
+        resetSelect(
+            timeSelect,
+            'Choisissez d’abord un groupe',
             true
         );
 
@@ -1169,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        subject.levels.forEach(level => {
+        (subject.levels || []).forEach(level => {
             levelSelect.appendChild(
                 createOption(
                     level.id,
@@ -1182,82 +1398,98 @@ document.addEventListener('DOMContentLoaded', () => {
         levelSelect.disabled = false;
 
         if (selectedLevelId) {
-            levelSelect.value = String(selectedLevelId);
+            levelSelect.value =
+                String(selectedLevelId);
 
             fillClasses(
                 subjectSelect,
                 levelSelect,
                 classSelect,
-                scheduleSelect,
+                groupSelect,
+                timeSelect,
                 selectedClassId,
-                selectedScheduleId
+                selectedGroupId,
+                selectedTimeId
             );
         }
     };
 
+    /*
+     * FORMULAIRE PRINCIPAL
+     */
     const mainSubject =
-        document.getElementById('assignment_subject_id');
+        document.getElementById(
+            'assignment_subject_id'
+        );
 
     const mainLevel =
-        document.getElementById('assignment_level_id');
+        document.getElementById(
+            'assignment_level_id'
+        );
 
     const mainClass =
-        document.getElementById('assignment_class_id');
+        document.getElementById(
+            'assignment_class_id'
+        );
 
-    const mainSchedule =
-        document.getElementById('assignment_class_slot_id');
+    const mainGroup =
+        document.getElementById(
+            'assignment_class_slot_id'
+        );
+
+    const mainTime =
+        document.getElementById(
+            'assignment_schedule_id'
+        );
 
     const pathSubject =
-        document.getElementById('studentPathSubject');
+        document.getElementById(
+            'studentPathSubject'
+        );
 
     const pathLevel =
-        document.getElementById('studentPathLevel');
+        document.getElementById(
+            'studentPathLevel'
+        );
 
     const pathClass =
-        document.getElementById('studentPathClass');
+        document.getElementById(
+            'studentPathClass'
+        );
 
-    const pathSchedule =
-        document.getElementById('studentPathSchedule');
+    const pathGroup =
+        document.getElementById(
+            'studentPathGroup'
+        );
+
+    const pathTime =
+        document.getElementById(
+            'studentPathTime'
+        );
 
     const slotPreview =
-        document.getElementById('assignmentSlotPreview');
+        document.getElementById(
+            'assignmentSlotPreview'
+        );
 
     const slotCode =
-        document.getElementById('assignmentSlotCode');
-
-    const updateSlotPreview = () => {
-        const option =
-            mainSchedule.options[
-                mainSchedule.selectedIndex
-            ];
-
-        const hasSlot = Boolean(mainSchedule.value);
-
-        slotPreview.hidden = !hasSlot;
-
-        if (!hasSlot || !option) {
-            slotCode.textContent = '—';
-            return;
-        }
-
-        slotCode.textContent =
-            option.dataset.code
-            || option.textContent
-            || '—';
-    };
+        document.getElementById(
+            'assignmentSlotCode'
+        );
 
     const updatePath = () => {
         const values = [
             [mainSubject, pathSubject, 'Matière'],
             [mainLevel, pathLevel, 'Niveau'],
             [mainClass, pathClass, 'Classe'],
-            [mainSchedule, pathSchedule, 'Créneau'],
+            [mainGroup, pathGroup, 'Groupe'],
+            [mainTime, pathTime, 'Créneau horaire'],
         ];
 
         values.forEach(
             ([select, target, fallback]) => {
                 target.textContent =
-                    select.value
+                    select?.value
                         ? select.options[
                             select.selectedIndex
                         ].textContent
@@ -1265,129 +1497,208 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 target.classList.toggle(
                     'is-selected',
-                    Boolean(select.value)
+                    Boolean(select?.value)
                 );
             }
         );
 
-        updateSlotPreview();
+        const option =
+            mainGroup.options[
+                mainGroup.selectedIndex
+            ];
+
+        const hasGroup =
+            Boolean(mainGroup.value);
+
+        slotPreview.hidden =
+            !hasGroup;
+
+        slotCode.textContent =
+            hasGroup && option
+                ? (
+                    option.dataset.code
+                    || option.textContent
+                    || '—'
+                )
+                : '—';
     };
 
-    mainSubject.addEventListener('change', () => {
-        fillLevels(
-            mainSubject,
-            mainLevel,
-            mainClass,
-            mainSchedule
-        );
+    mainSubject.addEventListener(
+        'change',
+        () => {
+            fillLevels(
+                mainSubject,
+                mainLevel,
+                mainClass,
+                mainGroup,
+                mainTime
+            );
+            updatePath();
+        }
+    );
 
-        updatePath();
-    });
+    mainLevel.addEventListener(
+        'change',
+        () => {
+            fillClasses(
+                mainSubject,
+                mainLevel,
+                mainClass,
+                mainGroup,
+                mainTime
+            );
+            updatePath();
+        }
+    );
 
-    mainLevel.addEventListener('change', () => {
-        fillClasses(
-            mainSubject,
-            mainLevel,
-            mainClass,
-            mainSchedule
-        );
+    mainClass.addEventListener(
+        'change',
+        () => {
+            fillGroups(
+                mainSubject,
+                mainLevel,
+                mainClass,
+                mainGroup,
+                mainTime
+            );
+            updatePath();
+        }
+    );
 
-        updatePath();
-    });
+    mainGroup.addEventListener(
+        'change',
+        () => {
+            fillTimeSlots(
+                mainGroup,
+                mainTime
+            );
+            updatePath();
+        }
+    );
 
-    mainClass.addEventListener('change', () => {
-        fillSlots(
-            mainSubject,
-            mainLevel,
-            mainClass,
-            mainSchedule
-        );
-
-        updatePath();
-    });
-
-    mainSchedule.addEventListener(
+    mainTime.addEventListener(
         'change',
         updatePath
     );
 
-    const oldSubjectId = @json(
-        (string) old('subject_id', '')
-    );
+    const oldSubjectId =
+        @json((string) old('subject_id', ''));
 
-    const oldLevelId = @json(
-        (string) old('level_id', '')
-    );
+    const oldLevelId =
+        @json((string) old('level_id', ''));
 
-    const oldClassId = @json(
-        (string) old('class_id', '')
-    );
+    const oldClassId =
+        @json((string) old('class_id', ''));
 
-    const oldScheduleId = @json(
-        (string) old('class_slot_id', '')
-    );
+    const oldGroupId =
+        @json((string) old('class_slot_id', ''));
+
+    const oldTimeId =
+        @json((string) old('schedule_id', ''));
 
     if (oldSubjectId) {
-        mainSubject.value = oldSubjectId;
+        mainSubject.value =
+            oldSubjectId;
 
         fillLevels(
             mainSubject,
             mainLevel,
             mainClass,
-            mainSchedule,
+            mainGroup,
+            mainTime,
             oldLevelId,
             oldClassId,
-            oldScheduleId
+            oldGroupId,
+            oldTimeId
         );
     }
 
     updatePath();
 
+    /*
+     * MODAL ÉDITION
+     */
     const editSubject =
-        document.getElementById('edit_assignment_subject_id');
+        document.getElementById(
+            'edit_assignment_subject_id'
+        );
 
     const editLevel =
-        document.getElementById('edit_assignment_level_id');
+        document.getElementById(
+            'edit_assignment_level_id'
+        );
 
     const editClass =
-        document.getElementById('edit_assignment_class_id');
-
-    const editSchedule =
-        document.getElementById('edit_assignment_class_slot_id');
-
-    editSubject.addEventListener('change', () => {
-        fillLevels(
-            editSubject,
-            editLevel,
-            editClass,
-            editSchedule
+        document.getElementById(
+            'edit_assignment_class_id'
         );
-    });
 
-    editLevel.addEventListener('change', () => {
-        fillClasses(
-            editSubject,
-            editLevel,
-            editClass,
-            editSchedule
+    const editGroup =
+        document.getElementById(
+            'edit_assignment_class_slot_id'
         );
-    });
 
-    editClass.addEventListener('change', () => {
-        fillSlots(
-            editSubject,
-            editLevel,
-            editClass,
-            editSchedule
+    const editTime =
+        document.getElementById(
+            'edit_assignment_schedule_id'
         );
-    });
+
+    editSubject.addEventListener(
+        'change',
+        () => {
+            fillLevels(
+                editSubject,
+                editLevel,
+                editClass,
+                editGroup,
+                editTime
+            );
+        }
+    );
+
+    editLevel.addEventListener(
+        'change',
+        () => {
+            fillClasses(
+                editSubject,
+                editLevel,
+                editClass,
+                editGroup,
+                editTime
+            );
+        }
+    );
+
+    editClass.addEventListener(
+        'change',
+        () => {
+            fillGroups(
+                editSubject,
+                editLevel,
+                editClass,
+                editGroup,
+                editTime
+            );
+        }
+    );
+
+    editGroup.addEventListener(
+        'change',
+        () => {
+            fillTimeSlots(
+                editGroup,
+                editTime
+            );
+        }
+    );
 
     window.openStudentAssignmentEdit = (
         userId,
         subjectId,
         levelId,
         classId,
-        scheduleId,
+        groupId,
+        timeId,
         pivotId
     ) => {
         document.getElementById(
@@ -1403,15 +1714,19 @@ document.addEventListener('DOMContentLoaded', () => {
             editSubject,
             editLevel,
             editClass,
-            editSchedule,
+            editGroup,
+            editTime,
             levelId
                 ? String(levelId)
                 : '',
             classId
                 ? String(classId)
                 : '',
-            scheduleId
-                ? String(scheduleId)
+            groupId
+                ? String(groupId)
+                : '',
+            timeId
+                ? String(timeId)
                 : ''
         );
 
@@ -1430,7 +1745,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'studentAssignmentModal'
         ).style.display = 'flex';
 
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow =
+            'hidden';
     };
 
     window.closeStudentAssignmentEdit = () => {
@@ -1438,7 +1754,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'studentAssignmentModal'
         ).style.display = 'none';
 
-        document.body.style.overflow = '';
+        document.body.style.overflow =
+            '';
     };
 });
 </script>

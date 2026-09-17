@@ -166,6 +166,20 @@ class UserController extends Controller
                     )
             );
 
+        /*
+         * Le builder d'affectation a besoin des disponibilités
+         * regroupées par professeur afin d'alimenter le select
+         * "Créneau disponible".
+         */
+        $professorAvailabilities =
+            $this->professorAvailabilityMap(
+                $professors
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all()
+            );
+
         return view(
             'admin.prof-assignments',
             compact(
@@ -173,11 +187,65 @@ class UserController extends Controller
                 'subjects',
                 'assignmentHierarchy',
                 'assignments',
-                'scheduleMap'
+                'scheduleMap',
+                'professorAvailabilities'
             )
         );
     }
 
+    /**
+     * Disponibilités du ou des professeurs au format attendu
+     * par admin.partials.prof-assignment-builder :
+     *
+     * [
+     *   professor_id => [
+     *      ['id' => 10, 'label' => 'Lundi · 09:00 – 10:30'],
+     *      ...
+     *   ]
+     * ]
+     */
+    private function professorAvailabilityMap(
+        array $professorIds = []
+    ): array {
+        $query = ProfessorAvailability::query()
+            ->orderBy('prof_id')
+            ->orderBy('day_of_week')
+            ->orderBy('start_time');
+
+        if (!empty($professorIds)) {
+            $query->whereIn(
+                'prof_id',
+                array_map(
+                    'intval',
+                    $professorIds
+                )
+            );
+        }
+
+        return $query
+            ->get()
+            ->groupBy(
+                fn (ProfessorAvailability $availability) =>
+                    (string) $availability->prof_id
+            )
+            ->map(
+                fn ($items) =>
+                    $items
+                        ->map(
+                            fn (ProfessorAvailability $availability) => [
+                                'id' =>
+                                    (int) $availability->id,
+                                'label' =>
+                                    $availability->day_label
+                                    . ' · '
+                                    . $availability->range_label,
+                            ]
+                        )
+                        ->values()
+                        ->all()
+            )
+            ->all();
+    }
     /**
      * Affecter un professeur à un créneau officiel de l'emploi du temps.
      */
@@ -382,6 +450,10 @@ class UserController extends Controller
                         (int) $assignment->class_id,
                     'class_slot_id' =>
                         (int) $assignment->class_slot_id,
+                    'preferred_availability_id' =>
+                        $assignment->preferred_availability_id
+                            ? (int) $assignment->preferred_availability_id
+                            : '',
                     'weekly_sessions' =>
                         (int) ($assignment->weekly_sessions ?: 1),
                 ]
@@ -389,12 +461,18 @@ class UserController extends Controller
             ->values()
             ->all();
 
+        $professorAvailabilities =
+            $this->professorAvailabilityMap([
+                (int) $professor->id,
+            ]);
+
         return view(
             'admin.prof-assignments-edit',
             compact(
                 'professor',
                 'assignmentHierarchy',
-                'selectedAssignments'
+                'selectedAssignments',
+                'professorAvailabilities'
             )
         );
     }
@@ -1162,6 +1240,15 @@ class UserController extends Controller
         $assignmentHierarchy =
             $this->buildAssignmentHierarchy();
 
+        /*
+         * Groupe = class_slot_id (A1, A2, D1, I1...).
+         * Créneau horaire = schedule_id (jour + heure réelle).
+         */
+        $studentScheduleMap =
+            $this->studentScheduleMap(
+                $assignmentHierarchy
+            );
+
         $subjects = collect($assignmentHierarchy)
             ->map(
                 fn (array $subject) =>
@@ -1213,6 +1300,7 @@ class UserController extends Controller
                 'class_user.class_id',
                 'class_user.subject_id',
                 'class_user.class_slot_id',
+                'class_user.schedule_id',
                 'class_rooms.level_id',
                 'users.name as student_name',
                 'class_rooms.name as class_name',
@@ -1223,12 +1311,42 @@ class UserController extends Controller
             ->orderByDesc('class_user.id')
             ->get();
 
+        $studentSchedulesById = Schedule::query()
+            ->whereIn(
+                'id',
+                $assignments
+                    ->pluck('schedule_id')
+                    ->filter()
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->values()
+            )
+            ->get()
+            ->keyBy('id');
+
+        $assignments->each(function ($assignment) use (
+            $studentSchedulesById
+        ) {
+            $schedule = $assignment->schedule_id
+                ? $studentSchedulesById->get(
+                    (int) $assignment->schedule_id
+                )
+                : null;
+
+            $assignment->schedule_label = $schedule
+                ? $schedule->day_label
+                    . ' · '
+                    . $schedule->time_range_label
+                : null;
+        });
+
         return view(
             'admin.assign-class',
             compact(
                 'students',
                 'subjects',
                 'assignmentHierarchy',
+                'studentScheduleMap',
                 'assignments'
             )
         );
@@ -1262,9 +1380,14 @@ class UserController extends Controller
                 'required',
                 'exists:class_slots,id',
             ],
+            'schedule_id' => [
+                'nullable',
+                'integer',
+                'exists:schedules,id',
+            ],
         ], [
             'class_slot_id.required' =>
-                'Veuillez choisir un créneau.',
+                'Veuillez choisir un groupe.',
         ]);
 
         $student = User::query()
@@ -1361,7 +1484,30 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'class_slot_id' =>
-                        'Ce créneau n’appartient pas à la matière, au niveau et à la classe sélectionnés.',
+                        'Ce groupe n’appartient pas à la matière, au niveau et à la classe sélectionnés.',
+                ]);
+        }
+
+        $studentSchedule =
+            $this->resolveStudentSchedule(
+                $request->filled('schedule_id')
+                    ? (int) $request->schedule_id
+                    : null,
+                $subject,
+                $level,
+                $class,
+                $slot
+            );
+
+        if (
+            $request->filled('schedule_id')
+            && !$studentSchedule
+        ) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'schedule_id' =>
+                        'Ce créneau horaire ne correspond pas au groupe sélectionné.',
                 ]);
         }
 
@@ -1381,7 +1527,7 @@ class UserController extends Controller
                 ->withInput()
                 ->with(
                     'info',
-                    'Cette matière est déjà assignée à cet étudiant. Utilisez Modifier pour changer sa classe ou son créneau.'
+                    'Cette matière est déjà assignée à cet étudiant. Utilisez Modifier pour changer sa classe, son groupe ou son créneau horaire.'
                 );
         }
 
@@ -1405,7 +1551,7 @@ class UserController extends Controller
                 'schedule_id'
             )
         ) {
-            $values['schedule_id'] = null;
+            $values['schedule_id'] = $studentSchedule?->id;
         }
 
         DB::table('class_user')
@@ -1417,8 +1563,14 @@ class UserController extends Controller
 
         return back()->with(
             'success',
-            'Étudiant assigné au créneau '
+            'Étudiant assigné au groupe '
             . $slot->code
+            . ($studentSchedule
+                ? ' — créneau '
+                    . $studentSchedule->day_label
+                    . ' · '
+                    . $studentSchedule->time_range_label
+                : ' — horaire à définir')
             . ' avec succès.'
         );
     }
@@ -1458,6 +1610,11 @@ class UserController extends Controller
                 'required',
                 'exists:class_slots,id',
             ],
+            'schedule_id' => [
+                'nullable',
+                'integer',
+                'exists:schedules,id',
+            ],
         ]);
 
         $student = User::query()
@@ -1554,7 +1711,30 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'class_slot_id' =>
-                        'Ce créneau n’appartient pas au parcours sélectionné.',
+                        'Ce groupe n’appartient pas au parcours sélectionné.',
+                ]);
+        }
+
+        $studentSchedule =
+            $this->resolveStudentSchedule(
+                $request->filled('schedule_id')
+                    ? (int) $request->schedule_id
+                    : null,
+                $subject,
+                $level,
+                $class,
+                $slot
+            );
+
+        if (
+            $request->filled('schedule_id')
+            && !$studentSchedule
+        ) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'schedule_id' =>
+                        'Ce créneau horaire ne correspond pas au groupe sélectionné.',
                 ]);
         }
 
@@ -1597,7 +1777,7 @@ class UserController extends Controller
                 'schedule_id'
             )
         ) {
-            $values['schedule_id'] = null;
+            $values['schedule_id'] = $studentSchedule?->id;
         }
 
         DB::table('class_user')
@@ -1619,8 +1799,14 @@ class UserController extends Controller
 
         return back()->with(
             'success',
-            'Assignation modifiée : créneau '
+            'Assignation modifiée : groupe '
             . $slot->code
+            . ($studentSchedule
+                ? ' — '
+                    . $studentSchedule->day_label
+                    . ' · '
+                    . $studentSchedule->time_range_label
+                : ' — horaire à définir')
             . '.'
         );
     }
@@ -1643,6 +1829,147 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'Assignation supprimée avec succès!');
     }
 
+    /**
+     * Créneaux horaires disponibles pour chaque Groupe (ClassSlot).
+     *
+     * Groupe = class_slot_id.
+     * Créneau horaire = schedule_id.
+     */
+    private function studentScheduleMap(
+        array $assignmentHierarchy
+    ): array {
+        $slotDefinitions = collect();
+
+        foreach ($assignmentHierarchy as $subject) {
+            foreach (($subject['levels'] ?? []) as $level) {
+                foreach (($level['classes'] ?? []) as $classRoom) {
+                    foreach (($classRoom['slots'] ?? []) as $slot) {
+                        $slotDefinitions->push([
+                            'slot_id' =>
+                                (int) $slot['id'],
+                            'slot_code' =>
+                                strtoupper(
+                                    trim(
+                                        (string) (
+                                            $slot['code']
+                                            ?? $slot['name']
+                                            ?? ''
+                                        )
+                                    )
+                                ),
+                            'subject_id' =>
+                                (int) $subject['id'],
+                            'level_id' =>
+                                (int) $level['id'],
+                            'class_id' =>
+                                (int) $classRoom['id'],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        if ($slotDefinitions->isEmpty()) {
+            return [];
+        }
+
+        $schedules = Schedule::query()
+            ->active()
+            ->where(
+                'recurrence',
+                Schedule::RECURRENCE_WEEKLY
+            )
+            ->whereNotNull('slot_code')
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
+            ->get();
+
+        return $slotDefinitions
+            ->mapWithKeys(function (
+                array $slot
+            ) use ($schedules) {
+                $matches = $schedules
+                    ->filter(function (
+                        Schedule $schedule
+                    ) use ($slot) {
+                        return
+                            (int) $schedule->subject_id
+                                === $slot['subject_id']
+                            && (int) $schedule->level_id
+                                === $slot['level_id']
+                            && (int) $schedule->class_id
+                                === $slot['class_id']
+                            && strtoupper(
+                                trim(
+                                    (string) $schedule->slot_code
+                                )
+                            ) === $slot['slot_code'];
+                    })
+                    ->map(
+                        fn (Schedule $schedule) => [
+                            'id' =>
+                                (int) $schedule->id,
+                            'label' =>
+                                $schedule->day_label
+                                . ' · '
+                                . $schedule->time_range_label,
+                        ]
+                    )
+                    ->values()
+                    ->all();
+
+                return [
+                    (string) $slot['slot_id'] =>
+                        $matches,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * Vérifie qu'un créneau horaire appartient exactement
+     * au parcours + Groupe sélectionnés.
+     */
+    private function resolveStudentSchedule(
+        ?int $scheduleId,
+        Subject $subject,
+        Level $level,
+        ClassRoom $classRoom,
+        ClassSlot $slot
+    ): ?Schedule {
+        if (!$scheduleId) {
+            return null;
+        }
+
+        return Schedule::query()
+            ->active()
+            ->whereKey($scheduleId)
+            ->where(
+                'recurrence',
+                Schedule::RECURRENCE_WEEKLY
+            )
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->where(
+                'level_id',
+                $level->id
+            )
+            ->where(
+                'class_id',
+                $classRoom->id
+            )
+            ->whereRaw(
+                'UPPER(TRIM(slot_code)) = ?',
+                [
+                    strtoupper(
+                        trim((string) $slot->code)
+                    ),
+                ]
+            )
+            ->first();
+    }
     /**
      * Hiérarchie de la page /admin/prof-assignments.
      *
