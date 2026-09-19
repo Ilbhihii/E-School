@@ -827,6 +827,11 @@ Route::middleware(['auth', 'isAdmin'])
             [UserController::class, 'storeAssignment']
         )->name('assign.class.store');
 
+        Route::get(
+            '/assign-class/{pivot}/edit',
+            [UserController::class, 'editStudentAssignment']
+        )->name('assign.class.edit');
+
         Route::patch(
             '/assign-class/{pivot}',
             [UserController::class, 'updateAssignment']

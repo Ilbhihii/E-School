@@ -1711,6 +1711,169 @@ class UserController extends Controller
     }
 
     /**
+     * FIX_ASSIGN_CLASS_MODIFIER_DEDICATED_PAGE_V2
+     *
+     * Page dédiée d'édition d'une assignation étudiant.
+     * Cette page ne dépend pas du modal JavaScript de la liste.
+     */
+    public function editStudentAssignment(
+        $pivotId
+    ) {
+        $assignment = DB::table('class_user')
+            ->join(
+                'users',
+                'class_user.user_id',
+                '=',
+                'users.id'
+            )
+            ->join(
+                'class_rooms',
+                'class_user.class_id',
+                '=',
+                'class_rooms.id'
+            )
+            ->leftJoin(
+                'levels',
+                'class_rooms.level_id',
+                '=',
+                'levels.id'
+            )
+            ->leftJoin(
+                'subjects',
+                'class_user.subject_id',
+                '=',
+                'subjects.id'
+            )
+            ->leftJoin(
+                'class_slots',
+                'class_user.class_slot_id',
+                '=',
+                'class_slots.id'
+            )
+            ->where(
+                'class_user.id',
+                $pivotId
+            )
+            ->select([
+                'class_user.id as pivot_id',
+                'class_user.user_id',
+                'class_user.subject_id',
+                'class_user.class_id',
+                'class_user.class_slot_id',
+                'class_user.student_slot_code',
+                'class_user.student_day_of_week',
+                'class_user.student_start_time',
+                'class_user.student_end_time',
+                'class_rooms.level_id',
+                'users.name as student_name',
+                'subjects.name as subject_name',
+                'levels.name as level_name',
+                'class_rooms.name as class_name',
+                'class_slots.code as slot_code',
+            ])
+            ->first();
+
+        abort_unless(
+            $assignment,
+            404
+        );
+
+        $students = User::query()
+            ->where(
+                'role',
+                'student'
+            )
+            ->orderBy('name')
+            ->get();
+
+        $assignmentHierarchy =
+            $this->buildAssignmentHierarchy();
+
+        $studentScheduleMap =
+            $this->studentScheduleMap(
+                $assignmentHierarchy
+            );
+
+        $subjects =
+            collect(
+                $assignmentHierarchy
+            )
+                ->map(
+                    fn (array $subject) =>
+                        (object) [
+                            'id' =>
+                                $subject['id'],
+                            'name' =>
+                                $subject['name'],
+                        ]
+                )
+                ->values();
+
+        /*
+         * Reconstruire la clé synthétique jour:créneau.
+         * Exemple : Dimanche 09:00 => 7:1.
+         */
+        $assignment->student_slot_key =
+            '';
+
+        if (
+            $assignment->student_day_of_week
+            && $assignment->student_start_time
+        ) {
+            $slotStarts = [
+                1 => '09:00',
+                2 => '10:30',
+                3 => '12:00',
+                4 => '13:30',
+                5 => '15:00',
+                6 => '16:30',
+                7 => '18:00',
+                8 => '19:30',
+                9 => '21:00',
+            ];
+
+            $start = substr(
+                (string)
+                    $assignment
+                        ->student_start_time,
+                0,
+                5
+            );
+
+            $slotNumber = array_search(
+                $start,
+                $slotStarts,
+                true
+            );
+
+            if (
+                $slotNumber
+                !== false
+            ) {
+                $assignment
+                    ->student_slot_key =
+                        (int)
+                            $assignment
+                                ->student_day_of_week
+                        . ':'
+                        . (int)
+                            $slotNumber;
+            }
+        }
+
+        return view(
+            'admin.assign-class-edit',
+            compact(
+                'assignment',
+                'students',
+                'subjects',
+                'assignmentHierarchy',
+                'studentScheduleMap'
+            )
+        );
+    }
+
+    /**
      * Update student-class assignment
      */
     public function updateAssignment(

@@ -573,26 +573,22 @@
 
                                     <td style="text-align:right;">
                                         <div class="assignment-actions">
-                                            <button
-                                                type="button"
+                                            <a
+                                                href="{{
+                                                    route(
+                                                        'admin.assign.class.edit',
+                                                        $assignment->pivot_id
+                                                    )
+                                                }}"
                                                 class="adm-btn
                                                     adm-btn-warning
                                                     adm-btn-sm"
-                                                onclick="openStudentAssignmentEdit(
-                                                    {{ $assignment->user_id }},
-                                                    {{ $assignment->subject_id ?: 'null' }},
-                                                    {{ $assignment->level_id ?: 'null' }},
-                                                    {{ $assignment->class_id }},
-                                                    {{ $assignment->class_slot_id ?: 'null' }},
-                                                    @json($assignment->student_slot_key ?? ''),
-                                                    {{ $assignment->pivot_id }}
-                                                )"
                                             >
                                                 <i
                                                     class="bi bi-pencil"
                                                 ></i>
                                                 Modifier
-                                            </button>
+                                            </a>
 
                                             <form
                                                 method="POST"
