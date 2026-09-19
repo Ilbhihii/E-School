@@ -147,6 +147,51 @@
     accent-color:#38BDF8;
 }
 
+.guest-participant-main {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:210px;
+}
+.guest-participant-info {
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+.guest-participant-name {
+    color:#F8FAFC;
+    font-size:.82rem;
+    font-weight:750;
+}
+.guest-participant-meta {
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+    color:var(--adm-text-muted);
+    font-size:.62rem;
+}
+.guest-participant-meta span {
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+.guest-participant-badge {
+    display:inline-flex;
+    width:fit-content;
+    align-items:center;
+    gap:4px;
+    margin-top:3px;
+    padding:2px 6px;
+    border:1px solid rgba(167,139,250,.22);
+    border-radius:999px;
+    color:#C4B5FD;
+    background:rgba(124,58,237,.1);
+    font-size:.53rem;
+    font-weight:800;
+    text-transform:uppercase;
+}
+
 </style>
 
 <div class="adm-page-header">
@@ -219,11 +264,42 @@
                     @forelse($submissions as $submission)
                     <tr>
                         <td>
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <div class="adm-avatar" style="background:linear-gradient(135deg,#003A8F,#2563EB);width:34px;height:34px;font-size:0.8rem;">
-                                    {{ strtoupper(substr($submission->user?->name ?? '?', 0, 1)) }}
+                            <div class="guest-participant-main">
+                                <div
+                                    class="adm-avatar"
+                                    style="background:linear-gradient(135deg,#003A8F,#7C3AED);width:34px;height:34px;font-size:.8rem;"
+                                >
+                                    {{ $submission->participant_initial }}
                                 </div>
-                                <span style="font-weight:500;font-size:0.85rem;">{{ $submission->user?->name ?? 'Utilisateur #'.$submission->user_id }}</span>
+
+                                <div class="guest-participant-info">
+                                    <span class="guest-participant-name">
+                                        {{ $submission->participant_name }}
+                                    </span>
+
+                                    <div class="guest-participant-meta">
+                                        @if($submission->participant_email)
+                                            <span>
+                                                <i class="bi bi-envelope"></i>
+                                                {{ $submission->participant_email }}
+                                            </span>
+                                        @endif
+
+                                        @if($submission->participant_phone)
+                                            <span>
+                                                <i class="bi bi-telephone"></i>
+                                                {{ $submission->participant_phone }}
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    @if($submission->participant_is_guest)
+                                        <span class="guest-participant-badge">
+                                            <i class="bi bi-globe2"></i>
+                                            Visiteur
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                         <td><span class="adm-badge adm-badge-primary">{{ $submission->subject?->name ?? '-' }}</span></td>
@@ -370,7 +446,7 @@
                                         type="submit"
                                         class="submission-delete-btn"
                                         title="Supprimer cette soumission"
-                                        aria-label="Supprimer la soumission de {{ $submission->user?->name ?? 'cet élève' }}"
+                                        aria-label="Supprimer la soumission de {{ $submission->participant_name }}"
                                     >
                                         <i class="bi bi-trash3-fill"></i>
                                         Supprimer

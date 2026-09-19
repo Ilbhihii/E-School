@@ -11,7 +11,7 @@
                     : 'Soumission vocale — '
             )
     )
-    . $submission->user?->name
+    . $submission->participant_name
 )
 @section('page_title', 'Détail de la soumission')
 @section('breadcrumb', 'Tests vocaux → Soumission')
@@ -209,7 +209,7 @@
                     )
             }}
         </h1>
-        <div class="subtitle">{{ $submission->user?->name }} — {{ $submission->subject?->name }} / {{ $submission->level?->name }} / {{ $submission->classRoom?->name }}</div>
+        <div class="subtitle">{{ $submission->participant_name }} — {{ $submission->subject?->name }} / {{ $submission->level?->name }} / {{ $submission->classRoom?->name }}</div>
     </div>
     <div class="page-actions">
         <a href="{{ route('admin.vocal-tests.submissions.index') }}" class="adm-btn adm-btn-ghost">
@@ -318,11 +318,15 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                     <div>
                         <small style="color:var(--adm-text-muted);display:block;">Élève</small>
-                        <strong>{{ $submission->user?->name ?? 'N/A' }}</strong>
+                        <strong>{{ $submission->participant_name }}</strong>
                     </div>
                     <div>
                         <small style="color:var(--adm-text-muted);display:block;">Email</small>
-                        <strong>{{ $submission->user?->email ?? 'N/A' }}</strong>
+                        <strong>{{ $submission->participant_email ?? 'N/A' }}</strong>
+                    </div>
+                    <div>
+                        <small style="color:var(--adm-text-muted);display:block;">Téléphone</small>
+                        <strong>{{ $submission->participant_phone ?? 'N/A' }}</strong>
                     </div>
                     <div>
                         <small style="color:var(--adm-text-muted);display:block;">Matière</small>

@@ -224,6 +224,63 @@ class VocalTestSubmission extends Model
         return (array) data_get($this->answer_data, 'results', []);
     }
 
+    /**
+     * GUEST_TEST_IDENTITY_ADMIN_V1
+     *
+     * Pour un compte inscrit : données du compte.
+     * Pour un visiteur : données du rendez-vous lié au test.
+     */
+    public function getParticipantNameAttribute(): string
+    {
+        $name = trim((string) ($this->user?->name ?? ''));
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        $name = trim((string) ($this->appointment?->full_name ?? ''));
+
+        return $name !== ''
+            ? $name
+            : 'Visiteur test #' . $this->id;
+    }
+
+    public function getParticipantEmailAttribute(): ?string
+    {
+        $value = trim((string) (
+            $this->user?->email
+            ?? $this->appointment?->email
+            ?? ''
+        ));
+
+        return $value !== '' ? $value : null;
+    }
+
+    public function getParticipantPhoneAttribute(): ?string
+    {
+        $value = trim((string) (
+            $this->user?->phone
+            ?? $this->appointment?->phone
+            ?? ''
+        ));
+
+        return $value !== '' ? $value : null;
+    }
+
+    public function getParticipantIsGuestAttribute(): bool
+    {
+        return $this->user_id === null;
+    }
+
+    public function getParticipantInitialAttribute(): string
+    {
+        $name = trim($this->participant_name);
+
+        return $name !== ''
+            ? mb_strtoupper(mb_substr($name, 0, 1))
+            : '?';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
