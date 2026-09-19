@@ -832,6 +832,14 @@ Route::middleware(['auth', 'isAdmin'])
             [UserController::class, 'updateAssignment']
         )->name('assign.class.update');
 
+        /*
+         * Capacité maximale d'un groupe étudiant : 10 ou 12.
+         */
+        Route::patch(
+            '/assign-class/groups/{slot}/capacity',
+            [UserController::class, 'updateStudentGroupCapacity']
+        )->name('assign.class.capacity.update');
+
         Route::delete(
             '/assign-class/{pivot}',
             [UserController::class, 'destroyAssignment']

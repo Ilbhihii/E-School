@@ -343,7 +343,54 @@
                                     Débutant → D1 à D4,
                                     Intermédiaire → I1 à I4,
                                     Avancé → A1 à A4.
+                                    Les groupes complets sont verrouillés automatiquement.
                                 </small>
+
+                                <div
+                                    class="assignment-capacity-control"
+                                    id="assignmentCapacityControl"
+                                    hidden
+                                >
+                                    <div>
+                                        <span class="assignment-capacity-title">
+                                            <i class="bi bi-people-fill"></i>
+                                            Capacité du groupe
+                                        </span>
+
+                                        <strong id="assignmentCapacityOccupancy">
+                                            0 / 12
+                                        </strong>
+                                    </div>
+
+                                    <div class="assignment-capacity-actions">
+                                        <select
+                                            id="assignmentCapacityMax"
+                                            class="adm-form-select"
+                                            aria-label="Capacité maximale du groupe"
+                                        >
+                                            <option value="10">
+                                                Maximum 10
+                                            </option>
+                                            <option value="12">
+                                                Maximum 12
+                                            </option>
+                                        </select>
+
+                                        <button
+                                            type="button"
+                                            class="adm-btn adm-btn-ghost adm-btn-sm"
+                                            id="assignmentCapacitySave"
+                                        >
+                                            <i class="bi bi-check2"></i>
+                                            Enregistrer
+                                        </button>
+                                    </div>
+
+                                    <small
+                                        id="assignmentCapacityStatus"
+                                        class="assignment-capacity-status"
+                                    ></small>
+                                </div>
 
                                 @error('class_slot_id')
                                     <div class="adm-form-error">
@@ -1014,6 +1061,81 @@
     text-decoration: none;
 }
 
+.assignment-capacity-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid rgba(96,165,250,0.14);
+    border-radius: 11px;
+    background: rgba(37,99,235,0.055);
+}
+
+.assignment-capacity-control[hidden] {
+    display: none;
+}
+
+.assignment-capacity-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #93C5FD;
+    font-size: .59rem;
+    font-weight: 750;
+}
+
+.assignment-capacity-control strong {
+    display: block;
+    margin-top: 3px;
+    color: #E2E8F0;
+    font-size: .72rem;
+}
+
+.assignment-capacity-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.assignment-capacity-actions .adm-form-select {
+    min-width: 118px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: .61rem;
+}
+
+.assignment-capacity-status {
+    grid-column: 1 / -1;
+    min-height: 14px;
+    color: #94A3B8;
+    font-size: .56rem;
+}
+
+.assignment-capacity-status.is-success {
+    color: #86EFAC;
+}
+
+.assignment-capacity-status.is-error {
+    color: #FCA5A5;
+}
+
+@media (max-width: 720px) {
+    .assignment-capacity-control {
+        grid-template-columns: 1fr;
+    }
+
+    .assignment-capacity-actions {
+        justify-content: stretch;
+    }
+
+    .assignment-capacity-actions .adm-form-select,
+    .assignment-capacity-actions .adm-btn {
+        flex: 1;
+    }
+}
+
 @media (max-width: 720px) {
     .assignment-slot-preview {
         grid-template-columns: 1fr;
@@ -1251,20 +1373,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         groups.forEach(group => {
-            groupSelect.appendChild(
+            const code =
+                group.code
+                || group.name
+                || 'Groupe';
+
+            const current =
+                Number(
+                    group.current_count
+                    || 0
+                );
+
+            const max =
+                Number(
+                    group.max_students
+                    || 12
+                );
+
+            const isFull =
+                Boolean(
+                    group.is_full
+                    || current >= max
+                );
+
+            const isSelected =
+                String(group.id)
+                === String(
+                    selectedGroupId
+                    || ''
+                );
+
+            const option =
                 createOption(
                     group.id,
-                    group.code
-                        || group.name
-                        || 'Groupe',
+                    code
+                        + ' — '
+                        + current
+                        + '/'
+                        + max
+                        + (
+                            isFull
+                                ? ' — COMPLET 🔒'
+                                : ' places'
+                        ),
                     selectedGroupId,
                     {
-                        code:
-                            group.code
-                            || group.name
-                            || '',
+                        code: code,
+                        current: current,
+                        max: max,
+                        full:
+                            isFull
+                                ? '1'
+                                : '0',
                     }
-                )
+                );
+
+            /*
+             * En édition, le groupe courant reste sélectionnable
+             * même s'il vient d'atteindre sa capacité.
+             */
+            option.disabled =
+                isFull
+                && !isSelected;
+
+            groupSelect.appendChild(
+                option
             );
         });
 
@@ -1489,6 +1662,129 @@ document.addEventListener('DOMContentLoaded', () => {
             'assignmentSlotCode'
         );
 
+    /*
+     * STUDENT_GROUP_CAPACITY_V1_JS
+     */
+    const capacityControl =
+        document.getElementById(
+            'assignmentCapacityControl'
+        );
+
+    const capacityOccupancy =
+        document.getElementById(
+            'assignmentCapacityOccupancy'
+        );
+
+    const capacityMax =
+        document.getElementById(
+            'assignmentCapacityMax'
+        );
+
+    const capacitySave =
+        document.getElementById(
+            'assignmentCapacitySave'
+        );
+
+    const capacityStatus =
+        document.getElementById(
+            'assignmentCapacityStatus'
+        );
+
+    const capacityUrlTemplate =
+        @json(
+            route(
+                'admin.assign.class.capacity.update',
+                '__SLOT_ID__'
+            )
+        );
+
+    const csrfToken =
+        @json(csrf_token());
+
+    const currentMainGroup = () => {
+        const subject =
+            findSubject(
+                mainSubject.value
+            );
+
+        const level =
+            findLevel(
+                subject,
+                mainLevel.value
+            );
+
+        const classRoom =
+            findClass(
+                subject,
+                level,
+                mainClass.value
+            );
+
+        return (
+            classRoom?.slots || []
+        ).find(
+            group =>
+                String(group.id)
+                === String(
+                    mainGroup.value
+                )
+        ) || null;
+    };
+
+    const updateCapacityControl = () => {
+        const group =
+            currentMainGroup();
+
+        if (!group) {
+            capacityControl.hidden = true;
+            capacityStatus.textContent = '';
+            return;
+        }
+
+        const current =
+            Number(
+                group.current_count
+                || 0
+            );
+
+        const max =
+            Number(
+                group.max_students
+                || 12
+            );
+
+        capacityControl.hidden = false;
+        capacityOccupancy.textContent =
+            current
+            + ' / '
+            + max
+            + (
+                current >= max
+                    ? ' — COMPLET'
+                    : ''
+            );
+
+        capacityMax.value =
+            String(
+                [10, 12].includes(max)
+                    ? max
+                    : 12
+            );
+
+        capacityStatus.textContent =
+            current >= max
+                ? 'Ce groupe est verrouillé : aucune nouvelle assignation.'
+                : (
+                    max - current
+                )
+                    + ' place(s) disponible(s).';
+
+        capacityStatus.classList.remove(
+            'is-success',
+            'is-error'
+        );
+    };
+
     const updatePath = () => {
         const values = [
             [mainSubject, pathSubject, 'Matière'],
@@ -1533,6 +1829,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     || '—'
                 )
                 : '—';
+
+        updateCapacityControl();
     };
 
     mainSubject.addEventListener(
@@ -1589,6 +1887,130 @@ document.addEventListener('DOMContentLoaded', () => {
     mainTime.addEventListener(
         'change',
         updatePath
+    );
+
+    capacitySave.addEventListener(
+        'click',
+        async () => {
+            const group =
+                currentMainGroup();
+
+            if (!group) {
+                return;
+            }
+
+            capacitySave.disabled = true;
+            capacityStatus.textContent =
+                'Enregistrement…';
+            capacityStatus.classList.remove(
+                'is-success',
+                'is-error'
+            );
+
+            try {
+                const response =
+                    await fetch(
+                        capacityUrlTemplate
+                            .replace(
+                                '__SLOT_ID__',
+                                String(group.id)
+                            ),
+                        {
+                            method: 'PATCH',
+                            credentials:
+                                'same-origin',
+                            headers: {
+                                'Accept':
+                                    'application/json',
+                                'Content-Type':
+                                    'application/json',
+                                'X-CSRF-TOKEN':
+                                    csrfToken,
+                            },
+                            body:
+                                JSON.stringify({
+                                    max_students:
+                                        Number(
+                                            capacityMax.value
+                                        ),
+                                }),
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+                    const message =
+                        data?.errors
+                            ?.max_students
+                            ?.[0]
+                        || data?.message
+                        || 'Impossible de modifier la capacité.';
+
+                    throw new Error(
+                        message
+                    );
+                }
+
+                group.max_students =
+                    Number(
+                        data.max_students
+                    );
+
+                group.current_count =
+                    Number(
+                        data.current_count
+                    );
+
+                group.available_places =
+                    Number(
+                        data.available_places
+                    );
+
+                group.is_full =
+                    Boolean(
+                        data.is_full
+                    );
+
+                const selectedGroupId =
+                    String(
+                        mainGroup.value
+                    );
+
+                fillGroups(
+                    mainSubject,
+                    mainLevel,
+                    mainClass,
+                    mainGroup,
+                    mainTime,
+                    selectedGroupId,
+                    String(
+                        mainTime.value
+                        || ''
+                    )
+                );
+
+                capacityStatus.textContent =
+                    data.message;
+
+                capacityStatus.classList.add(
+                    'is-success'
+                );
+
+                updatePath();
+            } catch (error) {
+                capacityStatus.textContent =
+                    error?.message
+                    || 'Erreur lors de l’enregistrement.';
+
+                capacityStatus.classList.add(
+                    'is-error'
+                );
+            } finally {
+                capacitySave.disabled = false;
+            }
+        }
     );
 
     const oldSubjectId =
@@ -1773,4 +2195,774 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<!-- FIX_ASSIGN_CLASS_MODIFIER_V1 -->
+<script>
+(() => {
+    /*
+     * Correctif indépendant du script principal.
+     *
+     * Il est volontairement déclaré dans un second <script>.
+     * Ainsi, même si le script principal rencontre une erreur
+     * JavaScript avant de créer openStudentAssignmentEdit(),
+     * le bouton Modifier reste fonctionnel.
+     */
+
+    const hierarchy =
+        @json($assignmentHierarchy ?? []);
+
+    const scheduleMap =
+        @json($studentScheduleMap ?? []);
+
+    const byId = id =>
+        document.getElementById(id);
+
+    const createOption = (
+        value,
+        label,
+        selectedValue = '',
+        disabled = false,
+        dataset = {}
+    ) => {
+        const option =
+            document.createElement(
+                'option'
+            );
+
+        option.value =
+            String(value ?? '');
+
+        option.textContent =
+            String(label ?? '');
+
+        option.selected =
+            String(value ?? '')
+            === String(
+                selectedValue ?? ''
+            );
+
+        option.disabled =
+            Boolean(disabled);
+
+        Object.entries(
+            dataset || {}
+        ).forEach(
+            ([key, value]) => {
+                option.dataset[key] =
+                    value ?? '';
+            }
+        );
+
+        return option;
+    };
+
+    const resetSelect = (
+        select,
+        placeholder,
+        disabled = true
+    ) => {
+        if (!select) {
+            return;
+        }
+
+        select.replaceChildren(
+            createOption(
+                '',
+                placeholder
+            )
+        );
+
+        select.disabled =
+            disabled;
+    };
+
+    const findSubject =
+        subjectId =>
+            hierarchy.find(
+                subject =>
+                    String(subject.id)
+                    === String(subjectId)
+            ) || null;
+
+    const findLevel = (
+        subject,
+        levelId
+    ) =>
+        subject?.levels?.find(
+            level =>
+                String(level.id)
+                === String(levelId)
+        ) || null;
+
+    const findClass = (
+        level,
+        classId
+    ) =>
+        level?.classes?.find(
+            classRoom =>
+                String(classRoom.id)
+                === String(classId)
+        ) || null;
+
+    const fillTimeSlots = (
+        subjectSelect,
+        timeSelect,
+        selectedTimeId = ''
+    ) => {
+        if (
+            !subjectSelect
+            || !timeSelect
+        ) {
+            return;
+        }
+
+        const subjectId =
+            String(
+                subjectSelect.value
+                || ''
+            );
+
+        if (!subjectId) {
+            resetSelect(
+                timeSelect,
+                'Choisissez d’abord une matière',
+                true
+            );
+            return;
+        }
+
+        const times =
+            scheduleMap[subjectId]
+            || [];
+
+        timeSelect.replaceChildren(
+            createOption(
+                '',
+                times.length
+                    ? 'Horaire à définir'
+                    : 'Aucun créneau disponible'
+            )
+        );
+
+        times.forEach(item => {
+            timeSelect.appendChild(
+                createOption(
+                    item.id,
+                    item.label,
+                    selectedTimeId,
+                    false,
+                    {
+                        code:
+                            item.code || '',
+                        day:
+                            item.day || '',
+                        time:
+                            item.time || '',
+                    }
+                )
+            );
+        });
+
+        timeSelect.disabled = false;
+
+        timeSelect.value =
+            selectedTimeId
+                ? String(
+                    selectedTimeId
+                )
+                : '';
+
+        if (
+            selectedTimeId
+            && !timeSelect.value
+        ) {
+            timeSelect.value = '';
+        }
+    };
+
+    const fillGroups = (
+        subjectSelect,
+        levelSelect,
+        classSelect,
+        groupSelect,
+        timeSelect,
+        selectedGroupId = '',
+        selectedTimeId = ''
+    ) => {
+        const subject =
+            findSubject(
+                subjectSelect?.value
+            );
+
+        const level =
+            findLevel(
+                subject,
+                levelSelect?.value
+            );
+
+        const classRoom =
+            findClass(
+                level,
+                classSelect?.value
+            );
+
+        resetSelect(
+            groupSelect,
+            classRoom
+                ? 'Sélectionner un groupe'
+                : 'Choisissez d’abord une classe',
+            !classRoom
+        );
+
+        if (!classRoom) {
+            fillTimeSlots(
+                subjectSelect,
+                timeSelect,
+                selectedTimeId
+            );
+            return;
+        }
+
+        const groups =
+            classRoom.slots || [];
+
+        if (!groups.length) {
+            resetSelect(
+                groupSelect,
+                'Aucun groupe pour cette classe',
+                true
+            );
+
+            fillTimeSlots(
+                subjectSelect,
+                timeSelect,
+                selectedTimeId
+            );
+            return;
+        }
+
+        groups.forEach(group => {
+            const code =
+                group.code
+                || group.name
+                || 'Groupe';
+
+            const current =
+                Number(
+                    group.current_count
+                    || 0
+                );
+
+            const max =
+                Number(
+                    group.max_students
+                    || 12
+                );
+
+            const isFull =
+                Boolean(
+                    group.is_full
+                    || current >= max
+                );
+
+            const isCurrentGroup =
+                String(group.id)
+                === String(
+                    selectedGroupId
+                    || ''
+                );
+
+            const hasCapacityData =
+                Object.prototype
+                    .hasOwnProperty.call(
+                        group,
+                        'max_students'
+                    )
+                || Object.prototype
+                    .hasOwnProperty.call(
+                        group,
+                        'current_count'
+                    );
+
+            const label =
+                hasCapacityData
+                    ? (
+                        code
+                        + ' — '
+                        + current
+                        + '/'
+                        + max
+                        + (
+                            isFull
+                                ? ' — COMPLET'
+                                : ' places'
+                        )
+                    )
+                    : code;
+
+            groupSelect.appendChild(
+                createOption(
+                    group.id,
+                    label,
+                    selectedGroupId,
+                    isFull
+                        && !isCurrentGroup,
+                    {
+                        code: code,
+                        current: current,
+                        max: max,
+                        full:
+                            isFull
+                                ? '1'
+                                : '0',
+                    }
+                )
+            );
+        });
+
+        groupSelect.disabled = false;
+
+        groupSelect.value =
+            selectedGroupId
+                ? String(
+                    selectedGroupId
+                )
+                : '';
+
+        fillTimeSlots(
+            subjectSelect,
+            timeSelect,
+            selectedTimeId
+        );
+    };
+
+    const fillClasses = (
+        subjectSelect,
+        levelSelect,
+        classSelect,
+        groupSelect,
+        timeSelect,
+        selectedClassId = '',
+        selectedGroupId = '',
+        selectedTimeId = ''
+    ) => {
+        const subject =
+            findSubject(
+                subjectSelect?.value
+            );
+
+        const level =
+            findLevel(
+                subject,
+                levelSelect?.value
+            );
+
+        resetSelect(
+            classSelect,
+            level
+                ? 'Sélectionner une classe'
+                : 'Choisissez d’abord un niveau',
+            !level
+        );
+
+        resetSelect(
+            groupSelect,
+            'Choisissez d’abord une classe',
+            true
+        );
+
+        fillTimeSlots(
+            subjectSelect,
+            timeSelect,
+            selectedTimeId
+        );
+
+        if (!level) {
+            return;
+        }
+
+        (level.classes || [])
+            .forEach(
+                classRoom => {
+                    classSelect.appendChild(
+                        createOption(
+                            classRoom.id,
+                            classRoom.name,
+                            selectedClassId
+                        )
+                    );
+                }
+            );
+
+        classSelect.disabled =
+            false;
+
+        classSelect.value =
+            selectedClassId
+                ? String(
+                    selectedClassId
+                )
+                : '';
+
+        if (selectedClassId) {
+            fillGroups(
+                subjectSelect,
+                levelSelect,
+                classSelect,
+                groupSelect,
+                timeSelect,
+                selectedGroupId,
+                selectedTimeId
+            );
+        }
+    };
+
+    const fillLevels = (
+        subjectSelect,
+        levelSelect,
+        classSelect,
+        groupSelect,
+        timeSelect,
+        selectedLevelId = '',
+        selectedClassId = '',
+        selectedGroupId = '',
+        selectedTimeId = ''
+    ) => {
+        const subject =
+            findSubject(
+                subjectSelect?.value
+            );
+
+        resetSelect(
+            levelSelect,
+            subject
+                ? 'Sélectionner un niveau'
+                : 'Choisissez d’abord une matière',
+            !subject
+        );
+
+        resetSelect(
+            classSelect,
+            'Choisissez d’abord un niveau',
+            true
+        );
+
+        resetSelect(
+            groupSelect,
+            'Choisissez d’abord une classe',
+            true
+        );
+
+        fillTimeSlots(
+            subjectSelect,
+            timeSelect,
+            selectedTimeId
+        );
+
+        if (!subject) {
+            return;
+        }
+
+        (subject.levels || [])
+            .forEach(
+                level => {
+                    levelSelect.appendChild(
+                        createOption(
+                            level.id,
+                            level.name,
+                            selectedLevelId
+                        )
+                    );
+                }
+            );
+
+        levelSelect.disabled =
+            false;
+
+        levelSelect.value =
+            selectedLevelId
+                ? String(
+                    selectedLevelId
+                )
+                : '';
+
+        if (selectedLevelId) {
+            fillClasses(
+                subjectSelect,
+                levelSelect,
+                classSelect,
+                groupSelect,
+                timeSelect,
+                selectedClassId,
+                selectedGroupId,
+                selectedTimeId
+            );
+        }
+    };
+
+    const elements = () => ({
+        modal:
+            byId(
+                'studentAssignmentModal'
+            ),
+        form:
+            byId(
+                'studentAssignmentEditForm'
+            ),
+        user:
+            byId(
+                'edit_assignment_user_id'
+            ),
+        subject:
+            byId(
+                'edit_assignment_subject_id'
+            ),
+        level:
+            byId(
+                'edit_assignment_level_id'
+            ),
+        classRoom:
+            byId(
+                'edit_assignment_class_id'
+            ),
+        group:
+            byId(
+                'edit_assignment_class_slot_id'
+            ),
+        time:
+            byId(
+                'edit_assignment_schedule_id'
+            ),
+    });
+
+    /*
+     * Déclaration IMMÉDIATE de la fonction globale utilisée
+     * par onclick="openStudentAssignmentEdit(...)".
+     */
+    window.openStudentAssignmentEdit = (
+        userId,
+        subjectId,
+        levelId,
+        classId,
+        groupId,
+        timeId,
+        pivotId
+    ) => {
+        const el =
+            elements();
+
+        if (
+            !el.modal
+            || !el.form
+            || !el.user
+            || !el.subject
+            || !el.level
+            || !el.classRoom
+            || !el.group
+            || !el.time
+        ) {
+            console.error(
+                '[SSA] Modal de modification incomplet.'
+            );
+
+            alert(
+                'Le formulaire de modification ne peut pas être ouvert. Rechargez la page.'
+            );
+
+            return;
+        }
+
+        el.user.value =
+            String(userId ?? '');
+
+        el.subject.value =
+            subjectId
+                ? String(subjectId)
+                : '';
+
+        fillLevels(
+            el.subject,
+            el.level,
+            el.classRoom,
+            el.group,
+            el.time,
+            levelId
+                ? String(levelId)
+                : '',
+            classId
+                ? String(classId)
+                : '',
+            groupId
+                ? String(groupId)
+                : '',
+            timeId
+                ? String(timeId)
+                : ''
+        );
+
+        const template =
+            el.form.dataset
+                .actionTemplate
+            || '';
+
+        if (
+            template
+            && pivotId
+        ) {
+            el.form.action =
+                template.replace(
+                    '__PIVOT_ID__',
+                    String(pivotId)
+                );
+        }
+
+        el.modal.style.display =
+            'flex';
+
+        el.modal.setAttribute(
+            'aria-hidden',
+            'false'
+        );
+
+        document.body.style.overflow =
+            'hidden';
+
+        /*
+         * Focus sur le premier champ du modal pour confirmer
+         * visuellement son ouverture.
+         */
+        window.setTimeout(
+            () => {
+                el.user.focus();
+            },
+            20
+        );
+    };
+
+    window.closeStudentAssignmentEdit = () => {
+        const modal =
+            byId(
+                'studentAssignmentModal'
+            );
+
+        if (modal) {
+            modal.style.display =
+                'none';
+
+            modal.setAttribute(
+                'aria-hidden',
+                'true'
+            );
+        }
+
+        document.body.style.overflow =
+            '';
+    };
+
+    /*
+     * Les événements du modal sont aussi installés ici,
+     * indépendamment du script principal.
+     */
+    const bindEditEvents = () => {
+        const el =
+            elements();
+
+        if (
+            !el.subject
+            || el.subject.dataset
+                .ssaEditFallbackBound
+                === '1'
+        ) {
+            return;
+        }
+
+        el.subject.dataset
+            .ssaEditFallbackBound =
+                '1';
+
+        el.subject.addEventListener(
+            'change',
+            () => {
+                fillLevels(
+                    el.subject,
+                    el.level,
+                    el.classRoom,
+                    el.group,
+                    el.time
+                );
+            }
+        );
+
+        el.level.addEventListener(
+            'change',
+            () => {
+                fillClasses(
+                    el.subject,
+                    el.level,
+                    el.classRoom,
+                    el.group,
+                    el.time
+                );
+            }
+        );
+
+        el.classRoom.addEventListener(
+            'change',
+            () => {
+                fillGroups(
+                    el.subject,
+                    el.level,
+                    el.classRoom,
+                    el.group,
+                    el.time
+                );
+            }
+        );
+
+        el.modal?.addEventListener(
+            'click',
+            event => {
+                if (
+                    event.target
+                    === el.modal
+                ) {
+                    window
+                        .closeStudentAssignmentEdit();
+                }
+            }
+        );
+
+        document.addEventListener(
+            'keydown',
+            event => {
+                if (
+                    event.key
+                    === 'Escape'
+                    && el.modal
+                    && el.modal.style
+                        .display
+                        !== 'none'
+                ) {
+                    window
+                        .closeStudentAssignmentEdit();
+                }
+            }
+        );
+    };
+
+    if (
+        document.readyState
+        === 'loading'
+    ) {
+        document.addEventListener(
+            'DOMContentLoaded',
+            bindEditEvents,
+            {
+                once: true,
+            }
+        );
+    } else {
+        bindEditEvents();
+    }
+})();
+</script>
 @endsection

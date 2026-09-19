@@ -13,6 +13,7 @@ class ClassSlot extends Model
         'code',
         'position',
         'is_active',
+        'max_students',
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class ClassSlot extends Model
         'class_id' => 'integer',
         'position' => 'integer',
         'is_active' => 'boolean',
+        'max_students' => 'integer',
     ];
 
     public function subject()

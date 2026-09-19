@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -1666,8 +1667,30 @@ class UserController extends Controller
                 $studentSchedule?->end_time;
         }
 
-        DB::table('class_user')
-            ->insert($values);
+        /*
+         * STUDENT_GROUP_CAPACITY_V1_STORE
+         *
+         * Le lock sur class_slots sérialise les ajouts concurrents
+         * dans le même groupe : deux administrateurs ne peuvent pas
+         * faire passer un groupe de 11/12 à 13/12.
+         */
+        DB::transaction(
+            function () use (
+                $values,
+                $slot,
+                $subject,
+                $class
+            ) {
+                $this->assertStudentGroupCapacity(
+                    $slot,
+                    $subject,
+                    $class
+                );
+
+                DB::table('class_user')
+                    ->insert($values);
+            }
+        );
 
         $this->syncStudentClass(
             (int) $student->id
@@ -1915,9 +1938,36 @@ class UserController extends Controller
                 $studentSchedule?->end_time;
         }
 
-        DB::table('class_user')
-            ->where('id', $pivotId)
-            ->update($values);
+        /*
+         * STUDENT_GROUP_CAPACITY_V1_UPDATE
+         *
+         * Le pivot courant est exclu du comptage. Ainsi un étudiant
+         * déjà dans un groupe 12/12 peut conserver ce groupe lors
+         * d'une simple modification de son créneau horaire.
+         */
+        DB::transaction(
+            function () use (
+                $values,
+                $slot,
+                $subject,
+                $class,
+                $pivotId
+            ) {
+                $this->assertStudentGroupCapacity(
+                    $slot,
+                    $subject,
+                    $class,
+                    (int) $pivotId
+                );
+
+                DB::table('class_user')
+                    ->where(
+                        'id',
+                        $pivotId
+                    )
+                    ->update($values);
+            }
+        );
 
         $this->syncStudentClass(
             (int) $assignment->user_id
@@ -1944,6 +1994,91 @@ class UserController extends Controller
                 : ' — horaire à définir')
             . '.'
         );
+    }
+
+    /**
+     * STUDENT_GROUP_CAPACITY_V1_SETTINGS
+     *
+     * Modifier la capacité d'un groupe depuis /admin/assign-class.
+     * Valeurs autorisées par le besoin métier : 10 ou 12.
+     */
+    public function updateStudentGroupCapacity(
+        Request $request,
+        ClassSlot $slot
+    ) {
+        abort_unless(
+            (bool) $slot->is_active,
+            404
+        );
+
+        $validated = $request->validate([
+            'max_students' => [
+                'required',
+                'integer',
+                'in:10,12',
+            ],
+        ]);
+
+        $current = (int) DB::table(
+            'class_user'
+        )
+            ->where(
+                'subject_id',
+                $slot->subject_id
+            )
+            ->where(
+                'class_id',
+                $slot->class_id
+            )
+            ->where(
+                'class_slot_id',
+                $slot->id
+            )
+            ->distinct()
+            ->count('user_id');
+
+        $newMax =
+            (int) $validated[
+                'max_students'
+            ];
+
+        if ($current > $newMax) {
+            throw ValidationException::withMessages([
+                'max_students' =>
+                    'Impossible de limiter le groupe '
+                    . $slot->code
+                    . ' à '
+                    . $newMax
+                    . ' élèves : il contient déjà '
+                    . $current
+                    . ' élève(s).',
+            ]);
+        }
+
+        $slot->update([
+            'max_students' => $newMax,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'slot_id' => (int) $slot->id,
+            'code' => (string) $slot->code,
+            'current_count' => $current,
+            'max_students' => $newMax,
+            'available_places' =>
+                max(
+                    0,
+                    $newMax - $current
+                ),
+            'is_full' =>
+                $current >= $newMax,
+            'message' =>
+                'Capacité du groupe '
+                . $slot->code
+                . ' enregistrée : '
+                . $newMax
+                . ' élèves maximum.',
+        ]);
     }
 
     /**
@@ -2294,13 +2429,61 @@ class UserController extends Controller
         $slotService =
             app(ClassSlotService::class);
 
+        /*
+         * STUDENT_GROUP_CAPACITY_V1_COUNTS
+         *
+         * Compteur exact par :
+         * Matière + Classe + Groupe.
+         *
+         * class_slots porte déjà subject_id + level_id + class_id,
+         * donc un même code D1 appartenant à un autre parcours
+         * reste complètement indépendant.
+         */
+        $studentCounts = DB::table(
+            'class_user'
+        )
+            ->whereNotNull(
+                'subject_id'
+            )
+            ->whereNotNull(
+                'class_id'
+            )
+            ->whereNotNull(
+                'class_slot_id'
+            )
+            ->select([
+                'subject_id',
+                'class_id',
+                'class_slot_id',
+                DB::raw(
+                    'COUNT(DISTINCT user_id) as total'
+                ),
+            ])
+            ->groupBy(
+                'subject_id',
+                'class_id',
+                'class_slot_id'
+            )
+            ->get()
+            ->mapWithKeys(
+                fn ($row) => [
+                    (int) $row->subject_id
+                    . ':'
+                    . (int) $row->class_id
+                    . ':'
+                    . (int) $row->class_slot_id
+                    => (int) $row->total,
+                ]
+            );
+
         return $subjects
             ->map(
                 function (
                     Subject $subject
                 ) use (
                     $levels,
-                    $slotService
+                    $slotService,
+                    $studentCounts
                 ) {
                     $subjectLevels = $levels
                         ->where(
@@ -2359,7 +2542,8 @@ class UserController extends Controller
                                 Level $level
                             ) use (
                                 $subject,
-                                $slotService
+                                $slotService,
+                                $studentCounts
                             ) {
                                 $classes = $level
                                     ->classes
@@ -2383,7 +2567,8 @@ class UserController extends Controller
                                         ) use (
                                             $subject,
                                             $level,
-                                            $slotService
+                                            $slotService,
+                                            $studentCounts
                                         ) {
                                             /*
                                              * Génération automatique des
@@ -2398,16 +2583,60 @@ class UserController extends Controller
                                                         $classRoom
                                                     )
                                                     ->map(
-                                                        fn (
+                                                        function (
                                                             ClassSlot $slot
-                                                        ) => [
-                                                            'id' =>
-                                                                $slot->id,
-                                                            'code' =>
-                                                                $slot->code,
-                                                            'name' =>
-                                                                $slot->code,
-                                                        ]
+                                                        ) use (
+                                                            $subject,
+                                                            $classRoom,
+                                                            $studentCounts
+                                                        ) {
+                                                            $key =
+                                                                (int) $subject->id
+                                                                . ':'
+                                                                . (int) $classRoom->id
+                                                                . ':'
+                                                                . (int) $slot->id;
+
+                                                            $current =
+                                                                (int) (
+                                                                    $studentCounts[
+                                                                        $key
+                                                                    ]
+                                                                    ?? 0
+                                                                );
+
+                                                            $max =
+                                                                max(
+                                                                    1,
+                                                                    (int) (
+                                                                        $slot
+                                                                            ->max_students
+                                                                        ?: 12
+                                                                    )
+                                                                );
+
+                                                            return [
+                                                                'id' =>
+                                                                    $slot->id,
+                                                                'code' =>
+                                                                    $slot->code,
+                                                                'name' =>
+                                                                    $slot->code,
+                                                                'current_count' =>
+                                                                    $current,
+                                                                'max_students' =>
+                                                                    $max,
+                                                                'available_places' =>
+                                                                    max(
+                                                                        0,
+                                                                        $max
+                                                                        - $current
+                                                                    ),
+                                                                'is_full' =>
+                                                                    $current
+                                                                    >= $max,
+                                                            ];
+                                                        }
                                                     )
                                                     ->values()
                                                     ->all();
@@ -2498,6 +2727,86 @@ class UserController extends Controller
         return Str::lower(
             Str::ascii((string) $value)
         );
+    }
+
+    /**
+     * STUDENT_GROUP_CAPACITY_V1_GUARD
+     *
+     * Doit être appelé DANS une transaction.
+     * Le verrou porte sur la ligne class_slots du groupe.
+     */
+    private function assertStudentGroupCapacity(
+        ClassSlot $slot,
+        Subject $subject,
+        ClassRoom $classRoom,
+        ?int $excludePivotId = null
+    ): void {
+        $lockedSlot = ClassSlot::query()
+            ->whereKey(
+                $slot->id
+            )
+            ->lockForUpdate()
+            ->first();
+
+        if (!$lockedSlot) {
+            throw ValidationException::withMessages([
+                'class_slot_id' =>
+                    'Le groupe sélectionné n’existe plus.',
+            ]);
+        }
+
+        $maxStudents = max(
+            1,
+            (int) (
+                $lockedSlot->max_students
+                ?: 12
+            )
+        );
+
+        $countQuery = DB::table(
+            'class_user'
+        )
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->where(
+                'class_id',
+                $classRoom->id
+            )
+            ->where(
+                'class_slot_id',
+                $lockedSlot->id
+            );
+
+        if ($excludePivotId) {
+            $countQuery->where(
+                'id',
+                '!=',
+                $excludePivotId
+            );
+        }
+
+        $currentStudents =
+            (int) $countQuery
+                ->distinct()
+                ->count('user_id');
+
+        if (
+            $currentStudents
+            >= $maxStudents
+        ) {
+            throw ValidationException::withMessages([
+                'class_slot_id' =>
+                    'Le groupe '
+                    . $lockedSlot->code
+                    . ' est complet ('
+                    . $maxStudents
+                    . '/'
+                    . $maxStudents
+                    . '). Choisissez un autre groupe.',
+            ]);
+        }
     }
 
     private function syncStudentClass(int $userId): void
