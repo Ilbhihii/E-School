@@ -21,7 +21,7 @@
 
         <div class="subtitle">
             Choisissez le parcours pédagogique, puis le Groupe.
-            Le Groupe reste indépendant. Le créneau horaire est filtré automatiquement selon la matière sélectionnée, du lundi au dimanche entre 09:00 et 22:00.
+            Le Groupe reste indépendant. Le créneau horaire est filtré automatiquement selon la matière sélectionnée, du lundi au dimanche entre 08:00 et 23:00.
         </div>
     </div>
 </div>
@@ -430,7 +430,7 @@
 
                                 <small class="assignment-help">
                                     Dès que vous choisissez une matière, seuls ses créneaux sont proposés.
-                                    Plage autorisée : lundi à dimanche, de 09:00 à 22:00.
+                                    Plage autorisée : lundi à dimanche, de 08:00 à 23:00.
                                 </small>
 
                                 @error('schedule_id')
@@ -839,7 +839,7 @@
                     </select>
 
                     <small class="assignment-help">
-                        Créneaux de la matière sélectionnée uniquement, du lundi au dimanche entre 09:00 et 22:00.
+                        Créneaux de la matière sélectionnée uniquement, du lundi au dimanche entre 08:00 et 23:00.
                     </small>
                 </div>
             </div>

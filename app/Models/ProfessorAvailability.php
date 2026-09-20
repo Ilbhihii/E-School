@@ -19,21 +19,22 @@ class ProfessorAvailability extends Model
     ];
 
     /**
+     * PROF_AVAILABILITY_08H_23H_V2
+     *
      * Créneaux fixes utilisés pour construire le planning.
-     * Ils commencent à 09:00 et couvrent désormais la journée jusqu'à 22:00.
-     * Le dernier bloc (21:00 → 22:00) dure 1h afin de fermer exactement à 22:00
-     * sans créer de chevauchement avec le créneau précédent.
+     * 10 blocs continus de 1h30, de 08:00 à 23:00.
      */
     public const TIME_SLOTS = [
-        ['start' => '09:00', 'end' => '10:30'],
-        ['start' => '10:30', 'end' => '12:00'],
-        ['start' => '12:00', 'end' => '13:30'],
-        ['start' => '13:30', 'end' => '15:00'],
-        ['start' => '15:00', 'end' => '16:30'],
-        ['start' => '16:30', 'end' => '18:00'],
-        ['start' => '18:00', 'end' => '19:30'],
-        ['start' => '19:30', 'end' => '21:00'],
-        ['start' => '21:00', 'end' => '22:00'],
+        ['start' => '08:00', 'end' => '09:30'],
+        ['start' => '09:30', 'end' => '11:00'],
+        ['start' => '11:00', 'end' => '12:30'],
+        ['start' => '12:30', 'end' => '14:00'],
+        ['start' => '14:00', 'end' => '15:30'],
+        ['start' => '15:30', 'end' => '17:00'],
+        ['start' => '17:00', 'end' => '18:30'],
+        ['start' => '18:30', 'end' => '20:00'],
+        ['start' => '20:00', 'end' => '21:30'],
+        ['start' => '21:30', 'end' => '23:00'],
     ];
 
     protected $fillable = [

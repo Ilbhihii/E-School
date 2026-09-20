@@ -119,7 +119,7 @@
             <div>
                 <span>Créneaux disponibles</span>
                 <strong>{{ $stats['availability_slots'] }}</strong>
-                <small>Blocs horaires jusqu’à 22h</small>
+                <small>Blocs horaires jusqu’à 23h</small>
             </div>
         </article>
     </div>
@@ -254,7 +254,7 @@
                 <div class="prof-av-grid-toolbar">
                     <div>
                         <strong>Créneaux disponibles</strong>
-                        <span>09:00 → 22:00</span>
+                        <span>08:00 → 23:00</span>
                     </div>
                     <button type="button" class="prof-av-text-btn" id="clearAvailability">
                         <i class="bi bi-eraser"></i>

@@ -1473,7 +1473,7 @@ class UserController extends Controller
             'schedule_id' => [
                 'nullable',
                 'string',
-                'regex:/^[1-7]:[1-9]$/',
+                'regex:/^[1-7]:(?:[1-9]|10)$/',
             ],
         ], [
             'class_slot_id.required' =>
@@ -1597,7 +1597,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 09:00 et Dimanche 22:00.',
+                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 08:00 et Dimanche 23:00.',
                 ]);
         }
 
@@ -1811,7 +1811,7 @@ class UserController extends Controller
 
         /*
          * Reconstruire la clé synthétique jour:créneau.
-         * Exemple : Dimanche 09:00 => 7:1.
+         * Exemple : Dimanche 08:00 => 7:1.
          */
         $assignment->student_slot_key =
             '';
@@ -1821,15 +1821,16 @@ class UserController extends Controller
             && $assignment->student_start_time
         ) {
             $slotStarts = [
-                1 => '09:00',
-                2 => '10:30',
-                3 => '12:00',
-                4 => '13:30',
-                5 => '15:00',
-                6 => '16:30',
-                7 => '18:00',
-                8 => '19:30',
-                9 => '21:00',
+                1 => '08:00',
+                2 => '09:30',
+                3 => '11:00',
+                4 => '12:30',
+                5 => '14:00',
+                6 => '15:30',
+                7 => '17:00',
+                8 => '18:30',
+                9 => '20:00',
+                10 => '21:30',
             ];
 
             $start = substr(
@@ -1911,7 +1912,7 @@ class UserController extends Controller
             'schedule_id' => [
                 'nullable',
                 'string',
-                'regex:/^[1-7]:[1-9]$/',
+                'regex:/^[1-7]:(?:[1-9]|10)$/',
             ],
         ]);
 
@@ -2032,7 +2033,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 09:00 et Dimanche 22:00.',
+                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 08:00 et Dimanche 23:00.',
                 ]);
         }
 
@@ -2272,8 +2273,8 @@ class UserController extends Controller
      * - ProfessorAvailability ;
      * - les lignes schedules.
      *
-     * Chaque matière obtient automatiquement 63 possibilités :
-     * 7 jours x 9 créneaux.
+     * Chaque matière obtient automatiquement 70 possibilités :
+     * 7 jours x 10 créneaux.
      */
     private function studentScheduleMap(
         array $assignmentHierarchy
@@ -2299,20 +2300,20 @@ class UserController extends Controller
         ];
 
         /*
-         * 09:00 -> 22:00 pour CHAQUE jour.
-         * Les 8 premiers créneaux durent 1h30.
-         * Le dernier ferme exactement à 22:00.
+         * 08:00 -> 23:00 pour CHAQUE jour.
+         * 10 créneaux continus de 1h30.
          */
         $timeSlots = [
-            1 => ['09:00', '10:30'],
-            2 => ['10:30', '12:00'],
-            3 => ['12:00', '13:30'],
-            4 => ['13:30', '15:00'],
-            5 => ['15:00', '16:30'],
-            6 => ['16:30', '18:00'],
-            7 => ['18:00', '19:30'],
-            8 => ['19:30', '21:00'],
-            9 => ['21:00', '22:00'],
+            1 => ['08:00', '09:30'],
+            2 => ['09:30', '11:00'],
+            3 => ['11:00', '12:30'],
+            4 => ['12:30', '14:00'],
+            5 => ['14:00', '15:30'],
+            6 => ['15:30', '17:00'],
+            7 => ['17:00', '18:30'],
+            8 => ['18:30', '20:00'],
+            9 => ['20:00', '21:30'],
+            10 => ['21:30', '23:00'],
         ];
 
         return collect($assignmentHierarchy)
@@ -2402,7 +2403,7 @@ class UserController extends Controller
      *
      * Exemple :
      * matière Arabe + "1:1"
-     * => LUAR1 — Lundi · 09:00 – 10:30.
+     * => LUAR1 — Lundi · 08:00 – 09:30.
      */
     private function resolveStudentSchedule(
         ?string $scheduleKey,
@@ -2449,15 +2450,16 @@ class UserController extends Controller
         ];
 
         $timeSlots = [
-            1 => ['09:00', '10:30'],
-            2 => ['10:30', '12:00'],
-            3 => ['12:00', '13:30'],
-            4 => ['13:30', '15:00'],
-            5 => ['15:00', '16:30'],
-            6 => ['16:30', '18:00'],
-            7 => ['18:00', '19:30'],
-            8 => ['19:30', '21:00'],
-            9 => ['21:00', '22:00'],
+            1 => ['08:00', '09:30'],
+            2 => ['09:30', '11:00'],
+            3 => ['11:00', '12:30'],
+            4 => ['12:30', '14:00'],
+            5 => ['14:00', '15:30'],
+            6 => ['15:30', '17:00'],
+            7 => ['17:00', '18:30'],
+            8 => ['18:30', '20:00'],
+            9 => ['20:00', '21:30'],
+            10 => ['21:30', '23:00'],
         ];
 
         if (!isset($timeSlots[$number])) {
