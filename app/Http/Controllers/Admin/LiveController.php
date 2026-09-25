@@ -744,9 +744,15 @@ class LiveController extends Controller
             ])
             ->findOrFail($id);
 
+        /*
+         * LIVE_EDIT_ACTIVE_SUBJECTS_V3
+         *
+         * Même hiérarchie que la page de création :
+         * toutes les matières actives avec leurs niveaux,
+         * classes et créneaux disponibles.
+         */
         $editHierarchy =
-            $this->structure
-                ->hierarchyForAdmin();
+            $this->buildLiveHierarchy();
 
         $professors = User::query()
             ->where('role', 'prof')
