@@ -9,18 +9,18 @@
     $calendarEvents = collect($lives->items())
         ->filter(
             fn ($live) =>
-                $live->start_date_time
+                $live->viewer_start_date_time
         )
         ->map(
             fn ($live) => [
                 'id' => $live->id,
                 'title' => $live->title,
                 'start' =>
-                    $live->start_date_time
-                        ?->toIso8601String(),
+                    $live->viewer_start_date_time
+                        ?->format('Y-m-d\TH:i:s'),
                 'end' =>
-                    $live->end_date_time
-                        ?->toIso8601String(),
+                    $live->viewer_end_date_time
+                        ?->format('Y-m-d\TH:i:s'),
                 'url' =>
                     $live->stream_url,
             ]
@@ -163,14 +163,24 @@
                 </div>
 
                 <div class="pps-inline-actions">
-                    @if($live->start_date_time)
+                    {{-- LIVE_LOCAL_TIME_ADMIN_PROF_V1 --}}
+                    @if($live->viewer_start_date_time)
                         <span class="pp-soft-chip">
                             <i class="bi bi-calendar3"></i>
                             {{
                                 $live
-                                    ->start_date_time
+                                    ->viewer_start_date_time
                                     ->format('d/m/Y H:i')
                             }}
+
+                            @if($live->viewer_end_date_time)
+                                →
+                                {{
+                                    $live
+                                        ->viewer_end_date_time
+                                        ->format('H:i')
+                                }}
+                            @endif
                         </span>
                     @endif
 

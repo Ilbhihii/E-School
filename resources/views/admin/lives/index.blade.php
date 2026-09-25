@@ -233,23 +233,24 @@
                                 </span>
                             @endif
                         </td>
+                        {{-- LIVE_LOCAL_TIME_ADMIN_PROF_V1 --}}
                         <td style="color:var(--adm-text-muted);font-size:0.8rem;">
-                            @if($live->live_date)
-                                {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
+                            @if($live->viewer_start_date_time)
+                                {{ $live->viewer_start_date_time->format('d/m/Y') }}
 
-                                @if($live->start_time && $live->end_time)
-                                    <small
-                                        style="
-                                            display:block;
-                                            margin-top:3px;
-                                            color:#64748B;
-                                        "
-                                    >
-                                        {{ substr((string) $live->start_time, 0, 5) }}
+                                <small
+                                    style="
+                                        display:block;
+                                        margin-top:3px;
+                                        color:#64748B;
+                                    "
+                                >
+                                    {{ $live->viewer_start_date_time->format('H:i') }}
+                                    @if($live->viewer_end_date_time)
                                         →
-                                        {{ substr((string) $live->end_time, 0, 5) }}
-                                    </small>
-                                @endif
+                                        {{ $live->viewer_end_date_time->format('H:i') }}
+                                    @endif
+                                </small>
                             @else
                                 {{ $live->created_at->format('d/m/Y') }}
                             @endif
@@ -386,8 +387,8 @@ document.addEventListener('DOMContentLoaded', function () {
             {
                 id: '{{ $live->id }}',
                 title: '{{ \Illuminate\Support\Str::limit($live->title, 30) }}',
-                start: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->start_time ?? '00:00' }}',
-                end: '{{ \Carbon\Carbon::parse($live->live_date)->format('Y-m-d') }}' + 'T' + '{{ $live->end_time ?? date('H:i', strtotime(($live->start_time ?? '00:00') . ' +1 hour')) }}',
+                start: '{{ $live->viewer_start_date_time?->format('Y-m-d\TH:i:s') }}',
+                end: '{{ $live->viewer_end_date_time?->format('Y-m-d\TH:i:s') }}',
                 url: '{{ $live->is_ended ? '#' : ($live->stream_url ?? '#') }}',
                 backgroundColor: '{{ $live->is_ended ? '#475569' : ($live->is_live ? '#DC2626' : '#4F46E5') }}',
                 borderColor: '{{ $live->is_ended ? '#64748B' : ($live->is_live ? '#EF4444' : '#6366F1') }}',

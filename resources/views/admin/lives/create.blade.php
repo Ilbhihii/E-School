@@ -502,15 +502,19 @@
                                     </td>
 
                                     <td style="color:var(--adm-text-muted);font-size:0.85rem;">
-                                        @if($live->live_date)
-                                            {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
+                                        @if($live->viewer_start_date_time)
+                                            {{ $live->viewer_start_date_time->format('d/m/Y') }}
                                         @else
                                             {{ $live->created_at->format('d/m/Y') }}
                                         @endif
                                     </td>
                                     <td style="color:var(--adm-text-muted);font-size:0.85rem;">
-                                        @if($live->start_time)
-                                            {{ $live->start_time }} @if($live->end_time) — {{ $live->end_time }} @endif
+                                        @if($live->viewer_start_date_time)
+                                            {{ $live->viewer_start_date_time->format('H:i') }}
+                                            @if($live->viewer_end_date_time)
+                                                —
+                                                {{ $live->viewer_end_date_time->format('H:i') }}
+                                            @endif
                                         @else
                                             —
                                         @endif

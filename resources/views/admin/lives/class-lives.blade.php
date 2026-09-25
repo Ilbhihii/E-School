@@ -132,15 +132,19 @@
                                 @endif
                             </td>
                             <td style="color:var(--adm-text-muted);font-size:0.8rem;">
-                                @if($live->live_date)
-                                    {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
+                                @if($live->viewer_start_date_time)
+                                    {{ $live->viewer_start_date_time->format('d/m/Y') }}
                                 @else
                                     {{ $live->created_at->format('d/m/Y') }}
                                 @endif
                             </td>
                             <td style="color:var(--adm-text-muted);font-size:0.8rem;">
-                                @if($live->start_time)
-                                    {{ $live->start_time }} @if($live->end_time) — {{ $live->end_time }} @endif
+                                @if($live->viewer_start_date_time)
+                                    {{ $live->viewer_start_date_time->format('H:i') }}
+                                    @if($live->viewer_end_date_time)
+                                        —
+                                        {{ $live->viewer_end_date_time->format('H:i') }}
+                                    @endif
                                 @else
                                     —
                                 @endif
@@ -227,8 +231,10 @@
                         <div style="font-weight:500;font-size:0.85rem;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $live->title }}</div>
                         @if($liveDate)
                         <div style="color:var(--adm-text-muted);font-size:0.72rem;margin-top:2px;">
-                            <i class="bi bi-calendar3 me-1"></i>{{ $liveDate->format('d/m/Y') }}
-                            @if($live->start_time) <i class="bi bi-clock ms-2 me-1"></i>{{ $live->start_time }} @endif
+                            <i class="bi bi-calendar3 me-1"></i>{{ $live->viewer_start_date_time?->format('d/m/Y') ?? $liveDate->format('d/m/Y') }}
+                            @if($live->viewer_start_date_time)
+                                <i class="bi bi-clock ms-2 me-1"></i>{{ $live->viewer_start_date_time->format('H:i') }}
+                            @endif
                         </div>
                         @endif
                     </div>
