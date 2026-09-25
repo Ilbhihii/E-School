@@ -103,6 +103,44 @@
                     <div class="adm-form-group">
                         <label
                             class="adm-form-label"
+                            for="professorId"
+                        >
+                            Personne / professeur affecté au lien
+                        </label>
+
+                        <select
+                            id="professorId"
+                            name="professor_id"
+                            class="adm-form-select @error('professor_id') error @enderror"
+                            required
+                        >
+                            <option value="">
+                                Choisir un professeur...
+                            </option>
+
+                            @foreach($professors as $professor)
+                                <option
+                                    value="{{ $professor->id }}"
+                                    {{ (string) old('professor_id', $selectedProfessorId) === (string) $professor->id ? 'selected' : '' }}
+                                >
+                                    {{ $professor->name }}
+                                    @if($professor->email)
+                                        — {{ $professor->email }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @error('professor_id')
+                            <div class="adm-form-error">
+                                {{ $message }}
+                            </div>
+                        @enderror
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label
+                            class="adm-form-label"
                             for="streamUrl"
                         >
                             Lien du live

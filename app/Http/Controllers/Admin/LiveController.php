@@ -8,6 +8,7 @@ use App\Models\ClassRoom;
 use App\Models\ClassSlot;
 use App\Models\Subject;
 use App\Models\Level;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -37,6 +38,7 @@ class LiveController extends Controller
                 'classSlot.subject',
                 'classSlot.level',
                 'classSlot.classRoom',
+                'professor',
             ])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -157,7 +159,10 @@ class LiveController extends Controller
     public function classLives(Subject $subject, Level $level, ClassRoom $class)
     {
         $lives = Live::where('class_id', $class->id)
-            ->with('classRoom')
+            ->with([
+                'classRoom',
+                'professor',
+            ])
             ->orderBy('live_date', 'desc')
             ->orderBy('start_time', 'desc')
             ->get();
@@ -191,12 +196,26 @@ class LiveController extends Controller
             )
             ->values();
 
+        /*
+         * LIVE_PROFESSOR_ASSIGNMENT_V2
+         * Chaque lien est relié à une personne précise.
+         */
+        $professors = User::query()
+            ->where('role', 'prof')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+            ]);
+
         $recentLives = Live::with([
                 'classRoom.level',
                 'classRoom.subjects',
                 'classSlot.subject',
                 'classSlot.level',
                 'classSlot.classRoom',
+                'professor',
             ])
             ->orderBy(
                 'created_at',
@@ -210,6 +229,7 @@ class LiveController extends Controller
             compact(
                 'subjects',
                 'liveHierarchy',
+                'professors',
                 'recentLives'
             )
         );
@@ -253,6 +273,11 @@ class LiveController extends Controller
                 'required',
                 'integer',
                 'exists:class_slots,id',
+            ],
+            'professor_id' => [
+                'required',
+                'integer',
+                'exists:users,id',
             ],
             'provider' => [
                 'required',
@@ -384,6 +409,20 @@ class LiveController extends Controller
             ]);
         }
 
+        $professor = User::query()
+            ->whereKey(
+                $validated['professor_id']
+            )
+            ->where('role', 'prof')
+            ->first();
+
+        if (!$professor) {
+            throw ValidationException::withMessages([
+                'professor_id' =>
+                    'Veuillez sélectionner un professeur valide.',
+            ]);
+        }
+
         $meetingHost = strtolower(
             (string) parse_url(
                 $validated['stream_url'],
@@ -466,6 +505,8 @@ class LiveController extends Controller
                 $validated['provider'],
             'admin_id' => auth()->id(),
             'user_id' => auth()->id(),
+            'professor_id' =>
+                $professor->id,
             'live_date' =>
                 $validated['live_date'],
             'start_time' =>
@@ -699,12 +740,22 @@ class LiveController extends Controller
                 'classSlot.level',
                 'classSlot.classRoom',
                 'classRoom.level',
+                'professor',
             ])
             ->findOrFail($id);
 
         $editHierarchy =
             $this->structure
                 ->hierarchyForAdmin();
+
+        $professors = User::query()
+            ->where('role', 'prof')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+            ]);
 
         return view(
             'admin.lives.edit',
@@ -732,6 +783,13 @@ class LiveController extends Controller
                     old(
                         'class_slot_id',
                         $live->class_slot_id
+                    ),
+                'professors' =>
+                    $professors,
+                'selectedProfessorId' =>
+                    old(
+                        'professor_id',
+                        $live->professor_id
                     ),
             ]
         );
@@ -766,6 +824,11 @@ class LiveController extends Controller
                 'integer',
                 'exists:class_slots,id',
             ],
+            'professor_id' => [
+                'required',
+                'integer',
+                'exists:users,id',
+            ],
             'stream_url' => [
                 'required',
                 'url',
@@ -788,6 +851,20 @@ class LiveController extends Controller
 
         $live = Live::query()
             ->findOrFail($id);
+
+        $professor = User::query()
+            ->whereKey(
+                $validated['professor_id']
+            )
+            ->where('role', 'prof')
+            ->first();
+
+        if (!$professor) {
+            throw ValidationException::withMessages([
+                'professor_id' =>
+                    'Veuillez sélectionner un professeur valide.',
+            ]);
+        }
 
         $slot =
             $this->structure
@@ -839,6 +916,8 @@ class LiveController extends Controller
                 $slot->class_id,
             'class_slot_id' =>
                 $slot->id,
+            'professor_id' =>
+                $professor->id,
             'stream_url' =>
                 $validated['stream_url'],
             'live_date' =>

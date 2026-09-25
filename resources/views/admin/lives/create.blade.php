@@ -118,6 +118,38 @@
                             </div>
                         </div>
 
+                        <div class="adm-form-group mt-2" style="margin-bottom:0;">
+                            <label class="adm-form-label" style="font-size:0.75rem;">
+                                Personne / professeur affecté au lien
+                            </label>
+
+                            <select
+                                id="outlook_professor_id"
+                                class="adm-form-select"
+                                style="font-size:0.85rem;"
+                            >
+                                <option value="">
+                                    Choisir un professeur...
+                                </option>
+
+                                @foreach($professors as $professor)
+                                    <option
+                                        value="{{ $professor->id }}"
+                                        {{ (string) old('professor_id') === (string) $professor->id ? 'selected' : '' }}
+                                    >
+                                        {{ $professor->name }}
+                                        @if($professor->email)
+                                            — {{ $professor->email }}
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            <small style="display:block;margin-top:6px;color:#64748B;font-size:0.7rem;">
+                                Cette affectation permet de savoir immédiatement à quelle personne appartient ce lien Teams / Google Meet.
+                            </small>
+                        </div>
+
                         <div class="row g-3 mt-2">
                             <div class="col-md-4">
                                 <div class="adm-form-group" style="margin-bottom:0;">
@@ -308,6 +340,41 @@
                         </div>
 
                         <div class="adm-form-group">
+                            <label class="adm-form-label">
+                                Personne / professeur affecté au lien
+                            </label>
+
+                            <select
+                                name="professor_id"
+                                id="manual_professor_id"
+                                class="adm-form-select @error('professor_id') error @enderror"
+                                required
+                            >
+                                <option value="">
+                                    Choisir un professeur...
+                                </option>
+
+                                @foreach($professors as $professor)
+                                    <option
+                                        value="{{ $professor->id }}"
+                                        {{ (string) old('professor_id') === (string) $professor->id ? 'selected' : '' }}
+                                    >
+                                        {{ $professor->name }}
+                                        @if($professor->email)
+                                            — {{ $professor->email }}
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            @error('professor_id')
+                                <div class="adm-form-error">
+                                    {{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+
+                        <div class="adm-form-group">
                             <label class="adm-form-label">Lien de la réunion <span style="color:#EF4444;font-size:0.7rem;font-weight:400;">(obligatoire)</span></label>
                             <input type="url" name="stream_url" value="{{ old('stream_url') }}" class="adm-form-control @error('stream_url') error @enderror" placeholder="https://meet.google.com/xxx-xxxx-xxx">
                             <div style="font-size:0.7rem;color:#64748B;margin-top:0.35rem;">
@@ -380,6 +447,7 @@
                                 <tr>
                                     <th>Titre</th>
                                     <th>Parcours</th>
+                                    <th>Personne affectée</th>
                                     <th>Date</th>
                                     <th>Horaire</th>
                                     <th>Lien de réunion</th>
@@ -408,6 +476,31 @@
                                             <span style="color:var(--adm-text-muted);">—</span>
                                         @endif
                                     </td>
+                                    <td>
+                                        @if($live->professor)
+                                            <div style="display:flex;align-items:center;gap:8px;">
+                                                <i
+                                                    class="bi bi-person-check-fill"
+                                                    style="color:#4ADE80;"
+                                                ></i>
+                                                <div>
+                                                    <div style="font-weight:600;font-size:.82rem;">
+                                                        {{ $live->professor->name }}
+                                                    </div>
+                                                    @if($live->professor->email)
+                                                        <small style="color:#64748B;">
+                                                            {{ $live->professor->email }}
+                                                        </small>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @else
+                                            <span class="adm-badge">
+                                                Non affecté
+                                            </span>
+                                        @endif
+                                    </td>
+
                                     <td style="color:var(--adm-text-muted);font-size:0.85rem;">
                                         @if($live->live_date)
                                             {{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}
@@ -856,6 +949,13 @@ document.addEventListener('DOMContentLoaded', () => {
             )?.value ?? 'google_meet'
         );
 
+        setField(
+            '[name="professor_id"]',
+            document.getElementById(
+                'outlook_professor_id'
+            )?.value
+        );
+
         copyMainToManual();
         updateProviderButtons();
     };
@@ -886,6 +986,9 @@ document.addEventListener('DOMContentLoaded', () => {
             )?.value
             && document.getElementById(
                 'outlook_class_slot_id'
+            )?.value
+            && document.getElementById(
+                'outlook_professor_id'
             )?.value
             && document.getElementById(
                 'outlook_date'
@@ -987,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         + 'Créez la réunion puis collez son lien'
                         + '</span>'
                     : 'Remplissez Matière → Niveau → Classe → Créneau, '
-                        + 'titre, date et heures';
+                        + 'professeur, titre, date et heures';
         }
     };
 
@@ -1072,6 +1175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     [
         'meeting_provider',
         'outlook_title',
+        'outlook_professor_id',
         'outlook_date',
         'outlook_start',
         'outlook_end',

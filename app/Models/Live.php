@@ -24,6 +24,7 @@ class Live extends Model
         'provider',
         'admin_id',
         'user_id',
+        'professor_id',
         'live_date',
         'start_time',
         'end_time',
@@ -78,6 +79,18 @@ class Live extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Professeur explicitement affecté au lien de réunion.
+     * user_id continue à représenter l'utilisateur qui a créé le live.
+     */
+    public function professor()
+    {
+        return $this->belongsTo(
+            User::class,
+            'professor_id'
+        );
     }
 
     public function accessLogs()

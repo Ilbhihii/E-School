@@ -142,6 +142,7 @@
                     <tr>
                         <th>Titre</th>
                         <th>Parcours</th>
+                        <th>Personne affectée</th>
                         <th>Lien</th>
                         <th>Date</th>
                         <th>Statut</th>
@@ -170,6 +171,31 @@
                                 <span style="color:var(--adm-text-muted);">—</span>
                             @endif
                         </td>
+                        <td>
+                            @if($live->professor)
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <i
+                                        class="bi bi-person-check-fill"
+                                        style="color:#4ADE80;"
+                                    ></i>
+                                    <div>
+                                        <div style="font-weight:600;font-size:.82rem;">
+                                            {{ $live->professor->name }}
+                                        </div>
+                                        @if($live->professor->email)
+                                            <small style="display:block;color:#64748B;margin-top:2px;">
+                                                {{ $live->professor->email }}
+                                            </small>
+                                        @endif
+                                    </div>
+                                </div>
+                            @else
+                                <span class="adm-badge">
+                                    Non affecté
+                                </span>
+                            @endif
+                        </td>
+
                         <td>
                             @if($live->is_ended)
                                 <span
@@ -275,7 +301,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-camera-video"></i></div>
                                 <h5>Aucun live</h5>
