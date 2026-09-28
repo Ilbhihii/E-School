@@ -419,18 +419,87 @@
                                 <select
                                     name="schedule_id"
                                     id="assignment_schedule_id"
-                                    class="adm-form-select
-                                        @error('schedule_id') error @enderror"
-                                    disabled
+                                    class="adm-form-select"
+                                    style="display:none;"
+                                    aria-hidden="true"
+                                    tabindex="-1"
                                 >
-                                    <option value="">
-                                        Choisissez d’abord une matière
-                                    </option>
+                                    <option value=""></option>
                                 </select>
+
+                                <!-- ASSIGNATION_JOUR_HEURE_LIBRE_V6_VIEW -->
+                                <div
+                                    class="ssa-free-time-grid"
+                                >
+                                    <div>
+                                        <label
+                                            class="adm-form-label"
+                                            for="assignment_schedule_day"
+                                        >
+                                            Jour
+                                        </label>
+
+                                        <select
+                                            id="assignment_schedule_day"
+                                            class="adm-form-select"
+                                        >
+                                            <option value="">
+                                                Choisir un jour
+                                            </option>
+
+                                            <option value="1">Lundi</option>
+                                            <option value="2">Mardi</option>
+                                            <option value="3">Mercredi</option>
+                                            <option value="4">Jeudi</option>
+                                            <option value="5">Vendredi</option>
+                                            <option value="6">Samedi</option>
+                                            <option value="7">Dimanche</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="adm-form-label"
+                                            for="assignment_schedule_hour"
+                                        >
+                                            Heure
+                                        </label>
+
+                                        <!-- ASSIGNATION_HEURE_MANUELLE_RESULTAT_V6_1 -->
+                                        <input
+                                            type="time"
+                                            id="assignment_schedule_hour"
+                                            class="adm-form-input"
+                                            min="08:00"
+                                            max="22:00"
+                                            step="1800"
+                                            placeholder="HH:MM"
+                                            autocomplete="off"
+                                        >
+
+                                        <small class="assignment-help">
+                                            Écrivez l’heure manuellement entre 08:00 et 22:00
+                                            (par pas de 30 minutes : 08:00, 08:30, 09:00…).
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- ASSIGNATION_RESULTAT_CODE_SEUL_V6_2 -->
+                                <div
+                                    id="assignmentGeneratedSlotCode"
+                                    class="assignment-slot-preview ssa-code-only-preview"
+                                    hidden
+                                    style="margin-top:10px;"
+                                >
+                                    <span>
+                                        Résultat final :
+                                        <strong>—</strong>
+                                    </span>
+                                </div>
 
                                 <small class="assignment-help">
                                     Dès que vous choisissez une matière, seuls ses créneaux sont proposés.
-                                    Plage autorisée : lundi à dimanche, de 08:00 à 23:00.
+                                    10 créneaux fixes sont proposés pour chacun des 7 jours, du lundi au dimanche.
                                 </small>
 
                                 @error('schedule_id')
@@ -1242,8 +1311,98 @@ document.addEventListener('DOMContentLoaded', () => {
         ) || null;
 
     /*
-     * Le créneau étudiant dépend UNIQUEMENT de la matière.
-     * Le Groupe est volontairement indépendant.
+     * ASSIGNATION_CODES_7J_10_CRENEAUX_V5
+     * D1ARD1 = D + 1 + AR + D + 1
+     */
+    const buildFullStudentSlotCode = (
+        item,
+        timeSelect
+    ) => {
+        const isMain =
+            timeSelect.id
+            === 'assignment_schedule_id';
+
+        const classSelect =
+            document.getElementById(
+                isMain
+                    ? 'assignment_class_id'
+                    : 'edit_assignment_class_id'
+            );
+
+        const groupSelect =
+            document.getElementById(
+                isMain
+                    ? 'assignment_class_slot_id'
+                    : 'edit_assignment_class_slot_id'
+            );
+
+        const classText =
+            classSelect?.value
+                ? (
+                    classSelect.options[
+                        classSelect.selectedIndex
+                    ]?.textContent
+                    || ''
+                ).trim()
+                : '';
+
+        const normalizedClass =
+            classText
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g,'')
+                .toLowerCase();
+
+        let classCode = '';
+
+        if (normalizedClass.includes('debut')) {
+            classCode = 'D';
+        } else if (normalizedClass.includes('inter')) {
+            classCode = 'I';
+        } else if (normalizedClass.includes('avance')) {
+            classCode = 'A';
+        } else if (normalizedClass) {
+            classCode =
+                normalizedClass
+                    .replace(/[^a-z0-9]/g,'')
+                    .charAt(0)
+                    .toUpperCase();
+        }
+
+        const groupOption =
+            groupSelect?.value
+                ? groupSelect.options[
+                    groupSelect.selectedIndex
+                ]
+                : null;
+
+        const groupCode =
+            groupOption?.dataset?.code
+            || '';
+
+        const match =
+            String(groupCode).match(/(\d+)$/);
+
+        const groupNumber =
+            match
+                ? match[1]
+                : '';
+
+        if (!classCode || !groupNumber) {
+            return String(item.base_code || item.code || '');
+        }
+
+        return (
+            String(item.day_code || '')
+            + String(item.slot_number || '')
+            + String(item.subject_code || '')
+            + classCode
+            + groupNumber
+        );
+    };
+
+    /*
+     * Groupe et créneau restent indépendants.
+     * Le groupe intervient seulement dans le code final.
      */
     const fillTimeSlots = (
         subjectSelect,
@@ -1276,13 +1435,26 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         times.forEach(item => {
+            const fullCode =
+                buildFullStudentSlotCode(
+                    item,
+                    timeSelect
+                );
+
+            const label =
+                fullCode
+                + ' — '
+                + String(item.day || '')
+                + ' · '
+                + String(item.time || '');
+
             timeSelect.appendChild(
                 createOption(
                     item.id,
-                    item.label,
+                    label,
                     selectedTimeId,
                     {
-                        code: item.code || '',
+                        code: fullCode,
                         day: item.day || '',
                         time: item.time || '',
                     }
@@ -1872,12 +2044,22 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     /*
-     * Le changement de Groupe ne recharge PAS les créneaux :
-     * Groupe et créneau sont deux informations séparées.
+     * Le changement de Groupe recalcule seulement le code visible.
      */
     mainGroup.addEventListener(
         'change',
-        updatePath
+        () => {
+            const currentTime =
+                mainTime.value;
+
+            fillTimeSlots(
+                mainSubject,
+                mainTime,
+                currentTime
+            );
+
+            updatePath();
+        }
     );
 
     mainTime.addEventListener(
@@ -2961,4 +3143,497 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 })();
 </script>
+<!-- ASSIGNATION_JOUR_HEURE_LIBRE_V6_ADDON -->
+<style>
+.ssa-free-time-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+}
+
+@media (max-width:650px) {
+    .ssa-free-time-grid {
+        grid-template-columns:1fr;
+    }
+}
+</style>
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        const hiddenTime =
+            document.getElementById(
+                'assignment_schedule_id'
+            );
+
+        const day =
+            document.getElementById(
+                'assignment_schedule_day'
+            );
+
+        const hour =
+            document.getElementById(
+                'assignment_schedule_hour'
+            );
+
+        const subject =
+            document.getElementById(
+                'assignment_subject_id'
+            );
+
+        const level =
+            document.getElementById(
+                'assignment_level_id'
+            );
+
+        const classRoom =
+            document.getElementById(
+                'assignment_class_id'
+            );
+
+        const group =
+            document.getElementById(
+                'assignment_class_slot_id'
+            );
+
+        const preview =
+            document.getElementById(
+                'assignmentGeneratedSlotCode'
+            );
+
+        if (
+            !hiddenTime
+            || !day
+            || !hour
+        ) {
+            return;
+        }
+
+        const pad = value =>
+            String(value)
+                .padStart(
+                    2,
+                    '0'
+                );
+
+        const slotToHour =
+            slot => {
+                const total =
+                    (8 * 60)
+                    + (
+                        (Number(slot) - 1)
+                        * 30
+                    );
+
+                return (
+                    pad(
+                        Math.floor(
+                            total / 60
+                        )
+                    )
+                    + ':'
+                    + pad(
+                        total % 60
+                    )
+                );
+            };
+
+        const hourToSlot =
+            value => {
+                const parts =
+                    String(value)
+                        .split(':');
+
+                if (
+                    parts.length
+                    !== 2
+                ) {
+                    return null;
+                }
+
+                const total =
+                    (
+                        Number(parts[0])
+                        * 60
+                    )
+                    + Number(parts[1]);
+
+                const first =
+                    8 * 60;
+
+                const diff =
+                    total - first;
+
+                if (
+                    diff < 0
+                    || diff > (14 * 60)
+                    || diff % 30 !== 0
+                ) {
+                    return null;
+                }
+
+                return (
+                    diff / 30
+                ) + 1;
+            };
+
+        const selectedCode =
+            () => {
+                if (
+                    !hiddenTime.value
+                ) {
+                    return '';
+                }
+
+                const option =
+                    hiddenTime.options[
+                        hiddenTime.selectedIndex
+                    ];
+
+                if (!option) {
+                    return '';
+                }
+
+                return (
+                    option.dataset.code
+                    || String(
+                        option.textContent
+                        || ''
+                    ).split(
+                        ' — '
+                    )[0]
+                    || ''
+                );
+            };
+
+        const ordinalSlot =
+            number => {
+                const n =
+                    Number(
+                        number
+                    );
+
+                if (n === 1) {
+                    return '1er créneau';
+                }
+
+                return (
+                    n
+                    + 'e créneau'
+                );
+            };
+
+        const refreshPreview =
+            () => {
+                const code =
+                    selectedCode();
+
+                if (!preview) {
+                    return;
+                }
+
+                preview.hidden =
+                    !code;
+
+                const strong =
+                    preview.querySelector(
+                        'strong'
+                    );
+
+                if (strong) {
+                    strong.textContent =
+                        code
+                        || '—';
+                }
+
+                const explanation =
+                    document.getElementById(
+                        'assignmentGeneratedSlotExplanation'
+                    );
+
+                if (
+                    !explanation
+                    || !code
+                ) {
+                    if (explanation) {
+                        explanation.textContent = '';
+                    }
+
+                    return;
+                }
+
+                const dayLabel =
+                    day.options[
+                        day.selectedIndex
+                    ]?.textContent
+                    ?.trim()
+                    || '';
+
+                const slotNumber =
+                    hourToSlot(
+                        hour.value
+                    );
+
+                const subjectLabel =
+                    subject?.value
+                        ? (
+                            subject.options[
+                                subject.selectedIndex
+                            ]?.textContent
+                            || ''
+                        ).trim()
+                        : '';
+
+                const classLabel =
+                    classRoom?.value
+                        ? (
+                            classRoom.options[
+                                classRoom.selectedIndex
+                            ]?.textContent
+                            || ''
+                        ).trim()
+                        : '';
+
+                const groupOption =
+                    group?.value
+                        ? group.options[
+                            group.selectedIndex
+                        ]
+                        : null;
+
+                const rawGroup =
+                    groupOption?.dataset?.code
+                    || groupOption?.textContent
+                    || '';
+
+                const groupMatch =
+                    String(
+                        rawGroup
+                    ).match(
+                        /(\d+)/
+                    );
+
+                const groupNumber =
+                    groupMatch
+                        ? groupMatch[1]
+                        : '';
+
+                const groupLabel =
+                    classLabel
+                    && groupNumber
+                        ? (
+                            classLabel
+                            + ' '
+                            + groupNumber
+                        )
+                        : (
+                            rawGroup
+                            || ''
+                        );
+
+                explanation.textContent =
+                    code
+                    + ' => '
+                    + dayLabel
+                    + ' -> '
+                    + ordinalSlot(
+                        slotNumber
+                    )
+                    + ' -> Matière ('
+                    + subjectLabel
+                    + ') -> Groupe ('
+                    + groupLabel
+                    + ')';
+            };
+        const syncHidden =
+            () => {
+                const selectedDay =
+                    Number(
+                        day.value
+                    );
+
+                const slot =
+                    hourToSlot(
+                        hour.value
+                    );
+
+                if (
+                    !selectedDay
+                    || !slot
+                ) {
+                    hiddenTime.value =
+                        '';
+
+                    hour.setCustomValidity(
+                        hour.value
+                            ? 'L’heure doit être comprise entre 08:00 et 22:00 par pas de 30 minutes.'
+                            : ''
+                    );
+
+                    hiddenTime.dispatchEvent(
+                        new Event(
+                            'change',
+                            {
+                                bubbles:true,
+                            }
+                        )
+                    );
+
+                    refreshPreview();
+                    return;
+                }
+
+                hour.setCustomValidity('');
+
+                const key =
+                    selectedDay
+                    + ':'
+                    + slot;
+
+                const optionExists =
+                    Array
+                        .from(
+                            hiddenTime.options
+                        )
+                        .some(
+                            item =>
+                                String(
+                                    item.value
+                                )
+                                === key
+                        );
+
+                hiddenTime.value =
+                    optionExists
+                        ? key
+                        : '';
+
+                hiddenTime.dispatchEvent(
+                    new Event(
+                        'change',
+                        {
+                            bubbles:true,
+                        }
+                    )
+                );
+
+                refreshPreview();
+            };
+
+        const restoreVisible =
+            () => {
+                const value =
+                    String(
+                        hiddenTime.value
+                        || ''
+                    );
+
+                const match =
+                    value.match(
+                        /^([1-7]):(\d{1,2})$/
+                    );
+
+                if (!match) {
+                    refreshPreview();
+                    return;
+                }
+
+                day.value =
+                    match[1];
+
+                hour.value =
+                    slotToHour(
+                        Number(
+                            match[2]
+                        )
+                    );
+
+                refreshPreview();
+            };
+
+        day.addEventListener(
+            'change',
+            syncHidden
+        );
+
+        hour.addEventListener(
+            'input',
+            syncHidden
+        );
+
+        hour.addEventListener(
+            'change',
+            syncHidden
+        );
+
+        /*
+         * Les handlers principaux reconstruisent d'abord
+         * les options schedule_id. On resynchronise ensuite.
+         */
+        [
+            subject,
+            level,
+            classRoom,
+            group,
+        ]
+            .filter(Boolean)
+            .forEach(
+                element => {
+                    element.addEventListener(
+                        'change',
+                        () => {
+                            setTimeout(
+                                syncHidden,
+                                0
+                            );
+                        }
+                    );
+                }
+            );
+
+        hiddenTime.addEventListener(
+            'change',
+            refreshPreview
+        );
+
+        setTimeout(
+            () => {
+                restoreVisible();
+                syncHidden();
+            },
+            0
+        );
+    }
+);
+</script>
+
+<!-- ASSIGNATION_RESULTAT_CODE_SEUL_V6_2_STYLE -->
+<style>
+#assignmentGeneratedSlotCode.ssa-code-only-preview {
+    width: 100%;
+    max-width: none;
+    overflow: visible;
+}
+
+#assignmentGeneratedSlotCode.ssa-code-only-preview span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+#assignmentGeneratedSlotCode.ssa-code-only-preview strong {
+    display: inline-block;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-size: .95rem;
+    letter-spacing: .02em;
+}
+</style>
+
 @endsection

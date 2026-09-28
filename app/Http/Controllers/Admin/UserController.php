@@ -1360,15 +1360,35 @@ class UserController extends Controller
                 ];
 
                 $slotStarts = [
-                    1 => '09:00',
-                    2 => '10:30',
-                    3 => '12:00',
-                    4 => '13:30',
-                    5 => '15:00',
-                    6 => '16:30',
-                    7 => '18:00',
-                    8 => '19:30',
-                    9 => '21:00',
+                    1 => '08:00',
+                    2 => '08:30',
+                    3 => '09:00',
+                    4 => '09:30',
+                    5 => '10:00',
+                    6 => '10:30',
+                    7 => '11:00',
+                    8 => '11:30',
+                    9 => '12:00',
+                    10 => '12:30',
+                    11 => '13:00',
+                    12 => '13:30',
+                    13 => '14:00',
+                    14 => '14:30',
+                    15 => '15:00',
+                    16 => '15:30',
+                    17 => '16:00',
+                    18 => '16:30',
+                    19 => '17:00',
+                    20 => '17:30',
+                    21 => '18:00',
+                    22 => '18:30',
+                    23 => '19:00',
+                    24 => '19:30',
+                    25 => '20:00',
+                    26 => '20:30',
+                    27 => '21:00',
+                    28 => '21:30',
+                    29 => '22:00',
                 ];
 
                 $start = substr(
@@ -1405,11 +1425,7 @@ class UserController extends Controller
                         $dayLabels[
                             (int) $assignment->student_day_of_week
                         ] ?? 'Jour'
-                    )
-                    . ' · '
-                    . $start
-                    . ' – '
-                    . $end;
+                    );
 
                 return;
             }
@@ -1473,7 +1489,7 @@ class UserController extends Controller
             'schedule_id' => [
                 'nullable',
                 'string',
-                'regex:/^[1-7]:(?:[1-9]|10)$/',
+                'regex:/^[1-7]:(?:[1-9]|1[0-9]|2[0-9])$/',
             ],
         ], [
             'class_slot_id.required' =>
@@ -1597,7 +1613,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 08:00 et Dimanche 23:00.',
+                        'Créneau étudiant invalide. Choisissez un jour et une heure entre 08:00 et 22:00.',
                 ]);
         }
 
@@ -1912,7 +1928,7 @@ class UserController extends Controller
             'schedule_id' => [
                 'nullable',
                 'string',
-                'regex:/^[1-7]:(?:[1-9]|10)$/',
+                'regex:/^[1-7]:(?:[1-9]|1[0-9]|2[0-9])$/',
             ],
         ]);
 
@@ -2033,7 +2049,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un créneau entre Lundi 08:00 et Dimanche 23:00.',
+                        'Créneau étudiant invalide. Choisissez un jour et une heure entre 08:00 et 22:00.',
                 ]);
         }
 
@@ -2276,6 +2292,29 @@ class UserController extends Controller
      * Chaque matière obtient automatiquement 70 possibilités :
      * 7 jours x 10 créneaux.
      */
+    /**
+     * STUDENT_SLOT_CODE_EXCEL_V4
+     *
+     * 29 heures de départ fixes de 08:00 à 22:00, par pas de 30 min.
+     * Le code final est complété dans resolveStudentSchedule()
+     * avec la Classe et le Groupe.
+     */
+    /**
+     * ASSIGNATION_CODES_7J_10_CRENEAUX_V5
+     *
+     * 7 jours x 10 créneaux.
+     * Jour: L, MA, M, J, V, S, D.
+     */
+    /**
+     * ASSIGNATION_JOUR_HEURE_LIBRE_V6
+     *
+     * Génère pour chaque matière :
+     * 7 jours x 29 heures de départ
+     * de 08:00 à 22:00, toutes les 30 minutes.
+     *
+     * Le code complet est finalisé dans
+     * resolveStudentSchedule() avec la classe et le groupe.
+     */
     private function studentScheduleMap(
         array $assignmentHierarchy
     ): array {
@@ -2290,113 +2329,162 @@ class UserController extends Controller
         ];
 
         $dayCodes = [
-            1 => 'LU',
+            1 => 'L',
             2 => 'MA',
-            3 => 'ME',
-            4 => 'JE',
-            5 => 'VE',
-            6 => 'SA',
-            7 => 'DI',
+            3 => 'M',
+            4 => 'J',
+            5 => 'V',
+            6 => 'S',
+            7 => 'D',
         ];
 
-        /*
-         * 08:00 -> 23:00 pour CHAQUE jour.
-         * 10 créneaux continus de 1h30.
-         */
-        $timeSlots = [
-            1 => ['08:00', '09:30'],
-            2 => ['09:30', '11:00'],
-            3 => ['11:00', '12:30'],
-            4 => ['12:30', '14:00'],
-            5 => ['14:00', '15:30'],
-            6 => ['15:30', '17:00'],
-            7 => ['17:00', '18:30'],
-            8 => ['18:30', '20:00'],
-            9 => ['20:00', '21:30'],
-            10 => ['21:30', '23:00'],
-        ];
+        return collect(
+            $assignmentHierarchy
+        )
+            ->mapWithKeys(
+                function (
+                    array $subject
+                ) use (
+                    $dayLabels,
+                    $dayCodes
+                ) {
+                    $subjectName =
+                        (string) (
+                            $subject['name']
+                            ?? ''
+                        );
 
-        return collect($assignmentHierarchy)
-            ->mapWithKeys(function (array $subject) use (
-                $dayLabels,
-                $dayCodes,
-                $timeSlots
-            ) {
-                $subjectName =
-                    (string) ($subject['name'] ?? '');
+                    $normalized =
+                        preg_replace(
+                            '/[^A-Z0-9]/',
+                            '',
+                            strtoupper(
+                                Str::ascii(
+                                    $subjectName
+                                )
+                            )
+                        );
 
-                /*
-                 * IMPORTANT :
-                 * strtoupper AVANT preg_replace.
-                 * Arabe => AR (et non AX).
-                 */
-                $normalized =
-                    preg_replace(
-                        '/[^A-Z0-9]/',
-                        '',
-                        strtoupper(
-                            Str::ascii($subjectName)
-                        )
-                    );
+                    $subjectCode =
+                        substr(
+                            (string)
+                                $normalized,
+                            0,
+                            2
+                        );
 
-                $subjectCode =
-                    substr(
-                        (string) $normalized,
-                        0,
-                        2
-                    );
-
-                if ($subjectCode === '') {
-                    $subjectCode = 'MT';
-                } elseif (strlen($subjectCode) === 1) {
-                    $subjectCode .= 'X';
-                }
-
-                $options = [];
-
-                foreach ($dayLabels as $day => $dayLabel) {
-                    foreach ($timeSlots as $number => $time) {
-                        [$start, $end] = $time;
-
-                        $displayCode =
-                            $dayCodes[$day]
-                            . $subjectCode
-                            . $number;
-
-                        $options[] = [
-                            /*
-                             * On conserve la clé "id" pour le JS
-                             * existant, mais ce n'est PAS un
-                             * schedules.id.
-                             */
-                            'id' =>
-                                $day . ':' . $number,
-                            'code' =>
-                                $displayCode,
-                            'label' =>
-                                $displayCode
-                                . ' — '
-                                . $dayLabel
-                                . ' · '
-                                . $start
-                                . ' – '
-                                . $end,
-                            'day' =>
-                                $dayLabel,
-                            'time' =>
-                                $start . ' – ' . $end,
-                        ];
+                    if (
+                        $subjectCode === ''
+                    ) {
+                        $subjectCode =
+                            'MT';
+                    } elseif (
+                        strlen(
+                            $subjectCode
+                        ) === 1
+                    ) {
+                        $subjectCode .=
+                            'X';
                     }
-                }
 
-                return [
-                    (string) $subject['id'] =>
-                        $options,
-                ];
-            })
+                    $options = [];
+
+                    foreach (
+                        $dayLabels
+                        as $day => $dayLabel
+                    ) {
+                        for (
+                            $number = 1;
+                            $number <= 29;
+                            $number++
+                        ) {
+                            $start =
+                                \Carbon\Carbon
+                                    ::createFromFormat(
+                                        'H:i',
+                                        '08:00'
+                                    )
+                                    ->addMinutes(
+                                        ($number - 1)
+                                        * 30
+                                    );
+
+                            $end =
+                                $start
+                                    ->copy()
+                                    ->addMinutes(
+                                        90
+                                    );
+
+                            $baseCode =
+                                $dayCodes[$day]
+                                . $number
+                                . $subjectCode;
+
+                            $options[] = [
+                                'id' =>
+                                    $day
+                                    . ':'
+                                    . $number,
+
+                                'code' =>
+                                    $baseCode,
+
+                                'base_code' =>
+                                    $baseCode,
+
+                                'day_code' =>
+                                    $dayCodes[$day],
+
+                                'slot_number' =>
+                                    $number,
+
+                                'subject_code' =>
+                                    $subjectCode,
+
+                                /*
+                                 * L'heure n'est volontairement
+                                 * pas dans le label de code.
+                                 */
+                                'label' =>
+                                    $baseCode
+                                    . ' — '
+                                    . $dayLabel,
+
+                                'day' =>
+                                    $dayLabel,
+
+                                'start' =>
+                                    $start
+                                        ->format(
+                                            'H:i'
+                                        ),
+
+                                'end' =>
+                                    $end
+                                        ->format(
+                                            'H:i'
+                                        ),
+
+                                'time' =>
+                                    $start
+                                        ->format(
+                                            'H:i'
+                                        ),
+                            ];
+                        }
+                    }
+
+                    return [
+                        (string)
+                            $subject['id']
+                        =>
+                            $options,
+                    ];
+                }
+            )
             ->all();
     }
-
     /**
      * Convertit la clé synthétique "jour:créneau"
      * en données enregistrables dans class_user.
@@ -2418,7 +2506,7 @@ class UserController extends Controller
 
         if (
             !preg_match(
-                '/^([1-7]):([1-9])$/',
+                '/^([1-7]):((?:[1-9]|1[0-9]|2[0-9]))$/',
                 $scheduleKey,
                 $matches
             )
@@ -2426,8 +2514,20 @@ class UserController extends Controller
             return null;
         }
 
-        $day = (int) $matches[1];
-        $number = (int) $matches[2];
+        $day =
+            (int)
+                $matches[1];
+
+        $number =
+            (int)
+                $matches[2];
+
+        if (
+            $number < 1
+            || $number > 29
+        ) {
+            return null;
+        }
 
         $dayLabels = [
             1 => 'Lundi',
@@ -2440,78 +2540,215 @@ class UserController extends Controller
         ];
 
         $dayCodes = [
-            1 => 'LU',
+            1 => 'L',
             2 => 'MA',
-            3 => 'ME',
-            4 => 'JE',
-            5 => 'VE',
-            6 => 'SA',
-            7 => 'DI',
+            3 => 'M',
+            4 => 'J',
+            5 => 'V',
+            6 => 'S',
+            7 => 'D',
         ];
 
-        $timeSlots = [
-            1 => ['08:00', '09:30'],
-            2 => ['09:30', '11:00'],
-            3 => ['11:00', '12:30'],
-            4 => ['12:30', '14:00'],
-            5 => ['14:00', '15:30'],
-            6 => ['15:30', '17:00'],
-            7 => ['17:00', '18:30'],
-            8 => ['18:30', '20:00'],
-            9 => ['20:00', '21:30'],
-            10 => ['21:30', '23:00'],
-        ];
+        $start =
+            \Carbon\Carbon
+                ::createFromFormat(
+                    'H:i',
+                    '08:00'
+                )
+                ->addMinutes(
+                    ($number - 1)
+                    * 30
+                );
 
-        if (!isset($timeSlots[$number])) {
+        if (
+            $start
+                ->format(
+                    'H:i'
+                )
+            > '22:00'
+        ) {
             return null;
         }
 
-        [$start, $end] =
-            $timeSlots[$number];
+        $end =
+            $start
+                ->copy()
+                ->addMinutes(
+                    90
+                );
 
-        $normalized =
+        /*
+         * Matière :
+         * Arabe = AR
+         * Coran = CO
+         * Anglais = AN
+         */
+        $normalizedSubject =
             preg_replace(
                 '/[^A-Z0-9]/',
                 '',
                 strtoupper(
                     Str::ascii(
-                        (string) $subject->name
+                        (string)
+                            $subject->name
                     )
                 )
             );
 
         $subjectCode =
             substr(
-                (string) $normalized,
+                (string)
+                    $normalizedSubject,
                 0,
                 2
             );
 
-        if ($subjectCode === '') {
-            $subjectCode = 'MT';
-        } elseif (strlen($subjectCode) === 1) {
-            $subjectCode .= 'X';
+        if (
+            $subjectCode === ''
+        ) {
+            $subjectCode =
+                'MT';
+        } elseif (
+            strlen(
+                $subjectCode
+            ) === 1
+        ) {
+            $subjectCode .=
+                'X';
+        }
+
+        /*
+         * Classe / niveau :
+         * Débutant = D
+         * Intermédiaire = I
+         * Avancé = A
+         */
+        $normalizedClass =
+            strtolower(
+                Str::ascii(
+                    trim(
+                        (string)
+                            $classRoom->name
+                    )
+                )
+            );
+
+        if (
+            str_contains(
+                $normalizedClass,
+                'debut'
+            )
+        ) {
+            $classCode =
+                'D';
+        } elseif (
+            str_contains(
+                $normalizedClass,
+                'inter'
+            )
+        ) {
+            $classCode =
+                'I';
+        } elseif (
+            str_contains(
+                $normalizedClass,
+                'avance'
+            )
+        ) {
+            $classCode =
+                'A';
+        } else {
+            $simpleClass =
+                preg_replace(
+                    '/[^A-Z0-9]/',
+                    '',
+                    strtoupper(
+                        Str::ascii(
+                            (string)
+                                $classRoom->name
+                        )
+                    )
+                );
+
+            $classCode =
+                substr(
+                    (string)
+                        $simpleClass,
+                    0,
+                    1
+                )
+                ?: 'X';
+        }
+
+        /*
+         * Groupe :
+         * D1 / I1 / A1 -> 1
+         * D2 / I2 / A2 -> 2
+         */
+        $groupCode =
+            strtoupper(
+                trim(
+                    (string)
+                        $slot->code
+                )
+            );
+
+        if (
+            preg_match(
+                '/(\d+)$/',
+                $groupCode,
+                $groupMatch
+            )
+        ) {
+            $groupNumber =
+                $groupMatch[1];
+        } else {
+            $groupNumber =
+                preg_replace(
+                    '/[^A-Z0-9]/',
+                    '',
+                    $groupCode
+                )
+                ?: '1';
         }
 
         $slotCode =
             $dayCodes[$day]
+            . $number
             . $subjectCode
-            . $number;
+            . $classCode
+            . $groupNumber;
 
         return (object) [
-            'id' => null,
+            'id' =>
+                null,
+
             'slot_code' =>
                 $slotCode,
+
             'day_of_week' =>
                 $day,
+
             'day_label' =>
                 $dayLabels[$day],
+
             'start_time' =>
-                $start . ':00',
+                $start
+                    ->format(
+                        'H:i:s'
+                    ),
+
             'end_time' =>
-                $end . ':00',
+                $end
+                    ->format(
+                        'H:i:s'
+                    ),
+
             'time_range_label' =>
-                $start . ' – ' . $end,
+                $start
+                    ->format(
+                        'H:i'
+                    ),
         ];
     }
     /**
