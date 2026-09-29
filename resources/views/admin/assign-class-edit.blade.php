@@ -279,14 +279,14 @@
                                         class="adm-form-input"
                                         min="08:00"
                                         max="22:00"
-                                        step="1800"
+                                        step="60"
                                         placeholder="HH:MM"
                                         autocomplete="off"
                                     >
 
                                     <small class="assignment-help">
-                                        Écrivez l’heure manuellement entre 08:00 et 22:00
-                                        (par pas de 30 minutes).
+                                        Choisissez librement l’heure entre 08:00 et 22:00, à la minute près.
+                                        Exemples : 08:15, 08:20, 13:45, 15:20…
                                     </small>
                                 </div>
                             </div>
@@ -941,7 +941,7 @@ document.addEventListener(
 );
 </script>
 
-<!-- ASSIGNATION_JOUR_HEURE_LIBRE_V6_EDIT_ADDON -->
+<!-- ASSIGNATION_HEURE_LIBRE_MINUTE_V1_EDIT -->
 <style>
 .ssa-free-time-grid {
     display:grid;
@@ -980,11 +980,6 @@ document.addEventListener(
                 'edit_page_subject_id'
             );
 
-        const level =
-            document.getElementById(
-                'edit_page_level_id'
-            );
-
         const classRoom =
             document.getElementById(
                 'edit_page_class_id'
@@ -1008,109 +1003,254 @@ document.addEventListener(
             return;
         }
 
-        const pad = value =>
-            String(value)
-                .padStart(
-                    2,
-                    '0'
-                );
-
-        const slotToHour =
-            slot => {
-                const total =
-                    (8 * 60)
-                    + (
-                        (Number(slot) - 1)
-                        * 30
+        const clean =
+            value =>
+                String(value || '')
+                    .normalize('NFD')
+                    .replace(
+                        /[\u0300-\u036f]/g,
+                        ''
                     );
 
-                return (
-                    pad(
-                        Math.floor(
-                            total / 60
-                        )
-                    )
-                    + ':'
-                    + pad(
-                        total % 60
-                    )
-                );
-            };
-
-        const hourToSlot =
+        const parseHour =
             value => {
-                const parts =
-                    String(value)
-                        .split(':');
+                const match =
+                    String(value || '')
+                        .match(
+                            /^(\d{2}):(\d{2})$/
+                        );
 
-                if (
-                    parts.length
-                    !== 2
-                ) {
+                if (!match) {
                     return null;
                 }
 
+                const h =
+                    Number(match[1]);
+
+                const m =
+                    Number(match[2]);
+
                 const total =
-                    (
-                        Number(parts[0])
-                        * 60
-                    )
-                    + Number(parts[1]);
+                    h * 60
+                    + m;
+
+                if (
+                    h < 0
+                    || h > 23
+                    || m < 0
+                    || m > 59
+                    || total < 8 * 60
+                    || total > 22 * 60
+                ) {
+                    return null;
+                }
 
                 const diff =
                     total
-                    - (8 * 60);
+                    - 8 * 60;
+
+                const aligned =
+                    diff % 30 === 0;
+
+                const part =
+                    aligned
+                        ? String(
+                            (diff / 30)
+                            + 1
+                        )
+                        : (
+                            String(h)
+                                .padStart(
+                                    2,
+                                    '0'
+                                )
+                            + String(m)
+                                .padStart(
+                                    2,
+                                    '0'
+                                )
+                        );
+
+                return {
+                    keyPart: part,
+                    codePart: part,
+                };
+            };
+
+        const codeForCurrent =
+            parsed => {
+                const dayCode =
+                    ({
+                        1:'L',
+                        2:'MA',
+                        3:'M',
+                        4:'J',
+                        5:'V',
+                        6:'S',
+                        7:'D',
+                    })[
+                        Number(
+                            day.value
+                        )
+                    ]
+                    || '';
+
+                const subjectText =
+                    subject?.value
+                        ? subject.options[
+                            subject.selectedIndex
+                        ]?.textContent
+                        : '';
+
+                let subjectCode =
+                    clean(subjectText)
+                        .toUpperCase()
+                        .replace(
+                            /[^A-Z0-9]/g,
+                            ''
+                        )
+                        .slice(
+                            0,
+                            2
+                        );
 
                 if (
-                    diff < 0
-                    || diff > (14 * 60)
-                    || diff % 30 !== 0
+                    subjectCode.length
+                    === 1
                 ) {
-                    return null;
+                    subjectCode += 'X';
+                }
+
+                const classText =
+                    classRoom?.value
+                        ? classRoom.options[
+                            classRoom.selectedIndex
+                        ]?.textContent
+                        : '';
+
+                const normalizedClass =
+                    clean(classText)
+                        .toLowerCase();
+
+                let classCode = '';
+
+                if (
+                    normalizedClass.includes(
+                        'debut'
+                    )
+                ) {
+                    classCode = 'D';
+                } else if (
+                    normalizedClass.includes(
+                        'inter'
+                    )
+                ) {
+                    classCode = 'I';
+                } else if (
+                    normalizedClass.includes(
+                        'avance'
+                    )
+                ) {
+                    classCode = 'A';
+                } else {
+                    classCode =
+                        normalizedClass
+                            .replace(
+                                /[^a-z0-9]/g,
+                                ''
+                            )
+                            .charAt(0)
+                            .toUpperCase();
+                }
+
+                const groupText =
+                    group?.value
+                        ? (
+                            group.options[
+                                group.selectedIndex
+                            ]?.textContent
+                            || ''
+                        )
+                        : '';
+
+                const groupMatch =
+                    String(groupText)
+                        .match(
+                            /(\d+)/
+                        );
+
+                const groupNumber =
+                    groupMatch
+                        ? groupMatch[1]
+                        : '';
+
+                if (
+                    !dayCode
+                    || !parsed
+                    || !subjectCode
+                    || !classCode
+                    || !groupNumber
+                ) {
+                    return '';
                 }
 
                 return (
-                    diff / 30
-                ) + 1;
+                    dayCode
+                    + parsed.codePart
+                    + subjectCode
+                    + classCode
+                    + groupNumber
+                );
             };
 
-        const ordinalSlot =
-            number => {
-                const n =
-                    Number(
-                        number
-                    );
+        const ensureOption =
+            (
+                key,
+                code
+            ) => {
+                let option =
+                    Array
+                        .from(
+                            hiddenTime.options
+                        )
+                        .find(
+                            item =>
+                                String(
+                                    item.value
+                                )
+                                === String(key)
+                        );
 
-                return n === 1
-                    ? '1er créneau'
-                    : (
-                        n
-                        + 'e créneau'
-                    );
+                if (!option) {
+                    option =
+                        document
+                            .createElement(
+                                'option'
+                            );
+
+                    option.value =
+                        String(key);
+
+                    hiddenTime
+                        .appendChild(
+                            option
+                        );
+                }
+
+                option.dataset.code =
+                    code;
+
+                option.textContent =
+                    code;
+
+                return option;
             };
 
         const refreshPreview =
-            () => {
+            code => {
                 if (!preview) {
                     return;
                 }
-
-                const option =
-                    hiddenTime.value
-                        ? hiddenTime.options[
-                            hiddenTime.selectedIndex
-                        ]
-                        : null;
-
-                const code =
-                    option
-                        ? String(
-                            option.textContent
-                            || ''
-                        ).split(
-                            ' — '
-                        )[0]
-                        : '';
 
                 preview.hidden =
                     !code;
@@ -1122,104 +1262,10 @@ document.addEventListener(
 
                 if (span) {
                     span.textContent =
-                        code
-                        || '—';
+                        code || '—';
                 }
-
-                const explanation =
-                    document.getElementById(
-                        'editPageGeneratedSlotExplanation'
-                    );
-
-                if (
-                    !explanation
-                    || !code
-                ) {
-                    if (explanation) {
-                        explanation.textContent = '';
-                    }
-
-                    return;
-                }
-
-                const dayLabel =
-                    day.options[
-                        day.selectedIndex
-                    ]?.textContent
-                    ?.trim()
-                    || '';
-
-                const slotNumber =
-                    hourToSlot(
-                        hour.value
-                    );
-
-                const subjectLabel =
-                    subject?.value
-                        ? (
-                            subject.options[
-                                subject.selectedIndex
-                            ]?.textContent
-                            || ''
-                        ).trim()
-                        : '';
-
-                const classLabel =
-                    classRoom?.value
-                        ? (
-                            classRoom.options[
-                                classRoom.selectedIndex
-                            ]?.textContent
-                            || ''
-                        ).trim()
-                        : '';
-
-                const groupLabelRaw =
-                    group?.value
-                        ? (
-                            group.options[
-                                group.selectedIndex
-                            ]?.textContent
-                            || ''
-                        )
-                        : '';
-
-                const groupMatch =
-                    String(
-                        groupLabelRaw
-                    ).match(
-                        /(\d+)/
-                    );
-
-                const groupNumber =
-                    groupMatch
-                        ? groupMatch[1]
-                        : '';
-
-                const groupLabel =
-                    classLabel
-                    && groupNumber
-                        ? (
-                            classLabel
-                            + ' '
-                            + groupNumber
-                        )
-                        : groupLabelRaw;
-
-                explanation.textContent =
-                    code
-                    + ' => '
-                    + dayLabel
-                    + ' -> '
-                    + ordinalSlot(
-                        slotNumber
-                    )
-                    + ' -> Matière ('
-                    + subjectLabel
-                    + ') -> Groupe ('
-                    + groupLabel
-                    + ')';
             };
+
         const syncHidden =
             () => {
                 const selectedDay =
@@ -1227,25 +1273,35 @@ document.addEventListener(
                         day.value
                     );
 
-                const slot =
-                    hourToSlot(
-                        hour.value
-                    );
-
                 if (
                     !selectedDay
-                    || !slot
+                    || !hour.value
                 ) {
                     hiddenTime.value =
                         '';
 
-                    hour.setCustomValidity(
+                    hour.setCustomValidity('');
+
+                    refreshPreview('');
+
+                    return;
+                }
+
+                const parsed =
+                    parseHour(
                         hour.value
-                            ? 'L’heure doit être comprise entre 08:00 et 22:00 par pas de 30 minutes.'
-                            : ''
                     );
 
-                    refreshPreview();
+                if (!parsed) {
+                    hiddenTime.value =
+                        '';
+
+                    hour.setCustomValidity(
+                        'L’heure doit être comprise entre 08:00 et 22:00.'
+                    );
+
+                    refreshPreview('');
+
                     return;
                 }
 
@@ -1254,27 +1310,24 @@ document.addEventListener(
                 const key =
                     selectedDay
                     + ':'
-                    + slot;
+                    + parsed.keyPart;
 
-                const exists =
-                    Array
-                        .from(
-                            hiddenTime.options
-                        )
-                        .some(
-                            item =>
-                                String(
-                                    item.value
-                                )
-                                === key
-                        );
+                const code =
+                    codeForCurrent(
+                        parsed
+                    );
+
+                ensureOption(
+                    key,
+                    code
+                );
 
                 hiddenTime.value =
-                    exists
-                        ? key
-                        : '';
+                    key;
 
-                refreshPreview();
+                refreshPreview(
+                    code
+                );
             };
 
         const restoreVisible =
@@ -1287,25 +1340,68 @@ document.addEventListener(
 
                 const match =
                     value.match(
-                        /^([1-7]):(\d{1,2})$/
+                        /^([1-7]):([0-9]{1,4})$/
                     );
 
                 if (!match) {
-                    refreshPreview();
                     return;
                 }
 
                 day.value =
                     match[1];
 
-                hour.value =
-                    slotToHour(
-                        Number(
-                            match[2]
-                        )
-                    );
+                const raw =
+                    match[2];
 
-                refreshPreview();
+                if (
+                    raw.length === 4
+                ) {
+                    hour.value =
+                        raw.slice(
+                            0,
+                            2
+                        )
+                        + ':'
+                        + raw.slice(
+                            2,
+                            4
+                        );
+                } else {
+                    const slot =
+                        Number(raw);
+
+                    const total =
+                        8 * 60
+                        + (
+                            slot - 1
+                        )
+                        * 30;
+
+                    hour.value =
+                        String(
+                            Math.floor(
+                                total / 60
+                            )
+                        ).padStart(
+                            2,
+                            '0'
+                        )
+                        + ':'
+                        + String(
+                            total % 60
+                        ).padStart(
+                            2,
+                            '0'
+                        );
+                }
+
+                refreshPreview(
+                    codeForCurrent(
+                        parseHour(
+                            hour.value
+                        )
+                    )
+                );
             };
 
         day.addEventListener(
@@ -1325,33 +1421,40 @@ document.addEventListener(
 
         [
             subject,
-            level,
             classRoom,
             group,
         ]
             .filter(Boolean)
             .forEach(
                 element => {
-                    element.addEventListener(
-                        'change',
-                        () => {
-                            setTimeout(
-                                syncHidden,
-                                0
-                            );
-                        }
-                    );
+                    element
+                        .addEventListener(
+                            'change',
+                            () =>
+                                setTimeout(
+                                    syncHidden,
+                                    0
+                                )
+                        );
                 }
             );
 
         setTimeout(
-            restoreVisible,
+            () => {
+                restoreVisible();
+
+                if (
+                    day.value
+                    && hour.value
+                ) {
+                    syncHidden();
+                }
+            },
             0
         );
     }
 );
 </script>
-
 <!-- ASSIGNATION_RESULTAT_CODE_SEUL_V6_2_EDIT_STYLE -->
 <style>
 #editPageGeneratedSlotCode.ssa-code-only-preview {
@@ -1371,4 +1474,999 @@ document.addEventListener(
 }
 </style>
 
+<!-- SLOT_ORDINAL_EDIT_PREVIEW_V1 -->
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        const registry =
+            @json(
+                app(
+                    \App\Services\StudentSlotOrdinalService::class
+                )->map()
+            );
+
+        const day =
+            document.getElementById(
+                'edit_page_schedule_day'
+            );
+
+        const hour =
+            document.getElementById(
+                'edit_page_schedule_hour'
+            );
+
+        const hidden =
+            document.getElementById(
+                'edit_page_schedule_id'
+            );
+
+        const subject =
+            document.getElementById(
+                'edit_page_subject_id'
+            );
+
+        const classRoom =
+            document.getElementById(
+                'edit_page_class_id'
+            );
+
+        const group =
+            document.getElementById(
+                'edit_page_group_id'
+            );
+
+        const preview =
+            document.getElementById(
+                'editPageGeneratedSlotCode'
+            );
+
+        if (
+            !day
+            || !hour
+            || !hidden
+        ) {
+            return;
+        }
+
+        hour.step = '60';
+
+        const dayCodes = {
+            1:'L',
+            2:'MA',
+            3:'M',
+            4:'J',
+            5:'V',
+            6:'S',
+            7:'D',
+        };
+
+        const strip =
+            value =>
+                String(value || '')
+                    .normalize('NFD')
+                    .replace(
+                        /[\u0300-\u036f]/g,
+                        ''
+                    );
+
+        const getText =
+            element =>
+                element?.value
+                    ? (
+                        element.options[
+                            element.selectedIndex
+                        ]?.textContent
+                        || ''
+                    )
+                    : '';
+
+        const getSubjectCode =
+            () => {
+                const value =
+                    strip(
+                        getText(
+                            subject
+                        )
+                    )
+                        .toUpperCase()
+                        .replace(
+                            /[^A-Z0-9]/g,
+                            ''
+                        )
+                        .slice(
+                            0,
+                            2
+                        );
+
+                return value.length === 1
+                    ? value + 'X'
+                    : value;
+            };
+
+        const getClassCode =
+            () => {
+                const text =
+                    strip(
+                        getText(
+                            classRoom
+                        )
+                    );
+
+                const normalized =
+                    text.toLowerCase();
+
+                if (
+                    normalized.includes(
+                        'debut'
+                    )
+                ) {
+                    return 'D';
+                }
+
+                if (
+                    normalized.includes(
+                        'inter'
+                    )
+                ) {
+                    return 'I';
+                }
+
+                if (
+                    normalized.includes(
+                        'avance'
+                    )
+                    || normalized.includes(
+                        'adulte'
+                    )
+                ) {
+                    return 'A';
+                }
+
+                return text
+                    .replace(
+                        /[^A-Za-z0-9]/g,
+                        ''
+                    )
+                    .charAt(0)
+                    .toUpperCase();
+            };
+
+        const getGroupNumber =
+            () => {
+                const text =
+                    getText(
+                        group
+                    );
+
+                const match =
+                    String(text)
+                        .match(
+                            /(\d+)/
+                        );
+
+                return match
+                    ? match[1]
+                    : '';
+            };
+
+        const getSlotNumber =
+            (
+                selectedDay,
+                selectedTime
+            ) => {
+                const times =
+                    Object.keys(
+                        registry[
+                            String(
+                                selectedDay
+                            )
+                        ]
+                        || {}
+                    );
+
+                times.push(
+                    selectedTime
+                );
+
+                const sorted =
+                    [
+                        ...new Set(
+                            times
+                        ),
+                    ].sort();
+
+                return
+                    sorted.indexOf(
+                        selectedTime
+                    ) + 1;
+            };
+
+        const setHidden =
+            value => {
+                if (
+                    hidden.tagName
+                    === 'SELECT'
+                ) {
+                    let option =
+                        Array.from(
+                            hidden.options
+                        ).find(
+                            item =>
+                                String(
+                                    item.value
+                                )
+                                === String(
+                                    value
+                                )
+                        );
+
+                    if (
+                        value
+                        && !option
+                    ) {
+                        option =
+                            document
+                                .createElement(
+                                    'option'
+                                );
+
+                        option.value =
+                            value;
+
+                        option.textContent =
+                            value;
+
+                        hidden.appendChild(
+                            option
+                        );
+                    }
+                }
+
+                hidden.value =
+                    value || '';
+            };
+
+        const sync =
+            () => {
+                const selectedDay =
+                    Number(
+                        day.value
+                    );
+
+                const selectedTime =
+                    String(
+                        hour.value
+                        || ''
+                    );
+
+                if (
+                    !selectedDay
+                    || !selectedTime
+                ) {
+                    setHidden('');
+                    hour.setCustomValidity('');
+
+                    if (preview) {
+                        preview.hidden = true;
+                    }
+
+                    return;
+                }
+
+                if (
+                    selectedTime < '08:00'
+                    || selectedTime > '22:00'
+                ) {
+                    hour.setCustomValidity(
+                        'Choisissez une heure entre 08:00 et 22:00.'
+                    );
+
+                    setHidden('');
+
+                    if (preview) {
+                        preview.hidden = true;
+                    }
+
+                    return;
+                }
+
+                hour.setCustomValidity('');
+
+                setHidden(
+                    selectedDay
+                    + ':'
+                    + selectedTime.replace(
+                        ':',
+                        ''
+                    )
+                );
+
+                const number =
+                    getSlotNumber(
+                        selectedDay,
+                        selectedTime
+                    );
+
+                const code =
+                    dayCodes[
+                        selectedDay
+                    ]
+                    + number
+                    + getSubjectCode()
+                    + getClassCode()
+                    + getGroupNumber();
+
+                if (preview) {
+                    preview.hidden =
+                        !(
+                            getSubjectCode()
+                            && getClassCode()
+                            && getGroupNumber()
+                        );
+
+                    const target =
+                        preview.querySelector(
+                            'span'
+                        );
+
+                    if (target) {
+                        target.textContent =
+                            code || '—';
+                    }
+                }
+            };
+
+        /*
+         * La base est la source de vérité pour l'assignation actuelle.
+         */
+        const savedDay =
+            @json(
+                (int) (
+                    $assignment
+                        ->student_day_of_week
+                    ?? 0
+                )
+            );
+
+        const savedTime =
+            @json(
+                $assignment
+                    ->student_start_time
+                    ? substr(
+                        (string)
+                            $assignment
+                                ->student_start_time,
+                        0,
+                        5
+                    )
+                    : ''
+            );
+
+        if (
+            savedDay
+            && savedTime
+        ) {
+            day.value =
+                String(
+                    savedDay
+                );
+
+            hour.value =
+                savedTime;
+        }
+
+        [
+            day,
+            hour,
+            subject,
+            classRoom,
+            group,
+        ]
+            .filter(Boolean)
+            .forEach(
+                element => {
+                    element.addEventListener(
+                        'input',
+                        () =>
+                            setTimeout(
+                                sync,
+                                0
+                            )
+                    );
+
+                    element.addEventListener(
+                        'change',
+                        () =>
+                            setTimeout(
+                                sync,
+                                0
+                            )
+                    );
+                }
+            );
+
+        setTimeout(
+            sync,
+            10
+        );
+    }
+);
+</script>
+
+
+<!-- TIME_SLOT_RANK_ASSIGNMENT_LIVE_V1 -->
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        const registry =
+            @json(
+                app(
+                    \App\Services\PedagogicalTimeSlotService::class
+                )->map()
+            );
+
+        const dayCodes = {
+            1:'L',
+            2:'MA',
+            3:'M',
+            4:'J',
+            5:'V',
+            6:'S',
+            7:'D',
+        };
+
+        const normalize =
+            value =>
+                String(value || '')
+                    .normalize('NFD')
+                    .replace(
+                        /[\u0300-\u036f]/g,
+                        ''
+                    );
+
+        const subjectCode =
+            select => {
+                const text =
+                    select?.value
+                        ? (
+                            select.options[
+                                select.selectedIndex
+                            ]?.textContent
+                            || ''
+                        ).trim()
+                        : '';
+
+                let code =
+                    normalize(text)
+                        .toUpperCase()
+                        .replace(
+                            /[^A-Z0-9]/g,
+                            ''
+                        )
+                        .slice(
+                            0,
+                            2
+                        );
+
+                if (!code) {
+                    code = 'MT';
+                }
+
+                if (
+                    code.length === 1
+                ) {
+                    code += 'X';
+                }
+
+                return code;
+            };
+
+        const classCode =
+            select => {
+                const text =
+                    normalize(
+                        select?.value
+                            ? (
+                                select.options[
+                                    select.selectedIndex
+                                ]?.textContent
+                                || ''
+                            )
+                            : ''
+                    )
+                        .toLowerCase();
+
+                if (
+                    text.includes(
+                        'debut'
+                    )
+                ) {
+                    return 'D';
+                }
+
+                if (
+                    text.includes(
+                        'inter'
+                    )
+                ) {
+                    return 'I';
+                }
+
+                if (
+                    text.includes(
+                        'avance'
+                    )
+                    || text.includes(
+                        'adulte'
+                    )
+                ) {
+                    return 'A';
+                }
+
+                return text
+                    .replace(
+                        /[^a-z0-9]/g,
+                        ''
+                    )
+                    .charAt(0)
+                    .toUpperCase();
+            };
+
+        const groupNumber =
+            select => {
+                const text =
+                    select?.value
+                        ? (
+                            select.options[
+                                select.selectedIndex
+                            ]?.dataset?.code
+                            || select.options[
+                                select.selectedIndex
+                            ]?.textContent
+                            || ''
+                        )
+                        : '';
+
+                const match =
+                    String(text)
+                        .match(
+                            /(\d+)/
+                        );
+
+                return match
+                    ? match[1]
+                    : '';
+            };
+
+        const slotNumber =
+            (
+                day,
+                hour
+            ) => {
+                const dayKey =
+                    String(
+                        day
+                        || ''
+                    );
+
+                const time =
+                    String(
+                        hour
+                        || ''
+                    )
+                        .slice(
+                            0,
+                            5
+                        );
+
+                if (
+                    !dayKey
+                    || !time
+                    || time < '08:00'
+                    || time > '22:00'
+                ) {
+                    return null;
+                }
+
+                if (
+                    registry[
+                        dayKey
+                    ]?.[
+                        time
+                    ]
+                ) {
+                    return Number(
+                        registry[
+                            dayKey
+                        ][
+                            time
+                        ]
+                    );
+                }
+
+                const knownTimes =
+                    Object.keys(
+                        registry[
+                            dayKey
+                        ]
+                        || {}
+                    )
+                        .map(
+                            value =>
+                                String(value)
+                                    .slice(0,5)
+                        )
+                        .concat(
+                            ['08:00']
+                        )
+                        .filter(
+                            (
+                                value,
+                                index,
+                                all
+                            ) =>
+                                all.indexOf(
+                                    value
+                                )
+                                === index
+                        )
+                        .sort();
+
+                return (
+                    knownTimes
+                        .filter(
+                            value =>
+                                value < time
+                        )
+                        .length
+                    + 1
+                );
+            };
+
+        const ensureHiddenValue =
+            (
+                hidden,
+                day,
+                hour
+            ) => {
+                if (!hidden) {
+                    return;
+                }
+
+                if (
+                    !day
+                    || !hour
+                ) {
+                    hidden.value = '';
+                    return;
+                }
+
+                const value =
+                    String(day)
+                    + '|'
+                    + String(hour)
+                        .slice(
+                            0,
+                            5
+                        );
+
+                let option =
+                    Array.from(
+                        hidden.options
+                    )
+                        .find(
+                            item =>
+                                String(
+                                    item.value
+                                )
+                                === value
+                        );
+
+                if (!option) {
+                    option =
+                        document.createElement(
+                            'option'
+                        );
+
+                    option.value =
+                        value;
+
+                    option.textContent =
+                        value;
+
+                    hidden.appendChild(
+                        option
+                    );
+                }
+
+                hidden.value =
+                    value;
+            };
+
+        const bind =
+            ({
+                hiddenId,
+                dayId,
+                hourId,
+                subjectId,
+                classId,
+                groupId,
+                previewId,
+                previewSelector,
+            }) => {
+                const hidden =
+                    document.getElementById(
+                        hiddenId
+                    );
+
+                const day =
+                    document.getElementById(
+                        dayId
+                    );
+
+                const hour =
+                    document.getElementById(
+                        hourId
+                    );
+
+                const subject =
+                    document.getElementById(
+                        subjectId
+                    );
+
+                const classroom =
+                    document.getElementById(
+                        classId
+                    );
+
+                const group =
+                    document.getElementById(
+                        groupId
+                    );
+
+                const preview =
+                    document.getElementById(
+                        previewId
+                    );
+
+                if (
+                    !hidden
+                    || !day
+                    || !hour
+                ) {
+                    return;
+                }
+
+                /*
+                 * Heure libre à la minute.
+                 */
+                hour.step = '60';
+                hour.min = '08:00';
+                hour.max = '22:00';
+
+                const help =
+                    hour.parentElement
+                        ?.querySelector(
+                            '.assignment-help'
+                        );
+
+                if (help) {
+                    help.textContent =
+                        'Choisissez librement l’heure entre 08:00 et 22:00, à la minute près.';
+                }
+
+                const refresh =
+                    () => {
+                        const selectedDay =
+                            Number(
+                                day.value
+                            );
+
+                        const selectedHour =
+                            String(
+                                hour.value
+                                || ''
+                            )
+                                .slice(
+                                    0,
+                                    5
+                                );
+
+                        hour.setCustomValidity('');
+
+                        if (
+                            !selectedDay
+                            || !selectedHour
+                        ) {
+                            hidden.value = '';
+
+                            if (preview) {
+                                preview.hidden = true;
+                            }
+
+                            return;
+                        }
+
+                        if (
+                            selectedHour < '08:00'
+                            || selectedHour > '22:00'
+                        ) {
+                            hidden.value = '';
+
+                            hour.setCustomValidity(
+                                'Choisissez une heure entre 08:00 et 22:00.'
+                            );
+
+                            if (preview) {
+                                preview.hidden = true;
+                            }
+
+                            return;
+                        }
+
+                        const number =
+                            slotNumber(
+                                selectedDay,
+                                selectedHour
+                            );
+
+                        ensureHiddenValue(
+                            hidden,
+                            selectedDay,
+                            selectedHour
+                        );
+
+                        const code =
+                            dayCodes[
+                                selectedDay
+                            ]
+                            && number
+                            && subjectCode(
+                                subject
+                            )
+                            && classCode(
+                                classroom
+                            )
+                            && groupNumber(
+                                group
+                            )
+                                ? (
+                                    dayCodes[
+                                        selectedDay
+                                    ]
+                                    + number
+                                    + subjectCode(
+                                        subject
+                                    )
+                                    + classCode(
+                                        classroom
+                                    )
+                                    + groupNumber(
+                                        group
+                                    )
+                                )
+                                : '';
+
+                        if (preview) {
+                            preview.hidden =
+                                !code;
+
+                            const target =
+                                previewSelector
+                                    ? preview.querySelector(
+                                        previewSelector
+                                    )
+                                    : null;
+
+                            if (target) {
+                                target.textContent =
+                                    code
+                                    || '—';
+                            }
+                        }
+                    };
+
+                [
+                    day,
+                    hour,
+                    subject,
+                    classroom,
+                    group,
+                ]
+                    .filter(Boolean)
+                    .forEach(
+                        element => {
+                            element.addEventListener(
+                                'change',
+                                () =>
+                                    setTimeout(
+                                        refresh,
+                                        0
+                                    )
+                            );
+
+                            element.addEventListener(
+                                'input',
+                                () =>
+                                    setTimeout(
+                                        refresh,
+                                        0
+                                    )
+                            );
+                        }
+                    );
+
+                /*
+                 * Nouveau format déjà sauvegardé :
+                 * 2|08:45
+                 */
+                const initial =
+                    String(
+                        hidden.value
+                        || ''
+                    );
+
+                const match =
+                    initial.match(
+                        /^([1-7])\|(\d{2}:\d{2})$/
+                    );
+
+                if (match) {
+                    day.value =
+                        match[1];
+
+                    hour.value =
+                        match[2];
+                }
+
+                setTimeout(
+                    refresh,
+                    0
+                );
+            };
+
+        bind({
+            hiddenId:
+                'assignment_schedule_id',
+            dayId:
+                'assignment_schedule_day',
+            hourId:
+                'assignment_schedule_hour',
+            subjectId:
+                'assignment_subject_id',
+            classId:
+                'assignment_class_id',
+            groupId:
+                'assignment_class_slot_id',
+            previewId:
+                'assignmentGeneratedSlotCode',
+            previewSelector:
+                'strong',
+        });
+
+        bind({
+            hiddenId:
+                'edit_page_schedule_id',
+            dayId:
+                'edit_page_schedule_day',
+            hourId:
+                'edit_page_schedule_hour',
+            subjectId:
+                'edit_page_subject_id',
+            classId:
+                'edit_page_class_id',
+            groupId:
+                'edit_page_group_id',
+            previewId:
+                'editPageGeneratedSlotCode',
+            previewSelector:
+                'span',
+        });
+    }
+);
+</script>
+
 @endsection
+<!-- TIME_SLOT_CHRONOLOGICAL_RANK_V2 -->

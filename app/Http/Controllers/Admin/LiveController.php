@@ -276,6 +276,24 @@ class LiveController extends Controller
                 'integer',
                 'exists:class_slots,id',
             ],
+            'assignment_day_of_week' => [
+                'nullable',
+                'integer',
+                'between:1,7',
+            ],
+            'assignment_start_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
+            'assignment_day_of_week' => [
+                'nullable',
+                'integer',
+                'between:1,7',
+            ],
+            'assignment_start_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
             'professor_id' => [
                 'required',
                 'integer',
@@ -310,7 +328,7 @@ class LiveController extends Controller
             'class_id.required' =>
                 'Veuillez sélectionner une classe.',
             'class_slot_id.required' =>
-                'Veuillez sélectionner un créneau.',
+                'Veuillez sélectionner un groupe.',
             'end_time.after' =>
                 'L’heure de fin doit être après '
                 . 'l’heure de début.',
@@ -319,6 +337,84 @@ class LiveController extends Controller
         $this->assertLiveStartTimeGrid(
             $validated['start_time']
         );
+
+        /*
+         * LIVE_SEPARATE_GROUP_SLOT_V1
+         *
+         * Le créneau pédagogique est optionnel,
+         * mais Jour et Heure doivent être remplis ensemble.
+         */
+        $hasAssignmentDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            );
+
+        $hasAssignmentTime =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+
+        if (
+            $hasAssignmentDay
+            xor $hasAssignmentTime
+        ) {
+            throw ValidationException::withMessages([
+                'assignment_day_of_week' =>
+                    'Pour définir le créneau horaire, choisissez '
+                    . 'à la fois le jour et l’heure.',
+            ]);
+        }
+
+        if ($hasAssignmentTime) {
+            $this->assertLiveStartTimeGrid(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+        }
+
+        /*
+         * LIVE_SEPARATE_GROUP_SLOT_V1
+         *
+         * Le créneau pédagogique est optionnel,
+         * mais Jour et Heure doivent être remplis ensemble.
+         */
+        $hasAssignmentDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            );
+
+        $hasAssignmentTime =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+
+        if (
+            $hasAssignmentDay
+            xor $hasAssignmentTime
+        ) {
+            throw ValidationException::withMessages([
+                'assignment_day_of_week' =>
+                    'Pour définir le créneau horaire, choisissez '
+                    . 'à la fois le jour et l’heure.',
+            ]);
+        }
+
+        if ($hasAssignmentTime) {
+            $this->assertLiveStartTimeGrid(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+        }
 
         $subject = Subject::query()
             ->whereKey(
@@ -435,6 +531,31 @@ class LiveController extends Controller
                 $validated['live_date']
             )->dayOfWeekIso;
 
+        $scopeDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            )
+                ? (int)
+                    $validated[
+                        'assignment_day_of_week'
+                    ]
+                : $liveDay;
+
+        $scopeStart =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            )
+                ? $validated[
+                    'assignment_start_time'
+                ]
+                : $validated[
+                    'start_time'
+                ];
+
         $professorScope =
             ProfAssignment::query()
                 ->where('prof_id', $professor->id)
@@ -442,11 +563,11 @@ class LiveController extends Controller
                 ->where('level_id', $level->id)
                 ->where('class_id', $classRoom->id)
                 ->where('class_slot_id', $classSlot->id)
-                ->where('day_of_week', $liveDay)
+                ->where('day_of_week', $scopeDay)
                 ->whereTime(
                     'start_time',
                     '=',
-                    $validated['start_time']
+                    $scopeStart
                 )
                 ->first();
 
@@ -534,6 +655,46 @@ class LiveController extends Controller
             'title' => $validated['title'],
             'class_id' => $classRoom->id,
             'class_slot_id' => $classSlot->id,
+
+            'assignment_day_of_week' =>
+                !empty(
+                    $validated[
+                        'assignment_day_of_week'
+                    ]
+                )
+                    ? (int)
+                        $validated[
+                            'assignment_day_of_week'
+                        ]
+                    : null,
+
+            'assignment_start_time' =>
+                !empty(
+                    $validated[
+                        'assignment_start_time'
+                    ]
+                )
+                    ? $validated[
+                        'assignment_start_time'
+                    ]
+                    : null,
+
+            'assignment_end_time' =>
+                !empty(
+                    $validated[
+                        'assignment_start_time'
+                    ]
+                )
+                    ? Carbon::createFromFormat(
+                        'H:i',
+                        $validated[
+                            'assignment_start_time'
+                        ]
+                    )
+                        ->addMinutes(90)
+                        ->format('H:i:s')
+                    : null,
+
             'stream_url' =>
                 $validated['stream_url'],
             'provider' =>
@@ -865,6 +1026,24 @@ class LiveController extends Controller
                 'integer',
                 'exists:class_slots,id',
             ],
+            'assignment_day_of_week' => [
+                'nullable',
+                'integer',
+                'between:1,7',
+            ],
+            'assignment_start_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
+            'assignment_day_of_week' => [
+                'nullable',
+                'integer',
+                'between:1,7',
+            ],
+            'assignment_start_time' => [
+                'nullable',
+                'date_format:H:i',
+            ],
             'professor_id' => [
                 'required',
                 'integer',
@@ -894,6 +1073,84 @@ class LiveController extends Controller
             $validated['start_time']
         );
 
+        /*
+         * LIVE_SEPARATE_GROUP_SLOT_V1
+         *
+         * Le créneau pédagogique est optionnel,
+         * mais Jour et Heure doivent être remplis ensemble.
+         */
+        $hasAssignmentDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            );
+
+        $hasAssignmentTime =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+
+        if (
+            $hasAssignmentDay
+            xor $hasAssignmentTime
+        ) {
+            throw ValidationException::withMessages([
+                'assignment_day_of_week' =>
+                    'Pour définir le créneau horaire, choisissez '
+                    . 'à la fois le jour et l’heure.',
+            ]);
+        }
+
+        if ($hasAssignmentTime) {
+            $this->assertLiveStartTimeGrid(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+        }
+
+        /*
+         * LIVE_SEPARATE_GROUP_SLOT_V1
+         *
+         * Le créneau pédagogique est optionnel,
+         * mais Jour et Heure doivent être remplis ensemble.
+         */
+        $hasAssignmentDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            );
+
+        $hasAssignmentTime =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+
+        if (
+            $hasAssignmentDay
+            xor $hasAssignmentTime
+        ) {
+            throw ValidationException::withMessages([
+                'assignment_day_of_week' =>
+                    'Pour définir le créneau horaire, choisissez '
+                    . 'à la fois le jour et l’heure.',
+            ]);
+        }
+
+        if ($hasAssignmentTime) {
+            $this->assertLiveStartTimeGrid(
+                $validated[
+                    'assignment_start_time'
+                ]
+            );
+        }
+
         $live = Live::query()
             ->findOrFail($id);
 
@@ -920,6 +1177,168 @@ class LiveController extends Controller
                     (int) $validated['class_id']
                 );
 
+        /*
+         * LIVE_SEPARATE_GROUP_SLOT_V1_UPDATE_SCOPE
+         */
+        $liveDay =
+            Carbon::parse(
+                $validated['live_date']
+            )->dayOfWeekIso;
+
+        $scopeDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            )
+                ? (int)
+                    $validated[
+                        'assignment_day_of_week'
+                    ]
+                : $liveDay;
+
+        $scopeStart =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            )
+                ? $validated[
+                    'assignment_start_time'
+                ]
+                : $validated[
+                    'start_time'
+                ];
+
+        $professorScope =
+            ProfAssignment::query()
+                ->where(
+                    'prof_id',
+                    $professor->id
+                )
+                ->where(
+                    'subject_id',
+                    (int)
+                        $validated[
+                            'subject_id'
+                        ]
+                )
+                ->where(
+                    'level_id',
+                    (int)
+                        $validated[
+                            'level_id'
+                        ]
+                )
+                ->where(
+                    'class_id',
+                    (int)
+                        $validated[
+                            'class_id'
+                        ]
+                )
+                ->where(
+                    'class_slot_id',
+                    $slot->id
+                )
+                ->where(
+                    'day_of_week',
+                    $scopeDay
+                )
+                ->whereTime(
+                    'start_time',
+                    '=',
+                    $scopeStart
+                )
+                ->first();
+
+        if (!$professorScope) {
+            throw ValidationException::withMessages([
+                'professor_id' =>
+                    'Ce professeur n’est pas affecté à ce groupe '
+                    . 'pour ce jour et cette heure.',
+            ]);
+        }
+        /* TIME_SLOT_RANK_V1_UPDATE_SCOPE */
+        $liveDay =
+            Carbon::parse(
+                $validated['live_date']
+            )->dayOfWeekIso;
+
+        $scopeDay =
+            !empty(
+                $validated[
+                    'assignment_day_of_week'
+                ]
+            )
+                ? (int)
+                    $validated[
+                        'assignment_day_of_week'
+                    ]
+                : $liveDay;
+
+        $scopeStart =
+            !empty(
+                $validated[
+                    'assignment_start_time'
+                ]
+            )
+                ? $validated[
+                    'assignment_start_time'
+                ]
+                : $validated[
+                    'start_time'
+                ];
+
+        $professorScope =
+            ProfAssignment::query()
+                ->where(
+                    'prof_id',
+                    $professor->id
+                )
+                ->where(
+                    'subject_id',
+                    (int)
+                        $validated[
+                            'subject_id'
+                        ]
+                )
+                ->where(
+                    'level_id',
+                    (int)
+                        $validated[
+                            'level_id'
+                        ]
+                )
+                ->where(
+                    'class_id',
+                    (int)
+                        $validated[
+                            'class_id'
+                        ]
+                )
+                ->where(
+                    'class_slot_id',
+                    $slot->id
+                )
+                ->where(
+                    'day_of_week',
+                    $scopeDay
+                )
+                ->whereTime(
+                    'start_time',
+                    '=',
+                    $scopeStart
+                )
+                ->first();
+
+        if (!$professorScope) {
+            throw ValidationException::withMessages([
+                'professor_id' =>
+                    'Ce professeur n’est pas affecté à ce groupe '
+                    . 'pour ce jour et cette heure.',
+            ]);
+        }
         $conflict = Live::query()
             ->where('id', '!=', $live->id)
             ->where(
@@ -961,6 +1380,46 @@ class LiveController extends Controller
                 $slot->class_id,
             'class_slot_id' =>
                 $slot->id,
+
+            'assignment_day_of_week' =>
+                !empty(
+                    $validated[
+                        'assignment_day_of_week'
+                    ]
+                )
+                    ? (int)
+                        $validated[
+                            'assignment_day_of_week'
+                        ]
+                    : null,
+
+            'assignment_start_time' =>
+                !empty(
+                    $validated[
+                        'assignment_start_time'
+                    ]
+                )
+                    ? $validated[
+                        'assignment_start_time'
+                    ]
+                    : null,
+
+            'assignment_end_time' =>
+                !empty(
+                    $validated[
+                        'assignment_start_time'
+                    ]
+                )
+                    ? Carbon::createFromFormat(
+                        'H:i',
+                        $validated[
+                            'assignment_start_time'
+                        ]
+                    )
+                        ->addMinutes(90)
+                        ->format('H:i:s')
+                    : null,
+
             'professor_id' =>
                 $professor->id,
             'stream_url' =>
@@ -986,6 +1445,9 @@ class LiveController extends Controller
      * Même grille horaire que l'assignation étudiant :
      * 08:00 à 22:00, toutes les 30 minutes.
      */
+    /**
+     * Heure libre à la minute entre 08:00 et 22:00.
+     */
     private function assertLiveStartTimeGrid(
         string $time
     ): void {
@@ -1006,21 +1468,15 @@ class LiveController extends Controller
             ((int) $matches[1] * 60)
             + (int) $matches[2];
 
-        $first =
-            8 * 60;
-
-        $last =
-            22 * 60;
-
         if (
-            $minutes < $first
-            || $minutes > $last
-            || (($minutes - $first) % 30) !== 0
+            $minutes < 8 * 60
+            || $minutes > 22 * 60
+            || (int) $matches[2] > 59
         ) {
             throw ValidationException::withMessages([
                 'start_time' =>
-                    'Choisissez une heure entre 08:00 et 22:00 '
-                    . 'par pas de 30 minutes.',
+                    'Choisissez une heure entre 08:00 et 22:00, '
+                    . 'à la minute près.',
             ]);
         }
     }

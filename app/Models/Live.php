@@ -21,6 +21,9 @@ class Live extends Model
         'title',
         'class_id',
         'class_slot_id',
+        'assignment_day_of_week',
+        'assignment_start_time',
+        'assignment_end_time',
         'stream_url',
         'provider',
         'admin_id',
@@ -337,188 +340,11 @@ class Live extends Model
      */
     public function getPedagogicalCodeAttribute(): ?string
     {
-        if (
-            !$this->live_date
-            || !$this->start_time
-            || !$this->classSlot
-        ) {
-            return null;
-        }
-
-        try {
-            $dayNumber =
-                Carbon::parse(
-                    $this->live_date
-                )->dayOfWeekIso;
-        } catch (\Throwable $exception) {
-            return null;
-        }
-
-        $dayCodes = [
-            1 => 'L',
-            2 => 'MA',
-            3 => 'M',
-            4 => 'J',
-            5 => 'V',
-            6 => 'S',
-            7 => 'D',
-        ];
-
-        if (!isset($dayCodes[$dayNumber])) {
-            return null;
-        }
-
-        try {
-            $start =
-                Carbon::parse(
-                    $this->start_time
-                );
-
-            $minutes =
-                ((int) $start->format('H') * 60)
-                + (int) $start->format('i');
-        } catch (\Throwable $exception) {
-            return null;
-        }
-
-        $first = 8 * 60;
-        $last = 22 * 60;
-
-        if (
-            $minutes < $first
-            || $minutes > $last
-            || (($minutes - $first) % 30) !== 0
-        ) {
-            return null;
-        }
-
-        $slotNumber =
-            intdiv(
-                $minutes - $first,
-                30
-            ) + 1;
-
-        $subjectName =
-            (string) (
-                $this->classSlot
-                    ?->subject
-                    ?->name
-                ?? ''
-            );
-
-        $subjectNormalized =
-            preg_replace(
-                '/[^A-Z0-9]/',
-                '',
-                strtoupper(
-                    Str::ascii(
-                        $subjectName
-                    )
-                )
-            );
-
-        $subjectCode =
-            substr(
-                (string) $subjectNormalized,
-                0,
-                2
-            );
-
-        if ($subjectCode === '') {
-            $subjectCode = 'MT';
-        } elseif (strlen($subjectCode) === 1) {
-            $subjectCode .= 'X';
-        }
-
-        $className =
-            (string) (
-                $this->classSlot
-                    ?->classRoom
-                    ?->name
-                ?? $this->classRoom?->name
-                ?? ''
-            );
-
-        $normalizedClass =
-            strtolower(
-                Str::ascii(
-                    trim($className)
-                )
-            );
-
-        if (
-            str_contains(
-                $normalizedClass,
-                'debut'
-            )
-        ) {
-            $classCode = 'D';
-        } elseif (
-            str_contains(
-                $normalizedClass,
-                'inter'
-            )
-        ) {
-            $classCode = 'I';
-        } elseif (
-            str_contains(
-                $normalizedClass,
-                'avance'
-            )
-        ) {
-            $classCode = 'A';
-        } else {
-            $simpleClass =
-                preg_replace(
-                    '/[^A-Z0-9]/',
-                    '',
-                    strtoupper(
-                        Str::ascii(
-                            $className
-                        )
-                    )
-                );
-
-            $classCode =
-                substr(
-                    (string) $simpleClass,
-                    0,
-                    1
-                ) ?: 'X';
-        }
-
-        $groupCode =
-            strtoupper(
-                trim(
-                    (string)
-                        $this->classSlot->code
-                )
-            );
-
-        if (
-            preg_match(
-                '/(\d+)$/',
-                $groupCode,
-                $matches
-            )
-        ) {
-            $groupNumber =
-                $matches[1];
-        } else {
-            $groupNumber =
-                preg_replace(
-                    '/[^A-Z0-9]/',
-                    '',
-                    $groupCode
-                ) ?: '1';
-        }
-
-        return
-            $dayCodes[$dayNumber]
-            . $slotNumber
-            . $subjectCode
-            . $classCode
-            . $groupNumber;
+        return app(
+            \App\Services\AssignmentScopeService::class
+        )->liveCode(
+            $this
+        );
     }
     private function viewerTimezone(): string
     {

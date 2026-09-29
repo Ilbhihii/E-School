@@ -23,6 +23,8 @@
         (string) ($selectedSlot ?? '');
 
     $pathRequired = $required ?? true;
+    $pathSlotTitle = $slotTitle ?? 'Créneau';
+    $pathSlotPlaceholder = $slotPlaceholder ?? $pathSlotPlaceholder;
 @endphp
 
 <div
@@ -162,7 +164,7 @@
                         for="{{ $pathPrefix }}Slot"
                         class="adm-form-label"
                     >
-                        Créneau
+                        {{ $pathSlotTitle }}
                         @if($pathRequired)
                             <span style="color:var(--adm-danger);">*</span>
                         @endif
@@ -347,7 +349,7 @@ document.addEventListener(
                 classItem?.name || 'Classe',
                 slotItem?.code
                     || slotItem?.label
-                    || 'Créneau',
+                    || $pathSlotTitle,
             ];
 
             preview.innerHTML =
@@ -378,7 +380,7 @@ document.addEventListener(
             slot.appendChild(
                 makeOption(
                     '',
-                    'Choisir un créneau'
+                    $pathSlotPlaceholder
                 )
             );
 

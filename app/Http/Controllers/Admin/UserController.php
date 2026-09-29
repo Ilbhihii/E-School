@@ -18,6 +18,7 @@ use App\Mail\StudentAccountCreatedMailable;
 use App\Services\ClassSlotService;
 use App\Services\ProfessorAssignmentService;
 use App\Services\ProfessorAutoSchedulerService;
+use App\Services\PedagogicalTimeSlotService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -1359,38 +1360,6 @@ class UserController extends Controller
                     7 => 'Dimanche',
                 ];
 
-                $slotStarts = [
-                    1 => '08:00',
-                    2 => '08:30',
-                    3 => '09:00',
-                    4 => '09:30',
-                    5 => '10:00',
-                    6 => '10:30',
-                    7 => '11:00',
-                    8 => '11:30',
-                    9 => '12:00',
-                    10 => '12:30',
-                    11 => '13:00',
-                    12 => '13:30',
-                    13 => '14:00',
-                    14 => '14:30',
-                    15 => '15:00',
-                    16 => '15:30',
-                    17 => '16:00',
-                    18 => '16:30',
-                    19 => '17:00',
-                    20 => '17:30',
-                    21 => '18:00',
-                    22 => '18:30',
-                    23 => '19:00',
-                    24 => '19:30',
-                    25 => '20:00',
-                    26 => '20:30',
-                    27 => '21:00',
-                    28 => '21:30',
-                    29 => '22:00',
-                ];
-
                 $start = substr(
                     (string) $assignment->student_start_time,
                     0,
@@ -1403,19 +1372,43 @@ class UserController extends Controller
                     5
                 );
 
-                $slotNumber = array_search(
-                    $start,
-                    $slotStarts,
-                    true
-                );
+                $minutes =
+                    ((int) substr($start, 0, 2) * 60)
+                    + (int) substr($start, 3, 2);
 
-                if ($slotNumber !== false) {
-                    $assignment->student_slot_key =
-                        (int) $assignment->student_day_of_week
-                        . ':'
-                        . (int) $slotNumber;
-                }
+                $first =
+                    8 * 60;
 
+                $diff =
+                    $minutes - $first;
+
+                $keyPart =
+                    (
+                        $diff >= 0
+                        && $diff <= 14 * 60
+                        && $diff % 30 === 0
+                    )
+                        ? (string) (
+                            intdiv($diff, 30) + 1
+                        )
+                        : str_replace(
+                            ':',
+                            '',
+                            $start
+                        );
+
+                $assignment->student_slot_key =
+                    (int) $assignment->student_day_of_week
+                    . ':'
+                    . $keyPart;
+
+                /* TIME_SLOT_RANK_V1_LIST_KEY */
+                $assignment->student_slot_key =
+                    (int)
+                        $assignment
+                            ->student_day_of_week
+                    . '|'
+                    . $start;
                 $assignment->schedule_label =
                     trim(
                         (string) $assignment->student_slot_code
@@ -1489,7 +1482,7 @@ class UserController extends Controller
             'schedule_id' => [
                 'nullable',
                 'string',
-                'regex:/^[1-7]:(?:[1-9]|1[0-9]|2[0-9])$/',
+                'max:16',
             ],
         ], [
             'class_slot_id.required' =>
@@ -1613,7 +1606,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un jour et une heure entre 08:00 et 22:00.',
+                        'Créneau étudiant invalide. Choisissez un jour et une heure libre entre 08:00 et 22:00.',
                 ]);
         }
 
@@ -1826,8 +1819,11 @@ class UserController extends Controller
                 ->values();
 
         /*
-         * Reconstruire la clé synthétique jour:créneau.
-         * Exemple : Dimanche 08:00 => 7:1.
+         * ASSIGNATION_HEURE_LIBRE_MINUTE_V1
+         *
+         * Clé :
+         * - ancienne grille de 30 min => jour:numéro
+         * - heure libre hors grille    => jour:HHMM
          */
         $assignment->student_slot_key =
             '';
@@ -1836,48 +1832,92 @@ class UserController extends Controller
             $assignment->student_day_of_week
             && $assignment->student_start_time
         ) {
-            $slotStarts = [
-                1 => '08:00',
-                2 => '09:30',
-                3 => '11:00',
-                4 => '12:30',
-                5 => '14:00',
-                6 => '15:30',
-                7 => '17:00',
-                8 => '18:30',
-                9 => '20:00',
-                10 => '21:30',
-            ];
+            $start =
+                substr(
+                    (string)
+                        $assignment
+                            ->student_start_time,
+                    0,
+                    5
+                );
 
-            $start = substr(
-                (string)
-                    $assignment
-                        ->student_start_time,
-                0,
-                5
-            );
+            $minutes =
+                ((int) substr($start, 0, 2) * 60)
+                + (int) substr($start, 3, 2);
 
-            $slotNumber = array_search(
-                $start,
-                $slotStarts,
-                true
-            );
+            $diff =
+                $minutes - (8 * 60);
 
-            if (
-                $slotNumber
-                !== false
-            ) {
-                $assignment
-                    ->student_slot_key =
-                        (int)
-                            $assignment
-                                ->student_day_of_week
-                        . ':'
-                        . (int)
-                            $slotNumber;
-            }
+            $keyPart =
+                (
+                    $diff >= 0
+                    && $diff <= 14 * 60
+                    && $diff % 30 === 0
+                )
+                    ? (string) (
+                        intdiv(
+                            $diff,
+                            30
+                        ) + 1
+                    )
+                    : str_replace(
+                        ':',
+                        '',
+                        $start
+                    );
+
+            $assignment
+                ->student_slot_key =
+                    (int)
+                        $assignment
+                            ->student_day_of_week
+                    . ':'
+                    . $keyPart;
         }
-
+        /*
+         * SLOT_ORDINAL_EDIT_KEY_V1
+         *
+         * Le champ caché utilise maintenant jour:HHMM.
+         */
+        if (
+            $assignment->student_day_of_week
+            && $assignment->student_start_time
+        ) {
+            $assignment->student_slot_key =
+                (int)
+                    $assignment
+                        ->student_day_of_week
+                . ':'
+                . str_replace(
+                    ':',
+                    '',
+                    substr(
+                        (string)
+                            $assignment
+                                ->student_start_time,
+                        0,
+                        5
+                    )
+                );
+        }
+        /* TIME_SLOT_RANK_V1_EDIT_KEY */
+        if (
+            $assignment->student_day_of_week
+            && $assignment->student_start_time
+        ) {
+            $assignment->student_slot_key =
+                (int)
+                    $assignment
+                        ->student_day_of_week
+                . '|'
+                . substr(
+                    (string)
+                        $assignment
+                            ->student_start_time,
+                    0,
+                    5
+                );
+        }
         return view(
             'admin.assign-class-edit',
             compact(
@@ -1928,7 +1968,7 @@ class UserController extends Controller
             'schedule_id' => [
                 'nullable',
                 'string',
-                'regex:/^[1-7]:(?:[1-9]|1[0-9]|2[0-9])$/',
+                'max:16',
             ],
         ]);
 
@@ -2049,7 +2089,7 @@ class UserController extends Controller
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un jour et une heure entre 08:00 et 22:00.',
+                        'Créneau étudiant invalide. Choisissez un jour et une heure libre entre 08:00 et 22:00.',
                 ]);
         }
 
@@ -2504,28 +2544,101 @@ class UserController extends Controller
             return null;
         }
 
+        $day = null;
+        $time = null;
+
+        /*
+         * Nouveau format :
+         * 2|08:45
+         */
         if (
-            !preg_match(
-                '/^([1-7]):((?:[1-9]|1[0-9]|2[0-9]))$/',
+            preg_match(
+                '/^([1-7])\|(\d{2}:\d{2})$/',
                 $scheduleKey,
                 $matches
             )
         ) {
+            $day =
+                (int)
+                    $matches[1];
+
+            $time =
+                $matches[2];
+        }
+
+        /*
+         * Compatibilité historique :
+         * 2:3 => ancien n° calculé par pas de 30 min.
+         */
+        if (
+            !$day
+            && preg_match(
+                '/^([1-7]):(\d{1,2})$/',
+                $scheduleKey,
+                $matches
+            )
+        ) {
+            $day =
+                (int)
+                    $matches[1];
+
+            $oldNumber =
+                (int)
+                    $matches[2];
+
+            if (
+                $oldNumber < 1
+                || $oldNumber > 29
+            ) {
+                return null;
+            }
+
+            $time =
+                \Carbon\Carbon
+                    ::createFromFormat(
+                        'H:i',
+                        '08:00'
+                    )
+                    ->addMinutes(
+                        ($oldNumber - 1)
+                        * 30
+                    )
+                    ->format(
+                        'H:i'
+                    );
+        }
+
+        if (
+            !$day
+            || !$time
+        ) {
             return null;
         }
 
-        $day =
-            (int)
-                $matches[1];
+        $timeService =
+            app(
+                PedagogicalTimeSlotService::class
+            );
+
+        $normalizedTime =
+            $timeService
+                ->normalizeTime(
+                    $time
+                );
+
+        if (!$normalizedTime) {
+            return null;
+        }
 
         $number =
-            (int)
-                $matches[2];
+            $timeService
+                ->slotNumber(
+                    $day,
+                    $normalizedTime,
+                    true
+                );
 
-        if (
-            $number < 1
-            || $number > 29
-        ) {
+        if (!$number) {
             return null;
         }
 
@@ -2553,22 +2666,8 @@ class UserController extends Controller
             \Carbon\Carbon
                 ::createFromFormat(
                     'H:i',
-                    '08:00'
-                )
-                ->addMinutes(
-                    ($number - 1)
-                    * 30
+                    $normalizedTime
                 );
-
-        if (
-            $start
-                ->format(
-                    'H:i'
-                )
-            > '22:00'
-        ) {
-            return null;
-        }
 
         $end =
             $start
@@ -2577,12 +2676,6 @@ class UserController extends Controller
                     90
                 );
 
-        /*
-         * Matière :
-         * Arabe = AR
-         * Coran = CO
-         * Anglais = AN
-         */
         $normalizedSubject =
             preg_replace(
                 '/[^A-Z0-9]/',
@@ -2603,26 +2696,16 @@ class UserController extends Controller
                 2
             );
 
-        if (
-            $subjectCode === ''
-        ) {
-            $subjectCode =
-                'MT';
+        if ($subjectCode === '') {
+            $subjectCode = 'MT';
         } elseif (
             strlen(
                 $subjectCode
             ) === 1
         ) {
-            $subjectCode .=
-                'X';
+            $subjectCode .= 'X';
         }
 
-        /*
-         * Classe / niveau :
-         * Débutant = D
-         * Intermédiaire = I
-         * Avancé = A
-         */
         $normalizedClass =
             strtolower(
                 Str::ascii(
@@ -2639,24 +2722,25 @@ class UserController extends Controller
                 'debut'
             )
         ) {
-            $classCode =
-                'D';
+            $classCode = 'D';
         } elseif (
             str_contains(
                 $normalizedClass,
                 'inter'
             )
         ) {
-            $classCode =
-                'I';
+            $classCode = 'I';
         } elseif (
             str_contains(
                 $normalizedClass,
                 'avance'
             )
+            || str_contains(
+                $normalizedClass,
+                'adulte'
+            )
         ) {
-            $classCode =
-                'A';
+            $classCode = 'A';
         } else {
             $simpleClass =
                 preg_replace(
@@ -2680,11 +2764,6 @@ class UserController extends Controller
                 ?: 'X';
         }
 
-        /*
-         * Groupe :
-         * D1 / I1 / A1 -> 1
-         * D2 / I2 / A2 -> 2
-         */
         $groupCode =
             strtoupper(
                 trim(
@@ -2693,23 +2772,18 @@ class UserController extends Controller
                 )
             );
 
-        if (
-            preg_match(
-                '/(\d+)$/',
-                $groupCode,
-                $groupMatch
-            )
-        ) {
-            $groupNumber =
-                $groupMatch[1];
-        } else {
-            $groupNumber =
-                preg_replace(
-                    '/[^A-Z0-9]/',
-                    '',
-                    $groupCode
-                )
-                ?: '1';
+        preg_match(
+            '/(\d+)$/',
+            $groupCode,
+            $groupMatch
+        );
+
+        $groupNumber =
+            $groupMatch[1]
+            ?? null;
+
+        if (!$groupNumber) {
+            return null;
         }
 
         $slotCode =
@@ -2720,8 +2794,7 @@ class UserController extends Controller
             . $groupNumber;
 
         return (object) [
-            'id' =>
-                null,
+            'id' => null,
 
             'slot_code' =>
                 $slotCode,

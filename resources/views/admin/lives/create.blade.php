@@ -2,7 +2,7 @@
 
 @section('title', 'Créer un live')
 @section('page_title', 'Nouveau live')
-@section('breadcrumb', 'Matière → Niveau → Classe → Créneau → Live')
+@section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Créneau horaire → Live')
 
 @section('content')
 <div class="row justify-content-center">
@@ -99,7 +99,7 @@
                             <div class="col-md-12">
                                 <div class="adm-form-group" style="margin-bottom:0;">
                                     <label class="adm-form-label" style="font-size:0.75rem;">
-                                        Créneau / groupe
+                                        Groupe
                                     </label>
                                     <select
                                         id="outlook_class_slot_id"
@@ -118,6 +118,85 @@
                             </div>
                         </div>
 
+                        <div
+                            class="adm-form-group mt-2"
+                            style="margin-bottom:0;"
+                        >
+                            <label
+                                class="adm-form-label"
+                                style="font-size:0.75rem;"
+                            >
+                                Créneau horaire
+                                <span
+                                    style="
+                                        color:#64748B;
+                                        font-weight:400;
+                                    "
+                                >
+                                    (optionnel)
+                                </span>
+                            </label>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label
+                                        class="adm-form-label"
+                                        for="outlook_assignment_day_of_week"
+                                        style="font-size:0.7rem;"
+                                    >
+                                        Jour
+                                    </label>
+
+                                    <select
+                                        id="outlook_assignment_day_of_week"
+                                        class="adm-form-select"
+                                        style="font-size:0.85rem;"
+                                    >
+                                        <option value="">Choisir un jour</option>
+                                        <option value="1">Lundi</option>
+                                        <option value="2">Mardi</option>
+                                        <option value="3">Mercredi</option>
+                                        <option value="4">Jeudi</option>
+                                        <option value="5">Vendredi</option>
+                                        <option value="6">Samedi</option>
+                                        <option value="7">Dimanche</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label
+                                        class="adm-form-label"
+                                        for="outlook_assignment_start_time"
+                                        style="font-size:0.7rem;"
+                                    >
+                                        Heure
+                                    </label>
+
+                                    <input
+                                        id="outlook_assignment_start_time"
+                                        type="time"
+                                        class="adm-form-control"
+                                        min="08:00"
+                                        max="22:00"
+                                        step="900"
+                                        style="font-size:0.85rem;"
+                                    >
+                                </div>
+                            </div>
+
+                            <small
+                                style="
+                                    display:block;
+                                    margin-top:6px;
+                                    color:#64748B;
+                                    font-size:0.7rem;
+                                "
+                            >
+                                Le Groupe reste indépendant.
+                                Ce créneau sert au rattachement pédagogique
+                                du Live.
+                            </small>
+                        </div>
                         <div class="adm-form-group mt-2" style="margin-bottom:0;">
                             <label class="adm-form-label" style="font-size:0.75rem;">
                                 Personne / professeur affecté au lien
@@ -160,7 +239,7 @@
                             <div class="col-md-4">
                                 <div class="adm-form-group" style="margin-bottom:0;">
                                     <label class="adm-form-label" style="font-size:0.75rem;">Début</label>
-                                    <input type="time" id="outlook_start" class="adm-form-control" min="08:00" max="22:00" step="1800" style="font-size:0.85rem;">
+                                    <input type="time" id="outlook_start" class="adm-form-control" min="08:00" max="22:00" step="900" style="font-size:0.85rem;">
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -336,7 +415,7 @@
 
                         <div class="adm-form-group">
                             <label class="adm-form-label">
-                                Créneau / groupe
+                                Groupe
                             </label>
                             <select
                                 name="class_slot_id"
@@ -350,13 +429,72 @@
                                 </option>
                             </select>
                             <small style="display:block;margin-top:6px;color:#64748B;font-size:0.7rem;">
-                                Créneau structurel indépendant de l'emploi du temps.
+                                Groupe pédagogique indépendant du créneau horaire.
                             </small>
                             @error('class_slot_id')
                                 <div class="adm-form-error">{{ $message }}</div>
                             @enderror
                         </div>
 
+                        <div class="adm-form-group">
+                            <label class="adm-form-label">
+                                Créneau horaire
+                                <span
+                                    style="
+                                        color:#64748B;
+                                        font-weight:400;
+                                    "
+                                >
+                                    (optionnel)
+                                </span>
+                            </label>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label
+                                        class="adm-form-label"
+                                        for="manual_assignment_day_of_week"
+                                    >
+                                        Jour
+                                    </label>
+
+                                    <select
+                                        name="assignment_day_of_week"
+                                        id="manual_assignment_day_of_week"
+                                        class="adm-form-select"
+                                    >
+                                        <option value="">Choisir un jour</option>
+                                        <option value="1" {{ old('assignment_day_of_week') == '1' ? 'selected' : '' }}>Lundi</option>
+                                        <option value="2" {{ old('assignment_day_of_week') == '2' ? 'selected' : '' }}>Mardi</option>
+                                        <option value="3" {{ old('assignment_day_of_week') == '3' ? 'selected' : '' }}>Mercredi</option>
+                                        <option value="4" {{ old('assignment_day_of_week') == '4' ? 'selected' : '' }}>Jeudi</option>
+                                        <option value="5" {{ old('assignment_day_of_week') == '5' ? 'selected' : '' }}>Vendredi</option>
+                                        <option value="6" {{ old('assignment_day_of_week') == '6' ? 'selected' : '' }}>Samedi</option>
+                                        <option value="7" {{ old('assignment_day_of_week') == '7' ? 'selected' : '' }}>Dimanche</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label
+                                        class="adm-form-label"
+                                        for="manual_assignment_start_time"
+                                    >
+                                        Heure
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        name="assignment_start_time"
+                                        id="manual_assignment_start_time"
+                                        value="{{ old('assignment_start_time') }}"
+                                        class="adm-form-control"
+                                        min="08:00"
+                                        max="22:00"
+                                        step="900"
+                                    >
+                                </div>
+                            </div>
+                        </div>
                         <div class="adm-form-group">
                             <label class="adm-form-label">
                                 Personne / professeur affecté au lien
@@ -424,7 +562,7 @@
                                         class="adm-form-control"
                                         min="08:00"
                                         max="22:00"
-                                        step="1800"
+                                        step="900"
                                         required
                                     >
                                 </div>
@@ -1002,6 +1140,20 @@ document.addEventListener('DOMContentLoaded', () => {
             )?.value
         );
 
+        setField(
+            '[name="assignment_day_of_week"]',
+            document.getElementById(
+                'outlook_assignment_day_of_week'
+            )?.value
+        );
+
+        setField(
+            '[name="assignment_start_time"]',
+            document.getElementById(
+                'outlook_assignment_start_time'
+            )?.value
+        );
+
         copyMainToManual();
         updateProviderButtons();
     };
@@ -1222,6 +1374,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'meeting_provider',
         'outlook_title',
         'outlook_professor_id',
+        'outlook_assignment_day_of_week',
+        'outlook_assignment_start_time',
         'outlook_date',
         'outlook_start',
         'outlook_end',
@@ -1580,14 +1734,48 @@ document.addEventListener(
                             )
                     );
 
-                const day =
+                const scopeDay =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_assignment_day_of_week'
+                            : 'manual_assignment_day_of_week'
+                    );
+
+                const scopeStart =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_assignment_start_time'
+                            : 'manual_assignment_start_time'
+                    );
+
+                const fallbackDateDay =
                     dayCodeFromDate(
                         dateInput.value
                     );
 
+                const dayMap = {
+                    1:'L',
+                    2:'MA',
+                    3:'M',
+                    4:'J',
+                    5:'V',
+                    6:'S',
+                    7:'D',
+                };
+
+                const day =
+                    scopeDay?.value
+                        ? dayMap[
+                            Number(
+                                scopeDay.value
+                            )
+                        ]
+                        : fallbackDateDay;
+
                 const number =
                     slotNumberFromTime(
-                        startInput.value
+                        scopeStart?.value
+                        || startInput.value
                     );
 
                 const sCode =
@@ -1648,6 +1836,18 @@ document.addEventListener(
                         `${prefix}_class_id`,
                         `${prefix}_class_slot_id`,
                         prefix === 'outlook'
+                            ? 'outlook_assignment_day_of_week'
+                            : 'manual_assignment_day_of_week',
+                        prefix === 'outlook'
+                            ? 'outlook_assignment_start_time'
+                            : 'manual_assignment_start_time',
+                        prefix === 'outlook'
+                            ? 'outlook_assignment_day_of_week'
+                            : 'manual_assignment_day_of_week',
+                        prefix === 'outlook'
+                            ? 'outlook_assignment_start_time'
+                            : 'manual_assignment_start_time',
+                        prefix === 'outlook'
                             ? 'outlook_date'
                             : 'manual_live_date',
                         prefix === 'outlook'
@@ -1695,4 +1895,654 @@ document.addEventListener(
 );
 </script>
 
+
+<!-- TIME_SLOT_RANK_LIVE_CREATE_V1 -->
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        const registry =
+            @json(
+                app(
+                    \App\Services\PedagogicalTimeSlotService::class
+                )->map()
+            );
+
+        const dayCodes = {
+            1:'L',
+            2:'MA',
+            3:'M',
+            4:'J',
+            5:'V',
+            6:'S',
+            7:'D',
+        };
+
+        const dayFromDate =
+            value => {
+                if (!value) {
+                    return null;
+                }
+
+                const date =
+                    new Date(
+                        value
+                        + 'T12:00:00'
+                    );
+
+                const jsDay =
+                    date.getDay();
+
+                return jsDay === 0
+                    ? 7
+                    : jsDay;
+            };
+
+        const normalize =
+            value =>
+                String(value || '')
+                    .normalize('NFD')
+                    .replace(
+                        /[\u0300-\u036f]/g,
+                        ''
+                    );
+
+        const slotNumber =
+            (
+                day,
+                hour
+            ) => {
+                const dayKey =
+                    String(
+                        day
+                        || ''
+                    );
+
+                const time =
+                    String(
+                        hour
+                        || ''
+                    )
+                        .slice(
+                            0,
+                            5
+                        );
+
+                if (
+                    !dayKey
+                    || !time
+                    || time < '08:00'
+                    || time > '22:00'
+                ) {
+                    return null;
+                }
+
+                if (
+                    registry[
+                        dayKey
+                    ]?.[
+                        time
+                    ]
+                ) {
+                    return Number(
+                        registry[
+                            dayKey
+                        ][
+                            time
+                        ]
+                    );
+                }
+
+                const knownTimes =
+                    Object.keys(
+                        registry[
+                            dayKey
+                        ]
+                        || {}
+                    )
+                        .map(
+                            value =>
+                                String(value)
+                                    .slice(0,5)
+                        )
+                        .concat(
+                            ['08:00']
+                        )
+                        .filter(
+                            (
+                                value,
+                                index,
+                                all
+                            ) =>
+                                all.indexOf(
+                                    value
+                                )
+                                === index
+                        )
+                        .sort();
+
+                return (
+                    knownTimes
+                        .filter(
+                            value =>
+                                value < time
+                        )
+                        .length
+                    + 1
+                );
+            };
+
+        const subjectCode =
+            select => {
+                const text =
+                    select?.value
+                        ? (
+                            select.options[
+                                select.selectedIndex
+                            ]?.textContent
+                            || ''
+                        )
+                        : '';
+
+                let code =
+                    normalize(text)
+                        .toUpperCase()
+                        .replace(
+                            /[^A-Z0-9]/g,
+                            ''
+                        )
+                        .slice(
+                            0,
+                            2
+                        );
+
+                if (!code) {
+                    code = 'MT';
+                }
+
+                if (
+                    code.length === 1
+                ) {
+                    code += 'X';
+                }
+
+                return code;
+            };
+
+        const classCode =
+            select => {
+                const text =
+                    normalize(
+                        select?.value
+                            ? (
+                                select.options[
+                                    select.selectedIndex
+                                ]?.textContent
+                                || ''
+                            )
+                            : ''
+                    )
+                        .toLowerCase();
+
+                if (
+                    text.includes(
+                        'debut'
+                    )
+                ) {
+                    return 'D';
+                }
+
+                if (
+                    text.includes(
+                        'inter'
+                    )
+                ) {
+                    return 'I';
+                }
+
+                if (
+                    text.includes(
+                        'avance'
+                    )
+                    || text.includes(
+                        'adulte'
+                    )
+                ) {
+                    return 'A';
+                }
+
+                return text
+                    .replace(
+                        /[^a-z0-9]/g,
+                        ''
+                    )
+                    .charAt(0)
+                    .toUpperCase();
+            };
+
+        const groupNumber =
+            select => {
+                const text =
+                    select?.value
+                        ? (
+                            select.options[
+                                select.selectedIndex
+                            ]?.textContent
+                            || ''
+                        )
+                        : '';
+
+                const match =
+                    String(text)
+                        .match(
+                            /(\d+)/
+                        );
+
+                return match
+                    ? match[1]
+                    : '';
+            };
+
+        const createScopeBlock =
+            (
+                anchorSelect,
+                prefix,
+                named
+            ) => {
+                if (
+                    !anchorSelect
+                    || document.getElementById(
+                        prefix
+                        + '_assignment_day_of_week'
+                    )
+                ) {
+                    return null;
+                }
+
+                const wrapper =
+                    document.createElement(
+                        'div'
+                    );
+
+                wrapper.className =
+                    'adm-form-group mt-2';
+
+                wrapper.innerHTML = `
+                    <label class="adm-form-label">
+                        Créneau horaire
+                        <span style="color:#64748B;font-weight:400;">
+                            (optionnel)
+                        </span>
+                    </label>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="adm-form-label">
+                                Jour
+                            </label>
+
+                            <select
+                                id="${prefix}_assignment_day_of_week"
+                                ${named ? 'name="assignment_day_of_week"' : ''}
+                                class="adm-form-select"
+                            >
+                                <option value="">Choisir un jour</option>
+                                <option value="1">Lundi</option>
+                                <option value="2">Mardi</option>
+                                <option value="3">Mercredi</option>
+                                <option value="4">Jeudi</option>
+                                <option value="5">Vendredi</option>
+                                <option value="6">Samedi</option>
+                                <option value="7">Dimanche</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="adm-form-label">
+                                Heure
+                            </label>
+
+                            <input
+                                type="time"
+                                id="${prefix}_assignment_start_time"
+                                ${named ? 'name="assignment_start_time"' : ''}
+                                class="adm-form-control"
+                                min="08:00"
+                                max="22:00"
+                                step="60"
+                            >
+                        </div>
+                    </div>
+
+                    <small style="display:block;margin-top:6px;color:#64748B;font-size:.7rem;">
+                        Groupe indépendant. Heure libre à la minute près.
+                    </small>
+                `;
+
+                const groupContainer =
+                    anchorSelect
+                        .closest(
+                            '.adm-form-group'
+                        )
+                    || anchorSelect
+                        .parentElement;
+
+                groupContainer
+                    ?.insertAdjacentElement(
+                        'afterend',
+                        wrapper
+                    );
+
+                return wrapper;
+            };
+
+        const mainGroup =
+            document.getElementById(
+                'outlook_class_slot_id'
+            );
+
+        const manualGroup =
+            document.getElementById(
+                'manual_class_slot_id'
+            );
+
+        createScopeBlock(
+            mainGroup,
+            'outlook',
+            false
+        );
+
+        createScopeBlock(
+            manualGroup,
+            'manual',
+            true
+        );
+
+        const mainDay =
+            document.getElementById(
+                'outlook_assignment_day_of_week'
+            );
+
+        const mainHour =
+            document.getElementById(
+                'outlook_assignment_start_time'
+            );
+
+        const manualDay =
+            document.getElementById(
+                'manual_assignment_day_of_week'
+            );
+
+        const manualHour =
+            document.getElementById(
+                'manual_assignment_start_time'
+            );
+
+        const mainStart =
+            document.getElementById(
+                'outlook_start'
+            );
+
+        const manualStart =
+            document.getElementById(
+                'manual_start_time'
+            );
+
+        if (mainStart) {
+            mainStart.step = '60';
+        }
+
+        if (manualStart) {
+            manualStart.step = '60';
+        }
+
+        const syncScope =
+            () => {
+                if (
+                    manualDay
+                    && mainDay
+                ) {
+                    manualDay.value =
+                        mainDay.value;
+                }
+
+                if (
+                    manualHour
+                    && mainHour
+                ) {
+                    manualHour.value =
+                        mainHour.value;
+                }
+            };
+
+        [
+            mainDay,
+            mainHour,
+        ]
+            .filter(Boolean)
+            .forEach(
+                element => {
+                    element.addEventListener(
+                        'change',
+                        syncScope
+                    );
+
+                    element.addEventListener(
+                        'input',
+                        syncScope
+                    );
+                }
+            );
+
+        const bindPreview =
+            prefix => {
+                const subject =
+                    document.getElementById(
+                        prefix
+                        + '_subject_id'
+                    );
+
+                const classroom =
+                    document.getElementById(
+                        prefix
+                        + '_class_id'
+                    );
+
+                const group =
+                    document.getElementById(
+                        prefix
+                        + '_class_slot_id'
+                    );
+
+                const date =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_date'
+                            : 'manual_live_date'
+                    );
+
+                const start =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_start'
+                            : 'manual_start_time'
+                    );
+
+                const day =
+                    document.getElementById(
+                        prefix
+                        + '_assignment_day_of_week'
+                    );
+
+                const hour =
+                    document.getElementById(
+                        prefix
+                        + '_assignment_start_time'
+                    );
+
+                const output =
+                    document.getElementById(
+                        prefix
+                        + '_live_code'
+                    );
+
+                const preview =
+                    document.getElementById(
+                        prefix
+                        + '_live_code_preview'
+                    );
+
+                if (
+                    !subject
+                    || !classroom
+                    || !group
+                    || !date
+                    || !start
+                    || !output
+                    || !preview
+                ) {
+                    return;
+                }
+
+                const refresh =
+                    () => {
+                        const selectedDay =
+                            Number(
+                                day?.value
+                                || dayFromDate(
+                                    date.value
+                                )
+                            );
+
+                        const selectedHour =
+                            String(
+                                hour?.value
+                                || start.value
+                                || ''
+                            )
+                                .slice(
+                                    0,
+                                    5
+                                );
+
+                        const number =
+                            slotNumber(
+                                selectedDay,
+                                selectedHour
+                            );
+
+                        const code =
+                            dayCodes[
+                                selectedDay
+                            ]
+                            && number
+                            && subjectCode(
+                                subject
+                            )
+                            && classCode(
+                                classroom
+                            )
+                            && groupNumber(
+                                group
+                            )
+                                ? (
+                                    dayCodes[
+                                        selectedDay
+                                    ]
+                                    + number
+                                    + subjectCode(
+                                        subject
+                                    )
+                                    + classCode(
+                                        classroom
+                                    )
+                                    + groupNumber(
+                                        group
+                                    )
+                                )
+                                : '';
+
+                        output.textContent =
+                            code
+                            || '—';
+
+                        preview.style.display =
+                            code
+                                ? 'block'
+                                : 'none';
+                    };
+
+                [
+                    subject,
+                    classroom,
+                    group,
+                    date,
+                    start,
+                    day,
+                    hour,
+                ]
+                    .filter(Boolean)
+                    .forEach(
+                        element => {
+                            element.addEventListener(
+                                'change',
+                                () =>
+                                    setTimeout(
+                                        refresh,
+                                        0
+                                    )
+                            );
+
+                            element.addEventListener(
+                                'input',
+                                () =>
+                                    setTimeout(
+                                        refresh,
+                                        0
+                                    )
+                            );
+                        }
+                    );
+
+                setTimeout(
+                    refresh,
+                    0
+                );
+            };
+
+        bindPreview(
+            'outlook'
+        );
+
+        bindPreview(
+            'manual'
+        );
+
+        /*
+         * Garantit la copie juste avant le submit déclenché
+         * par le gros bouton principal.
+         */
+        if (
+            typeof window.saveLive
+            === 'function'
+        ) {
+            const originalSaveLive =
+                window.saveLive;
+
+            window.saveLive =
+                function (...args) {
+                    syncScope();
+
+                    return originalSaveLive
+                        .apply(
+                            this,
+                            args
+                        );
+                };
+        }
+    }
+);
+</script>
+
 @endsection
+<!-- TIME_SLOT_CHRONOLOGICAL_RANK_V2 -->
