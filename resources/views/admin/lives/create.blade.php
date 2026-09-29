@@ -160,7 +160,7 @@
                             <div class="col-md-4">
                                 <div class="adm-form-group" style="margin-bottom:0;">
                                     <label class="adm-form-label" style="font-size:0.75rem;">Début</label>
-                                    <input type="time" id="outlook_start" class="adm-form-control" style="font-size:0.85rem;">
+                                    <input type="time" id="outlook_start" class="adm-form-control" min="08:00" max="22:00" step="1800" style="font-size:0.85rem;">
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -169,6 +169,24 @@
                                     <input type="time" id="outlook_end" class="adm-form-control" style="font-size:0.85rem;">
                                 </div>
                             </div>
+                        </div>
+
+                        <div
+                            id="outlook_live_code_preview"
+                            style="
+                                display:none;
+                                margin-top:10px;
+                                padding:10px 12px;
+                                border-radius:10px;
+                                border:1px solid rgba(99,102,241,.18);
+                                background:rgba(99,102,241,.06);
+                                color:#C4B5FD;
+                                font-size:.8rem;
+                                font-weight:700;
+                            "
+                        >
+                            Résultat final :
+                            <strong id="outlook_live_code">—</strong>
                         </div>
 
                         <div class="adm-form-group mt-2" style="margin-bottom:0;">
@@ -389,6 +407,7 @@
                             <div class="row g-3 mt-1">
                                 <div class="col-md-4">
                                     <input
+                                        id="manual_live_date"
                                         type="date"
                                         name="live_date"
                                         value="{{ old('live_date') }}"
@@ -398,15 +417,20 @@
                                 </div>
                                 <div class="col-md-4">
                                     <input
+                                        id="manual_start_time"
                                         type="time"
                                         name="start_time"
                                         value="{{ old('start_time') }}"
                                         class="adm-form-control"
+                                        min="08:00"
+                                        max="22:00"
+                                        step="1800"
                                         required
                                     >
                                 </div>
                                 <div class="col-md-4">
                                     <input
+                                        id="manual_end_time"
                                         type="time"
                                         name="end_time"
                                         value="{{ old('end_time') }}"
@@ -415,6 +439,24 @@
                                     >
                                 </div>
                             </div>
+                        </div>
+
+                        <div
+                            id="manual_live_code_preview"
+                            style="
+                                display:none;
+                                margin-top:10px;
+                                padding:10px 12px;
+                                border-radius:10px;
+                                border:1px solid rgba(99,102,241,.18);
+                                background:rgba(99,102,241,.06);
+                                color:#C4B5FD;
+                                font-size:.8rem;
+                                font-weight:700;
+                            "
+                        >
+                            Résultat final :
+                            <strong id="manual_live_code">—</strong>
                         </div>
 
                         <button type="submit" class="adm-btn adm-btn-ghost w-100 mt-3" style="border:1px solid rgba(255,255,255,0.08);">
@@ -467,7 +509,7 @@
                                                 <span style="color:#64748B;">→</span>
                                                 <span class="adm-badge adm-badge-danger">{{ $live->classSlot->classRoom?->name ?? '—' }}</span>
                                                 <span style="color:#64748B;">→</span>
-                                                <span class="adm-badge adm-badge-warning">{{ $live->classSlot->code }}</span>
+                                                <span class="adm-badge adm-badge-warning">{{ $live->pedagogical_code ?? $live->classSlot->code }}</span>
                                             </div>
                                         @elseif($live->classRoom)
                                             <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name }}</span>
@@ -1240,6 +1282,417 @@ document.addEventListener('DOMContentLoaded', () => {
         )?.requestSubmit();
     };
 });
+</script>
+
+<!-- LIVE_PEDAGOGICAL_CODE_ADMIN_PROF_V1_CREATE -->
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        const hierarchy =
+            @json($liveHierarchy);
+
+        const strip =
+            value =>
+                String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+
+        const findSubject =
+            id =>
+                hierarchy.find(
+                    item =>
+                        String(item.id)
+                        === String(id)
+                );
+
+        const findLevel =
+            (subject, id) =>
+                subject?.levels?.find(
+                    item =>
+                        String(item.id)
+                        === String(id)
+                );
+
+        const findClass =
+            (subject, level, id) =>
+                level?.classes?.find(
+                    item =>
+                        String(item.id)
+                        === String(id)
+                );
+
+        const dayCodeFromDate =
+            value => {
+                if (!value) {
+                    return '';
+                }
+
+                const date =
+                    new Date(
+                        value
+                        + 'T12:00:00'
+                    );
+
+                if (
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                ) {
+                    return '';
+                }
+
+                return {
+                    0:'D',
+                    1:'L',
+                    2:'MA',
+                    3:'M',
+                    4:'J',
+                    5:'V',
+                    6:'S',
+                }[date.getDay()] || '';
+            };
+
+        const slotNumberFromTime =
+            value => {
+                const match =
+                    String(value || '')
+                        .match(
+                            /^(\d{2}):(\d{2})$/
+                        );
+
+                if (!match) {
+                    return null;
+                }
+
+                const minutes =
+                    Number(match[1]) * 60
+                    + Number(match[2]);
+
+                const first =
+                    8 * 60;
+
+                const diff =
+                    minutes - first;
+
+                if (
+                    diff < 0
+                    || diff > 14 * 60
+                    || diff % 30 !== 0
+                ) {
+                    return null;
+                }
+
+                return (
+                    diff / 30
+                ) + 1;
+            };
+
+        const add90Minutes =
+            value => {
+                const match =
+                    String(value || '')
+                        .match(
+                            /^(\d{2}):(\d{2})$/
+                        );
+
+                if (!match) {
+                    return '';
+                }
+
+                let total =
+                    Number(match[1]) * 60
+                    + Number(match[2])
+                    + 90;
+
+                total =
+                    total % (24 * 60);
+
+                return (
+                    String(
+                        Math.floor(total / 60)
+                    ).padStart(2, '0')
+                    + ':'
+                    + String(
+                        total % 60
+                    ).padStart(2, '0')
+                );
+            };
+
+        const classCode =
+            name => {
+                const normalized =
+                    strip(name)
+                        .toLowerCase();
+
+                if (
+                    normalized.includes(
+                        'debut'
+                    )
+                ) {
+                    return 'D';
+                }
+
+                if (
+                    normalized.includes(
+                        'inter'
+                    )
+                ) {
+                    return 'I';
+                }
+
+                if (
+                    normalized.includes(
+                        'avance'
+                    )
+                ) {
+                    return 'A';
+                }
+
+                return strip(name)
+                    .replace(
+                        /[^A-Za-z0-9]/g,
+                        ''
+                    )
+                    .charAt(0)
+                    .toUpperCase();
+            };
+
+        const subjectCode =
+            name => {
+                const value =
+                    strip(name)
+                        .toUpperCase()
+                        .replace(
+                            /[^A-Z0-9]/g,
+                            ''
+                        )
+                        .slice(0, 2);
+
+                return value.length === 1
+                    ? value + 'X'
+                    : value;
+            };
+
+        const groupNumber =
+            value => {
+                const match =
+                    String(value || '')
+                        .match(
+                            /(\d+)$/
+                        );
+
+                return match
+                    ? match[1]
+                    : '';
+            };
+
+        const update =
+            prefix => {
+                const subjectSelect =
+                    document.getElementById(
+                        `${prefix}_subject_id`
+                    );
+
+                const levelSelect =
+                    document.getElementById(
+                        `${prefix}_level_id`
+                    );
+
+                const classSelect =
+                    document.getElementById(
+                        `${prefix}_class_id`
+                    );
+
+                const slotSelect =
+                    document.getElementById(
+                        `${prefix}_class_slot_id`
+                    );
+
+                const dateInput =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_date'
+                            : 'manual_live_date'
+                    );
+
+                const startInput =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_start'
+                            : 'manual_start_time'
+                    );
+
+                const endInput =
+                    document.getElementById(
+                        prefix === 'outlook'
+                            ? 'outlook_end'
+                            : 'manual_end_time'
+                    );
+
+                const output =
+                    document.getElementById(
+                        `${prefix}_live_code`
+                    );
+
+                const preview =
+                    document.getElementById(
+                        `${prefix}_live_code_preview`
+                    );
+
+                if (
+                    !subjectSelect
+                    || !levelSelect
+                    || !classSelect
+                    || !slotSelect
+                    || !dateInput
+                    || !startInput
+                    || !output
+                    || !preview
+                ) {
+                    return;
+                }
+
+                const subject =
+                    findSubject(
+                        subjectSelect.value
+                    );
+
+                const level =
+                    findLevel(
+                        subject,
+                        levelSelect.value
+                    );
+
+                const classroom =
+                    findClass(
+                        subject,
+                        level,
+                        classSelect.value
+                    );
+
+                const slot =
+                    classroom?.slots?.find(
+                        item =>
+                            String(item.id)
+                            === String(
+                                slotSelect.value
+                            )
+                    );
+
+                const day =
+                    dayCodeFromDate(
+                        dateInput.value
+                    );
+
+                const number =
+                    slotNumberFromTime(
+                        startInput.value
+                    );
+
+                const sCode =
+                    subjectCode(
+                        subject?.name
+                    );
+
+                const cCode =
+                    classCode(
+                        classroom?.name
+                    );
+
+                const gNumber =
+                    groupNumber(
+                        slot?.code
+                    );
+
+                const code =
+                    day
+                    && number
+                    && sCode
+                    && cCode
+                    && gNumber
+                        ? (
+                            day
+                            + number
+                            + sCode
+                            + cCode
+                            + gNumber
+                        )
+                        : '';
+
+                output.textContent =
+                    code || '—';
+
+                preview.style.display =
+                    code
+                        ? 'block'
+                        : 'none';
+
+                if (
+                    startInput.value
+                    && endInput
+                ) {
+                    endInput.value =
+                        add90Minutes(
+                            startInput.value
+                        );
+                }
+            };
+
+        ['outlook', 'manual']
+            .forEach(
+                prefix => {
+                    [
+                        `${prefix}_subject_id`,
+                        `${prefix}_level_id`,
+                        `${prefix}_class_id`,
+                        `${prefix}_class_slot_id`,
+                        prefix === 'outlook'
+                            ? 'outlook_date'
+                            : 'manual_live_date',
+                        prefix === 'outlook'
+                            ? 'outlook_start'
+                            : 'manual_start_time',
+                    ]
+                        .forEach(
+                            id => {
+                                const element =
+                                    document
+                                        .getElementById(id);
+
+                                element?.addEventListener(
+                                    'change',
+                                    () =>
+                                        setTimeout(
+                                            () =>
+                                                update(prefix),
+                                            0
+                                        )
+                                );
+
+                                element?.addEventListener(
+                                    'input',
+                                    () =>
+                                        setTimeout(
+                                            () =>
+                                                update(prefix),
+                                            0
+                                        )
+                                );
+                            }
+                        );
+                }
+            );
+
+        setTimeout(
+            () => {
+                update('outlook');
+                update('manual');
+            },
+            0
+        );
+    }
+);
 </script>
 
 @endsection

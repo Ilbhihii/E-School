@@ -29,6 +29,7 @@
 @endpush
 
 @section('content')
+{{-- LIVE_CODE_ESPACE_ETUDIANT_V1_VIEW --}}
 @php
     $todayTotal =
         $todayOccurrences->count()
@@ -412,6 +413,15 @@
                                     ->schedule_status
                                     !== 'ended'
                             )
+                                @if($linkedLive->pedagogical_code)
+                                    <span
+                                        class="slh-slot"
+                                        style="margin-right:8px;"
+                                    >
+                                        {{ $linkedLive->pedagogical_code }}
+                                    </span>
+                                @endif
+
                                 <a
                                     href="{{
                                         route(
@@ -654,7 +664,7 @@
 
                             <span class="slh-slot slh-slot-large">
                                 {{
-                                    $live->classSlot?->code
+                                    ($live->pedagogical_code ?? $live->classSlot?->code)
                                     ?? '—'
                                 }}
                             </span>

@@ -16,6 +16,7 @@ use App\Services\LearningPathService;
 use App\Services\ProfessorPathService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -112,12 +113,9 @@ class ProfController extends Controller
                 : 100;
 
         $livesCount = Live::query()
-            ->whereIn(
-                'class_id',
-                $profAssignments
-                    ->pluck('class_id')
-                    ->unique()
-                    ->values()
+            ->where(
+                'professor_id',
+                auth()->id()
             )
             ->count();
 
@@ -193,6 +191,26 @@ class ProfController extends Controller
             ->unique()
             ->values();
 
+        /* EXACT_SCOPE_RECEIVED_DEVOIRS_V1 */
+        $visibleCodes =
+            $visibleScope
+                ->map(
+                    fn (ProfAssignment $assignment) =>
+                        $this->profPaths
+                            ->codeForAssignment(
+                                $assignment
+                            )
+                )
+                ->filter()
+                ->map(
+                    fn ($code) =>
+                        strtoupper(
+                            trim((string) $code)
+                        )
+                )
+                ->unique()
+                ->values();
+
         $assignments = Assignment::query()
             ->with([
                 'user',
@@ -205,6 +223,27 @@ class ProfController extends Controller
             ->whereIn('user_id', $studentIds)
             ->whereIn('subject_id', $subjectIds)
             ->whereIn('class_room_id', $classIds)
+            ->when(
+                Schema::hasColumn(
+                    'assignments',
+                    'assignment_code'
+                )
+                && $visibleCodes->isNotEmpty(),
+                function ($query) use ($visibleCodes) {
+                    $query->where(
+                        function ($scope) use ($visibleCodes) {
+                            $scope
+                                ->whereIn(
+                                    'assignment_code',
+                                    $visibleCodes->all()
+                                )
+                                ->orWhereNull(
+                                    'assignment_code'
+                                );
+                        }
+                    );
+                }
+            )
             ->when(
                 $request->filled('class_slot_id'),
                 fn ($query) =>
@@ -442,12 +481,22 @@ class ProfController extends Controller
             ->findOrFail($id);
 
         $scope =
-            $this->profPaths->findClassAssignment(
-                auth()->id(),
-                (int) $absence->subject_id,
-                (int) $absence->level_id,
-                (int) $absence->class_id
-            );
+            $absence->class_slot_id
+                ? $this->profPaths
+                    ->findExactAssignment(
+                        auth()->id(),
+                        (int) $absence->subject_id,
+                        (int) $absence->level_id,
+                        (int) $absence->class_id,
+                        (int) $absence->class_slot_id
+                    )
+                : $this->profPaths
+                    ->findClassAssignment(
+                        auth()->id(),
+                        (int) $absence->subject_id,
+                        (int) $absence->level_id,
+                        (int) $absence->class_id
+                    );
 
         abort_unless($scope, 403);
 
@@ -472,15 +521,22 @@ class ProfController extends Controller
         $validated = $request->validate([
             'subject_id' => ['required', 'integer'],
             'level_id' => ['required', 'integer'],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
         ]);
 
+        /* FINAL_EXACT_ATTENDANCE_V2 */
         $scope =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $id
+                    (int) $id,
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless($scope, 403);
@@ -524,6 +580,11 @@ class ProfController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'date' => [
                 'required',
                 'date',
@@ -557,11 +618,12 @@ class ProfController extends Controller
 
         $scope =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id']
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless($scope, 403);
@@ -1199,6 +1261,11 @@ class ProfController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            'class_slot_id' => [
+                'required',
+                'integer',
+                'exists:class_slots,id',
+            ],
             'date' => [
                 'required',
                 'date',
@@ -1215,11 +1282,12 @@ class ProfController extends Controller
 
         $scope =
             $this->profPaths
-                ->findClassAssignment(
+                ->findExactAssignment(
                     auth()->id(),
                     (int) $validated['subject_id'],
                     (int) $validated['level_id'],
-                    (int) $validated['class_id']
+                    (int) $validated['class_id'],
+                    (int) $validated['class_slot_id']
                 );
 
         abort_unless($scope, 403);
@@ -1259,7 +1327,8 @@ class ProfController extends Controller
                         (int) $validated[
                             'class_id'
                         ],
-                    'class_slot_id' => null,
+                    'class_slot_id' =>
+                        (int) $validated['class_slot_id'],
                     'date' =>
                         $validated['date'],
                 ],
@@ -1384,6 +1453,27 @@ class ProfController extends Controller
             ->values();
 
         $lives = Live::query()
+            ->where(
+                function ($query) {
+                    $query
+                        ->where(
+                            'professor_id',
+                            auth()->id()
+                        )
+                        ->orWhere(
+                            function ($legacy) {
+                                $legacy
+                                    ->whereNull(
+                                        'professor_id'
+                                    )
+                                    ->where(
+                                        'user_id',
+                                        auth()->id()
+                                    );
+                            }
+                        );
+                }
+            )
             ->whereIn(
                 'class_slot_id',
                 $slotIds
@@ -1487,6 +1577,27 @@ class ProfController extends Controller
                 'classSlot.level',
                 'classSlot.classRoom',
             ])
+            ->where(
+                function ($query) {
+                    $query
+                        ->where(
+                            'professor_id',
+                            auth()->id()
+                        )
+                        ->orWhere(
+                            function ($legacy) {
+                                $legacy
+                                    ->whereNull(
+                                        'professor_id'
+                                    )
+                                    ->where(
+                                        'user_id',
+                                        auth()->id()
+                                    );
+                            }
+                        );
+                }
+            )
             ->when(
                 $classIds->isNotEmpty(),
                 fn ($query) =>
@@ -1847,7 +1958,31 @@ class ProfController extends Controller
                 ->values();
 
         $lives = Live::query()
-            ->with('classSlot')
+            ->with([
+                'classSlot.subject',
+                'classSlot.classRoom',
+            ])
+            ->where(
+                function ($query) {
+                    $query
+                        ->where(
+                            'professor_id',
+                            auth()->id()
+                        )
+                        ->orWhere(
+                            function ($legacy) {
+                                $legacy
+                                    ->whereNull(
+                                        'professor_id'
+                                    )
+                                    ->where(
+                                        'user_id',
+                                        auth()->id()
+                                    );
+                            }
+                        );
+                }
+            )
             ->whereIn(
                 'class_slot_id',
                 $slotIds

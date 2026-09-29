@@ -8,6 +8,8 @@ use App\Models\Message;
 use App\Models\User;
 use App\Models\ProfAssignment;
 use App\Services\LearningPathService;
+use App\Services\ProfessorPathService;
+use App\Services\AssignmentScopeService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -21,64 +23,234 @@ class ChatController extends Controller
     public function subjects()
     {
         $user = auth()->user();
-        abort_unless($user->isStudent(), 403);
 
-        $subjectIds = $this->assignedStudentSubjectIds($user->id);
+        abort_unless(
+            $user->isStudent(),
+            403
+        );
 
-        $subjects = Subject::query()
-            ->whereIn(
-                'id',
-                $subjectIds
+        $rows =
+            app(
+                LearningPathService::class
             )
-            ->where(
-                'status',
-                'active'
-            )
-            ->orderBy('name')
-            ->get();
+                ->studentAssignmentRows(
+                    $user->id
+                )
+                ->filter(
+                    fn ($row) =>
+                        !empty(
+                            $row
+                                ->student_slot_code
+                        )
+                )
+                ->values();
 
-        $administration = Subject::where('name', 'Administration')->first();
+        $subjectsById =
+            Subject::query()
+                ->whereIn(
+                    'id',
+                    $rows
+                        ->pluck('subject_id')
+                        ->filter()
+                        ->unique()
+                )
+                ->where(
+                    'status',
+                    'active'
+                )
+                ->get()
+                ->keyBy('id');
+
+        $subjects =
+            $rows
+                ->map(
+                    function ($row) use (
+                        $subjectsById
+                    ) {
+                        $subject =
+                            $subjectsById->get(
+                                (int) $row
+                                    ->subject_id
+                            );
+
+                        if (!$subject) {
+                            return null;
+                        }
+
+                        $space =
+                            clone $subject;
+
+                        $space->setAttribute(
+                            'assignment_code',
+                            strtoupper(
+                                trim(
+                                    (string)
+                                        $row
+                                            ->student_slot_code
+                                )
+                            )
+                        );
+
+                        $space->setAttribute(
+                            'class_slot_id',
+                            (int) (
+                                $row
+                                    ->class_slot_id
+                                ?? 0
+                            )
+                        );
+
+                        return $space;
+                    }
+                )
+                ->filter()
+                ->unique(
+                    fn ($subject) =>
+                        $subject->id
+                        . '|'
+                        . $subject
+                            ->assignment_code
+                )
+                ->values();
+
+        $administration =
+            Subject::query()
+                ->where(
+                    'name',
+                    'Administration'
+                )
+                ->first();
+
         if ($administration) {
-            $subjects = $subjects->push($administration)->unique('id')->values();
+            $administration
+                ->setAttribute(
+                    'assignment_code',
+                    null
+                );
+
+            $subjects =
+                $subjects
+                    ->push(
+                        $administration
+                    )
+                    ->values();
         }
 
-        return view('student.chats', compact('subjects'));
+        return view(
+            'student.chats',
+            compact('subjects')
+        );
     }
 
     // Chat pour une matière (used by route:chat) — accès vérifié pour les étudiants
     public function index($subject_id)
     {
-        $subject = Subject::findOrFail($subject_id);
-        $user = auth()->user();
+        $subject =
+            Subject::findOrFail(
+                $subject_id
+            );
 
-        abort_unless($user->isStudent(), 403);
-        $isAdministration = $this->isAdministrationSubject($subject);
-        $assignedSubjectIds = $this->assignedStudentSubjectIds($user->id);
+        $user =
+            auth()->user();
 
         abort_unless(
-            $isAdministration
-            || (
-                $subject->status === 'active'
-                && $assignedSubjectIds->contains(
-                    (int) $subject->id
-                )
-            ),
-            403,
-            'Cette matière n’est pas disponible pour la discussion.'
+            $user->isStudent(),
+            403
         );
 
-        $messages = Message::where('subject_id', $subject_id)
-            ->when($isAdministration, fn($query) => $query->where('conversation_user_id', $user->id))
-            ->with('user')
-            ->latest()
-            ->get();
+        $isAdministration =
+            $this
+                ->isAdministrationSubject(
+                    $subject
+                );
 
-        $groupChatContext = $isAdministration
-            ? $this->emptyGroupChatContext()
-            : $this->groupChatContext(
-                $subject,
-                $messages
+        $assignmentCode = null;
+        $scopeRow = null;
+
+        if (!$isAdministration) {
+            $assignmentCode =
+                strtoupper(
+                    trim(
+                        (string)
+                            request(
+                                'assignment_code',
+                                ''
+                            )
+                    )
+                );
+
+            abort_if(
+                $assignmentCode === '',
+                403,
+                'Choisissez votre groupe pédagogique.'
             );
+
+            $scopeRow =
+                app(
+                    LearningPathService::class
+                )
+                    ->studentAssignmentRows(
+                        $user->id
+                    )
+                    ->first(
+                        fn ($row) =>
+                            (int) $row->subject_id
+                                === (int) $subject->id
+                            && strtoupper(
+                                trim(
+                                    (string) (
+                                        $row
+                                            ->student_slot_code
+                                        ?? ''
+                                    )
+                                )
+                            ) === $assignmentCode
+                    );
+
+            abort_unless(
+                $scopeRow
+                && $subject->status === 'active',
+                403,
+                'Ce groupe ne fait pas partie de votre affectation.'
+            );
+        }
+
+        $messages =
+            Message::query()
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->when(
+                    $isAdministration,
+                    fn ($query) =>
+                        $query->where(
+                            'conversation_user_id',
+                            $user->id
+                        )
+                )
+                ->when(
+                    !$isAdministration,
+                    fn ($query) =>
+                        $query->where(
+                            'assignment_code',
+                            $assignmentCode
+                        )
+                )
+                ->with('user')
+                ->latest()
+                ->get();
+
+        $groupChatContext =
+            $isAdministration
+                ? $this
+                    ->emptyGroupChatContext()
+                : $this
+                    ->groupChatContext(
+                        $subject,
+                        $messages,
+                        $assignmentCode
+                    );
 
         return view(
             'student.chat',
@@ -86,7 +258,8 @@ class ChatController extends Controller
                 'subject',
                 'messages',
                 'isAdministration',
-                'groupChatContext'
+                'groupChatContext',
+                'assignmentCode'
             )
         );
     }
@@ -94,34 +267,112 @@ class ChatController extends Controller
     // Envoyer message étudiant
     public function send(Request $request)
     {
-        $validated = $request->validate([
-            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
-            'message' => ['required', 'string', 'max:5000'],
-        ]);
+        $validated =
+            $request->validate([
+                'subject_id' => [
+                    'required',
+                    'integer',
+                    'exists:subjects,id',
+                ],
+                'assignment_code' => [
+                    'nullable',
+                    'string',
+                    'max:64',
+                ],
+                'message' => [
+                    'required',
+                    'string',
+                    'max:5000',
+                ],
+            ]);
 
-        $user = auth()->user();
-        abort_unless($user->isStudent(), 403);
-        $subject = Subject::findOrFail($validated['subject_id']);
-        $isAdministration = $this->isAdministrationSubject($subject);
-        $assignedSubjectIds = $this->assignedStudentSubjectIds($user->id);
+        $user =
+            auth()->user();
 
         abort_unless(
-            $isAdministration
-            || (
-                $subject->status === 'active'
-                && $assignedSubjectIds->contains(
-                    (int) $subject->id
-                )
-            ),
-            403,
-            'Cette matière n’est pas disponible pour la discussion.'
+            $user->isStudent(),
+            403
         );
 
+        $subject =
+            Subject::findOrFail(
+                $validated['subject_id']
+            );
+
+        $isAdministration =
+            $this
+                ->isAdministrationSubject(
+                    $subject
+                );
+
+        $assignmentCode = null;
+        $classSlotId = null;
+
+        if (!$isAdministration) {
+            $assignmentCode =
+                strtoupper(
+                    trim(
+                        (string) (
+                            $validated[
+                                'assignment_code'
+                            ]
+                            ?? ''
+                        )
+                    )
+                );
+
+            $scope =
+                app(
+                    LearningPathService::class
+                )
+                    ->studentAssignmentRows(
+                        $user->id
+                    )
+                    ->first(
+                        fn ($row) =>
+                            (int) $row->subject_id
+                                === (int) $subject->id
+                            && strtoupper(
+                                trim(
+                                    (string) (
+                                        $row
+                                            ->student_slot_code
+                                        ?? ''
+                                    )
+                                )
+                            ) === $assignmentCode
+                    );
+
+            abort_unless(
+                $scope
+                && $subject->status === 'active',
+                403,
+                'Ce groupe ne fait pas partie de votre affectation.'
+            );
+
+            $classSlotId =
+                (int) (
+                    $scope
+                        ->class_slot_id
+                    ?? 0
+                );
+        }
+
         Message::create([
-            'user_id' => $user->id,
-            'subject_id' => $validated['subject_id'],
-            'conversation_user_id' => $isAdministration ? $user->id : null,
-            'message' => $validated['message'],
+            'user_id' =>
+                $user->id,
+            'subject_id' =>
+                $subject->id,
+            'conversation_user_id' =>
+                $isAdministration
+                    ? $user->id
+                    : null,
+            'assignment_code' =>
+                $assignmentCode,
+            'class_slot_id' =>
+                $classSlotId ?: null,
+            'message' =>
+                $validated['message'],
         ]);
 
         return back();
@@ -640,62 +891,173 @@ class ChatController extends Controller
     // Liste matières professeur
     public function profSubjects()
     {
-        $subjectIds = ProfAssignment::query()
-            ->where(
-                'prof_id',
+        $assignments =
+            app(
+                ProfessorPathService::class
+            )->assignments(
                 auth()->id()
-            )
-            ->pluck('subject_id');
+            );
 
-        $subjects = Subject::query()
-            ->whereIn(
-                'id',
-                $subjectIds
-            )
-            ->where(
-                'status',
-                'active'
-            )
-            ->orderBy('name')
-            ->get();
-        $administration = Subject::where('name', 'Administration')->first();
+        $subjects =
+            $assignments
+                ->map(
+                    function (
+                        ProfAssignment $assignment
+                    ) {
+                        $subject =
+                            $assignment
+                                ->subject;
+
+                        if (
+                            !$subject
+                            || $subject->status
+                                !== 'active'
+                        ) {
+                            return null;
+                        }
+
+                        $code =
+                            app(
+                                AssignmentScopeService::class
+                            )->professorCode(
+                                $assignment
+                            );
+
+                        if (!$code) {
+                            return null;
+                        }
+
+                        $space =
+                            clone $subject;
+
+                        $space->setAttribute(
+                            'assignment_code',
+                            $code
+                        );
+
+                        $space->setAttribute(
+                            'class_slot_id',
+                            (int) $assignment
+                                ->class_slot_id
+                        );
+
+                        return $space;
+                    }
+                )
+                ->filter()
+                ->unique(
+                    fn ($subject) =>
+                        $subject->id
+                        . '|'
+                        . $subject
+                            ->assignment_code
+                )
+                ->values();
+
+        $administration =
+            Subject::query()
+                ->where(
+                    'name',
+                    'Administration'
+                )
+                ->first();
+
         if ($administration) {
-            $subjects = $subjects->push($administration)->unique('id')->values();
+            $administration
+                ->setAttribute(
+                    'assignment_code',
+                    null
+                );
+
+            $subjects =
+                $subjects
+                    ->push(
+                        $administration
+                    )
+                    ->values();
         }
-        return view('prof.chat_subjects', compact('subjects'));
+
+        return view(
+            'prof.chat_subjects',
+            compact('subjects')
+        );
     }
 
     // Chat professeur
     public function profChat(Subject $subject)
     {
-        $this->authorizeProfSubject($subject);
-
         $isAdministration =
-            $this->isAdministrationSubject(
-                $subject
-            );
+            $this
+                ->isAdministrationSubject(
+                    $subject
+                );
 
-        $messages = $subject
-            ->messages()
-            ->with('user')
-            ->when(
-                $isAdministration,
-                fn ($query) =>
-                    $query->where(
-                        'conversation_user_id',
-                        auth()->id()
+        $assignmentCode = null;
+
+        if (!$isAdministration) {
+            $assignmentCode =
+                strtoupper(
+                    trim(
+                        (string)
+                            request(
+                                'assignment_code',
+                                ''
+                            )
                     )
-            )
-            ->whereNull('deleted_at')
-            ->orderBy('created_at', 'asc')
-            ->get();
+                );
 
-        $groupChatContext = $isAdministration
-            ? $this->emptyGroupChatContext()
-            : $this->groupChatContext(
-                $subject,
-                $messages
+            abort_unless(
+                $subject->status === 'active'
+                && $this
+                    ->profOwnsChatScope(
+                        $subject,
+                        $assignmentCode
+                    ),
+                403,
+                'Ce groupe ne fait pas partie de vos affectations.'
             );
+        }
+
+        $messages =
+            Message::query()
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->when(
+                    $isAdministration,
+                    fn ($query) =>
+                        $query->where(
+                            'conversation_user_id',
+                            auth()->id()
+                        )
+                )
+                ->when(
+                    !$isAdministration,
+                    fn ($query) =>
+                        $query->where(
+                            'assignment_code',
+                            $assignmentCode
+                        )
+                )
+                ->with('user')
+                ->whereNull('deleted_at')
+                ->orderBy(
+                    'created_at',
+                    'asc'
+                )
+                ->get();
+
+        $groupChatContext =
+            $isAdministration
+                ? $this
+                    ->emptyGroupChatContext()
+                : $this
+                    ->groupChatContext(
+                        $subject,
+                        $messages,
+                        $assignmentCode
+                    );
 
         return view(
             'prof.chat',
@@ -703,7 +1065,8 @@ class ChatController extends Controller
                 'subject',
                 'messages',
                 'isAdministration',
-                'groupChatContext'
+                'groupChatContext',
+                'assignmentCode'
             )
         );
     }
@@ -711,18 +1074,86 @@ class ChatController extends Controller
     // Envoyer message professeur
     public function profSend(Request $request)
     {
-        $validated = $request->validate([
-            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
-            'message' => ['required', 'string', 'max:5000'],
-        ]);
-        $subject = Subject::findOrFail($validated['subject_id']);
-        $this->authorizeProfSubject($subject);
+        $validated =
+            $request->validate([
+                'subject_id' => [
+                    'required',
+                    'integer',
+                    'exists:subjects,id',
+                ],
+                'assignment_code' => [
+                    'nullable',
+                    'string',
+                    'max:64',
+                ],
+                'message' => [
+                    'required',
+                    'string',
+                    'max:5000',
+                ],
+            ]);
+
+        $subject =
+            Subject::findOrFail(
+                $validated['subject_id']
+            );
+
+        $isAdministration =
+            $this
+                ->isAdministrationSubject(
+                    $subject
+                );
+
+        $assignmentCode = null;
+        $classSlotId = null;
+
+        if (!$isAdministration) {
+            $assignmentCode =
+                strtoupper(
+                    trim(
+                        (string) (
+                            $validated[
+                                'assignment_code'
+                            ]
+                            ?? ''
+                        )
+                    )
+                );
+
+            $scope =
+                $this
+                    ->profChatScope(
+                        $subject,
+                        $assignmentCode
+                    );
+
+            abort_unless(
+                $scope
+                && $subject->status === 'active',
+                403,
+                'Ce groupe ne fait pas partie de vos affectations.'
+            );
+
+            $classSlotId =
+                (int) $scope
+                    ->class_slot_id;
+        }
 
         Message::create([
-            'user_id' => auth()->id(),
-            'subject_id' => $subject->id,
-            'conversation_user_id' => $this->isAdministrationSubject($subject) ? auth()->id() : null,
-            'message' => $validated['message'],
+            'user_id' =>
+                auth()->id(),
+            'subject_id' =>
+                $subject->id,
+            'conversation_user_id' =>
+                $isAdministration
+                    ? auth()->id()
+                    : null,
+            'assignment_code' =>
+                $assignmentCode,
+            'class_slot_id' =>
+                $classSlotId ?: null,
+            'message' =>
+                $validated['message'],
         ]);
 
         return back();
@@ -731,17 +1162,92 @@ class ChatController extends Controller
     // Supprimer messages professeur
     public function profDelete(Request $request)
     {
-        $validated = $request->validate([
-            'subject_id' => ['required', 'integer', 'exists:subjects,id'],
-            'messages' => ['required', 'array', 'min:1'],
-            'messages.*' => ['integer', 'exists:messages,id'],
-        ]);
-        $subject = Subject::findOrFail($validated['subject_id']);
-        $this->authorizeProfSubject($subject);
-        Message::whereIn('id', $validated['messages'])
-            ->where('subject_id', $subject->id)
-            ->when($this->isAdministrationSubject($subject), fn ($query) => $query->where('conversation_user_id', auth()->id()))
-            ->where('user_id', auth()->id())
+        $validated =
+            $request->validate([
+                'subject_id' => [
+                    'required',
+                    'integer',
+                    'exists:subjects,id',
+                ],
+                'assignment_code' => [
+                    'nullable',
+                    'string',
+                    'max:64',
+                ],
+                'messages' => [
+                    'required',
+                    'array',
+                    'min:1',
+                ],
+                'messages.*' => [
+                    'integer',
+                    'exists:messages,id',
+                ],
+            ]);
+
+        $subject =
+            Subject::findOrFail(
+                $validated['subject_id']
+            );
+
+        $isAdministration =
+            $this
+                ->isAdministrationSubject(
+                    $subject
+                );
+
+        $assignmentCode =
+            strtoupper(
+                trim(
+                    (string) (
+                        $validated[
+                            'assignment_code'
+                        ]
+                        ?? ''
+                    )
+                )
+            );
+
+        if (!$isAdministration) {
+            abort_unless(
+                $this
+                    ->profOwnsChatScope(
+                        $subject,
+                        $assignmentCode
+                    ),
+                403
+            );
+        }
+
+        Message::query()
+            ->whereIn(
+                'id',
+                $validated['messages']
+            )
+            ->where(
+                'subject_id',
+                $subject->id
+            )
+            ->when(
+                $isAdministration,
+                fn ($query) =>
+                    $query->where(
+                        'conversation_user_id',
+                        auth()->id()
+                    )
+            )
+            ->when(
+                !$isAdministration,
+                fn ($query) =>
+                    $query->where(
+                        'assignment_code',
+                        $assignmentCode
+                    )
+            )
+            ->where(
+                'user_id',
+                auth()->id()
+            )
             ->delete();
 
         return back();
@@ -754,85 +1260,222 @@ class ChatController extends Controller
      * On n'élargit pas les droits d'accès : ces données sont
      * uniquement utilisées après les contrôles d'autorisation.
      */
+    /**
+     * Participants du groupe exact D1ARD1/L1ARD1/...
+     */
     private function groupChatContext(
         Subject $subject,
-        Collection $messages
+        Collection $messages,
+        ?string $assignmentCode = null
     ): array {
-        $studentIds = DB::table('class_user')
-            ->where(
-                'subject_id',
-                $subject->id
-            )
-            ->pluck('user_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
+        $assignmentCode =
+            strtoupper(
+                trim(
+                    (string) $assignmentCode
+                )
+            );
 
-        $professorIds = ProfAssignment::query()
-            ->where(
-                'subject_id',
-                $subject->id
-            )
-            ->pluck('prof_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
+        if ($assignmentCode !== '') {
+            $studentIds =
+                DB::table('class_user')
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->where(
+                        'student_slot_code',
+                        $assignmentCode
+                    )
+                    ->pluck('user_id')
+                    ->filter()
+                    ->map(
+                        fn ($id) =>
+                            (int) $id
+                    )
+                    ->unique()
+                    ->values();
 
-        $participantIds = $studentIds
-            ->merge($professorIds)
-            ->unique()
-            ->values();
+            $professorIds =
+                ProfAssignment::query()
+                    ->with([
+                        'subject',
+                        'classRoom',
+                        'classSlot',
+                    ])
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->get()
+                    ->filter(
+                        fn (ProfAssignment $assignment) =>
+                            strtoupper(
+                                trim(
+                                    (string)
+                                        app(
+                                            AssignmentScopeService::class
+                                        )->professorCode(
+                                            $assignment
+                                        )
+                                )
+                            ) === $assignmentCode
+                    )
+                    ->pluck('prof_id')
+                    ->filter()
+                    ->map(
+                        fn ($id) =>
+                            (int) $id
+                    )
+                    ->unique()
+                    ->values();
+        } else {
+            $studentIds =
+                DB::table('class_user')
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->pluck('user_id');
 
-        $participants = User::query()
-            ->whereIn('id', $participantIds)
-            ->whereIn(
-                'role',
-                ['student', 'prof']
-            )
-            ->orderByRaw(
-                "CASE WHEN role = 'prof' THEN 0 ELSE 1 END"
-            )
-            ->orderBy('name')
-            ->get();
+            $professorIds =
+                ProfAssignment::query()
+                    ->where(
+                        'subject_id',
+                        $subject->id
+                    )
+                    ->pluck('prof_id');
+        }
 
-        $professors = $participants
-            ->where('role', 'prof')
-            ->values();
+        $participantIds =
+            collect($studentIds)
+                ->merge(
+                    $professorIds
+                )
+                ->filter()
+                ->map(
+                    fn ($id) =>
+                        (int) $id
+                )
+                ->unique()
+                ->values();
 
-        $recentAuthors = $messages
-            ->sortByDesc('created_at')
-            ->pluck('user')
-            ->filter()
-            ->unique('id')
-            ->take(6)
-            ->values();
+        $participants =
+            User::query()
+                ->whereIn(
+                    'id',
+                    $participantIds
+                )
+                ->whereIn(
+                    'role',
+                    [
+                        'student',
+                        'prof',
+                    ]
+                )
+                ->orderByRaw(
+                    "CASE WHEN role = 'prof' THEN 0 ELSE 1 END"
+                )
+                ->orderBy('name')
+                ->get();
+
+        $professors =
+            $participants
+                ->where(
+                    'role',
+                    'prof'
+                )
+                ->values();
 
         return [
             'participants_count' =>
                 $participants->count(),
             'active_accounts_count' =>
                 $participants
-                    ->where('is_active', true)
+                    ->where(
+                        'is_active',
+                        true
+                    )
                     ->count(),
             'students_count' =>
                 $participants
-                    ->where('role', 'student')
+                    ->where(
+                        'role',
+                        'student'
+                    )
                     ->count(),
             'professors_count' =>
                 $professors->count(),
             'professors' =>
                 $professors,
             'recent_authors' =>
-                $recentAuthors,
+                $messages
+                    ->sortByDesc(
+                        'created_at'
+                    )
+                    ->pluck('user')
+                    ->filter()
+                    ->unique('id')
+                    ->take(6)
+                    ->values(),
             'last_activity' =>
                 $messages
-                    ->sortByDesc('created_at')
+                    ->sortByDesc(
+                        'created_at'
+                    )
                     ->first()
                     ?->created_at,
         ];
     }
+
+    private function profChatScope(
+        Subject $subject,
+        string $assignmentCode
+    ): ?ProfAssignment {
+        $assignmentCode =
+            strtoupper(
+                trim($assignmentCode)
+            );
+
+        if ($assignmentCode === '') {
+            return null;
+        }
+
+        return app(
+            ProfessorPathService::class
+        )
+            ->assignments(
+                auth()->id()
+            )
+            ->first(
+                fn (ProfAssignment $assignment) =>
+                    (int) $assignment->subject_id
+                        === (int) $subject->id
+                    && strtoupper(
+                        trim(
+                            (string)
+                                app(
+                                    AssignmentScopeService::class
+                                )->professorCode(
+                                    $assignment
+                                )
+                        )
+                    ) === $assignmentCode
+            );
+    }
+
+    private function profOwnsChatScope(
+        Subject $subject,
+        string $assignmentCode
+    ): bool {
+        return
+            $this
+                ->profChatScope(
+                    $subject,
+                    $assignmentCode
+                )
+            !== null;
+    }
+
 
     private function emptyGroupChatContext(): array
     {

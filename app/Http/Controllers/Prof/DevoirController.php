@@ -8,6 +8,7 @@ use App\Models\ClassRoom;
 use App\Models\Course;
 use App\Models\ProfAssignment;
 use App\Services\ProfessorPathService;
+use App\Services\AssignmentScopeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -441,6 +442,11 @@ class DevoirController extends Controller
 
         abort_unless($scope, 403);
 
+        /* EXACT_SCOPE_PROF_DEVOIR_STORE_V1 */
+        $assignmentCode = app(
+            AssignmentScopeService::class
+        )->professorCode($scope);
+
         $course = null;
 
         if (!empty($validated['course_id'])) {
@@ -522,6 +528,12 @@ class DevoirController extends Controller
                 $scope->class_id,
             'class_slot_id' =>
                 $scope->class_slot_id,
+            'assignment_code' =>
+                $assignmentCode,
+            'assignment_day_of_week' =>
+                $scope->day_of_week,
+            'assignment_start_time' =>
+                $scope->start_time,
             'user_id' =>
                 auth()->id(),
         ]);
@@ -742,6 +754,11 @@ class DevoirController extends Controller
             'Cette classe ne fait pas partie de vos affectations.'
         );
 
+        /* EXACT_SCOPE_PROF_DEVOIR_UPDATE_V1 */
+        $assignmentCode = app(
+            AssignmentScopeService::class
+        )->professorCode($scope);
+
         $course = null;
 
         if (!empty($validated['course_id'])) {
@@ -857,6 +874,15 @@ class DevoirController extends Controller
 
         $devoir->class_slot_id =
             $scope->class_slot_id;
+
+        $devoir->assignment_code =
+            $assignmentCode;
+
+        $devoir->assignment_day_of_week =
+            $scope->day_of_week;
+
+        $devoir->assignment_start_time =
+            $scope->start_time;
 
         $devoir->course_id =
             $course?->id;

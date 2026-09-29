@@ -15,6 +15,8 @@ class Message extends Model
         'user_id',
         'conversation_user_id',
         'private_professor_id',
+        'assignment_code',
+        'class_slot_id',
         'message'
     ];
 

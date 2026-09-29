@@ -37,6 +37,20 @@ Cours - {{ $subject->name ?? '' }}
                     </div>
                     <div style="padding:1rem 1.25rem;text-align:center;">
                         <h4 style="font-weight:600;color:#F1F5F9;margin-bottom:0.5rem;font-size:0.95rem;">{{ Str::limit($course->title, 40) }}</h4>
+
+                        {{-- FINAL_STUDENT_COURSE_CODE_V2 --}}
+                        @if($course->assignment_code)
+                            <div
+                                style="
+                                    margin-bottom:8px;
+                                    color:#C4B5FD;
+                                    font-size:.72rem;
+                                    font-weight:800;
+                                "
+                            >
+                                {{ $course->assignment_code }}
+                            </div>
+                        @endif
                         <span class="pr-badge pr-badge-purple"><i class="bi bi-file-earmark-text me-1"></i>{{ $course->devoirs_count ?? 0 }} devoir{{ ($course->devoirs_count ?? 0) > 1 ? 's' : '' }}</span>
                     </div>
                 </div>

@@ -119,6 +119,8 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $devoir
+                                            ->assignment_code
+                                        ?? $devoir
                                             ->resolved_group_code
                                         ?? $devoir
                                             ->classSlot

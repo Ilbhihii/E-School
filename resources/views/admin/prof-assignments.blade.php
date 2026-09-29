@@ -312,7 +312,7 @@
 
                                         <td>
                                             <span class="prof-slot-badge">
-                                                {{ $slotCode ?: '—' }}
+                                                {{ $assignment->pedagogical_code ?? ($slotCode ?: '—') }}
                                             </span>
                                         </td>
 

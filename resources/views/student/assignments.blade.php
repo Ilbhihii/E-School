@@ -220,7 +220,7 @@
                                     {{ $assignment->subject?->name ?? $assignment->course?->subject?->name ?? 'Matière' }}
                                     → {{ $assignment->resolved_level_name ?? $assignment->course?->level?->name ?? 'Niveau' }}
                                     → {{ $assignment->resolved_class_name ?? $assignment->course?->classRoom?->name ?? 'Classe' }}
-                                    → {{ $assignment->resolved_slot_code ?? $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Groupe' }}
+                                    → {{ $assignment->assignment_code ?? $assignment->resolved_slot_code ?? $assignment->classSlot?->code ?? $assignment->course?->assignment_code ?? $assignment->course?->slot_code ?? 'Groupe' }}
                                 </span>
 
                                 <span class="{{ $isOverdue ? 'late' : '' }}">
@@ -716,7 +716,7 @@
                                 <td data-label="Parcours">
                                     {{ $assignment->course?->level?->name ?? 'Niveau' }}
                                     → {{ $assignment->course?->classRoom?->name ?? 'Classe' }}
-                                    → {{ $assignment->classSlot?->code ?? $assignment->course?->slot_code ?? 'Groupe' }}
+                                    → {{ $assignment->assignment_code ?? $assignment->classSlot?->code ?? $assignment->course?->assignment_code ?? $assignment->course?->slot_code ?? 'Groupe' }}
                                 </td>
 
                                 <td data-label="Date d’envoi">

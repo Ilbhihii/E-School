@@ -262,6 +262,15 @@
                                         ?? 'Classe'
                                     }}
                                 </span>
+
+                                @if($course->assignment_code)
+                                    {{-- FINAL_COURSE_CODE_BADGE_V2 --}}
+                                    <i class="bi bi-chevron-right"></i>
+
+                                    <span class="pps-path-chip">
+                                        {{ $course->assignment_code }}
+                                    </span>
+                                @endif
                             </div>
 
                             @if(

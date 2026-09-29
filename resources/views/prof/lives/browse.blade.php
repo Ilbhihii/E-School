@@ -45,7 +45,20 @@
                         <tbody>
                             @foreach($lives as $live)
                             <tr>
-                                <td><span style="font-weight:600;">{{ $live->title }}</span></td>
+                                <td>
+                                    <span style="font-weight:600;">
+                                        {{ $live->title }}
+                                    </span>
+
+                                    @if($live->pedagogical_code)
+                                        <span
+                                            class="adm-badge adm-badge-primary"
+                                            style="margin-left:6px;"
+                                        >
+                                            {{ $live->pedagogical_code }}
+                                        </span>
+                                    @endif
+                                </td>
                                 <td><span class="adm-badge adm-badge-gray">{{ \Carbon\Carbon::parse($live->live_date)->format('d/m/Y') }}</span></td>
                                 <td>{{ $live->start_time }} - {{ $live->end_time }}</td>
                                 <td><a href="{{ $live->stream_url }}" target="_blank" class="adm-btn adm-btn-sm adm-btn-ghost"><i class="bi bi-box-arrow-up-right"></i></a></td>

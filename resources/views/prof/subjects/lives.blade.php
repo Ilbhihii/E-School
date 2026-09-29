@@ -42,7 +42,7 @@
             <article class="pp-live-row">
                 <div class="pp-live-main">
                     <span class="pps-slot-badge">
-                        {{ $live->classSlot?->code ?? '—' }}
+                        {{ $live->pedagogical_code ?? $live->classSlot?->code ?? '—' }}
                     </span>
                     <div class="pp-live-copy">
                         <strong class="pp-live-title">

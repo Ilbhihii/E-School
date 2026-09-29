@@ -117,7 +117,11 @@ class ProfessorPathService
                                                                         (int) $assignment
                                                                             ->class_slot_id,
                                                                     'code' =>
-                                                                        $assignment
+                                                                        $this
+                                                                            ->codeForAssignment(
+                                                                                $assignment
+                                                                            )
+                                                                        ?? $assignment
                                                                             ->classSlot
                                                                             ?->code
                                                                         ?? '—',
@@ -177,6 +181,17 @@ class ProfessorPathService
                 $request->query('class_id')
             );
 
+        /* FINAL_EXACT_SLOT_FILTER_V2 */
+        $slotId =
+            $this->positiveInt(
+                $request->query(
+                    'class_slot_id',
+                    $request->input(
+                        'class_slot_id'
+                    )
+                )
+            );
+
         return $assignments
             ->filter(
                 function (
@@ -184,7 +199,8 @@ class ProfessorPathService
                 ) use (
                     $subjectId,
                     $levelId,
-                    $classId
+                    $classId,
+                    $slotId
                 ) {
                     if (
                         $subjectId
@@ -206,6 +222,14 @@ class ProfessorPathService
                         $classId
                         && (int) $assignment->class_id
                             !== $classId
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $slotId
+                        && (int) $assignment->class_slot_id
+                            !== $slotId
                     ) {
                         return false;
                     }
@@ -300,6 +324,14 @@ class ProfessorPathService
             ->values();
     }
 
+
+    public function codeForAssignment(
+        ProfAssignment $assignment
+    ): ?string {
+        return app(
+            AssignmentScopeService::class
+        )->professorCode($assignment);
+    }
     public function studentIdsForAssignment(
         ProfAssignment $assignment
     ): Collection {
@@ -329,6 +361,42 @@ class ProfessorPathService
                 'class_slot_id',
                 $assignment->class_slot_id
             );
+        }
+
+        /* EXACT_SCOPE_PROF_STUDENTS_V1 */
+        if (
+            !empty($assignment->day_of_week)
+            && Schema::hasColumn(
+                'class_user',
+                'student_day_of_week'
+            )
+        ) {
+            $query->where(
+                'student_day_of_week',
+                (int) $assignment->day_of_week
+            );
+        }
+
+        if (
+            !empty($assignment->start_time)
+            && Schema::hasColumn(
+                'class_user',
+                'student_start_time'
+            )
+        ) {
+            $start = app(
+                AssignmentScopeService::class
+            )->normalizeTime(
+                (string) $assignment->start_time
+            );
+
+            if ($start) {
+                $query->whereTime(
+                    'student_start_time',
+                    '=',
+                    $start
+                );
+            }
         }
 
         return $query

@@ -77,9 +77,28 @@ class StudentController extends Controller
         $coursesCount = (clone $courseQuery)->count();
         $recentCourses = (clone $courseQuery)->latest()->take(4)->get();
         $recentCourses2 = (clone $courseQuery)->latest()->take(2)->get();
-        $livesCount = $classIds->isNotEmpty()
-            ? Live::whereIn('class_id', $classIds)->count()
-            : 0;
+        /*
+         * LIVE_CODE_ESPACE_ETUDIANT_V1
+         *
+         * Le compteur Live respecte maintenant le Groupe exact
+         * affecté à l'étudiant, et pas seulement sa Classe.
+         */
+        $studentLiveSlotIds =
+            $assignmentRows
+                ->pluck('class_slot_id')
+                ->filter()
+                ->unique()
+                ->values();
+
+        $livesCount =
+            $studentLiveSlotIds->isNotEmpty()
+                ? Live::query()
+                    ->whereIn(
+                        'class_slot_id',
+                        $studentLiveSlotIds
+                    )
+                    ->count()
+                : 0;
 
         $profAssignments = Assignment::query()
             ->when($classRoom, fn($query) => $query->where('class_room_id', $classRoom->id))
@@ -296,6 +315,46 @@ class StudentController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        /* EXACT_SCOPE_STUDENT_LIVE_V1 */
+        $allowedLiveCodes =
+            $assignmentRows
+                ->pluck('student_slot_code')
+                ->filter()
+                ->map(
+                    fn ($code) =>
+                        strtoupper(
+                            trim((string) $code)
+                        )
+                )
+                ->unique()
+                ->values();
+
+        if ($allowedLiveCodes->isNotEmpty()) {
+            $lives =
+                $lives
+                    ->filter(
+                        function (Live $live) use (
+                            $allowedLiveCodes
+                        ) {
+                            $code =
+                                strtoupper(
+                                    trim(
+                                        (string) (
+                                            $live->pedagogical_code
+                                            ?? ''
+                                        )
+                                    )
+                                );
+
+                            return
+                                $code === ''
+                                || $allowedLiveCodes
+                                    ->contains($code);
+                        }
+                    )
+                    ->values();
+        }
+
         /*
          * Le calendrier est chargé pour une large fenêtre afin que les vues
          * semaine / mois puissent être parcourues sans seconde interface.
@@ -415,7 +474,8 @@ class StudentController extends Controller
                     'id' => 'live-' . $live->id,
                     'title' => collect([
                         'LIVE',
-                        $live->classSlot?->code,
+                        $live->pedagogical_code
+                            ?? $live->classSlot?->code,
                         $live->title,
                     ])->filter()->implode(' · '),
                     'start' => $start->toIso8601String(),
@@ -808,7 +868,42 @@ class StudentController extends Controller
 
                     $resolved = null;
 
-                    if (!empty($profAssignment->class_slot_id)) {
+                    /* EXACT_SCOPE_STUDENT_VISIBLE_DEVOIR_V1 */
+                    if (
+                        !empty(
+                            $profAssignment->assignment_code
+                        )
+                    ) {
+                        $wantedCode =
+                            strtoupper(
+                                trim(
+                                    (string)
+                                        $profAssignment
+                                            ->assignment_code
+                                )
+                            );
+
+                        $resolved =
+                            $candidatePaths->first(
+                                fn ($path) =>
+                                    strtoupper(
+                                        trim(
+                                            (string) (
+                                                $path
+                                                    ->student_slot_code
+                                                ?? ''
+                                            )
+                                        )
+                                    ) === $wantedCode
+                            );
+                    }
+
+                    if (
+                        !$resolved
+                        && !empty(
+                            $profAssignment->class_slot_id
+                        )
+                    ) {
                         $resolved = $candidatePaths->firstWhere(
                             'class_slot_id',
                             (int) $profAssignment->class_slot_id
@@ -1171,8 +1266,39 @@ class StudentController extends Controller
                 )
                 ->values();
 
+            /* EXACT_SCOPE_SOURCE_DEVOIR_V1 */
             if (
-                !empty(
+                !$selectedPath
+                && !empty(
+                    $sourceAssignment->assignment_code
+                )
+            ) {
+                $wantedCode =
+                    strtoupper(
+                        trim(
+                            (string)
+                                $sourceAssignment
+                                    ->assignment_code
+                        )
+                    );
+
+                $selectedPath =
+                    $candidatePaths->first(
+                        fn ($row) =>
+                            strtoupper(
+                                trim(
+                                    (string) (
+                                        $row->student_slot_code
+                                        ?? ''
+                                    )
+                                )
+                            ) === $wantedCode
+                    );
+            }
+
+            if (
+                !$selectedPath
+                && !empty(
                     $sourceAssignment->class_slot_id
                 )
             ) {
@@ -1342,6 +1468,17 @@ class StudentController extends Controller
                 (int) $validated['class_id'],
             'class_slot_id' =>
                 (int) $validated['class_slot_id'],
+
+            /* EXACT_SCOPE_STUDENT_SUBMISSION_V1 */
+            'assignment_code' =>
+                $selectedPath->student_slot_code
+                ?? null,
+            'assignment_day_of_week' =>
+                $selectedPath->student_day_of_week
+                ?? null,
+            'assignment_start_time' =>
+                $selectedPath->student_start_time
+                ?? null,
         ]);
 
         return back()->with(

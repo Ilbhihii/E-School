@@ -252,6 +252,21 @@ class LearningPathService
                 'class_slots.code as slot_code';
         }
 
+        /* EXACT_SCOPE_STUDENT_COLUMNS_V1 */
+        foreach (
+            [
+                'student_slot_code',
+                'student_day_of_week',
+                'student_start_time',
+                'student_end_time',
+            ]
+            as $column
+        ) {
+            if (Schema::hasColumn('class_user', $column)) {
+                $columns[] = 'class_user.' . $column;
+            }
+        }
+
         return $query
             ->select($columns)
             ->get()
@@ -495,6 +510,36 @@ class LearningPathService
             || empty($course->slot_code)
         ) {
             return true;
+        }
+
+        /* EXACT_SCOPE_STUDENT_COURSE_V1 */
+        if (
+            Schema::hasColumn('courses', 'assignment_code')
+            && trim((string) $course->assignment_code) !== ''
+            && Schema::hasColumn('class_user', 'student_slot_code')
+        ) {
+            $wanted =
+                strtoupper(
+                    trim((string) $course->assignment_code)
+                );
+
+            return $this
+                ->studentAssignmentRows($student->id)
+                ->contains(
+                    fn ($row) =>
+                        (int) $row->subject_id
+                            === (int) $course->subject_id
+                        && (int) $row->class_id
+                            === (int) $course->class_id
+                        && strtoupper(
+                            trim(
+                                (string) (
+                                    $row->student_slot_code
+                                    ?? ''
+                                )
+                            )
+                        ) === $wanted
+                );
         }
 
         return DB::table('class_user')

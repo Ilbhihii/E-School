@@ -9,12 +9,14 @@ use App\Models\ClassSlot;
 use App\Models\Subject;
 use App\Models\Level;
 use App\Models\User;
+use App\Models\ProfAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Services\ClassSlotService;
 use App\Services\PedagogicalStructureService;
+use Carbon\Carbon;
 
 
 class LiveController extends Controller
@@ -314,6 +316,10 @@ class LiveController extends Controller
                 . 'l’heure de début.',
         ]);
 
+        $this->assertLiveStartTimeGrid(
+            $validated['start_time']
+        );
+
         $subject = Subject::query()
             ->whereKey(
                 $validated['subject_id']
@@ -420,6 +426,35 @@ class LiveController extends Controller
             throw ValidationException::withMessages([
                 'professor_id' =>
                     'Veuillez sélectionner un professeur valide.',
+            ]);
+        }
+
+        /* EXACT_SCOPE_ADMIN_LIVE_STORE_V1 */
+        $liveDay =
+            Carbon::parse(
+                $validated['live_date']
+            )->dayOfWeekIso;
+
+        $professorScope =
+            ProfAssignment::query()
+                ->where('prof_id', $professor->id)
+                ->where('subject_id', $subject->id)
+                ->where('level_id', $level->id)
+                ->where('class_id', $classRoom->id)
+                ->where('class_slot_id', $classSlot->id)
+                ->where('day_of_week', $liveDay)
+                ->whereTime(
+                    'start_time',
+                    '=',
+                    $validated['start_time']
+                )
+                ->first();
+
+        if (!$professorScope) {
+            throw ValidationException::withMessages([
+                'professor_id' =>
+                    'Ce professeur n’est pas affecté à ce groupe '
+                    . 'pour ce jour et cette heure.',
             ]);
         }
 
@@ -855,6 +890,10 @@ class LiveController extends Controller
             ],
         ]);
 
+        $this->assertLiveStartTimeGrid(
+            $validated['start_time']
+        );
+
         $live = Live::query()
             ->findOrFail($id);
 
@@ -942,6 +981,49 @@ class LiveController extends Controller
             );
     }
 
+
+    /**
+     * Même grille horaire que l'assignation étudiant :
+     * 08:00 à 22:00, toutes les 30 minutes.
+     */
+    private function assertLiveStartTimeGrid(
+        string $time
+    ): void {
+        if (
+            !preg_match(
+                '/^(\d{2}):(\d{2})$/',
+                $time,
+                $matches
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'start_time' =>
+                    'Heure de début invalide.',
+            ]);
+        }
+
+        $minutes =
+            ((int) $matches[1] * 60)
+            + (int) $matches[2];
+
+        $first =
+            8 * 60;
+
+        $last =
+            22 * 60;
+
+        if (
+            $minutes < $first
+            || $minutes > $last
+            || (($minutes - $first) % 30) !== 0
+        ) {
+            throw ValidationException::withMessages([
+                'start_time' =>
+                    'Choisissez une heure entre 08:00 et 22:00 '
+                    . 'par pas de 30 minutes.',
+            ]);
+        }
+    }
     // Supprimer un live
     public function destroy($id)
     {

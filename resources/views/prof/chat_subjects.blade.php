@@ -116,6 +116,7 @@
             </footer>
         </a>
 
+        {{-- FINAL_D1ARD1_PROF_CHAT_LIST_V2 --}}
         @forelse($subjects as $subject)
             @php
                 $name =
@@ -161,7 +162,12 @@
                 href="{{
                     route(
                         'prof.chat',
-                        $subject->id
+                        array_filter([
+                            'subject' => $subject->id,
+                            'assignment_code' =>
+                                $subject->assignment_code
+                                ?? null,
+                        ])
                     )
                 }}"
                 class="rgc-list-card {{ $class }}"
@@ -191,6 +197,22 @@
                             )
                     }}
                 </h3>
+
+                @if(!$isAdmin && $subject->assignment_code)
+                    <div
+                        style="
+                            display:inline-flex;
+                            margin:0 0 8px;
+                            padding:5px 9px;
+                            border-radius:8px;
+                            background:rgba(99,102,241,.12);
+                            font-weight:800;
+                            font-size:.72rem;
+                        "
+                    >
+                        {{ $subject->assignment_code }}
+                    </div>
+                @endif
 
                 <p>{{ $description }}</p>
 

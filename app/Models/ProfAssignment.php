@@ -82,6 +82,13 @@ class ProfAssignment extends Model
         )->withTimestamps();
     }
 
+
+    public function getPedagogicalCodeAttribute(): ?string
+    {
+        return app(
+            \App\Services\AssignmentScopeService::class
+        )->professorCode($this);
+    }
     public function getWeeklySessionsAttribute($value): int
     {
         return max(1, min(7, (int) ($value ?: 1)));

@@ -16,6 +16,7 @@
 @endpush
 
 @section('content')
+{{-- FINAL_D1ARD1_STUDENT_CHAT_V2 --}}
 @php
     $isAdministration =
         (bool) ($isAdministration ?? false);
@@ -120,7 +121,12 @@
                         }}
                     </span>
 
-                    <h1>{{ $title }}</h1>
+                    <h1>
+                        {{ $title }}
+                        @if(!$isAdministration && !empty($assignmentCode))
+                            — {{ $assignmentCode }}
+                        @endif
+                    </h1>
                     <p>{{ $description }}</p>
                 </div>
             </div>
@@ -548,6 +554,14 @@
                         name="subject_id"
                         value="{{ $subject->id }}"
                     >
+
+                    @unless($isAdministration)
+                        <input
+                            type="hidden"
+                            name="assignment_code"
+                            value="{{ $assignmentCode }}"
+                        >
+                    @endunless
 
                     <button
                         type="button"

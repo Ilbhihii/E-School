@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\ProfAssignment;
 use App\Services\ProfessorPathService;
+use App\Services\AssignmentScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -181,6 +182,11 @@ class CourseController extends Controller
             'Cette classe ne fait pas partie de vos affectations.'
         );
 
+        /* EXACT_SCOPE_PROF_COURSE_STORE_V1 */
+        $assignmentCode = app(
+            AssignmentScopeService::class
+        )->professorCode($assignment);
+
         [$videoPath, $pdfPath] =
             $this->storeFiles(
                 $request
@@ -207,6 +213,12 @@ class CourseController extends Controller
                     $assignment->class_id,
                 'slot_code' =>
                     $assignment->classSlot?->code,
+                'assignment_code' =>
+                    $assignmentCode,
+                'assignment_day_of_week' =>
+                    $assignment->day_of_week,
+                'assignment_start_time' =>
+                    $assignment->start_time,
                 'video' =>
                     $videoPath,
                 'pdf' =>
@@ -428,6 +440,11 @@ class CourseController extends Controller
             'Cette classe ne fait pas partie de vos affectations.'
         );
 
+        /* EXACT_SCOPE_PROF_COURSE_UPDATE_V1 */
+        $assignmentCode = app(
+            AssignmentScopeService::class
+        )->professorCode($assignment);
+
         $oldVideo =
             $course->video;
 
@@ -464,6 +481,15 @@ class CourseController extends Controller
 
             $course->slot_code =
                 $assignment->classSlot?->code;
+
+            $course->assignment_code =
+                $assignmentCode;
+
+            $course->assignment_day_of_week =
+                $assignment->day_of_week;
+
+            $course->assignment_start_time =
+                $assignment->start_time;
 
             $course->course_link =
                 $validated['course_link']

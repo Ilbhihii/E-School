@@ -151,7 +151,8 @@
 
                             <span class="pps-path-chip">
                                 {{
-                                    $live
+                                    $live->pedagogical_code
+                                    ?? $live
                                         ->classSlot
                                         ?->code
                                     ?? 'Groupe'

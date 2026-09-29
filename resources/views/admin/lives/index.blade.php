@@ -162,7 +162,7 @@
                                     <span style="color:#64748B;">→</span>
                                     <span class="adm-badge adm-badge-danger">{{ $live->classSlot->classRoom?->name ?? '—' }}</span>
                                     <span style="color:#64748B;">→</span>
-                                    <span class="adm-badge adm-badge-warning">{{ $live->classSlot->code }}</span>
+                                    <span class="adm-badge adm-badge-warning">{{ $live->pedagogical_code ?? $live->classSlot->code }}</span>
                                 </div>
                             @elseif($live->classRoom)
                                 <span class="adm-badge adm-badge-danger">{{ $live->classRoom->name ?? '-' }}</span>

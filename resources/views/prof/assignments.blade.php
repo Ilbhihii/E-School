@@ -182,6 +182,8 @@
                                 <span class="pps-path-chip">
                                     {{
                                         $assignment
+                                            ->assignment_code
+                                        ?? $assignment
                                             ->classSlot
                                             ?->code
                                         ?? 'Groupe'

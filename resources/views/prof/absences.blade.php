@@ -97,6 +97,7 @@
                     </select>
                 </div>
 
+                {{-- FINAL_ATTENDANCE_GROUP_V2 --}}
                 <div class="pp-field">
                     <label
                         for="attendanceClass"
@@ -114,6 +115,27 @@
                     >
                         <option value="">
                             Choisir une classe
+                        </option>
+                    </select>
+                </div>
+
+                <div class="pp-field">
+                    <label
+                        for="attendanceSlot"
+                        class="pp-label"
+                    >
+                        Groupe
+                    </label>
+
+                    <select
+                        name="class_slot_id"
+                        id="attendanceSlot"
+                        class="adm-form-select"
+                        disabled
+                        required
+                    >
+                        <option value="">
+                            Choisir un groupe
                         </option>
                     </select>
                 </div>
@@ -344,6 +366,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const classroom =
         document.getElementById('attendanceClass');
 
+    const slot =
+        document.getElementById('attendanceSlot');
+
     const list =
         document.getElementById('studentsList');
 
@@ -369,6 +394,41 @@ document.addEventListener('DOMContentLoaded', function () {
         subjectData()?.levels?.find(
             item => String(item.id) === String(level.value)
         );
+
+    const classData = () =>
+        levelData()?.classes?.find(
+            item =>
+                String(item.id)
+                === String(classroom.value)
+        );
+
+    function fillSlots() {
+        slot.innerHTML = '';
+        slot.appendChild(
+            option('', 'Choisir un groupe')
+        );
+
+        const data =
+            classData();
+
+        (data?.slots || [])
+            .forEach(
+                item =>
+                    slot.appendChild(
+                        option(
+                            item.id,
+                            item.code
+                        )
+                    )
+            );
+
+        slot.disabled =
+            !(data?.slots || []).length;
+
+        clearStudents(
+            'Choisissez un groupe pour charger les étudiants.'
+        );
+    }
 
     function clearStudents(message = 'Choisissez une classe pour charger les étudiants.') {
         submit.disabled = true;
@@ -432,6 +492,7 @@ document.addEventListener('DOMContentLoaded', function () {
             !subject.value
             || !level.value
             || !classroom.value
+            || !slot.value
         ) {
             clearStudents();
             return;
@@ -447,6 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
             new URLSearchParams({
                 subject_id: subject.value,
                 level_id: level.value,
+                class_slot_id: slot.value,
             });
 
         try {
@@ -765,6 +827,10 @@ document.addEventListener('DOMContentLoaded', function () {
             data.append(
                 'class_id',
                 classroom.value
+            );
+            data.append(
+                'class_slot_id',
+                slot.value
             );
             data.append(
                 'date',
