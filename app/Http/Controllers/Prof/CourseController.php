@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
+use App\Rules\SafeEducationalUpload;
 
 class CourseController extends Controller
 {
@@ -647,13 +648,13 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:mp4,mov,avi,webm,m4v',
-                'max:1048576',
+                'max:' . config('uploads.educational_max_kb', 2097152),
             ],
             'pdf' => [
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:1048576',
+                'max:' . config('uploads.educational_max_kb', 2097152),
             ],
             'attachments' => [
                 'nullable',
@@ -662,7 +663,8 @@ class CourseController extends Controller
             ],
             'attachments.*' => [
                 'file',
-                'max:102400',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
                 function ($attribute, $value, $fail) {
                     $extension = mb_strtolower(
                         trim((string) $value->getClientOriginalExtension())
@@ -699,15 +701,15 @@ class CourseController extends Controller
             'class_slot_id.required' =>
                 'Veuillez sélectionner un groupe.',
             'video.max' =>
-                'La vidéo ne doit pas dépasser 1 Go.',
+                'La vidéo ne doit pas dépasser 2 Go.',
             'video.mimes' =>
                 'La vidéo doit être au format MP4, MOV, AVI, WEBM ou M4V.',
             'pdf.max' =>
-                'Le document PDF ne doit pas dépasser 1 Go.',
+                'Le document PDF ne doit pas dépasser 2 Go.',
             'pdf.mimes' =>
                 'Le document sélectionné doit être un fichier PDF.',
             'attachments.*.max' =>
-                'Chaque fichier supplémentaire ne doit pas dépasser 100 Mo.',
+                'Chaque fichier supplémentaire ne doit pas dépasser 2 Go.',
         ]);
     }
 

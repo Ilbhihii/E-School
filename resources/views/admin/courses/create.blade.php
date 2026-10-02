@@ -370,7 +370,7 @@
                                     </label>
 
                                     <span>
-                                        MP4, MOV ou AVI — 1 Go maximum
+                                        MP4, MOV ou AVI — 2 Go maximum
                                     </span>
 
                                     <input
@@ -406,7 +406,7 @@
                                     </label>
 
                                     <span>
-                                        PDF — 1 Go maximum
+                                        PDF — 2 Go maximum
                                     </span>
 
                                     <input
@@ -1140,6 +1140,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<script src="{{ asset('js/course-upload-1gb-v1.js') }}?v=1"></script>
+<script src="{{ asset('js/course-upload-2gb-v2.js') }}?v=2"></script>
 
 @endsection

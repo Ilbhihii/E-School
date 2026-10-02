@@ -32,6 +32,56 @@ class AssignmentFileController extends Controller
         abort(404);
     }
 
+    public function voice(
+        Request $request,
+        Assignment $assignment,
+        LearningPathService $paths
+    ) {
+        $user = $request->user();
+
+        abort_unless(
+            $user
+            && $this->canView(
+                $user,
+                $assignment,
+                $paths
+            ),
+            403
+        );
+
+        abort_unless($assignment->voice_path, 404);
+
+        foreach (['local', 'public'] as $diskName) {
+            $disk = Storage::disk($diskName);
+
+            if (!$disk->exists($assignment->voice_path)) {
+                continue;
+            }
+
+            return response()->file(
+                $disk->path($assignment->voice_path),
+                [
+                    'Content-Type' =>
+                        $assignment->voice_mime_type
+                        ?: $disk->mimeType($assignment->voice_path)
+                        ?: 'audio/webm',
+                    'Content-Disposition' =>
+                        'inline; filename="devoir-vocal-'
+                        . $assignment->id
+                        . '.'
+                        . (pathinfo($assignment->voice_path, PATHINFO_EXTENSION) ?: 'webm')
+                        . '"',
+                    'Cache-Control' =>
+                        'private, no-store, max-age=0',
+                    'X-Content-Type-Options' =>
+                        'nosniff',
+                ]
+            );
+        }
+
+        abort(404);
+    }
+
     public function attachment(
         Request $request,
         Assignment $assignment,

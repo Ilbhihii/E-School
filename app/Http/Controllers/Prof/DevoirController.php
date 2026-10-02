@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use App\Rules\SafeEducationalUpload;
 
 class DevoirController extends Controller
 {
@@ -391,8 +392,8 @@ class DevoirController extends Controller
             'file' => [
                 'nullable',
                 'file',
-                'mimes:pdf',
-                'max:5120',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
             ],
             'attachments' => [
                 'nullable',
@@ -401,7 +402,8 @@ class DevoirController extends Controller
             ],
             'attachments.*' => [
                 'file',
-                'max:102400',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
                 function ($attribute, $value, $fail) {
                     $extension = mb_strtolower(
                         trim((string) $value->getClientOriginalExtension())
@@ -699,8 +701,8 @@ class DevoirController extends Controller
             'file' => [
                 'nullable',
                 'file',
-                'mimes:pdf',
-                'max:5120',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
             ],
             'attachments' => [
                 'nullable',
@@ -709,7 +711,8 @@ class DevoirController extends Controller
             ],
             'attachments.*' => [
                 'file',
-                'max:102400',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
                 function ($attribute, $value, $fail) {
                     $extension = mb_strtolower(
                         trim((string) $value->getClientOriginalExtension())

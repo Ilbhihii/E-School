@@ -442,14 +442,24 @@
                             / (1024 * 1024)
                         ).toFixed(2)
                     } Mo`
-                    : 'PDF, DOCX, JPG, PNG, MP3, MP4… — maximum 100 Mo';
+                    : 'PDF, DOCX, JPG, PNG, MP3, MP4… — maximum 2 Go';
             };
 
             fileInput.addEventListener(
                 'change',
-                () => updateFileName(
-                    fileInput.files[0]
-                )
+                () => {
+                    const file = fileInput.files[0];
+                    const maxBytes = 2 * 1024 * 1024 * 1024;
+
+                    if (file && file.size > maxBytes) {
+                        alert('Le fichier dépasse 2 Go. Choisissez un fichier plus petit.');
+                        fileInput.value = '';
+                        updateFileName(null);
+                        return;
+                    }
+
+                    updateFileName(file);
+                }
             );
 
             ['dragenter', 'dragover']
@@ -488,10 +498,18 @@
                         return;
                     }
 
+                    const selectedFile = files[0];
+                    const maxBytes = 2 * 1024 * 1024 * 1024;
+
+                    if (selectedFile.size > maxBytes) {
+                        alert('Le fichier dépasse 2 Go. Choisissez un fichier plus petit.');
+                        return;
+                    }
+
                     const transfer =
                         new DataTransfer();
 
-                    transfer.items.add(files[0]);
+                    transfer.items.add(selectedFile);
                     fileInput.files =
                         transfer.files;
 

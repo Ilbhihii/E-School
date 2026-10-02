@@ -15,6 +15,9 @@ class Assignment extends Model
         'week_number',
         'description',
         'file',
+        'voice_path',
+        'voice_mime_type',
+        'voice_duration_seconds',
         'extra_files',
         'due_date',
         'course_id',
@@ -31,6 +34,7 @@ class Assignment extends Model
 
     protected $casts = [
         'week_number' => 'integer',
+        'voice_duration_seconds' => 'integer',
         'due_date' => 'date',
         'extra_files' => 'array',
     ];

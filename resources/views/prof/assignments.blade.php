@@ -201,18 +201,22 @@
 
                         @if($assignment->file)
                             <a
-                                href="{{
-                                    asset(
-                                        'storage/'
-                                        . $assignment->file
-                                    )
-                                }}"
+                                href="{{ route('assignments.file', $assignment) }}"
                                 target="_blank"
                                 rel="noopener"
                                 class="adm-btn adm-btn-primary adm-btn-sm"
                             >
                                 Voir la copie
                             </a>
+                        @endif
+
+                        @if($assignment->voice_path)
+                            <audio
+                                controls
+                                preload="none"
+                                style="width:min(300px,100%);height:38px;"
+                                src="{{ route('assignments.voice', $assignment) }}"
+                            ></audio>
                         @endif
                     </div>
                 </div>

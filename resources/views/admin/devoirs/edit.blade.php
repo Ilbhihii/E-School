@@ -253,14 +253,15 @@
                             class="adm-form-label"
                             for="devoirFile"
                         >
-                            Remplacer le PDF
+                            Remplacer le fichier (maximum 2 Go)
                         </label>
 
                         <input
                             id="devoirFile"
                             type="file"
                             name="file"
-                            accept="application/pdf,.pdf"
+                            data-educational-2gb
+                            accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
                             class="adm-form-control
                                 @error('file') error @enderror"
                         >
@@ -297,6 +298,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/educational-file-2gb-v1.js?v=1') }}"></script>
 <script>
 document.addEventListener(
     'DOMContentLoaded',

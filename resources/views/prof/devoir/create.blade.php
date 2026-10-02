@@ -405,14 +405,15 @@
                         for="file"
                         class="pp-label"
                     >
-                        Document PDF
+                        Fichier du devoir (maximum 2 Go)
                     </label>
 
                     <input
                         type="file"
                         name="file"
+                            data-educational-2gb
                         id="file"
-                        accept="application/pdf,.pdf"
+                        accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
                         class="adm-form-control"
                     >
                 </div>
@@ -434,6 +435,7 @@
                     <input
                         type="file"
                         name="attachments[]"
+                        data-educational-2gb
                         id="devoirExtraFiles"
                         multiple
                         accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
@@ -446,7 +448,7 @@
                     ></div>
 
                     <small class="pp-help">
-                        1 à 10 fichiers · 100 Mo maximum par fichier.
+                        1 à 10 fichiers · 2 Go maximum par fichier.
                     </small>
                 </div>
             </div>
@@ -475,6 +477,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/educational-file-2gb-v1.js?v=1') }}"></script>
 <script>
 window.profDevoirGroupData = {
     hierarchy: @json($profHierarchy),

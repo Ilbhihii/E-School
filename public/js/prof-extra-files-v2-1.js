@@ -1,10 +1,13 @@
 (() => {
     'use strict';
 
-    const MAX_BYTES = 100 * 1024 * 1024;
+    const MAX_BYTES = 2 * 1024 * 1024 * 1024;
 
     function human(bytes) {
-        return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+        const gb = bytes / (1024 * 1024 * 1024);
+        return gb >= 1
+            ? `${gb.toFixed(2)} Go`
+            : `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
     }
 
     function install(button) {
@@ -36,7 +39,7 @@
 
             if (tooLarge) {
                 alert(
-                    `${tooLarge.name} dépasse 100 Mo `
+                    `${tooLarge.name} dépasse 2 Go `
                     + `(${human(tooLarge.size)}).`
                 );
                 input.value = '';

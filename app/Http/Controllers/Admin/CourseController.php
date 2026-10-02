@@ -222,13 +222,13 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:mp4,mov,avi',
-                'max:1048576',
+                'max:' . config('uploads.educational_max_kb', 2097152),
             ],
             'pdf' => [
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:1048576',
+                'max:' . config('uploads.educational_max_kb', 2097152),
             ],
         ], [
             'subject_id.required' =>
@@ -612,13 +612,13 @@ class CourseController extends Controller
                 'nullable',
                 'file',
                 'mimes:mp4,mov,avi,webm,m4v',
-                'max:1048576',
+                'max:' . config('uploads.educational_max_kb', 2097152),
             ],
             'pdf' => [
                 'nullable',
                 'file',
                 'mimes:pdf',
-                'max:1048576',
+                'max:' . config('uploads.educational_max_kb', 2097152),
             ],
         ], [
             'title.required' =>
@@ -630,11 +630,11 @@ class CourseController extends Controller
             'slot_code.required' =>
                 'Veuillez sélectionner un créneau.',
             'video.max' =>
-                'La vidéo ne doit pas dépasser 1 Go.',
+                'La vidéo ne doit pas dépasser 2 Go.',
             'video.mimes' =>
                 'La vidéo doit être au format MP4, MOV, AVI, WEBM ou M4V.',
             'pdf.max' =>
-                'Le document PDF ne doit pas dépasser 1 Go.',
+                'Le document PDF ne doit pas dépasser 2 Go.',
             'pdf.mimes' =>
                 'Le document sélectionné doit être un fichier PDF.',
         ]);

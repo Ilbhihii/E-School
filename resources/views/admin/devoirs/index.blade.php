@@ -48,7 +48,8 @@
                         <th>Classe</th>
                         <th>Date limite</th>
                         <th>Fichier</th>
-                        <th>Professeur</th>
+                        <th>Vocal</th>
+                        <th>Auteur</th>
                         <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
@@ -71,6 +72,18 @@
                                 <span style="color:var(--adm-text-muted);">Aucun</span>
                             @endif
                         </td>
+                        <td>
+                            @if($devoir->voice_path)
+                                <audio
+                                    controls
+                                    preload="none"
+                                    style="width:min(260px,100%);height:36px;"
+                                    src="{{ route('assignments.voice', $devoir) }}"
+                                ></audio>
+                            @else
+                                <span style="color:var(--adm-text-muted);">—</span>
+                            @endif
+                        </td>
                         <td style="color:var(--adm-text-secondary);">{{ $devoir->user->name ?? 'Admin' }}</td>
                         <td style="text-align:right;">
                             <div style="display:flex;gap:6px;justify-content:flex-end;">
@@ -88,7 +101,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="adm-empty">
                                 <div class="adm-empty-icon"><i class="bi bi-file-text"></i></div>
                                 <h5>Aucun devoir</h5>

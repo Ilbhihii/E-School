@@ -78,8 +78,8 @@
                         </div>
                         <div class="col-12">
                             <div class="adm-form-group">
-                                <label class="adm-form-label">Fichier (PDF optionnel)</label>
-                                <input type="file" name="file" accept=".pdf" class="adm-form-control" style="padding:8px;">
+                                <label class="adm-form-label">Fichier (optionnel · maximum 2 Go)</label>
+                                <input type="file" name="file" data-educational-2gb accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z" class="adm-form-control" style="padding:8px;">
                             </div>
                         </div>
                     </div>
@@ -98,3 +98,7 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/educational-file-2gb-v1.js?v=1') }}"></script>
+@endpush

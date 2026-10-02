@@ -5,6 +5,10 @@
 @section('breadcrumb', 'Matière → Niveau → Classe → Groupe → Devoirs')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/student-assignment-voice-v1.css?v=1') }}">
+@endpush
+
+@push('styles')
     <link
         rel="stylesheet"
         href="{{ asset('css/student-pages-v6.css') }}"
@@ -350,7 +354,7 @@
             </div>
 
             <span class="sp-status-badge blue">
-                Documents, images, audio et vidéo · 100 Mo
+                Documents, images, audio et vidéo · 2 Go par fichier
             </span>
         </header>
 
@@ -403,7 +407,7 @@
                     Devoir sélectionné :
                     <strong id="assignmentAutoFillTitle">—</strong>.
                     Le titre et le parcours sont remplis automatiquement.
-                    Il ne reste qu’à choisir votre fichier.
+                    Il ne reste qu’à joindre un fichier ou enregistrer votre vocal.
                 </span>
             </div>
 
@@ -606,7 +610,7 @@
                 </strong>
 
                 <small id="assignmentFileName">
-                    PDF, DOCX, JPG, PNG, MP3, MP4… — maximum 100 Mo
+                    PDF, DOCX, JPG, PNG, MP3, MP4… — maximum 2 Go
                 </small>
 
                 <input
@@ -614,7 +618,6 @@
                     name="file"
                     id="assignmentFile"
                     accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.heic,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.mov,.m4v,.avi,.webm,.mkv,.zip,.rar,.7z"
-                    required
                 >
             </label>
 
@@ -623,6 +626,80 @@
                     {{ $message }}
                 </small>
             @enderror
+
+            <div class="sp-voice-recorder" id="assignmentVoiceRecorder">
+                <div class="sp-voice-head">
+                    <strong>
+                        <i class="bi bi-mic-fill"></i>
+                        Enregistrer un devoir vocal
+                    </strong>
+                    <span class="sp-voice-status" id="assignmentVoiceStatus">
+                        Aucun vocal enregistré.
+                    </span>
+                </div>
+
+                <div class="sp-voice-controls">
+                    <button
+                        type="button"
+                        class="sp-voice-button start"
+                        id="assignmentVoiceStart"
+                    >
+                        <i class="bi bi-mic-fill"></i>
+                        Démarrer l’enregistrement
+                    </button>
+
+                    <button
+                        type="button"
+                        class="sp-voice-button stop"
+                        id="assignmentVoiceStop"
+                        disabled
+                    >
+                        <i class="bi bi-stop-circle-fill"></i>
+                        Arrêter
+                    </button>
+
+                    <button
+                        type="button"
+                        class="sp-voice-button clear"
+                        id="assignmentVoiceClear"
+                        hidden
+                    >
+                        <i class="bi bi-trash3"></i>
+                        Refaire le vocal
+                    </button>
+                </div>
+
+                <audio
+                    id="assignmentVoicePreview"
+                    class="sp-voice-preview"
+                    controls
+                    preload="metadata"
+                    hidden
+                ></audio>
+
+                <input
+                    type="file"
+                    name="voice_recording"
+                    id="assignmentVoiceInput"
+                    accept="audio/*,.webm,.m4a,.mp3,.wav,.ogg,.aac"
+                    hidden
+                >
+
+                <input
+                    type="hidden"
+                    name="voice_duration_seconds"
+                    id="assignmentVoiceDuration"
+                    value="{{ old('voice_duration_seconds') }}"
+                >
+
+                <small class="sp-voice-help">
+                    Vous pouvez envoyer un fichier, un vocal, ou les deux. Maximum 2 Go par fichier.
+                </small>
+
+                @error('voice_recording')
+                    <small class="sp-field-error">{{ $message }}</small>
+                @enderror
+            </div>
 
             <button
                 type="submit"
@@ -671,6 +748,7 @@
                             <th>Parcours</th>
                             <th>Date d’envoi</th>
                             <th>Fichier</th>
+                            <th>Vocal</th>
                             <th>Correction</th>
                             <th>Note</th>
                         </tr>
@@ -738,16 +816,31 @@
                                 </td>
 
                                 <td data-label="Fichier">
-                                    <a
-                                        href="{{
-                                            route('assignments.file', $assignment)
-                                        }}"
-                                        target="_blank"
-                                        class="sp-secondary-button compact"
-                                    >
-                                        <i class="bi bi-eye-fill"></i>
-                                        Voir
-                                    </a>
+                                    @if($assignment->file)
+                                        <a
+                                            href="{{ route('assignments.file', $assignment) }}"
+                                            target="_blank"
+                                            class="sp-secondary-button compact"
+                                        >
+                                            <i class="bi bi-eye-fill"></i>
+                                            Voir
+                                        </a>
+                                    @else
+                                        <span class="sp-muted-value">—</span>
+                                    @endif
+                                </td>
+
+                                <td data-label="Vocal">
+                                    @if($assignment->voice_path)
+                                        <audio
+                                            controls
+                                            preload="none"
+                                            class="sp-inline-audio"
+                                            src="{{ route('assignments.voice', $assignment) }}"
+                                        ></audio>
+                                    @else
+                                        <span class="sp-muted-value">—</span>
+                                    @endif
                                 </td>
 
                                 <td data-label="Correction">
@@ -829,5 +922,6 @@ window.studentAssignmentPathData = {
         @json((string) old('prof_assignment_id'))
 };
 </script>
-<script src="{{ asset('js/student-assignments-path-v11.js?v=11') }}"></script>
+<script src="{{ asset('js/student-assignments-path-v11.js?v=12') }}"></script>
+<script src="{{ asset('js/student-assignment-voice-v1.js?v=1') }}"></script>
 @endpush

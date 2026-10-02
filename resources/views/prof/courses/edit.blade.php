@@ -157,7 +157,7 @@
                         >
 
                         <small class="pp-help">
-                            PDF · 1 Go maximum.
+                            PDF · 2 Go maximum.
                         </small>
 
                         @if($course->pdf)
@@ -239,11 +239,11 @@
 
                 <small class="pp-help">
                     Vous pouvez sélectionner 1, 2 ou plusieurs fichiers.
-                    10 fichiers maximum · 100 Mo maximum par fichier.
+                    10 fichiers maximum · 2 Go maximum par fichier.
                 </small>
             </div>
 </form>
 <script src="{{ asset('js/prof-extra-files-v2-1.js') }}?v=21"></script>
-<script src="{{ asset('js/course-upload-1gb-v1.js') }}?v=1"></script>
+<script src="{{ asset('js/course-upload-2gb-v2.js') }}?v=2"></script>
 
 @endsection

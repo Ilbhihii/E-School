@@ -25,6 +25,7 @@ use App\Services\ClassScheduleDisplayService;
 use Carbon\Carbon;
 use App\Models\HighSchoolTestSubmission;
 use App\Models\VocalTestPrompt;
+use App\Rules\SafeEducationalUpload;
 
 class StudentController extends Controller
 {
@@ -1122,73 +1123,57 @@ class StudentController extends Controller
                 'exists:class_slots,id',
             ],
             'file' => [
-                'required',
+                'required_without:voice_recording',
+                'nullable',
                 'file',
-                'max:102400',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
+            ],
+            'voice_recording' => [
+                'required_without:file',
+                'nullable',
+                'file',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                function ($attribute, $value, $fail) {
+                    if (!$value) {
+                        return;
+                    }
+
+                    $mime = mb_strtolower(
+                        trim((string) ($value->getMimeType() ?: ''))
+                    );
+
+                    $isAudio = str_starts_with($mime, 'audio/');
+                    $browserContainer = in_array(
+                        $mime,
+                        ['video/webm', 'video/mp4', 'application/ogg'],
+                        true
+                    );
+
+                    if (!$isAudio && !$browserContainer) {
+                        $fail('Le vocal enregistré doit être un fichier audio valide.');
+                    }
+                },
+            ],
+            'voice_duration_seconds' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:86400',
             ],
         ], [
+            'file.required_without' =>
+                'Ajoutez un fichier ou enregistrez un vocal.',
+            'voice_recording.required_without' =>
+                'Ajoutez un fichier ou enregistrez un vocal.',
             'file.max' =>
-                'Le fichier ne doit pas dépasser 100 Mo.',
+                'Le fichier ne doit pas dépasser 2 Go.',
+            'voice_recording.max' =>
+                'Le vocal ne doit pas dépasser 2 Go.',
         ]);
 
-        /*
-         * On autorise une large liste de formats usuels, mais on bloque
-         * les formats exécutables / scripts qui ne doivent jamais être
-         * téléversés comme devoir.
-         */
         $uploadedFile = $request->file('file');
-
-        $extension = mb_strtolower(
-            trim(
-                (string) $uploadedFile
-                    ->getClientOriginalExtension()
-            )
-        );
-
-        $blockedExtensions = [
-            'php',
-            'php3',
-            'php4',
-            'php5',
-            'phtml',
-            'phar',
-            'cgi',
-            'pl',
-            'py',
-            'sh',
-            'bash',
-            'bat',
-            'cmd',
-            'com',
-            'exe',
-            'msi',
-            'dll',
-            'ps1',
-            'vbs',
-            'scr',
-            'js',
-            'mjs',
-            'html',
-            'htm',
-            'svg',
-            'jar',
-            'apk',
-        ];
-
-        if (
-            $extension !== ''
-            && in_array(
-                $extension,
-                $blockedExtensions,
-                true
-            )
-        ) {
-            throw ValidationException::withMessages([
-                'file' =>
-                    'Ce type de fichier n’est pas autorisé '
-                    . 'pour des raisons de sécurité.',
-            ]);
-        }
+        $voiceRecording = $request->file('voice_recording');
 
         $selectedPath = null;
         $sourceAssignment = null;
@@ -1448,18 +1433,47 @@ class StudentController extends Controller
             ->orderBy('id')
             ->first();
 
-        $file = $uploadedFile
-            ->store(
-                'assignments',
-                'local'
-            );
+        $file = null;
+        $voicePath = null;
+        $voiceMimeType = null;
 
-        Assignment::create([
+        if ($voiceRecording) {
+            $detectedVoiceMime = (string) ($voiceRecording->getMimeType() ?: '');
+            $clientVoiceMime = (string) ($voiceRecording->getClientMimeType() ?: '');
+
+            $voiceMimeType = str_starts_with(
+                mb_strtolower($clientVoiceMime),
+                'audio/'
+            )
+                ? $clientVoiceMime
+                : ($detectedVoiceMime ?: $clientVoiceMime ?: 'audio/webm');
+        }
+
+        try {
+            if ($uploadedFile) {
+                $file = $uploadedFile->store(
+                    'assignments',
+                    'local'
+                );
+            }
+
+            if ($voiceRecording) {
+                $voicePath = $voiceRecording->store(
+                    'assignment-voices',
+                    'local'
+                );
+            }
+
+            Assignment::create([
             'user_id' => $user->id,
             'title' => trim(
                 (string) $validated['title']
             ),
             'file' => $file,
+            'voice_path' => $voicePath,
+            'voice_mime_type' => $voiceMimeType,
+            'voice_duration_seconds' =>
+                $validated['voice_duration_seconds'] ?? null,
             'course_id' =>
                 $course ? $course->id : null,
             'subject_id' =>
@@ -1479,7 +1493,18 @@ class StudentController extends Controller
             'assignment_start_time' =>
                 $selectedPath->student_start_time
                 ?? null,
-        ]);
+            ]);
+        } catch (\Throwable $exception) {
+            if ($file) {
+                Storage::disk('local')->delete($file);
+            }
+
+            if ($voicePath) {
+                Storage::disk('local')->delete($voicePath);
+            }
+
+            throw $exception;
+        }
 
         return back()->with(
             'success',

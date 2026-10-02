@@ -163,6 +163,11 @@ Route::middleware('auth')->get(
 )->name('assignments.file');
 
 Route::middleware('auth')->get(
+    '/assignments/{assignment}/voice',
+    [AssignmentFileController::class, 'voice']
+)->name('assignments.voice');
+
+Route::middleware('auth')->get(
     '/assignments/{assignment}/extra-file/{index}',
     [AssignmentFileController::class, 'attachment']
 )

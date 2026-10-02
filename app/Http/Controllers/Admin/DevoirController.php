@@ -10,6 +10,7 @@ use App\Models\Course;
 use Illuminate\Support\Facades\Storage;
 use App\Services\PedagogicalStructureService;
 use Illuminate\Validation\ValidationException;
+use App\Rules\SafeEducationalUpload;
 
 class DevoirController extends Controller
 {
@@ -61,7 +62,12 @@ class DevoirController extends Controller
             'course_id' => 'required|exists:courses,id',
             'class_room_id' => 'required|exists:class_rooms,id',
             'due_date' => 'required|date|after:now',
-            'file' => 'nullable|file|mimes:pdf|max:5120',
+            'file' => [
+                'nullable',
+                'file',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
+            ],
         ]);
 
         $filePath = null;
@@ -197,8 +203,8 @@ class DevoirController extends Controller
             'file' => [
                 'nullable',
                 'file',
-                'mimes:pdf',
-                'max:5120',
+                'max:' . config('uploads.educational_max_kb', 2097152),
+                new SafeEducationalUpload(),
             ],
         ]);
 
@@ -297,6 +303,14 @@ class DevoirController extends Controller
     {
         if ($devoir->file) {
             foreach (['local', 'public'] as $disk) { if (Storage::disk($disk)->exists($devoir->file)) Storage::disk($disk)->delete($devoir->file); }
+        }
+
+        if ($devoir->voice_path) {
+            foreach (['local', 'public'] as $disk) {
+                if (Storage::disk($disk)->exists($devoir->voice_path)) {
+                    Storage::disk($disk)->delete($devoir->voice_path);
+                }
+            }
         }
 
         $course_id = $devoir->course_id;

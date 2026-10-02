@@ -233,7 +233,7 @@
                                         font-size:0.72rem;
                                     "
                                 >
-                                    MP4, MOV, AVI, WEBM ou M4V — maximum 1 Go.
+                                    MP4, MOV, AVI, WEBM ou M4V — maximum 2 Go.
                                     Laissez vide pour conserver la vidéo actuelle.
                                 </small>
 
@@ -266,7 +266,7 @@
                                         font-size:0.72rem;
                                     "
                                 >
-                                    PDF — maximum 1 Go. Laissez vide pour
+                                    PDF — maximum 2 Go. Laissez vide pour
                                     conserver le document actuel.
                                 </small>
 
@@ -382,6 +382,6 @@ document.addEventListener(
     }
 );
 </script>
-<script src="{{ asset('js/course-upload-1gb-v1.js') }}?v=1"></script>
+<script src="{{ asset('js/course-upload-2gb-v2.js') }}?v=2"></script>
 
 @endsection
