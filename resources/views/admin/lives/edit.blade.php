@@ -474,16 +474,6 @@ document.addEventListener(
                 'liveAssignmentStart'
             );
 
-        const assignmentDay =
-            document.getElementById(
-                'liveAssignmentDay'
-            );
-
-        const assignmentStart =
-            document.getElementById(
-                'liveAssignmentStart'
-            );
-
         const end =
             document.getElementById(
                 'liveEnd'
@@ -789,17 +779,31 @@ document.addEventListener(
 </script>
 
 
+@php
+    $liveEditTimeSlotRegistry = app(
+        \App\Services\PedagogicalTimeSlotService::class
+    )->map();
+
+    $liveEditSelectedAssignmentDay = (string) old(
+        'assignment_day_of_week',
+        $live->assignment_day_of_week ?? ''
+    );
+
+    $liveEditSelectedAssignmentStart = (string) old(
+        'assignment_start_time',
+        !empty($live->assignment_start_time)
+            ? substr((string) $live->assignment_start_time, 0, 5)
+            : ''
+    );
+@endphp
+
 <!-- TIME_SLOT_RANK_LIVE_EDIT_V1 -->
 <script>
 document.addEventListener(
     'DOMContentLoaded',
     () => {
         const registry =
-            @json(
-                app(
-                    \App\Services\PedagogicalTimeSlotService::class
-                )->map()
-            );
+            @json($liveEditTimeSlotRegistry);
 
         const form =
             document.querySelector(
@@ -903,28 +907,12 @@ document.addEventListener(
 
         if (day) {
             day.value =
-                @json(
-                    (string) old(
-                        'assignment_day_of_week',
-                        $live->assignment_day_of_week ?? ''
-                    )
-                );
+                @json($liveEditSelectedAssignmentDay);
         }
 
         if (hour) {
             hour.value =
-                @json(
-                    (string) old(
-                        'assignment_start_time',
-                        !empty($live->assignment_start_time)
-                            ? substr(
-                                (string) $live->assignment_start_time,
-                                0,
-                                5
-                            )
-                            : ''
-                    )
-                );
+                @json($liveEditSelectedAssignmentStart);
         }
 
         const liveStart =
