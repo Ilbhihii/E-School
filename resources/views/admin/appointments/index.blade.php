@@ -342,10 +342,6 @@
                                         {{ $appointment->first_name }}
                                         {{ $appointment->last_name }}
                                     </strong>
-
-                                    <a href="mailto:{{ $appointment->email }}">
-                                        {{ $appointment->email }}
-                                    </a>
                                 </div>
                             </div>
                         </td>
@@ -578,36 +574,35 @@
                         {{-- CONTACT --}}
                         <td class="appointment-contact-cell">
                             <div class="appointment-contact">
-                                <a href="tel:{{ $appointment->phone }}">
-                                    <i class="bi bi-telephone"></i>
-                                    {{ $appointment->phone }}
-                                </a>
-
-                                <span>
-                                    <i class="bi bi-geo-alt"></i>
-                                    {{ $appointment->city ?: '—' }}
-                                    @if($appointment->country)
-                                        · {{ $appointment->country }}
-                                    @endif
-                                </span>
-
-                                <div class="appointment-contact-actions">
-                                    <a
-                                        href="mailto:{{ $appointment->email }}"
-                                        title="Envoyer un e-mail"
-                                        aria-label="Envoyer un e-mail"
-                                    >
-                                        <i class="bi bi-envelope"></i>
-                                    </a>
-
+                                <div class="appointment-contact-primary">
                                     <a
                                         href="tel:{{ $appointment->phone }}"
-                                        title="Appeler"
-                                        aria-label="Appeler"
+                                        class="appointment-contact-item appointment-contact-phone"
+                                        title="Appeler {{ $appointment->phone }}"
                                     >
                                         <i class="bi bi-telephone-fill"></i>
+                                        <span>{{ $appointment->phone ?: '—' }}</span>
+                                    </a>
+
+                                    <a
+                                        href="mailto:{{ $appointment->email }}"
+                                        class="appointment-contact-item appointment-contact-email"
+                                        title="Envoyer un e-mail à {{ $appointment->email }}"
+                                    >
+                                        <i class="bi bi-envelope-fill"></i>
+                                        <span>{{ $appointment->email ?: '—' }}</span>
                                     </a>
                                 </div>
+
+                                <span class="appointment-contact-location">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span>
+                                        {{ $appointment->city ?: 'Ville non renseignée' }}
+                                        @if($appointment->country)
+                                            · {{ $appointment->country }}
+                                        @endif
+                                    </span>
+                                </span>
                             </div>
                         </td>
 
@@ -1027,16 +1022,16 @@
     text-transform: uppercase;
 }
 
-.appointments-table th:nth-child(1) { width: 11%; }
+.appointments-table th:nth-child(1) { width: 9%; }
 .appointments-table th:nth-child(2) { width: 11%; }
 .appointments-table th:nth-child(3) { width: 11%; }
 .appointments-table th:nth-child(4) { width: 11%; }
 .appointments-table th:nth-child(5) { width: 10%; }
-.appointments-table th:nth-child(6) { width: 10%; }
+.appointments-table th:nth-child(6) { width: 14%; }
 .appointments-table th:nth-child(7) { width: 9%; }
 .appointments-table th:nth-child(8) { width: 8%; }
 .appointments-table th:nth-child(9) { width: 8%; }
-.appointments-table th:nth-child(10) { width: 11%; }
+.appointments-table th:nth-child(10) { width: 9%; }
 
 .appointments-table td {
     padding: 15px 14px;
@@ -1307,49 +1302,75 @@
 
 .appointment-contact {
     display: flex;
+    min-width: 0;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
+    align-items: stretch;
+    gap: 7px;
 }
 
-.appointment-contact > a,
-.appointment-contact > span {
+.appointment-contact-primary {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+
+.appointment-contact-item {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    gap: 5px;
+    color: #cbd5e1;
+    font-size: .58rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-decoration: none;
+}
+
+.appointment-contact-item i {
+    flex: 0 0 auto;
+    color: #7dd3fc;
+}
+
+.appointment-contact-email {
+    color: #bfdbfe;
+}
+
+.appointment-contact-email i {
+    color: #a5b4fc;
+}
+
+.appointment-contact-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.appointment-contact-item:hover {
+    color: #fff;
+}
+
+.appointment-contact-location {
     display: inline-flex;
     min-width: 0;
     align-items: center;
     gap: 6px;
     color: #94a3b8;
-    font-size: .59rem;
-    text-decoration: none;
+    font-size: .57rem;
+    line-height: 1.4;
 }
 
-.appointment-contact > a {
-    color: #cbd5e1;
+.appointment-contact-location i {
+    flex: 0 0 auto;
+    color: #64748b;
 }
 
-.appointment-contact-actions {
-    display: flex;
-    gap: 5px;
-    margin-top: 2px;
-}
-
-.appointment-contact-actions a {
-    display: grid;
-    width: 27px;
-    height: 27px;
-    place-items: center;
-    color: #94a3b8;
-    border: 1px solid rgba(148,163,184,.1);
-    border-radius: 7px;
-    background: rgba(255,255,255,.025);
-    text-decoration: none;
-    transition: .18s ease;
-}
-
-.appointment-contact-actions a:hover {
-    color: #fff;
-    border-color: rgba(96,165,250,.25);
-    background: rgba(59,130,246,.08);
+.appointment-contact-location span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .status-badge {
