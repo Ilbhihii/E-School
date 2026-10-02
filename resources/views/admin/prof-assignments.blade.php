@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation professeurs')
 @section(
     'breadcrumb',
-    'Professeur → Matière → Niveau → Classe → Groupe → Créneau'
+    'Professeur → Matière → Niveau → Classe → Jour/Heure → Groupe automatique'
 )
 
 @section('content')
@@ -20,8 +20,8 @@
         </h1>
 
         <div class="subtitle">
-            Affectez un même professeur à plusieurs matières, niveaux,
-            classes et groupes D1, D2, I1, A1… en une seule opération.
+            Choisissez la matière, le niveau et la classe, puis le jour et l’heure.
+            Comme pour l’assignation des étudiants, le groupe est calculé automatiquement à partir de l’horaire.
         </div>
     </div>
 </div>
@@ -46,9 +46,6 @@
 @endif
 
 @php
-    $professorAvailabilities =
-        $professorAvailabilities ?? [];
-
     $initialAssignments = old('assignments');
 
     if (!is_array($initialAssignments) || empty($initialAssignments)) {
@@ -57,8 +54,12 @@
             'level_id' => old('level_id', ''),
             'class_id' => old('class_id', ''),
             'class_slot_id' => old('class_slot_id', ''),
-            'preferred_availability_id' => old(
-                'preferred_availability_id',
+            'assignment_day_of_week' => old(
+                'assignment_day_of_week',
+                ''
+            ),
+            'assignment_start_time' => old(
+                'assignment_start_time',
                 ''
             ),
             'weekly_sessions' => old('weekly_sessions', 1),
@@ -137,11 +138,8 @@
                         [
                             'builderId' => 'profCreateAssignmentBuilder',
                             'assignmentHierarchy' => $assignmentHierarchy,
+                            'professorTimeSlotMap' => $professorTimeSlotMap,
                             'initialAssignments' => $initialAssignments,
-                            'professorAvailabilities' =>
-                                $professorAvailabilities,
-                            'professorSelectId' =>
-                                'prof_assignment_prof_id',
                         ]
                     )
 
@@ -332,7 +330,21 @@
                                         </td>
 
                                         <td>
-                                            @if($linkedSchedules->isNotEmpty())
+                                            @if($assignment->has_schedule)
+                                                <div class="prof-linked-schedule">
+                                                    <div class="prof-linked-schedule-row">
+                                                        <span class="prof-day-badge">
+                                                            <i class="bi bi-calendar3"></i>
+                                                            {{ $assignment->day_label }}
+                                                        </span>
+
+                                                        <span class="prof-time-badge">
+                                                            <i class="bi bi-clock"></i>
+                                                            {{ $assignment->time_range_label }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            @elseif($linkedSchedules->isNotEmpty())
                                                 <div class="prof-linked-schedule">
                                                     @foreach($linkedSchedules as $linkedSchedule)
                                                         <div class="prof-linked-schedule-row">

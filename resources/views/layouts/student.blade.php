@@ -27,6 +27,8 @@
     {{-- Nouveau design harmonisé avec les espaces Admin et Professeur --}}
     <link rel="stylesheet" href="{{ asset('css/student-admin-prof-v4.css') }}">
 
+    <link rel="stylesheet" href="{{ asset('css/ssa-ui-v1.css') }}?v={{ file_exists(public_path('css/ssa-ui-v1.css')) ? filemtime(public_path('css/ssa-ui-v1.css')) : time() }}">
+
     @stack('styles')
 </head>
 

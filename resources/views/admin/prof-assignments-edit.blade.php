@@ -19,8 +19,8 @@
         </h1>
 
         <div class="subtitle">
-            {{ $professor->name }} — modifiez ses groupes,
-            créneaux disponibles et séances hebdomadaires.
+            {{ $professor->name }} — modifiez ses parcours et son horaire.
+            Le groupe sera recalculé automatiquement.
         </div>
     </div>
 
@@ -41,10 +41,8 @@
 @endif
 
 @php
-    $professorAvailabilities =
-        $professorAvailabilities ?? [];
-
-    $initialAssignments = old(        'assignments',
+    $initialAssignments = old(
+        'assignments',
         $selectedAssignments
     );
 @endphp
@@ -82,9 +80,9 @@
                 <div class="prof-edit-note">
                     <i class="bi bi-clock-history"></i>
                     <span>
-                        Les créneaux proposés proviennent uniquement des
-                        disponibilités enregistrées pour ce professeur.
-                        Le groupe D1/D2/I1/A2… reste indépendant du créneau.
+                        Le groupe n’est plus choisi manuellement. Le jour et l’heure
+                        déterminent automatiquement D1, D2, D3… / I1, I2… / A1, A2…,
+                        sans dépendre des disponibilités du professeur.
                     </span>
                 </div>
             </div>
@@ -118,11 +116,8 @@
                         [
                             'builderId' => 'profEditAssignmentBuilder',
                             'assignmentHierarchy' => $assignmentHierarchy,
+                            'professorTimeSlotMap' => $professorTimeSlotMap,
                             'initialAssignments' => $initialAssignments,
-                            'professorAvailabilities' =>
-                                $professorAvailabilities,
-                            'fixedProfessorId' =>
-                                $professor->id,
                         ]
                     )
 

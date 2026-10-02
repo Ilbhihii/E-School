@@ -50,6 +50,8 @@
     <link rel="stylesheet" href="{{ asset('css/prof-pages.css') }}?v={{ file_exists(public_path('css/prof-pages.css')) ? filemtime(public_path('css/prof-pages.css')) : time() }}">
 
     <link rel="stylesheet" href="{{ asset('css/prof-path-structure-v1.css') }}?v={{ file_exists(public_path('css/prof-path-structure-v1.css')) ? filemtime(public_path('css/prof-path-structure-v1.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('css/ssa-ui-v1.css') }}?v={{ file_exists(public_path('css/ssa-ui-v1.css')) ? filemtime(public_path('css/ssa-ui-v1.css')) : time() }}">
+
     @stack('styles')
 
 </head>

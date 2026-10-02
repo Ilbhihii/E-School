@@ -48,6 +48,11 @@ class PedagogicalScopeCodeRebuildService
             $timeNumbers
         );
 
+        $this->rebuildProfessors(
+            $day,
+            $timeNumbers
+        );
+
         $this->rebuildCourses(
             $day,
             $timeNumbers
@@ -103,9 +108,7 @@ class PedagogicalScopeCodeRebuildService
         Collection $timeNumbers
     ): void {
         if (
-            !Schema::hasTable(
-                'class_user'
-            )
+            !Schema::hasTable('class_user')
             || !Schema::hasColumn(
                 'class_user',
                 'student_slot_code'
@@ -136,11 +139,11 @@ class PedagogicalScopeCodeRebuildService
                     '=',
                     'class_rooms.id'
                 )
-                ->leftJoin(
-                    'class_slots',
-                    'class_user.class_slot_id',
+                ->join(
+                    'levels',
+                    'class_rooms.level_id',
                     '=',
-                    'class_slots.id'
+                    'levels.id'
                 )
                 ->where(
                     'class_user.student_day_of_week',
@@ -151,10 +154,13 @@ class PedagogicalScopeCodeRebuildService
                 )
                 ->select([
                     'class_user.id',
+                    'class_user.subject_id',
+                    'class_user.class_id',
                     'class_user.student_start_time',
+                    'class_rooms.level_id',
                     'subjects.name as subject_name',
+                    'levels.name as level_name',
                     'class_rooms.name as class_name',
-                    'class_slots.code as group_code',
                 ])
                 ->get();
 
@@ -175,13 +181,26 @@ class PedagogicalScopeCodeRebuildService
                 continue;
             }
 
+            $slot =
+                $this->ensureGroupSlot(
+                    (int) $row->subject_id,
+                    (int) $row->level_id,
+                    (int) $row->class_id,
+                    (string) $row->class_name,
+                    (int) $number
+                );
+
+            if (!$slot) {
+                continue;
+            }
+
             $code =
                 $this->buildCode(
                     $day,
                     (int) $number,
                     (string) $row->subject_name,
-                    (string) $row->class_name,
-                    (string) $row->group_code
+                    (string) $row->level_name,
+                    (string) $slot->code
                 );
 
             if (!$code) {
@@ -189,11 +208,10 @@ class PedagogicalScopeCodeRebuildService
             }
 
             DB::table('class_user')
-                ->where(
-                    'id',
-                    $row->id
-                )
+                ->where('id', $row->id)
                 ->update([
+                    'class_slot_id' =>
+                        (int) $slot->id,
                     'student_slot_code' =>
                         $code,
                     'updated_at' =>
@@ -207,9 +225,7 @@ class PedagogicalScopeCodeRebuildService
         Collection $timeNumbers
     ): void {
         if (
-            !Schema::hasTable(
-                'courses'
-            )
+            !Schema::hasTable('courses')
             || !Schema::hasColumn(
                 'courses',
                 'assignment_code'
@@ -240,6 +256,12 @@ class PedagogicalScopeCodeRebuildService
                     '=',
                     'class_rooms.id'
                 )
+                ->join(
+                    'levels',
+                    'class_rooms.level_id',
+                    '=',
+                    'levels.id'
+                )
                 ->where(
                     'courses.assignment_day_of_week',
                     $day
@@ -247,14 +269,14 @@ class PedagogicalScopeCodeRebuildService
                 ->whereNotNull(
                     'courses.assignment_start_time'
                 )
-                ->whereNotNull(
-                    'courses.slot_code'
-                )
                 ->select([
                     'courses.id',
+                    'courses.subject_id',
+                    'courses.class_id',
                     'courses.assignment_start_time',
-                    'courses.slot_code',
+                    'class_rooms.level_id',
                     'subjects.name as subject_name',
+                    'levels.name as level_name',
                     'class_rooms.name as class_name',
                 ])
                 ->get();
@@ -276,30 +298,52 @@ class PedagogicalScopeCodeRebuildService
                 continue;
             }
 
+            $slot =
+                $this->ensureGroupSlot(
+                    (int) $row->subject_id,
+                    (int) $row->level_id,
+                    (int) $row->class_id,
+                    (string) $row->class_name,
+                    (int) $number
+                );
+
+            if (!$slot) {
+                continue;
+            }
+
             $code =
                 $this->buildCode(
                     $day,
                     (int) $number,
                     (string) $row->subject_name,
-                    (string) $row->class_name,
-                    (string) $row->slot_code
+                    (string) $row->level_name,
+                    (string) $slot->code
                 );
 
             if (!$code) {
                 continue;
             }
 
-            DB::table('courses')
-                ->where(
-                    'id',
-                    $row->id
+            $values = [
+                'assignment_code' =>
+                    $code,
+                'updated_at' =>
+                    now(),
+            ];
+
+            if (
+                Schema::hasColumn(
+                    'courses',
+                    'slot_code'
                 )
-                ->update([
-                    'assignment_code' =>
-                        $code,
-                    'updated_at' =>
-                        now(),
-                ]);
+            ) {
+                $values['slot_code'] =
+                    (string) $slot->code;
+            }
+
+            DB::table('courses')
+                ->where('id', $row->id)
+                ->update($values);
         }
     }
 
@@ -308,9 +352,7 @@ class PedagogicalScopeCodeRebuildService
         Collection $timeNumbers
     ): void {
         if (
-            !Schema::hasTable(
-                'assignments'
-            )
+            !Schema::hasTable('assignments')
             || !Schema::hasColumn(
                 'assignments',
                 'assignment_code'
@@ -341,11 +383,11 @@ class PedagogicalScopeCodeRebuildService
                     '=',
                     'class_rooms.id'
                 )
-                ->leftJoin(
-                    'class_slots',
-                    'assignments.class_slot_id',
+                ->join(
+                    'levels',
+                    'class_rooms.level_id',
                     '=',
-                    'class_slots.id'
+                    'levels.id'
                 )
                 ->where(
                     'assignments.assignment_day_of_week',
@@ -354,15 +396,15 @@ class PedagogicalScopeCodeRebuildService
                 ->whereNotNull(
                     'assignments.assignment_start_time'
                 )
-                ->whereNotNull(
-                    'assignments.class_slot_id'
-                )
                 ->select([
                     'assignments.id',
+                    'assignments.subject_id',
+                    'assignments.class_room_id as class_id',
                     'assignments.assignment_start_time',
+                    'class_rooms.level_id',
                     'subjects.name as subject_name',
+                    'levels.name as level_name',
                     'class_rooms.name as class_name',
-                    'class_slots.code as group_code',
                 ])
                 ->get();
 
@@ -383,31 +425,191 @@ class PedagogicalScopeCodeRebuildService
                 continue;
             }
 
+            $slot =
+                $this->ensureGroupSlot(
+                    (int) $row->subject_id,
+                    (int) $row->level_id,
+                    (int) $row->class_id,
+                    (string) $row->class_name,
+                    (int) $number
+                );
+
+            if (!$slot) {
+                continue;
+            }
+
             $code =
                 $this->buildCode(
                     $day,
                     (int) $number,
                     (string) $row->subject_name,
-                    (string) $row->class_name,
-                    (string) $row->group_code
+                    (string) $row->level_name,
+                    (string) $slot->code
                 );
 
             if (!$code) {
                 continue;
             }
 
-            DB::table('assignments')
-                ->where(
-                    'id',
-                    $row->id
+            $values = [
+                'assignment_code' =>
+                    $code,
+                'updated_at' =>
+                    now(),
+            ];
+
+            if (
+                Schema::hasColumn(
+                    'assignments',
+                    'class_slot_id'
                 )
-                ->update([
-                    'assignment_code' =>
-                        $code,
-                    'updated_at' =>
-                        now(),
-                ]);
+            ) {
+                $values['class_slot_id'] =
+                    (int) $slot->id;
+            }
+
+            DB::table('assignments')
+                ->where('id', $row->id)
+                ->update($values);
         }
+    }
+
+    /**
+     * Recalcule également le groupe des professeurs lorsqu'une nouvelle
+     * heure est insérée dans la journée.
+     *
+     * Exemple : si 08:45 est ajouté entre 08:30 et 09:00, un professeur
+     * placé à 09:00 passe automatiquement de D3 à D4, exactement comme
+     * les étudiants.
+     */
+    private function rebuildProfessors(
+        int $day,
+        Collection $timeNumbers
+    ): void {
+        if (
+            !Schema::hasTable('prof_assignments')
+            || !Schema::hasColumn(
+                'prof_assignments',
+                'class_slot_id'
+            )
+            || !Schema::hasColumn(
+                'prof_assignments',
+                'day_of_week'
+            )
+            || !Schema::hasColumn(
+                'prof_assignments',
+                'start_time'
+            )
+        ) {
+            return;
+        }
+
+        $rows =
+            DB::table('prof_assignments')
+                ->join(
+                    'subjects',
+                    'prof_assignments.subject_id',
+                    '=',
+                    'subjects.id'
+                )
+                ->join(
+                    'class_rooms',
+                    'prof_assignments.class_id',
+                    '=',
+                    'class_rooms.id'
+                )
+                ->join(
+                    'levels',
+                    'prof_assignments.level_id',
+                    '=',
+                    'levels.id'
+                )
+                ->where(
+                    'prof_assignments.day_of_week',
+                    $day
+                )
+                ->whereNotNull(
+                    'prof_assignments.start_time'
+                )
+                ->select([
+                    'prof_assignments.id',
+                    'prof_assignments.subject_id',
+                    'prof_assignments.level_id',
+                    'prof_assignments.class_id',
+                    'prof_assignments.start_time',
+                    'class_rooms.name as class_name',
+                ])
+                ->get();
+
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(
+            function () use (
+                $rows,
+                $timeNumbers
+            ) {
+                /*
+                 * class_slot_id fait partie d'un index unique. On libère
+                 * temporairement les groupes afin d'éviter un conflit
+                 * transitoire D3 -> D4 pendant que D4 -> D5 n'a pas encore
+                 * été appliqué.
+                 */
+                DB::table('prof_assignments')
+                    ->whereIn(
+                        'id',
+                        $rows->pluck('id')
+                    )
+                    ->update([
+                        'class_slot_id' => null,
+                        'updated_at' => now(),
+                    ]);
+
+                foreach ($rows as $row) {
+                    $time =
+                        substr(
+                            (string) $row->start_time,
+                            0,
+                            5
+                        );
+
+                    $number =
+                        $timeNumbers->get(
+                            $time
+                        );
+
+                    if (!$number) {
+                        continue;
+                    }
+
+                    $slot =
+                        $this->ensureGroupSlot(
+                            (int) $row->subject_id,
+                            (int) $row->level_id,
+                            (int) $row->class_id,
+                            (string) $row->class_name,
+                            (int) $number
+                        );
+
+                    if (!$slot) {
+                        continue;
+                    }
+
+                    DB::table('prof_assignments')
+                        ->where(
+                            'id',
+                            $row->id
+                        )
+                        ->update([
+                            'class_slot_id' =>
+                                (int) $slot->id,
+                            'updated_at' =>
+                                now(),
+                        ]);
+                }
+            }
+        );
     }
 
     /**
@@ -587,6 +789,16 @@ class PedagogicalScopeCodeRebuildService
                     )
                     ->first();
 
+            $level =
+                $classRoom
+                    ? DB::table('levels')
+                        ->where(
+                            'id',
+                            $classRoom->level_id
+                        )
+                        ->first()
+                    : null;
+
             $classSlot =
                 DB::table(
                     'class_slots'
@@ -600,6 +812,7 @@ class PedagogicalScopeCodeRebuildService
             if (
                 !$classRoom
                 || !$subject
+                || !$level
                 || !$classSlot
             ) {
                 continue;
@@ -631,7 +844,7 @@ class PedagogicalScopeCodeRebuildService
                     $scope->day,
                     (int) $number,
                     (string) $subject->name,
-                    (string) $classRoom->name,
+                    (string) $level->name,
                     (string) $classSlot->code
                 );
 
@@ -653,11 +866,99 @@ class PedagogicalScopeCodeRebuildService
         }
     }
 
+    /**
+     * Crée/retourne le groupe dynamique correspondant au rang horaire.
+     */
+    private function ensureGroupSlot(
+        int $subjectId,
+        int $levelId,
+        int $classId,
+        string $className,
+        int $number
+    ): ?object {
+        if (
+            $subjectId < 1
+            || $levelId < 1
+            || $classId < 1
+            || $number < 1
+            || !Schema::hasTable(
+                'class_slots'
+            )
+        ) {
+            return null;
+        }
+
+        $prefix =
+            $this->classPrefix(
+                $className
+            );
+
+        $code =
+            $prefix
+            . $number;
+
+        $existing = DB::table('class_slots')
+            ->where('subject_id', $subjectId)
+            ->where('level_id', $levelId)
+            ->where('class_id', $classId)
+            ->where('code', $code)
+            ->first();
+
+        if ($existing) {
+            DB::table('class_slots')
+                ->where('id', $existing->id)
+                ->update([
+                    'position' => $number,
+                    'is_active' => true,
+                    'updated_at' => now(),
+                ]);
+        } else {
+            DB::table('class_slots')
+                ->insert([
+                    'subject_id' => $subjectId,
+                    'level_id' => $levelId,
+                    'class_id' => $classId,
+                    'code' => $code,
+                    'position' => $number,
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        }
+
+        return DB::table('class_slots')
+            ->where(
+                'subject_id',
+                $subjectId
+            )
+            ->where(
+                'level_id',
+                $levelId
+            )
+            ->where(
+                'class_id',
+                $classId
+            )
+            ->where(
+                'code',
+                $code
+            )
+            ->first();
+    }
+
+    /**
+     * Format :
+     * [Jour]1[Matière][Niveau][Groupe]
+     *
+     * Exemple :
+     * D1ARLED3
+     * = Dimanche + Arabe + Lecture & Écriture + groupe D3.
+     */
     private function buildCode(
         int $day,
         int $number,
         string $subjectName,
-        string $className,
+        string $levelName,
         string $groupCode
     ): ?string {
         $dayCodes = [
@@ -680,35 +981,40 @@ class PedagogicalScopeCodeRebuildService
         }
 
         $subjectCode =
-            substr(
-                preg_replace(
-                    '/[^A-Z0-9]/',
-                    '',
-                    strtoupper(
-                        Str::ascii(
-                            trim(
-                                $subjectName
-                            )
-                        )
-                    )
-                ),
-                0,
-                2
+            $this->twoLetterCode(
+                $subjectName,
+                'MT'
             );
 
-        if ($subjectCode === '') {
-            $subjectCode = 'MT';
+        $levelCode =
+            $this->twoLetterCode(
+                $levelName,
+                'NV'
+            );
+
+        $groupCode =
+            strtoupper(
+                trim(
+                    $groupCode
+                )
+            );
+
+        if ($groupCode === '') {
+            return null;
         }
 
-        if (
-            strlen(
-                $subjectCode
-            ) === 1
-        ) {
-            $subjectCode .= 'X';
-        }
+        return
+            $dayCodes[$day]
+            . '1'
+            . $subjectCode
+            . $levelCode
+            . $groupCode;
+    }
 
-        $classNormalized =
+    private function classPrefix(
+        string $className
+    ): string {
+        $normalized =
             strtolower(
                 Str::ascii(
                     trim(
@@ -719,75 +1025,87 @@ class PedagogicalScopeCodeRebuildService
 
         if (
             str_contains(
-                $classNormalized,
+                $normalized,
                 'debut'
             )
         ) {
-            $classCode = 'D';
-        } elseif (
+            return 'D';
+        }
+
+        if (
             str_contains(
-                $classNormalized,
+                $normalized,
                 'inter'
             )
         ) {
-            $classCode = 'I';
-        } elseif (
+            return 'I';
+        }
+
+        if (
             str_contains(
-                $classNormalized,
+                $normalized,
                 'avance'
             )
             || str_contains(
-                $classNormalized,
+                $normalized,
                 'adulte'
             )
         ) {
-            $classCode = 'A';
-        } else {
-            $simpleClass =
-                preg_replace(
-                    '/[^A-Z0-9]/',
-                    '',
-                    strtoupper(
-                        Str::ascii(
-                            trim(
-                                $className
-                            )
+            return 'A';
+        }
+
+        $simple =
+            preg_replace(
+                '/[^A-Z0-9]/',
+                '',
+                strtoupper(
+                    Str::ascii(
+                        trim(
+                            $className
                         )
                     )
-                );
-
-            $classCode =
-                substr(
-                    (string) $simpleClass,
-                    0,
-                    1
                 )
-                ?: 'X';
-        }
-
-        preg_match(
-            '/(\d+)$/',
-            strtoupper(
-                trim(
-                    $groupCode
-                )
-            ),
-            $matches
-        );
-
-        $groupNumber =
-            $matches[1]
-            ?? null;
-
-        if (!$groupNumber) {
-            return null;
-        }
+            );
 
         return
-            $dayCodes[$day]
-            . $number
-            . $subjectCode
-            . $classCode
-            . $groupNumber;
+            substr(
+                (string) $simple,
+                0,
+                1
+            )
+            ?: 'G';
+    }
+
+    private function twoLetterCode(
+        string $value,
+        string $fallback
+    ): string {
+        $normalized =
+            preg_replace(
+                '/[^A-Z0-9]/',
+                '',
+                strtoupper(
+                    Str::ascii(
+                        trim(
+                            $value
+                        )
+                    )
+                )
+            );
+
+        $code =
+            substr(
+                (string) $normalized,
+                0,
+                2
+            );
+
+        if ($code === '') {
+            return $fallback;
+        }
+
+        return strlen($code) === 1
+            ? $code . 'X'
+            : $code;
     }
 }

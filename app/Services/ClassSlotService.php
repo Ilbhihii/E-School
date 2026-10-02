@@ -12,7 +12,13 @@ use Illuminate\Validation\ValidationException;
 
 class ClassSlotService
 {
-    public const SLOT_COUNT = 4;
+    /**
+     * Les 4 premiers groupes restent créés automatiquement pour
+     * conserver la compatibilité avec l'existant, mais ce n'est
+     * plus une limite métier. D5, D6, I5, A12... sont créés
+     * à la demande lorsqu'un horaire étudiant le nécessite.
+     */
+    public const DEFAULT_SLOT_COUNT = 4;
 
     public function codesForClass(
         ClassRoom $classRoom
@@ -30,7 +36,10 @@ class ClassSlotService
         );
 
         return collect(
-            range(1, self::SLOT_COUNT)
+            range(
+                1,
+                self::DEFAULT_SLOT_COUNT
+            )
         )
             ->map(
                 fn (int $number) =>
@@ -39,6 +48,13 @@ class ClassSlotService
             ->all();
     }
 
+    /**
+     * Synchronise le parcours sans supprimer les groupes dynamiques.
+     *
+     * Avant : seuls D1-D4 / I1-I4 / A1-A4 restaient actifs.
+     * Maintenant : les 4 premiers sont garantis, et tous les groupes
+     * supplémentaires déjà créés (D5, D6...) restent actifs.
+     */
     public function syncForPath(
         Subject $subject,
         Level $level,
@@ -50,15 +66,15 @@ class ClassSlotService
             $classRoom
         );
 
-        $codes = $this->codesForClass(
-            $classRoom
+        $prefix = $this->prefixForClass(
+            $classRoom->name
         );
 
         /*
-         * Si la classe a été renommée et que son préfixe change
-         * (ex. Débutant D1-D4 → Avancé A1-A4), les anciens
-         * créneaux sont conservés pour l'historique mais désactivés.
-         * Il reste donc exactement 4 créneaux ACTIFS.
+         * Si la classe change réellement de catégorie
+         * (ex. Débutant -> Intermédiaire), les anciens groupes
+         * d'un autre préfixe restent en historique mais sont désactivés.
+         * Les groupes du bon préfixe ne sont jamais limités à 4.
          */
         ClassSlot::query()
             ->where(
@@ -73,26 +89,27 @@ class ClassSlotService
                 'class_id',
                 $classRoom->id
             )
-            ->whereNotIn(
+            ->where(
                 'code',
-                $codes
+                'not like',
+                $prefix . '%'
             )
             ->update([
                 'is_active' => false,
             ]);
 
-        foreach ($codes as $index => $code) {
-            ClassSlot::query()->updateOrCreate(
-                [
-                    'subject_id' => $subject->id,
-                    'level_id' => $level->id,
-                    'class_id' => $classRoom->id,
-                    'code' => $code,
-                ],
-                [
-                    'position' => $index + 1,
-                    'is_active' => true,
-                ]
+        foreach (
+            range(
+                1,
+                self::DEFAULT_SLOT_COUNT
+            )
+            as $number
+        ) {
+            $this->ensureSlotForNumber(
+                $subject,
+                $level,
+                $classRoom,
+                $number
             );
         }
 
@@ -109,14 +126,81 @@ class ClassSlotService
                 'class_id',
                 $classRoom->id
             )
-            ->whereIn(
+            ->where(
                 'code',
-                $codes
+                'like',
+                $prefix . '%'
             )
-            ->where('is_active', true)
-            ->orderBy('position')
-            ->orderBy('code')
+            ->where(
+                'is_active',
+                true
+            )
+            ->orderBy(
+                'position'
+            )
+            ->orderBy(
+                'code'
+            )
             ->get();
+    }
+
+    /**
+     * Retourne/crée le groupe correspondant au rang horaire.
+     *
+     * Exemples pour une classe Débutant :
+     * 1 -> D1
+     * 2 -> D2
+     * 3 -> D3
+     * 27 -> D27
+     *
+     * Il n'existe plus de plafond applicatif D1-D4.
+     */
+    public function ensureSlotForNumber(
+        Subject $subject,
+        Level $level,
+        ClassRoom $classRoom,
+        int $number
+    ): ClassSlot {
+        $this->assertPath(
+            $subject,
+            $level,
+            $classRoom
+        );
+
+        if ($number < 1) {
+            throw ValidationException::withMessages([
+                'schedule_id' =>
+                    'Le numéro de groupe calculé est invalide.',
+            ]);
+        }
+
+        $prefix = $this->prefixForClass(
+            $classRoom->name
+        );
+
+        $code =
+            $prefix
+            . $number;
+
+        return ClassSlot::query()
+            ->updateOrCreate(
+                [
+                    'subject_id' =>
+                        $subject->id,
+                    'level_id' =>
+                        $level->id,
+                    'class_id' =>
+                        $classRoom->id,
+                    'code' =>
+                        $code,
+                ],
+                [
+                    'position' =>
+                        $number,
+                    'is_active' =>
+                        true,
+                ]
+            );
     }
 
     public function slotForPath(
@@ -139,8 +223,22 @@ class ClassSlotService
                 'class_id',
                 $classId
             )
-            ->where('is_active', true)
+            ->where(
+                'is_active',
+                true
+            )
             ->first();
+    }
+
+    /**
+     * Préfixe du groupe pédagogique selon la classe.
+     */
+    public function prefixForClassName(
+        string $name
+    ): string {
+        return $this->prefixForClass(
+            $name
+        );
     }
 
     private function prefixForClass(
@@ -200,7 +298,9 @@ class ClassSlotService
     ): string {
         return Str::lower(
             Str::ascii(
-                trim($value)
+                trim(
+                    $value
+                )
             )
         );
     }

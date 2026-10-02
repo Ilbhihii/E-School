@@ -47,6 +47,8 @@
     <link rel="stylesheet" href="{{ asset('css/admin-refresh.css') }}">
     <link rel="stylesheet" href="{{ asset('css/admin-pages.css') }}?v={{ file_exists(public_path('css/admin-pages.css')) ? filemtime(public_path('css/admin-pages.css')) : time() }}">
 
+    <link rel="stylesheet" href="{{ asset('css/ssa-ui-v1.css') }}?v={{ file_exists(public_path('css/ssa-ui-v1.css')) ? filemtime(public_path('css/ssa-ui-v1.css')) : time() }}">
+
     @stack('styles')
 
 </head>

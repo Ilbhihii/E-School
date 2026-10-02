@@ -1,0 +1,325 @@
+/* Smart School Academy — UI Design System V1
+   Global visual polish for Admin / Professor / Student portals.
+   Safe override layer: no application logic is changed here. */
+
+:root {
+    --ssa-bg: #07101d;
+    --ssa-bg-soft: #0a1423;
+    --ssa-panel: rgba(15, 27, 46, .94);
+    --ssa-panel-2: rgba(19, 34, 57, .94);
+    --ssa-border: rgba(148, 163, 184, .15);
+    --ssa-border-strong: rgba(148, 163, 184, .24);
+    --ssa-text: #eef4ff;
+    --ssa-muted: #93a4bc;
+    --ssa-primary: #6d5dfc;
+    --ssa-primary-2: #3b82f6;
+    --ssa-success: #22c55e;
+    --ssa-warning: #f59e0b;
+    --ssa-danger: #ef4444;
+    --ssa-radius-sm: 10px;
+    --ssa-radius: 14px;
+    --ssa-radius-lg: 18px;
+    --ssa-shadow: 0 18px 45px rgba(2, 8, 23, .28);
+    --ssa-shadow-soft: 0 10px 30px rgba(2, 8, 23, .18);
+    --ssa-control-h: 44px;
+}
+
+html { scroll-behavior: smooth; }
+
+body.admin-portal,
+body.prof-portal,
+body.student-portal {
+    background:
+        radial-gradient(circle at 75% -20%, rgba(59, 130, 246, .10), transparent 30rem),
+        radial-gradient(circle at 10% 120%, rgba(109, 93, 252, .08), transparent 34rem),
+        var(--ssa-bg) !important;
+    color: var(--ssa-text);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+body.admin-portal *,
+body.prof-portal *,
+body.student-portal * { box-sizing: border-box; }
+
+/* Shell + content breathing room */
+.admin-content,
+.prof-content,
+.student-content {
+    min-width: 0;
+    padding-top: clamp(22px, 2vw, 34px) !important;
+    padding-right: clamp(18px, 2.2vw, 36px) !important;
+    padding-bottom: 44px !important;
+    padding-left: clamp(18px, 2.2vw, 36px) !important;
+}
+
+.prof-content-inner,
+.student-content-inner {
+    width: 100%;
+    max-width: 1660px;
+    margin-inline: auto;
+}
+
+/* Header / topbar refinement */
+.admin-topbar,
+.prof-topbar,
+.student-topbar {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--ssa-border) !important;
+    box-shadow: 0 8px 24px rgba(2, 8, 23, .12);
+}
+
+.admin-brand,
+.prof-brand,
+.student-brand-link {
+    text-decoration: none !important;
+}
+
+.admin-brand-logo img,
+.prof-brand-logo img,
+.student-brand-logo img {
+    object-fit: contain;
+}
+
+/* Sidebar consistency */
+.admin-sidebar,
+.prof-sidebar,
+.student-sidebar {
+    border-right: 1px solid var(--ssa-border) !important;
+    box-shadow: 18px 0 38px rgba(2, 8, 23, .10);
+}
+
+.admin-nav-heading,
+.prof-nav-heading,
+.student-nav-heading {
+    letter-spacing: .075em !important;
+    font-weight: 800 !important;
+    opacity: .76;
+}
+
+.admin-nav-link,
+.prof-nav-link,
+.student-nav-link {
+    min-height: 43px;
+    border-radius: 11px !important;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease !important;
+}
+
+.admin-nav-link:hover,
+.prof-nav-link:hover,
+.student-nav-link:hover {
+    transform: translateX(2px);
+}
+
+.admin-nav-link.active,
+.prof-nav-link.active,
+.student-nav-link.active {
+    box-shadow: inset 0 0 0 1px rgba(109, 93, 252, .38), 0 8px 22px rgba(59, 130, 246, .08);
+}
+
+/* Generic page cards / panels */
+:where(.admin-content,.prof-content,.student-content) :where(
+    .card,.panel,.dashboard-card,.content-card,.section-card,.table-container,
+    .admin-card,.prof-card,.student-card,.assignment-card,.form-card
+) {
+    border-color: var(--ssa-border) !important;
+    border-radius: var(--ssa-radius-lg) !important;
+    box-shadow: var(--ssa-shadow-soft);
+}
+
+:where(.admin-content,.prof-content,.student-content) :where(.card-header,.card-footer) {
+    border-color: var(--ssa-border) !important;
+}
+
+/* Typography hierarchy */
+:where(.admin-content,.prof-content,.student-content) h1,
+:where(.admin-content,.prof-content,.student-content) h2,
+:where(.admin-content,.prof-content,.student-content) h3 {
+    font-family: Poppins, Inter, sans-serif;
+    letter-spacing: -.025em;
+}
+
+:where(.admin-content,.prof-content,.student-content) h1 {
+    font-size: clamp(1.55rem, 2vw, 2rem);
+    font-weight: 800;
+}
+
+:where(.admin-content,.prof-content,.student-content) h2 { font-weight: 750; }
+
+:where(.admin-content,.prof-content,.student-content) .text-muted,
+:where(.admin-content,.prof-content,.student-content) small {
+    color: var(--ssa-muted) !important;
+}
+
+/* Form controls */
+:where(.admin-content,.prof-content,.student-content) :where(
+    input.form-control,select.form-select,textarea.form-control,
+    input[type="text"],input[type="email"],input[type="password"],input[type="number"],
+    input[type="date"],input[type="time"],input[type="datetime-local"],select,textarea
+) {
+    border-radius: var(--ssa-radius-sm) !important;
+    border-color: var(--ssa-border-strong) !important;
+    min-height: var(--ssa-control-h);
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease !important;
+}
+
+:where(.admin-content,.prof-content,.student-content) textarea { min-height: 112px; }
+
+:where(.admin-content,.prof-content,.student-content) :where(
+    input.form-control,select.form-select,textarea.form-control,
+    input[type="text"],input[type="email"],input[type="password"],input[type="number"],
+    input[type="date"],input[type="time"],input[type="datetime-local"],select,textarea
+):focus {
+    border-color: rgba(109, 93, 252, .78) !important;
+    box-shadow: 0 0 0 3px rgba(109, 93, 252, .14) !important;
+    outline: none !important;
+}
+
+:where(.admin-content,.prof-content,.student-content) label,
+:where(.admin-content,.prof-content,.student-content) .form-label {
+    font-weight: 700;
+    font-size: .82rem;
+    letter-spacing: .005em;
+    margin-bottom: 7px;
+}
+
+/* Buttons */
+:where(.admin-content,.prof-content,.student-content) .btn {
+    min-height: 40px;
+    border-radius: 10px !important;
+    font-weight: 750;
+    letter-spacing: -.01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease !important;
+}
+
+:where(.admin-content,.prof-content,.student-content) .btn:hover {
+    transform: translateY(-1px);
+}
+
+:where(.admin-content,.prof-content,.student-content) :where(.btn-primary,.btn-success) {
+    box-shadow: 0 8px 20px rgba(59, 130, 246, .14);
+}
+
+:where(.admin-content,.prof-content,.student-content) .btn-danger {
+    box-shadow: 0 8px 20px rgba(239, 68, 68, .10);
+}
+
+/* Tables */
+:where(.admin-content,.prof-content,.student-content) .table-responsive {
+    border-radius: var(--ssa-radius);
+    scrollbar-width: thin;
+}
+
+:where(.admin-content,.prof-content,.student-content) table.table {
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+:where(.admin-content,.prof-content,.student-content) table.table thead th {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .055em;
+    font-weight: 800;
+    white-space: nowrap;
+    border-bottom-color: var(--ssa-border-strong) !important;
+}
+
+:where(.admin-content,.prof-content,.student-content) table.table tbody td {
+    padding-top: 13px;
+    padding-bottom: 13px;
+    border-bottom-color: rgba(148, 163, 184, .09) !important;
+}
+
+:where(.admin-content,.prof-content,.student-content) table.table tbody tr {
+    transition: background .16s ease;
+}
+
+:where(.admin-content,.prof-content,.student-content) table.table tbody tr:hover {
+    background: rgba(148, 163, 184, .035);
+}
+
+/* Badges and pills */
+:where(.admin-content,.prof-content,.student-content) :where(.badge,[class*="badge"],[class*="pill"]) {
+    border-radius: 999px;
+    font-weight: 750;
+}
+
+/* Alerts */
+:where(.admin-content,.prof-content,.student-content) :where(
+    .alert,.adm-alert,.student-alert
+) {
+    border-radius: 13px !important;
+    border-width: 1px !important;
+    box-shadow: var(--ssa-shadow-soft);
+}
+
+/* Better empty-state rhythm */
+:where(.admin-content,.prof-content,.student-content) :where(
+    .empty-state,.empty-box,.no-data,.no-results
+) {
+    padding: clamp(28px, 4vw, 54px) !important;
+    text-align: center;
+    border-radius: var(--ssa-radius-lg);
+}
+
+/* Keyboard accessibility */
+:where(.admin-portal,.prof-portal,.student-portal) :where(a,button,input,select,textarea):focus-visible {
+    outline: 2px solid rgba(96, 165, 250, .95) !important;
+    outline-offset: 2px;
+}
+
+/* Scrollbars */
+body.admin-portal,
+body.prof-portal,
+body.student-portal,
+.admin-sidebar,
+.prof-sidebar,
+.student-sidebar {
+    scrollbar-color: rgba(148, 163, 184, .30) transparent;
+    scrollbar-width: thin;
+}
+
+/* Responsive polish */
+@media (max-width: 991.98px) {
+    .admin-content,
+    .prof-content,
+    .student-content {
+        padding: 18px 14px 34px !important;
+    }
+
+    :where(.admin-content,.prof-content,.student-content) .btn {
+        min-height: 42px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    :root { --ssa-control-h: 46px; }
+
+    :where(.admin-content,.prof-content,.student-content) h1 {
+        font-size: 1.45rem;
+    }
+
+    :where(.admin-content,.prof-content,.student-content) :where(.card,.panel,.content-card,.section-card) {
+        border-radius: 14px !important;
+    }
+
+    :where(.admin-content,.prof-content,.student-content) .table-responsive {
+        margin-inline: -2px;
+    }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

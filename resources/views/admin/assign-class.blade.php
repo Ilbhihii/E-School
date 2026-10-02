@@ -4,7 +4,7 @@
 @section('page_title', 'Assignation étudiants')
 @section(
     'breadcrumb',
-    'Étudiants → Matière → Niveau → Classe → Groupe → Créneau horaire'
+    'Étudiants → Matière → Niveau → Classe → Jour/Heure → Groupe automatique'
 )
 
 @section('content')
@@ -20,8 +20,8 @@
         </h1>
 
         <div class="subtitle">
-            Choisissez le parcours pédagogique, puis le Groupe.
-            Le Groupe reste indépendant. Le créneau horaire est filtré automatiquement selon la matière sélectionnée, du lundi au dimanche entre 08:00 et 23:00.
+            Choisissez la matière, le niveau et la classe, puis le jour et l’heure.
+            Le groupe est calculé automatiquement à partir de l’horaire, sans limite D1-D4.
         </div>
     </div>
 </div>
@@ -67,7 +67,7 @@
                     </h4>
 
                     <p class="assignment-card-subtitle">
-                        Matière → Niveau → Classe → Groupe → Créneau horaire
+                        Matière → Niveau → Classe → Jour/Heure → Groupe automatique
                     </p>
                 </div>
             </div>
@@ -151,14 +151,14 @@
 
                             <i class="bi bi-chevron-right"></i>
 
-                            <span id="studentPathGroup">
-                                Groupe
+                            <span id="studentPathTime">
+                                Jour / heure
                             </span>
 
                             <i class="bi bi-chevron-right"></i>
 
-                            <span id="studentPathTime">
-                                Créneau horaire
+                            <span id="studentPathGroup">
+                                Groupe automatique
                             </span>
                         </div>
 
@@ -299,7 +299,11 @@
                             </div>
                         </div>
 
-                        <div class="assignment-step assignment-slot-step">
+                        <div
+                            class="assignment-step assignment-slot-step"
+                            style="display:none;"
+                            aria-hidden="true"
+                        >
                             <span class="assignment-step-number">
                                 4
                             </span>
@@ -316,10 +320,8 @@
                                 <select
                                     name="class_slot_id"
                                     id="assignment_class_slot_id"
-                                    class="adm-form-select
-                                        @error('class_slot_id') error @enderror"
+                                    class="adm-form-select"
                                     disabled
-                                    required
                                 >
                                     <option value="">
                                         Choisissez d’abord une classe
@@ -339,12 +341,115 @@
                                 </div>
 
                                 <small class="assignment-help">
-                                    Groupe pédagogique :
-                                    Débutant → D1 à D4,
-                                    Intermédiaire → I1 à I4,
-                                    Avancé → A1 à A4.
-                                    Les groupes complets sont verrouillés automatiquement.
+                                    Le groupe est calculé automatiquement à partir du jour et de l’heure.
+                                    Les groupes D1, D2, D3… sont sans limite de places.
                                 </small>
+
+
+
+                                @error('class_slot_id')
+                                    <div class="adm-form-error">
+                                        {{ $message }}
+                                    </div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="assignment-step assignment-time-step">
+                            <span class="assignment-step-number">
+                                4
+                            </span>
+
+                            <div class="adm-form-group mb-0">
+                                <label
+                                    class="adm-form-label"
+                                    for="assignment_schedule_id"
+                                >
+                                    Jour et heure
+                                    <span class="assignment-required">*</span>
+                                </label>
+
+                                <select
+                                    name="schedule_id"
+                                    id="assignment_schedule_id"
+                                    class="adm-form-select"
+                                    style="display:none;"
+                                    aria-hidden="true"
+                                    tabindex="-1"
+                                >
+                                    <option value=""></option>
+                                </select>
+
+                                <!-- ASSIGNATION_JOUR_HEURE_LIBRE_V6_VIEW -->
+                                <div
+                                    class="ssa-free-time-grid"
+                                >
+                                    <div>
+                                        <label
+                                            class="adm-form-label"
+                                            for="assignment_schedule_day"
+                                        >
+                                            Jour
+                                        </label>
+
+                                        <select
+                                            id="assignment_schedule_day"
+                                            class="adm-form-select"
+                                            required
+                                        >
+                                            <option value="">
+                                                Choisir un jour
+                                            </option>
+
+                                            <option value="1">Lundi</option>
+                                            <option value="2">Mardi</option>
+                                            <option value="3">Mercredi</option>
+                                            <option value="4">Jeudi</option>
+                                            <option value="5">Vendredi</option>
+                                            <option value="6">Samedi</option>
+                                            <option value="7">Dimanche</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="adm-form-label"
+                                            for="assignment_schedule_hour"
+                                        >
+                                            Heure
+                                        </label>
+
+                                        <!-- ASSIGNATION_HEURE_MANUELLE_RESULTAT_V6_1 -->
+                                        <input
+                                            type="time"
+                                            id="assignment_schedule_hour"
+                                            class="adm-form-input"
+                                            min="08:00"
+                                            max="22:00"
+                                            step="60"
+                                            placeholder="HH:MM"
+                                            autocomplete="off"
+                                            required
+                                        >
+
+                                        <small class="assignment-help">
+                                            Choisissez librement l’heure entre 08:00 et 22:00, à la minute près.
+                                            Exemples : 08:15, 08:20, 10:10, 13:45, 15:20…
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="assignment-slot-preview"
+                                    id="assignmentAutoGroupPreview"
+                                    hidden
+                                    style="margin-top:10px;"
+                                >
+                                    <span>
+                                        Groupe automatique :
+                                        <strong id="assignmentAutoGroupCode">—</strong>
+                                    </span>
+                                </div>
 
                                 <div
                                     class="assignment-capacity-control"
@@ -392,98 +497,6 @@
                                     ></small>
                                 </div>
 
-                                @error('class_slot_id')
-                                    <div class="adm-form-error">
-                                        {{ $message }}
-                                    </div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="assignment-step assignment-time-step">
-                            <span class="assignment-step-number">
-                                5
-                            </span>
-
-                            <div class="adm-form-group mb-0">
-                                <label
-                                    class="adm-form-label"
-                                    for="assignment_schedule_id"
-                                >
-                                    Créneau horaire
-                                    <span class="assignment-optional">
-                                        (optionnel)
-                                    </span>
-                                </label>
-
-                                <select
-                                    name="schedule_id"
-                                    id="assignment_schedule_id"
-                                    class="adm-form-select"
-                                    style="display:none;"
-                                    aria-hidden="true"
-                                    tabindex="-1"
-                                >
-                                    <option value=""></option>
-                                </select>
-
-                                <!-- ASSIGNATION_JOUR_HEURE_LIBRE_V6_VIEW -->
-                                <div
-                                    class="ssa-free-time-grid"
-                                >
-                                    <div>
-                                        <label
-                                            class="adm-form-label"
-                                            for="assignment_schedule_day"
-                                        >
-                                            Jour
-                                        </label>
-
-                                        <select
-                                            id="assignment_schedule_day"
-                                            class="adm-form-select"
-                                        >
-                                            <option value="">
-                                                Choisir un jour
-                                            </option>
-
-                                            <option value="1">Lundi</option>
-                                            <option value="2">Mardi</option>
-                                            <option value="3">Mercredi</option>
-                                            <option value="4">Jeudi</option>
-                                            <option value="5">Vendredi</option>
-                                            <option value="6">Samedi</option>
-                                            <option value="7">Dimanche</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            class="adm-form-label"
-                                            for="assignment_schedule_hour"
-                                        >
-                                            Heure
-                                        </label>
-
-                                        <!-- ASSIGNATION_HEURE_MANUELLE_RESULTAT_V6_1 -->
-                                        <input
-                                            type="time"
-                                            id="assignment_schedule_hour"
-                                            class="adm-form-input"
-                                            min="08:00"
-                                            max="22:00"
-                                            step="60"
-                                            placeholder="HH:MM"
-                                            autocomplete="off"
-                                        >
-
-                                        <small class="assignment-help">
-                                            Choisissez librement l’heure entre 08:00 et 22:00, à la minute près.
-                                            Exemples : 08:15, 08:20, 10:10, 13:45, 15:20…
-                                        </small>
-                                    </div>
-                                </div>
-
                                 <!-- ASSIGNATION_RESULTAT_CODE_SEUL_V6_2 -->
                                 <div
                                     id="assignmentGeneratedSlotCode"
@@ -498,8 +511,9 @@
                                 </div>
 
                                 <small class="assignment-help">
-                                    Le créneau horaire reste optionnel et indépendant du Groupe.
-                                    L’heure peut être choisie librement à la minute près.
+                                    Le groupe n’est plus choisi manuellement : il est déterminé automatiquement par le jour et l’heure.
+                                    Exemple Arabe → Lecture & Écriture → Débutant → Dimanche :
+                                    08:00 → D1ARLED1, 08:30 → D1ARLED2, 08:45 → D1ARLED3, 09:00 → D1ARLED4, puis D5, D6… sans limite fixe.
                                 </small>
 
                                 @error('schedule_id')
@@ -1546,63 +1560,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 || group.name
                 || 'Groupe';
 
-            const current =
-                Number(
-                    group.current_count
-                    || 0
-                );
-
-            const max =
-                Number(
-                    group.max_students
-                    || 12
-                );
-
-            const isFull =
-                Boolean(
-                    group.is_full
-                    || current >= max
-                );
-
-            const isSelected =
-                String(group.id)
-                === String(
-                    selectedGroupId
-                    || ''
-                );
-
             const option =
                 createOption(
                     group.id,
-                    code
-                        + ' — '
-                        + current
-                        + '/'
-                        + max
-                        + (
-                            isFull
-                                ? ' — COMPLET 🔒'
-                                : ' places'
-                        ),
+                    code,
                     selectedGroupId,
                     {
                         code: code,
-                        current: current,
-                        max: max,
-                        full:
-                            isFull
-                                ? '1'
-                                : '0',
+                        unlimited: '1',
                     }
                 );
 
-            /*
-             * En édition, le groupe courant reste sélectionnable
-             * même s'il vient d'atteindre sa capacité.
-             */
-            option.disabled =
-                isFull
-                && !isSelected;
+            // Aucun groupe étudiant n'est bloqué par une capacité maximale.
+            option.disabled = false;
 
             groupSelect.appendChild(
                 option
@@ -1900,57 +1870,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateCapacityControl = () => {
-        const group =
-            currentMainGroup();
-
-        if (!group) {
+        // STUDENT_GROUP_UNLIMITED_CAPACITY_V1
+        // La capacité n'est plus une règle métier sur l'assignation étudiant.
+        if (capacityControl) {
             capacityControl.hidden = true;
-            capacityStatus.textContent = '';
-            return;
         }
 
-        const current =
-            Number(
-                group.current_count
-                || 0
-            );
-
-        const max =
-            Number(
-                group.max_students
-                || 12
-            );
-
-        capacityControl.hidden = false;
-        capacityOccupancy.textContent =
-            current
-            + ' / '
-            + max
-            + (
-                current >= max
-                    ? ' — COMPLET'
-                    : ''
-            );
-
-        capacityMax.value =
-            String(
-                [10, 12].includes(max)
-                    ? max
-                    : 12
-            );
-
-        capacityStatus.textContent =
-            current >= max
-                ? 'Ce groupe est verrouillé : aucune nouvelle assignation.'
-                : (
-                    max - current
-                )
-                    + ' place(s) disponible(s).';
-
-        capacityStatus.classList.remove(
-            'is-success',
-            'is-error'
-        );
+        if (capacityStatus) {
+            capacityStatus.textContent = '';
+        }
     };
 
     const updatePath = () => {
@@ -2624,74 +2552,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 || group.name
                 || 'Groupe';
 
-            const current =
-                Number(
-                    group.current_count
-                    || 0
-                );
-
-            const max =
-                Number(
-                    group.max_students
-                    || 12
-                );
-
-            const isFull =
-                Boolean(
-                    group.is_full
-                    || current >= max
-                );
-
-            const isCurrentGroup =
-                String(group.id)
-                === String(
-                    selectedGroupId
-                    || ''
-                );
-
-            const hasCapacityData =
-                Object.prototype
-                    .hasOwnProperty.call(
-                        group,
-                        'max_students'
-                    )
-                || Object.prototype
-                    .hasOwnProperty.call(
-                        group,
-                        'current_count'
-                    );
-
-            const label =
-                hasCapacityData
-                    ? (
-                        code
-                        + ' — '
-                        + current
-                        + '/'
-                        + max
-                        + (
-                            isFull
-                                ? ' — COMPLET'
-                                : ' places'
-                        )
-                    )
-                    : code;
-
             groupSelect.appendChild(
                 createOption(
                     group.id,
-                    label,
+                    code,
                     selectedGroupId,
-                    isFull
-                        && !isCurrentGroup,
+                    false,
                     {
                         code: code,
-                        current: current,
-                        max: max,
-                        full:
-                            isFull
-                                ? '1'
-                                : '0',
+                        unlimited: '1',
                     }
                 )
             );
@@ -3143,7 +3012,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 })();
 </script>
-<!-- ASSIGNATION_JOUR_HEURE_LIBRE_MINUTE_V1 -->
+<!-- AUTO_GROUP_FROM_TIME_V1 -->
 <style>
 .ssa-free-time-grid {
     display:grid;
@@ -3182,11 +3051,20 @@ document.addEventListener(
                 'assignment_subject_id'
             );
 
+        const level =
+            document.getElementById(
+                'assignment_level_id'
+            );
+
         const classRoom =
             document.getElementById(
                 'assignment_class_id'
             );
 
+        /*
+         * Le select Groupe est conservé uniquement pour compatibilité
+         * avec l'ancien JavaScript. Il n'est plus un choix utilisateur.
+         */
         const group =
             document.getElementById(
                 'assignment_class_slot_id'
@@ -3196,6 +3074,27 @@ document.addEventListener(
             document.getElementById(
                 'assignmentGeneratedSlotCode'
             );
+
+        const groupPreview =
+            document.getElementById(
+                'assignmentAutoGroupPreview'
+            );
+
+        const groupCodeTarget =
+            document.getElementById(
+                'assignmentAutoGroupCode'
+            );
+
+        const form =
+            document.getElementById(
+                'studentAssignmentForm'
+            );
+
+        const knownTimeMap =
+            @json($studentTimeSlotMap ?? []);
+
+        const initialScheduleKey =
+            @json((string) old('schedule_id', ''));
 
         if (
             !hiddenTime
@@ -3214,43 +3113,55 @@ document.addEventListener(
                         ''
                     );
 
-        const subjectCode =
-            () => {
-                const text =
-                    subject?.value
-                        ? subject.options[
-                            subject.selectedIndex
+        const selectedText =
+            select =>
+                select?.value
+                    ? (
+                        select.options[
+                            select.selectedIndex
                         ]?.textContent
-                        : '';
+                        || ''
+                    ).trim()
+                    : '';
 
-                const value =
-                    clean(text)
+        const twoLetterCode =
+            (
+                value,
+                fallback
+            ) => {
+                const normalized =
+                    clean(value)
                         .toUpperCase()
                         .replace(
                             /[^A-Z0-9]/g,
                             ''
-                        )
-                        .slice(
-                            0,
-                            2
                         );
 
-                return value.length === 1
-                    ? value + 'X'
-                    : value;
+                let code =
+                    normalized.slice(
+                        0,
+                        2
+                    );
+
+                if (!code) {
+                    return fallback;
+                }
+
+                if (code.length === 1) {
+                    code += 'X';
+                }
+
+                return code;
             };
 
-        const classCode =
+        const classPrefix =
             () => {
-                const text =
-                    classRoom?.value
-                        ? classRoom.options[
-                            classRoom.selectedIndex
-                        ]?.textContent
-                        : '';
-
                 const normalized =
-                    clean(text)
+                    clean(
+                        selectedText(
+                            classRoom
+                        )
+                    )
                         .toLowerCase();
 
                 if (
@@ -3273,44 +3184,23 @@ document.addEventListener(
                     normalized.includes(
                         'avance'
                     )
+                    || normalized.includes(
+                        'adulte'
+                    )
                 ) {
                     return 'A';
                 }
 
-                return normalized
-                    .replace(
-                        /[^a-z0-9]/g,
-                        ''
-                    )
-                    .charAt(0)
-                    .toUpperCase();
-            };
+                const fallback =
+                    normalized
+                        .replace(
+                            /[^a-z0-9]/g,
+                            ''
+                        )
+                        .charAt(0)
+                        .toUpperCase();
 
-        const groupNumber =
-            () => {
-                if (!group?.value) {
-                    return '';
-                }
-
-                const option =
-                    group.options[
-                        group.selectedIndex
-                    ];
-
-                const raw =
-                    option?.dataset?.code
-                    || option?.textContent
-                    || '';
-
-                const match =
-                    String(raw)
-                        .match(
-                            /(\d+)/
-                        );
-
-                return match
-                    ? match[1]
-                    : '';
+                return fallback || 'G';
             };
 
         const dayCode =
@@ -3328,7 +3218,7 @@ document.addEventListener(
                 ]
                 || '';
 
-        const parseHour =
+        const validTime =
             value => {
                 const match =
                     String(value || '')
@@ -3337,7 +3227,7 @@ document.addEventListener(
                         );
 
                 if (!match) {
-                    return null;
+                    return false;
                 }
 
                 const h =
@@ -3346,127 +3236,101 @@ document.addEventListener(
                 const m =
                     Number(match[2]);
 
-                if (
-                    h < 0
-                    || h > 23
-                    || m < 0
-                    || m > 59
-                ) {
-                    return null;
-                }
-
                 const total =
                     h * 60
                     + m;
 
-                if (
-                    total < 8 * 60
-                    || total > 22 * 60
-                ) {
-                    return null;
-                }
-
-                const diff =
-                    total
-                    - 8 * 60;
-
-                const aligned =
-                    diff % 30 === 0;
-
-                return {
-                    h,
-                    m,
-                    aligned,
-                    keyPart:
-                        aligned
-                            ? String(
-                                (diff / 30)
-                                + 1
-                            )
-                            : (
-                                String(h)
-                                    .padStart(
-                                        2,
-                                        '0'
-                                    )
-                                + String(m)
-                                    .padStart(
-                                        2,
-                                        '0'
-                                    )
-                            ),
-                    codePart:
-                        aligned
-                            ? String(
-                                (diff / 30)
-                                + 1
-                            )
-                            : (
-                                String(h)
-                                    .padStart(
-                                        2,
-                                        '0'
-                                    )
-                                + String(m)
-                                    .padStart(
-                                        2,
-                                        '0'
-                                    )
-                            ),
-                };
+                return (
+                    h >= 0
+                    && h <= 23
+                    && m >= 0
+                    && m <= 59
+                    && total >= 8 * 60
+                    && total <= 22 * 60
+                );
             };
 
-        const buildCode =
-            parsed => {
-                const d =
-                    dayCode(
-                        day.value
+        /*
+         * Prévisualisation du rang chronologique.
+         *
+         * On utilise les heures déjà connues en base, on ajoute
+         * l'heure saisie si elle est nouvelle, puis on trie.
+         * Le backend refait exactement le calcul et reste la source
+         * de vérité au moment de l'enregistrement.
+         */
+        const previewSlotNumber =
+            (
+                selectedDay,
+                selectedTime
+            ) => {
+                const dayMap =
+                    knownTimeMap[
+                        String(
+                            selectedDay
+                        )
+                    ]
+                    || knownTimeMap[
+                        Number(
+                            selectedDay
+                        )
+                    ]
+                    || {};
+
+                const times =
+                    Object.keys(
+                        dayMap
                     );
 
-                const s =
-                    subjectCode();
-
-                const c =
-                    classCode();
-
-                const g =
-                    groupNumber();
-
-                if (
-                    !d
-                    || !parsed
-                    || !s
-                    || !c
-                    || !g
-                ) {
-                    return '';
-                }
-
-                return (
-                    d
-                    + parsed.codePart
-                    + s
-                    + c
-                    + g
+                /*
+                 * 08:00 est la base minimale du système.
+                 */
+                times.push(
+                    '08:00'
                 );
+
+                times.push(
+                    selectedTime
+                );
+
+                const unique =
+                    Array.from(
+                        new Set(
+                            times
+                                .filter(
+                                    validTime
+                                )
+                        )
+                    )
+                        .sort();
+
+                const index =
+                    unique.indexOf(
+                        selectedTime
+                    );
+
+                return index >= 0
+                    ? index + 1
+                    : null;
             };
 
         const ensureHiddenOption =
             (
                 key,
+                label,
                 code
             ) => {
                 let option =
-                    Array
-                        .from(
-                            hiddenTime.options
-                        )
+                    Array.from(
+                        hiddenTime.options
+                    )
                         .find(
                             item =>
                                 String(
                                     item.value
                                 )
-                                === String(key)
+                                === String(
+                                    key
+                                )
                         );
 
                 if (!option) {
@@ -3476,32 +3340,105 @@ document.addEventListener(
                         );
 
                     option.value =
-                        String(key);
-
-                    hiddenTime
-                        .appendChild(
-                            option
+                        String(
+                            key
                         );
+
+                    hiddenTime.appendChild(
+                        option
+                    );
                 }
+
+                option.textContent =
+                    label;
 
                 option.dataset.code =
                     code;
 
-                const dayLabel =
-                    day.options[
-                        day.selectedIndex
-                    ]?.textContent
-                    ?.trim()
-                    || '';
-
-                option.textContent =
-                    code
-                    + ' — '
-                    + dayLabel
-                    + ' · '
-                    + hour.value;
-
                 return option;
+            };
+
+        const setAutomaticGroup =
+            groupCode => {
+                if (!group) {
+                    return;
+                }
+
+                let option =
+                    Array.from(
+                        group.options
+                    )
+                        .find(
+                            item =>
+                                String(
+                                    item.dataset?.code
+                                    || ''
+                                ).toUpperCase()
+                                === String(
+                                    groupCode
+                                ).toUpperCase()
+                        );
+
+                /*
+                 * Si D5/D6/... n'existe pas encore en base,
+                 * on ajoute une option visuelle temporaire.
+                 * Laravel créera réellement ce groupe au submit.
+                 */
+                if (!option) {
+                    option =
+                        document.createElement(
+                            'option'
+                        );
+
+                    option.value =
+                        'AUTO:'
+                        + groupCode;
+
+                    option.textContent =
+                        groupCode
+                        + ' — automatique';
+
+                    option.dataset.code =
+                        groupCode;
+
+                    option.dataset.auto =
+                        '1';
+
+                    group.appendChild(
+                        option
+                    );
+                }
+
+                group.disabled =
+                    false;
+
+                group.value =
+                    option.value;
+
+                if (
+                    groupPreview
+                    && groupCodeTarget
+                ) {
+                    groupPreview.hidden =
+                        false;
+
+                    groupCodeTarget.textContent =
+                        groupCode;
+                }
+            };
+
+        const clearAutomaticGroup =
+            () => {
+                if (
+                    groupPreview
+                    && groupCodeTarget
+                ) {
+                    groupPreview.hidden =
+                        true;
+
+                    groupCodeTarget.textContent =
+                        '—';
+                }
             };
 
         const refreshPreview =
@@ -3531,20 +3468,24 @@ document.addEventListener(
                         day.value
                     );
 
-                const parsed =
-                    parseHour(
+                const selectedHour =
+                    String(
                         hour.value
+                        || ''
                     );
 
                 if (
                     !selectedDay
-                    || !hour.value
+                    || !selectedHour
                 ) {
                     hiddenTime.value =
                         '';
 
-                    hour.setCustomValidity('');
+                    hour.setCustomValidity(
+                        ''
+                    );
 
+                    clearAutomaticGroup();
                     refreshPreview('');
 
                     hiddenTime.dispatchEvent(
@@ -3559,7 +3500,11 @@ document.addEventListener(
                     return;
                 }
 
-                if (!parsed) {
+                if (
+                    !validTime(
+                        selectedHour
+                    )
+                ) {
                     hiddenTime.value =
                         '';
 
@@ -3567,30 +3512,96 @@ document.addEventListener(
                         'L’heure doit être comprise entre 08:00 et 22:00.'
                     );
 
+                    clearAutomaticGroup();
                     refreshPreview('');
 
                     return;
                 }
 
-                hour.setCustomValidity('');
+                hour.setCustomValidity(
+                    ''
+                );
+
+                const number =
+                    previewSlotNumber(
+                        selectedDay,
+                        selectedHour
+                    );
+
+                const prefix =
+                    classPrefix();
+
+                const groupCode =
+                    number
+                        ? (
+                            prefix
+                            + number
+                        )
+                        : '';
+
+                const code =
+                    (
+                        number
+                        && subject?.value
+                        && level?.value
+                        && classRoom?.value
+                    )
+                        ? (
+                            dayCode(
+                                selectedDay
+                            )
+                            + '1'
+                            + twoLetterCode(
+                                selectedText(
+                                    subject
+                                ),
+                                'MT'
+                            )
+                            + twoLetterCode(
+                                selectedText(
+                                    level
+                                ),
+                                'NV'
+                            )
+                            + groupCode
+                        )
+                        : '';
 
                 const key =
                     selectedDay
-                    + ':'
-                    + parsed.keyPart;
+                    + '|'
+                    + selectedHour;
 
-                const code =
-                    buildCode(
-                        parsed
-                    );
+                const dayLabel =
+                    day.options[
+                        day.selectedIndex
+                    ]?.textContent
+                    ?.trim()
+                    || '';
 
                 ensureHiddenOption(
                     key,
+                    (
+                        code
+                        ? code + ' — '
+                        : ''
+                    )
+                    + dayLabel
+                    + ' · '
+                    + selectedHour,
                     code
                 );
 
                 hiddenTime.value =
                     key;
+
+                if (groupCode) {
+                    setAutomaticGroup(
+                        groupCode
+                    );
+                } else {
+                    clearAutomaticGroup();
+                }
 
                 refreshPreview(
                     code
@@ -3611,12 +3622,31 @@ document.addEventListener(
                 const value =
                     String(
                         hiddenTime.value
+                        || initialScheduleKey
                         || ''
                     );
 
-                const match =
+                let match =
                     value.match(
-                        /^([1-7]):([0-9]{1,4})$/
+                        /^([1-7])\|(\d{2}:\d{2})$/
+                    );
+
+                if (match) {
+                    day.value =
+                        match[1];
+
+                    hour.value =
+                        match[2];
+
+                    return;
+                }
+
+                /*
+                 * Compatibilité ancienne clé "jour:numéro".
+                 */
+                match =
+                    value.match(
+                        /^([1-7]):(\d{1,2})$/
                     );
 
                 if (!match) {
@@ -3626,27 +3656,22 @@ document.addEventListener(
                 day.value =
                     match[1];
 
-                const raw =
-                    match[2];
+                const slot =
+                    Number(
+                        match[2]
+                    );
+
+                const total =
+                    8 * 60
+                    + (
+                        slot - 1
+                    )
+                    * 30;
 
                 if (
-                    raw.length === 4
+                    total >= 8 * 60
+                    && total <= 22 * 60
                 ) {
-                    hour.value =
-                        raw.slice(0, 2)
-                        + ':'
-                        + raw.slice(2, 4);
-                } else {
-                    const slot =
-                        Number(raw);
-
-                    const total =
-                        8 * 60
-                        + (
-                            slot - 1
-                        )
-                        * 30;
-
                     hour.value =
                         String(
                             Math.floor(
@@ -3664,17 +3689,6 @@ document.addEventListener(
                             '0'
                         );
                 }
-
-                const parsed =
-                    parseHour(
-                        hour.value
-                    );
-
-                refreshPreview(
-                    buildCode(
-                        parsed
-                    )
-                );
             };
 
         day.addEventListener(
@@ -3694,23 +3708,43 @@ document.addEventListener(
 
         [
             subject,
+            level,
             classRoom,
-            group,
         ]
             .filter(Boolean)
             .forEach(
                 element => {
-                    element
-                        .addEventListener(
-                            'change',
-                            () =>
-                                setTimeout(
-                                    syncHidden,
-                                    0
-                                )
-                        );
+                    element.addEventListener(
+                        'change',
+                        () =>
+                            setTimeout(
+                                syncHidden,
+                                0
+                            )
+                    );
                 }
             );
+
+        form?.addEventListener(
+            'submit',
+            event => {
+                syncHidden();
+
+                if (
+                    !day.value
+                    || !hour.value
+                    || !hiddenTime.value
+                ) {
+                    event.preventDefault();
+
+                    if (!day.value) {
+                        day.focus();
+                    } else {
+                        hour.focus();
+                    }
+                }
+            }
+        );
 
         setTimeout(
             () => {
@@ -3728,6 +3762,7 @@ document.addEventListener(
     }
 );
 </script>
+
 <!-- ASSIGNATION_RESULTAT_CODE_SEUL_V6_2_STYLE -->
 <style>
 #assignmentGeneratedSlotCode.ssa-code-only-preview {

@@ -1263,6 +1263,9 @@ class ChatController extends Controller
     /**
      * Participants du groupe exact D1ARD1/L1ARD1/...
      */
+    /**
+     * Participants du groupe exact D1ARD1/L1ARD1/...
+     */
     private function groupChatContext(
         Subject $subject,
         Collection $messages,

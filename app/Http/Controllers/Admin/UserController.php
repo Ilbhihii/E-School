@@ -34,9 +34,9 @@ class UserController extends Controller
      * Affiche la page d'assignation des professeurs.
      *
      * Structure :
-     * Professeur + Matière → Niveau → Classe → Créneau.
+     * Professeur + Matière → Niveau → Classe → Jour/Heure → Groupe automatique.
      *
-     * Les créneaux proviennent exclusivement de /admin/schedule.
+     * Même logique que pour les étudiants : l'horaire détermine le groupe.
      */
     public function profAssignments()
     {
@@ -60,6 +60,10 @@ class UserController extends Controller
          */
         $assignmentHierarchy =
             $this->buildAssignmentHierarchy();
+
+        $professorTimeSlotMap = app(
+            PedagogicalTimeSlotService::class
+        )->map();
 
         /*
          * IMPORTANT :
@@ -168,29 +172,15 @@ class UserController extends Controller
                     )
             );
 
-        /*
-         * Le builder d'affectation a besoin des disponibilités
-         * regroupées par professeur afin d'alimenter le select
-         * "Créneau disponible".
-         */
-        $professorAvailabilities =
-            $this->professorAvailabilityMap(
-                $professors
-                    ->pluck('id')
-                    ->map(fn ($id) => (int) $id)
-                    ->values()
-                    ->all()
-            );
-
         return view(
             'admin.prof-assignments',
             compact(
                 'professors',
                 'subjects',
                 'assignmentHierarchy',
+                'professorTimeSlotMap',
                 'assignments',
-                'scheduleMap',
-                'professorAvailabilities'
+                'scheduleMap'
             )
         );
     }
@@ -273,6 +263,10 @@ class UserController extends Controller
                         $request->input('class_id'),
                     'class_slot_id' =>
                         $request->input('class_slot_id'),
+                    'assignment_day_of_week' =>
+                        $request->input('assignment_day_of_week'),
+                    'assignment_start_time' =>
+                        $request->input('assignment_start_time'),
                     'weekly_sessions' =>
                         $request->input('weekly_sessions', 1),
                 ]],
@@ -306,10 +300,24 @@ class UserController extends Controller
                 'integer',
                 'exists:class_rooms,id',
             ],
+            /*
+             * Le groupe n'est plus choisi par l'administrateur.
+             * Il sera calculé depuis le jour + l'heure dans
+             * normalizeProfessorAssignmentRows().
+             */
             'assignments.*.class_slot_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'exists:class_slots,id',
+            ],
+            'assignments.*.assignment_day_of_week' => [
+                'required',
+                'integer',
+                'between:1,7',
+            ],
+            'assignments.*.assignment_start_time' => [
+                'required',
+                'date_format:H:i',
             ],
             'assignments.*.weekly_sessions' => [
                 'required',
@@ -330,8 +338,10 @@ class UserController extends Controller
                 'Chaque ligne doit avoir un niveau.',
             'assignments.*.class_id.required' =>
                 'Chaque ligne doit avoir une classe.',
-            'assignments.*.class_slot_id.required' =>
-                'Chaque ligne doit avoir un créneau.',
+            'assignments.*.assignment_day_of_week.required' =>
+                'Chaque ligne doit avoir un jour.',
+            'assignments.*.assignment_start_time.required' =>
+                'Chaque ligne doit avoir une heure. Le groupe sera calculé automatiquement.',
             'assignments.*.weekly_sessions.required' =>
                 'Indiquez le nombre de séances par semaine.',
             'assignments.*.weekly_sessions.min' =>
@@ -339,6 +349,11 @@ class UserController extends Controller
             'assignments.*.weekly_sessions.max' =>
                 'Le maximum autorisé est de 7 séances par semaine.',
         ]);
+
+        $validated['assignments'] =
+            $this->normalizeProfessorAssignmentRows(
+                $validated['assignments']
+            );
 
         $professor = User::query()
             ->whereKey(
@@ -371,30 +386,16 @@ class UserController extends Controller
             $validated['assignments']
         );
 
-        $autoPlanning = $this->syncPlanningIfAvailabilityExists(
-            $professor
-        );
-
+        /*
+         * L'assignation professeur suit désormais la même règle que
+         * l'assignation étudiant : le jour et l'heure déterminent le groupe.
+         * On ne relance pas le planificateur basé sur ProfessorAvailability,
+         * afin de ne pas écraser le créneau choisi par l'administrateur.
+         */
         $message = $result['total']
             . ' affectation(s) enregistrée(s) pour '
             . $professor->name
             . '.';
-
-        if ($autoPlanning) {
-            $message .= ' Planning recalculé : '
-                . ($autoPlanning['requested_sessions'] ?? 0)
-                . ' séance(s)/semaine demandée(s), '
-                . $autoPlanning['created']
-                . ' créée(s), '
-                . $autoPlanning['reused']
-                . ' réutilisée(s), '
-                . ($autoPlanning['rescheduled'] ?? 0)
-                . ' repositionnée(s), '
-                . ($autoPlanning['removed'] ?? 0)
-                . ' retirée(s), '
-                . $autoPlanning['pending']
-                . ' restant à planifier.';
-        }
 
         return back()->with('success', $message);
     }
@@ -412,6 +413,10 @@ class UserController extends Controller
 
         $assignmentHierarchy =
             $this->buildAssignmentHierarchy();
+
+        $professorTimeSlotMap = app(
+            PedagogicalTimeSlotService::class
+        )->map();
 
         $assignments = ProfAssignment::query()
             ->with([
@@ -452,9 +457,17 @@ class UserController extends Controller
                         (int) $assignment->class_id,
                     'class_slot_id' =>
                         (int) $assignment->class_slot_id,
-                    'preferred_availability_id' =>
-                        $assignment->preferred_availability_id
-                            ? (int) $assignment->preferred_availability_id
+                    'assignment_day_of_week' =>
+                        $assignment->day_of_week
+                            ? (int) $assignment->day_of_week
+                            : '',
+                    'assignment_start_time' =>
+                        $assignment->start_time
+                            ? substr(
+                                (string) $assignment->start_time,
+                                0,
+                                5
+                            )
                             : '',
                     'weekly_sessions' =>
                         (int) ($assignment->weekly_sessions ?: 1),
@@ -463,18 +476,13 @@ class UserController extends Controller
             ->values()
             ->all();
 
-        $professorAvailabilities =
-            $this->professorAvailabilityMap([
-                (int) $professor->id,
-            ]);
-
         return view(
             'admin.prof-assignments-edit',
             compact(
                 'professor',
                 'assignmentHierarchy',
-                'selectedAssignments',
-                'professorAvailabilities'
+                'professorTimeSlotMap',
+                'selectedAssignments'
             )
         );
     }
@@ -514,9 +522,18 @@ class UserController extends Controller
                 'exists:class_rooms,id',
             ],
             'assignments.*.class_slot_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'exists:class_slots,id',
+            ],
+            'assignments.*.assignment_day_of_week' => [
+                'required',
+                'integer',
+                'between:1,7',
+            ],
+            'assignments.*.assignment_start_time' => [
+                'required',
+                'date_format:H:i',
             ],
             'assignments.*.weekly_sessions' => [
                 'required',
@@ -533,6 +550,11 @@ class UserController extends Controller
                 . 'depuis la liste principale.',
         ]);
 
+        $validated['assignments'] =
+            $this->normalizeProfessorAssignmentRows(
+                $validated['assignments']
+            );
+
         $result = app(
             ProfessorAssignmentService::class
         )->replaceActive(
@@ -545,10 +567,6 @@ class UserController extends Controller
             $validated['assignments']
         );
 
-        $autoPlanning = $this->syncPlanningIfAvailabilityExists(
-            $professor
-        );
-
         $message = 'Affectations de '
             . $professor->name
             . ' mises à jour : '
@@ -557,25 +575,197 @@ class UserController extends Controller
             . $result['removed']
             . ' retirée(s).';
 
-        if ($autoPlanning) {
-            $message .= ' Planning recalculé : '
-                . ($autoPlanning['requested_sessions'] ?? 0)
-                . ' séance(s)/semaine demandée(s), '
-                . $autoPlanning['created']
-                . ' créée(s), '
-                . $autoPlanning['reused']
-                . ' réutilisée(s), '
-                . ($autoPlanning['rescheduled'] ?? 0)
-                . ' repositionnée(s), '
-                . ($autoPlanning['removed'] ?? 0)
-                . ' retirée(s), '
-                . $autoPlanning['pending']
-                . ' restant à planifier.';
-        }
-
         return redirect()
             ->route('admin.users.prof-assignments')
             ->with('success', $message);
+    }
+
+    /**
+     * Même logique que l'assignation étudiant :
+     *
+     * Matière -> Niveau -> Classe -> Jour/Heure -> Groupe automatique.
+     *
+     * Le groupe n'est jamais choisi manuellement. Son numéro correspond
+     * au rang chronologique de l'heure dans la journée :
+     * 08:00 -> D1, 08:30 -> D2, 08:45 -> D3, 09:00 -> D4, etc.
+     * D5, D6... sont créés à la demande sans plafond applicatif.
+     */
+    private function normalizeProfessorAssignmentRows(
+        array $rows
+    ): array {
+        $timeService = app(
+            PedagogicalTimeSlotService::class
+        );
+
+        $classSlotService = app(
+            ClassSlotService::class
+        );
+
+        /*
+         * Premier passage : valider les parcours et enregistrer toutes
+         * les nouvelles heures. On ne calcule pas encore le groupe car
+         * l'ajout d'une heure comme 08:45 peut décaler 09:00 de D3 à D4.
+         */
+        foreach ($rows as $index => &$row) {
+            $day = !empty(
+                $row['assignment_day_of_week'] ?? null
+            )
+                ? (int) $row['assignment_day_of_week']
+                : null;
+
+            $rawTime = trim(
+                (string) (
+                    $row['assignment_start_time']
+                    ?? ''
+                )
+            );
+
+            if (!$day || $rawTime === '') {
+                throw ValidationException::withMessages([
+                    "assignments.$index.assignment_day_of_week" =>
+                        'Choisissez le jour et l’heure. Le groupe sera calculé automatiquement.',
+                ]);
+            }
+
+            $normalizedTime =
+                $timeService->normalizeTime(
+                    $rawTime
+                );
+
+            if (!$normalizedTime) {
+                throw ValidationException::withMessages([
+                    "assignments.$index.assignment_start_time" =>
+                        'Choisissez une heure comprise entre 08:00 et 22:00.',
+                ]);
+            }
+
+            $subject = Subject::query()
+                ->whereKey(
+                    (int) ($row['subject_id'] ?? 0)
+                )
+                ->where('status', 'active')
+                ->first();
+
+            if (!$subject) {
+                throw ValidationException::withMessages([
+                    "assignments.$index.subject_id" =>
+                        'Cette matière n’est pas active.',
+                ]);
+            }
+
+            $level = Level::query()
+                ->whereKey(
+                    (int) ($row['level_id'] ?? 0)
+                )
+                ->where(
+                    'subject_id',
+                    $subject->id
+                )
+                ->first();
+
+            if (!$level) {
+                throw ValidationException::withMessages([
+                    "assignments.$index.level_id" =>
+                        'Ce niveau n’appartient pas à la matière sélectionnée.',
+                ]);
+            }
+
+            $classRoom = ClassRoom::query()
+                ->whereKey(
+                    (int) ($row['class_id'] ?? 0)
+                )
+                ->where(
+                    'level_id',
+                    $level->id
+                )
+                ->whereHas(
+                    'subjects',
+                    fn ($query) =>
+                        $query->where(
+                            'subjects.id',
+                            $subject->id
+                        )
+                )
+                ->first();
+
+            if (!$classRoom) {
+                throw ValidationException::withMessages([
+                    "assignments.$index.class_id" =>
+                        'Cette classe n’appartient pas au parcours sélectionné.',
+                ]);
+            }
+
+            if (
+                !$timeService->slotNumber(
+                    $day,
+                    $normalizedTime,
+                    true
+                )
+            ) {
+                throw ValidationException::withMessages([
+                    "assignments.$index.assignment_start_time" =>
+                        'Impossible de calculer le groupe pour cet horaire.',
+                ]);
+            }
+
+            $row['assignment_day_of_week'] =
+                $day;
+            $row['assignment_start_time'] =
+                $normalizedTime;
+        }
+
+        unset($row);
+
+        /*
+         * Deuxième passage : toutes les heures sont maintenant connues.
+         * On recalcule leur rang final puis on crée/récupère D1, D2,
+         * D3... I1, I2... A1, A2... sans limite fixe.
+         */
+        foreach ($rows as $index => &$row) {
+            $subject = Subject::query()
+                ->whereKey((int) $row['subject_id'])
+                ->where('status', 'active')
+                ->firstOrFail();
+
+            $level = Level::query()
+                ->whereKey((int) $row['level_id'])
+                ->where('subject_id', $subject->id)
+                ->firstOrFail();
+
+            $classRoom = ClassRoom::query()
+                ->whereKey((int) $row['class_id'])
+                ->where('level_id', $level->id)
+                ->firstOrFail();
+
+            $number =
+                $timeService->slotNumber(
+                    (int) $row['assignment_day_of_week'],
+                    (string) $row['assignment_start_time'],
+                    false
+                );
+
+            if (!$number) {
+                throw ValidationException::withMessages([
+                    "assignments.$index.assignment_start_time" =>
+                        'Impossible de déterminer le groupe automatique.',
+                ]);
+            }
+
+            $slot =
+                $classSlotService->ensureSlotForNumber(
+                    $subject,
+                    $level,
+                    $classRoom,
+                    (int) $number
+                );
+
+            $row['class_slot_id'] =
+                (int) $slot->id;
+        }
+
+        unset($row);
+
+        return $rows;
     }
 
     /**
@@ -1251,6 +1441,16 @@ class UserController extends Controller
                 $assignmentHierarchy
             );
 
+        /*
+         * Carte réelle des heures déjà connues par jour.
+         * Elle sert au navigateur à prévisualiser immédiatement
+         * le groupe automatique pour une heure libre (ex. 08:45).
+         */
+        $studentTimeSlotMap =
+            app(
+                PedagogicalTimeSlotService::class
+            )->map();
+
         $subjects = collect($assignmentHierarchy)
             ->map(
                 fn (array $subject) =>
@@ -1418,7 +1618,9 @@ class UserController extends Controller
                         $dayLabels[
                             (int) $assignment->student_day_of_week
                         ] ?? 'Jour'
-                    );
+                    )
+                    . ' · '
+                    . $start;
 
                 return;
             }
@@ -1446,6 +1648,7 @@ class UserController extends Controller
                 'subjects',
                 'assignmentHierarchy',
                 'studentScheduleMap',
+                'studentTimeSlotMap',
                 'assignments'
             )
         );
@@ -1475,18 +1678,19 @@ class UserController extends Controller
                 'required',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
-                'required',
-                'exists:class_slots,id',
-            ],
+            /*
+             * Le groupe n'est plus choisi par l'administrateur.
+             * Il est calculé automatiquement à partir du jour
+             * et de l'heure.
+             */
             'schedule_id' => [
-                'nullable',
+                'required',
                 'string',
-                'max:16',
+                'max:32',
             ],
         ], [
-            'class_slot_id.required' =>
-                'Veuillez choisir un groupe.',
+            'schedule_id.required' =>
+                'Veuillez choisir le jour et l’heure. Le groupe sera calculé automatiquement.',
         ]);
 
         $student = User::query()
@@ -1504,13 +1708,8 @@ class UserController extends Controller
         }
 
         $subject = Subject::query()
-            ->whereKey(
-                $request->subject_id
-            )
-            ->where(
-                'status',
-                'active'
-            )
+            ->whereKey($request->subject_id)
+            ->where('status', 'active')
             ->first();
 
         if (!$subject) {
@@ -1524,10 +1723,7 @@ class UserController extends Controller
 
         $level = Level::query()
             ->whereKey($request->level_id)
-            ->where(
-                'subject_id',
-                $subject->id
-            )
+            ->where('subject_id', $subject->id)
             ->first();
 
         if (!$level) {
@@ -1541,10 +1737,7 @@ class UserController extends Controller
 
         $class = ClassRoom::query()
             ->whereKey($request->class_id)
-            ->where(
-                'level_id',
-                $level->id
-            )
+            ->where('level_id', $level->id)
             ->whereHas(
                 'subjects',
                 fn ($query) =>
@@ -1564,61 +1757,43 @@ class UserController extends Controller
                 ]);
         }
 
-        $classSlotService->syncForPath(
-            $subject,
-            $level,
-            $class
-        );
-
-        $slot =
-            $classSlotService->slotForPath(
-                (int) $request->class_slot_id,
-                (int) $subject->id,
-                (int) $level->id,
-                (int) $class->id
-            );
-
-        if (!$slot) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'class_slot_id' =>
-                        'Ce groupe n’appartient pas à la matière, au niveau et à la classe sélectionnés.',
-                ]);
-        }
-
+        /*
+         * AUTO_GROUP_FROM_TIME_V1
+         *
+         * Jour + heure -> rang horaire -> groupe.
+         * Exemple :
+         * Dimanche 08:00 -> D1
+         * Dimanche 08:30 -> D2
+         * Dimanche 08:45 -> D3
+         * Dimanche 09:00 -> D4
+         *
+         * D5, D6... sont créés automatiquement si nécessaire.
+         */
         $studentSchedule =
             $this->resolveStudentSchedule(
-                $request->filled('schedule_id')
-                    ? (string) $request->schedule_id
-                    : null,
+                (string) $request->schedule_id,
                 $subject,
                 $level,
                 $class,
-                $slot
+                $classSlotService
             );
 
-        if (
-            $request->filled('schedule_id')
-            && !$studentSchedule
-        ) {
+        if (!$studentSchedule) {
             return back()
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un jour et une heure libre entre 08:00 et 22:00.',
+                        'Créneau étudiant invalide. Choisissez un jour et une heure entre 08:00 et 22:00.',
                 ]);
         }
 
+        /** @var \App\Models\ClassSlot $slot */
+        $slot =
+            $studentSchedule->class_slot;
+
         $exists = DB::table('class_user')
-            ->where(
-                'user_id',
-                $student->id
-            )
-            ->where(
-                'subject_id',
-                $subject->id
-            )
+            ->where('user_id', $student->id)
+            ->where('subject_id', $subject->id)
             ->exists();
 
         if ($exists) {
@@ -1626,7 +1801,7 @@ class UserController extends Controller
                 ->withInput()
                 ->with(
                     'info',
-                    'Cette matière est déjà assignée à cet étudiant. Utilisez Modifier pour changer sa classe, son groupe ou son créneau horaire.'
+                    'Cette matière est déjà assignée à cet étudiant. Utilisez Modifier pour changer sa classe ou son créneau horaire.'
                 );
         }
 
@@ -1639,21 +1814,12 @@ class UserController extends Controller
             'updated_at' => now(),
         ];
 
-        /*
-         * Compatibilité avec l'ancien système :
-         * schedule_id peut encore exister en base, mais
-         * l'assignation étudiant ne dépend plus d'une séance.
-         */
         if (
             Schema::hasColumn(
                 'class_user',
                 'schedule_id'
             )
         ) {
-            /*
-             * Le créneau étudiant V2 ne doit pas polluer
-             * l'emploi du temps/professeur.
-             */
             $values['schedule_id'] = null;
         }
 
@@ -1664,25 +1830,18 @@ class UserController extends Controller
             )
         ) {
             $values['student_slot_code'] =
-                $studentSchedule?->slot_code;
+                $studentSchedule->slot_code;
 
             $values['student_day_of_week'] =
-                $studentSchedule?->day_of_week;
+                $studentSchedule->day_of_week;
 
             $values['student_start_time'] =
-                $studentSchedule?->start_time;
+                $studentSchedule->start_time;
 
             $values['student_end_time'] =
-                $studentSchedule?->end_time;
+                $studentSchedule->end_time;
         }
 
-        /*
-         * STUDENT_GROUP_CAPACITY_V1_STORE
-         *
-         * Le lock sur class_slots sérialise les ajouts concurrents
-         * dans le même groupe : deux administrateurs ne peuvent pas
-         * faire passer un groupe de 11/12 à 13/12.
-         */
         DB::transaction(
             function () use (
                 $values,
@@ -1707,15 +1866,15 @@ class UserController extends Controller
 
         return back()->with(
             'success',
-            'Étudiant assigné au groupe '
+            'Étudiant assigné automatiquement au groupe '
             . $slot->code
-            . ($studentSchedule
-                ? ' — créneau '
-                    . $studentSchedule->day_label
-                    . ' · '
-                    . $studentSchedule->time_range_label
-                : ' — horaire à définir')
-            . ' avec succès.'
+            . ' — '
+            . $studentSchedule->day_label
+            . ' · '
+            . $studentSchedule->time_range_label
+            . ' — code '
+            . $studentSchedule->slot_code
+            . '.'
         );
     }
 
@@ -1802,6 +1961,16 @@ class UserController extends Controller
             $this->studentScheduleMap(
                 $assignmentHierarchy
             );
+
+        /*
+         * Carte réelle des heures déjà connues par jour.
+         * Elle sert au navigateur à prévisualiser immédiatement
+         * le groupe automatique pour une heure libre (ex. 08:45).
+         */
+        $studentTimeSlotMap =
+            app(
+                PedagogicalTimeSlotService::class
+            )->map();
 
         $subjects =
             collect(
@@ -1925,7 +2094,8 @@ class UserController extends Controller
                 'students',
                 'subjects',
                 'assignmentHierarchy',
-                'studentScheduleMap'
+                'studentScheduleMap',
+                'studentTimeSlotMap'
             )
         );
     }
@@ -1942,7 +2112,10 @@ class UserController extends Controller
             ->where('id', $pivotId)
             ->first();
 
-        abort_unless($assignment, 404);
+        abort_unless(
+            $assignment,
+            404
+        );
 
         $request->validate([
             'user_id' => [
@@ -1961,15 +2134,14 @@ class UserController extends Controller
                 'required',
                 'exists:class_rooms,id',
             ],
-            'class_slot_id' => [
-                'required',
-                'exists:class_slots,id',
-            ],
             'schedule_id' => [
-                'nullable',
+                'required',
                 'string',
-                'max:16',
+                'max:32',
             ],
+        ], [
+            'schedule_id.required' =>
+                'Veuillez choisir le jour et l’heure. Le groupe sera recalculé automatiquement.',
         ]);
 
         $student = User::query()
@@ -1987,13 +2159,8 @@ class UserController extends Controller
         }
 
         $subject = Subject::query()
-            ->whereKey(
-                $request->subject_id
-            )
-            ->where(
-                'status',
-                'active'
-            )
+            ->whereKey($request->subject_id)
+            ->where('status', 'active')
             ->first();
 
         if (!$subject) {
@@ -2007,10 +2174,7 @@ class UserController extends Controller
 
         $level = Level::query()
             ->whereKey($request->level_id)
-            ->where(
-                'subject_id',
-                $subject->id
-            )
+            ->where('subject_id', $subject->id)
             ->first();
 
         if (!$level) {
@@ -2024,10 +2188,7 @@ class UserController extends Controller
 
         $class = ClassRoom::query()
             ->whereKey($request->class_id)
-            ->where(
-                'level_id',
-                $level->id
-            )
+            ->where('level_id', $level->id)
             ->whereHas(
                 'subjects',
                 fn ($query) =>
@@ -2047,66 +2208,36 @@ class UserController extends Controller
                 ]);
         }
 
-        $classSlotService->syncForPath(
-            $subject,
-            $level,
-            $class
-        );
-
-        $slot =
-            $classSlotService->slotForPath(
-                (int) $request->class_slot_id,
-                (int) $subject->id,
-                (int) $level->id,
-                (int) $class->id
-            );
-
-        if (!$slot) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'class_slot_id' =>
-                        'Ce groupe n’appartient pas au parcours sélectionné.',
-                ]);
-        }
-
+        /*
+         * En modification également, l'ancien groupe n'est pas
+         * conservé de force : jour + heure recalculent le groupe.
+         */
         $studentSchedule =
             $this->resolveStudentSchedule(
-                $request->filled('schedule_id')
-                    ? (string) $request->schedule_id
-                    : null,
+                (string) $request->schedule_id,
                 $subject,
                 $level,
                 $class,
-                $slot
+                $classSlotService
             );
 
-        if (
-            $request->filled('schedule_id')
-            && !$studentSchedule
-        ) {
+        if (!$studentSchedule) {
             return back()
                 ->withInput()
                 ->withErrors([
                     'schedule_id' =>
-                        'Créneau étudiant invalide. Choisissez un jour et une heure libre entre 08:00 et 22:00.',
+                        'Créneau étudiant invalide. Choisissez un jour et une heure entre 08:00 et 22:00.',
                 ]);
         }
 
+        /** @var \App\Models\ClassSlot $slot */
+        $slot =
+            $studentSchedule->class_slot;
+
         $duplicateExists = DB::table('class_user')
-            ->where(
-                'user_id',
-                $student->id
-            )
-            ->where(
-                'subject_id',
-                $subject->id
-            )
-            ->where(
-                'id',
-                '!=',
-                $pivotId
-            )
+            ->where('user_id', $student->id)
+            ->where('subject_id', $subject->id)
+            ->where('id', '!=', $pivotId)
             ->exists();
 
         if ($duplicateExists) {
@@ -2132,10 +2263,6 @@ class UserController extends Controller
                 'schedule_id'
             )
         ) {
-            /*
-             * Le créneau étudiant V2 ne doit pas polluer
-             * l'emploi du temps/professeur.
-             */
             $values['schedule_id'] = null;
         }
 
@@ -2146,25 +2273,18 @@ class UserController extends Controller
             )
         ) {
             $values['student_slot_code'] =
-                $studentSchedule?->slot_code;
+                $studentSchedule->slot_code;
 
             $values['student_day_of_week'] =
-                $studentSchedule?->day_of_week;
+                $studentSchedule->day_of_week;
 
             $values['student_start_time'] =
-                $studentSchedule?->start_time;
+                $studentSchedule->start_time;
 
             $values['student_end_time'] =
-                $studentSchedule?->end_time;
+                $studentSchedule->end_time;
         }
 
-        /*
-         * STUDENT_GROUP_CAPACITY_V1_UPDATE
-         *
-         * Le pivot courant est exclu du comptage. Ainsi un étudiant
-         * déjà dans un groupe 12/12 peut conserver ce groupe lors
-         * d'une simple modification de son créneau horaire.
-         */
         DB::transaction(
             function () use (
                 $values,
@@ -2181,10 +2301,7 @@ class UserController extends Controller
                 );
 
                 DB::table('class_user')
-                    ->where(
-                        'id',
-                        $pivotId
-                    )
+                    ->where('id', $pivotId)
                     ->update($values);
             }
         );
@@ -2202,18 +2319,20 @@ class UserController extends Controller
             );
         }
 
-        return back()->with(
-            'success',
-            'Assignation modifiée : groupe '
-            . $slot->code
-            . ($studentSchedule
-                ? ' — '
-                    . $studentSchedule->day_label
-                    . ' · '
-                    . $studentSchedule->time_range_label
-                : ' — horaire à définir')
-            . '.'
-        );
+        return redirect()
+            ->route('admin.assign.class')
+            ->with(
+                'success',
+                'Assignation modifiée : groupe '
+                . $slot->code
+                . ' — '
+                . $studentSchedule->day_label
+                . ' · '
+                . $studentSchedule->time_range_label
+                . ' — code '
+                . $studentSchedule->slot_code
+                . '.'
+            );
     }
 
     /**
@@ -2538,7 +2657,7 @@ class UserController extends Controller
         Subject $subject,
         Level $level,
         ClassRoom $classRoom,
-        ClassSlot $slot
+        ClassSlotService $classSlotService
     ): ?object {
         if (!$scheduleKey) {
             return null;
@@ -2548,8 +2667,8 @@ class UserController extends Controller
         $time = null;
 
         /*
-         * Nouveau format :
-         * 2|08:45
+         * Format courant envoyé par les formulaires :
+         * 7|08:45
          */
         if (
             preg_match(
@@ -2558,17 +2677,13 @@ class UserController extends Controller
                 $matches
             )
         ) {
-            $day =
-                (int)
-                    $matches[1];
-
-            $time =
-                $matches[2];
+            $day = (int) $matches[1];
+            $time = $matches[2];
         }
 
         /*
-         * Compatibilité historique :
-         * 2:3 => ancien n° calculé par pas de 30 min.
+         * Compatibilité avec les anciennes valeurs "jour:numéro".
+         * L'ancien numéro représentait une grille de 30 minutes.
          */
         if (
             !$day
@@ -2578,17 +2693,12 @@ class UserController extends Controller
                 $matches
             )
         ) {
-            $day =
-                (int)
-                    $matches[1];
-
-            $oldNumber =
-                (int)
-                    $matches[2];
+            $day = (int) $matches[1];
+            $oldNumber = (int) $matches[2];
 
             if (
                 $oldNumber < 1
-                || $oldNumber > 29
+                || $oldNumber > 99
             ) {
                 return null;
             }
@@ -2603,9 +2713,7 @@ class UserController extends Controller
                         ($oldNumber - 1)
                         * 30
                     )
-                    ->format(
-                        'H:i'
-                    );
+                    ->format('H:i');
         }
 
         if (
@@ -2621,26 +2729,44 @@ class UserController extends Controller
             );
 
         $normalizedTime =
-            $timeService
-                ->normalizeTime(
-                    $time
-                );
+            $timeService->normalizeTime(
+                $time
+            );
 
         if (!$normalizedTime) {
             return null;
         }
 
+        /*
+         * Le rang horaire pilote directement le groupe.
+         *
+         * Avec les heures :
+         * 08:00, 08:30, 08:45, 09:00
+         * on obtient :
+         * D1, D2, D3, D4 pour une classe Débutant.
+         *
+         * Le rang peut dépasser 4 : D5, D6, D7... sont créés
+         * automatiquement.
+         */
         $number =
-            $timeService
-                ->slotNumber(
-                    $day,
-                    $normalizedTime,
-                    true
-                );
+            $timeService->slotNumber(
+                $day,
+                $normalizedTime,
+                true
+            );
 
         if (!$number) {
             return null;
         }
+
+        $slot =
+            $classSlotService
+                ->ensureSlotForNumber(
+                    $subject,
+                    $level,
+                    $classRoom,
+                    (int) $number
+                );
 
         $dayLabels = [
             1 => 'Lundi',
@@ -2672,158 +2798,92 @@ class UserController extends Controller
         $end =
             $start
                 ->copy()
-                ->addMinutes(
-                    90
-                );
+                ->addMinutes(90);
 
-        $normalizedSubject =
-            preg_replace(
-                '/[^A-Z0-9]/',
-                '',
-                strtoupper(
-                    Str::ascii(
-                        (string)
-                            $subject->name
-                    )
-                )
-            );
+        $codePart =
+            static function (
+                string $value,
+                string $fallback
+            ): string {
+                $normalized =
+                    preg_replace(
+                        '/[^A-Z0-9]/',
+                        '',
+                        strtoupper(
+                            Str::ascii(
+                                trim($value)
+                            )
+                        )
+                    );
+
+                $code =
+                    substr(
+                        (string) $normalized,
+                        0,
+                        2
+                    );
+
+                if ($code === '') {
+                    return $fallback;
+                }
+
+                return strlen($code) === 1
+                    ? $code . 'X'
+                    : $code;
+            };
 
         $subjectCode =
-            substr(
-                (string)
-                    $normalizedSubject,
-                0,
-                2
+            $codePart(
+                (string) $subject->name,
+                'MT'
             );
 
-        if ($subjectCode === '') {
-            $subjectCode = 'MT';
-        } elseif (
-            strlen(
-                $subjectCode
-            ) === 1
-        ) {
-            $subjectCode .= 'X';
-        }
-
-        $normalizedClass =
-            strtolower(
-                Str::ascii(
-                    trim(
-                        (string)
-                            $classRoom->name
-                    )
-                )
+        $levelCode =
+            $codePart(
+                (string) $level->name,
+                'NV'
             );
 
-        if (
-            str_contains(
-                $normalizedClass,
-                'debut'
-            )
-        ) {
-            $classCode = 'D';
-        } elseif (
-            str_contains(
-                $normalizedClass,
-                'inter'
-            )
-        ) {
-            $classCode = 'I';
-        } elseif (
-            str_contains(
-                $normalizedClass,
-                'avance'
-            )
-            || str_contains(
-                $normalizedClass,
-                'adulte'
-            )
-        ) {
-            $classCode = 'A';
-        } else {
-            $simpleClass =
-                preg_replace(
-                    '/[^A-Z0-9]/',
-                    '',
-                    strtoupper(
-                        Str::ascii(
-                            (string)
-                                $classRoom->name
-                        )
-                    )
-                );
-
-            $classCode =
-                substr(
-                    (string)
-                        $simpleClass,
-                    0,
-                    1
-                )
-                ?: 'X';
-        }
-
-        $groupCode =
-            strtoupper(
-                trim(
-                    (string)
-                        $slot->code
-                )
-            );
-
-        preg_match(
-            '/(\d+)$/',
-            $groupCode,
-            $groupMatch
-        );
-
-        $groupNumber =
-            $groupMatch[1]
-            ?? null;
-
-        if (!$groupNumber) {
-            return null;
-        }
-
+        /*
+         * Format métier demandé :
+         *
+         * [Jour]1[Matière][Niveau][Groupe automatique]
+         *
+         * Arabe -> Lecture & Écriture -> Débutant :
+         * Dimanche 08:00 => D1ARLED1
+         * Dimanche 08:30 => D1ARLED2
+         * Dimanche 08:45 => D1ARLED3
+         * Dimanche 09:00 => D1ARLED4
+         */
         $slotCode =
             $dayCodes[$day]
-            . $number
+            . '1'
             . $subjectCode
-            . $classCode
-            . $groupNumber;
+            . $levelCode
+            . strtoupper(
+                trim(
+                    (string) $slot->code
+                )
+            );
 
         return (object) [
             'id' => null,
-
-            'slot_code' =>
-                $slotCode,
-
-            'day_of_week' =>
-                $day,
-
-            'day_label' =>
-                $dayLabels[$day],
-
+            'slot_code' => $slotCode,
+            'class_slot' => $slot,
+            'class_slot_id' => (int) $slot->id,
+            'group_code' => (string) $slot->code,
+            'group_number' => (int) $number,
+            'day_of_week' => $day,
+            'day_label' => $dayLabels[$day],
             'start_time' =>
-                $start
-                    ->format(
-                        'H:i:s'
-                    ),
-
+                $start->format('H:i:s'),
             'end_time' =>
-                $end
-                    ->format(
-                        'H:i:s'
-                    ),
-
+                $end->format('H:i:s'),
             'time_range_label' =>
-                $start
-                    ->format(
-                        'H:i'
-                    ),
+                $start->format('H:i'),
         ];
     }
+
     /**
      * Hiérarchie de la page /admin/prof-assignments.
      *
@@ -3216,72 +3276,15 @@ class UserController extends Controller
         ClassRoom $classRoom,
         ?int $excludePivotId = null
     ): void {
-        $lockedSlot = ClassSlot::query()
-            ->whereKey(
-                $slot->id
-            )
-            ->lockForUpdate()
-            ->first();
-
-        if (!$lockedSlot) {
-            throw ValidationException::withMessages([
-                'class_slot_id' =>
-                    'Le groupe sélectionné n’existe plus.',
-            ]);
-        }
-
-        $maxStudents = max(
-            1,
-            (int) (
-                $lockedSlot->max_students
-                ?: 12
-            )
-        );
-
-        $countQuery = DB::table(
-            'class_user'
-        )
-            ->where(
-                'subject_id',
-                $subject->id
-            )
-            ->where(
-                'class_id',
-                $classRoom->id
-            )
-            ->where(
-                'class_slot_id',
-                $lockedSlot->id
-            );
-
-        if ($excludePivotId) {
-            $countQuery->where(
-                'id',
-                '!=',
-                $excludePivotId
-            );
-        }
-
-        $currentStudents =
-            (int) $countQuery
-                ->distinct()
-                ->count('user_id');
-
-        if (
-            $currentStudents
-            >= $maxStudents
-        ) {
-            throw ValidationException::withMessages([
-                'class_slot_id' =>
-                    'Le groupe '
-                    . $lockedSlot->code
-                    . ' est complet ('
-                    . $maxStudents
-                    . '/'
-                    . $maxStudents
-                    . '). Choisissez un autre groupe.',
-            ]);
-        }
+        /*
+         * STUDENT_GROUP_UNLIMITED_CAPACITY_V1
+         *
+         * Les groupes étudiants n'ont plus de limite de places.
+         * La méthode est conservée temporairement pour compatibilité
+         * avec les appels existants, mais elle ne bloque plus aucune
+         * nouvelle assignation ni modification d'assignation.
+         */
+        return;
     }
 
     private function syncStudentClass(int $userId): void

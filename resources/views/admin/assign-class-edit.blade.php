@@ -20,8 +20,8 @@
         </h1>
 
         <div class="subtitle">
-            Modifiez l’étudiant, la matière, le niveau,
-            la classe, le groupe ou le créneau horaire.
+            Modifiez l’étudiant, la matière, le niveau, la classe,
+            puis le jour et l’heure. Le groupe est recalculé automatiquement.
         </div>
     </div>
 
@@ -201,28 +201,24 @@
                             </select>
                         </div>
 
-                        <div class="adm-form-group">
+                        <div
+                            class="adm-form-group"
+                            style="display:none;"
+                            aria-hidden="true"
+                        >
                             <label
                                 class="adm-form-label"
                                 for="edit_page_group_id"
                             >
-                                Groupe
-                                <span class="ssa-required">*</span>
+                                Groupe automatique
                             </label>
 
                             <select
                                 name="class_slot_id"
                                 id="edit_page_group_id"
                                 class="adm-form-select"
-                                required
                             >
                             </select>
-
-                            <small class="ssa-help">
-                                Un groupe complet reste disponible
-                                uniquement s’il s’agit déjà du groupe
-                                de cet étudiant.
-                            </small>
                         </div>
 
                         <div class="adm-form-group ssa-edit-full">
@@ -230,10 +226,8 @@
                                 class="adm-form-label"
                                 for="edit_page_schedule_id"
                             >
-                                Créneau horaire
-                                <span class="ssa-optional">
-                                    (optionnel)
-                                </span>
+                                Jour et heure
+                                <span class="ssa-required">*</span>
                             </label>
 
                             <select
@@ -256,6 +250,7 @@
                                     <select
                                         id="edit_page_schedule_day"
                                         class="adm-form-select"
+                                        required
                                     >
                                         <option value="">Choisir un jour</option>
                                         <option value="1">Lundi</option>
@@ -282,12 +277,27 @@
                                         step="60"
                                         placeholder="HH:MM"
                                         autocomplete="off"
+                                        required
                                     >
 
                                     <small class="assignment-help">
                                         Choisissez librement l’heure entre 08:00 et 22:00, à la minute près.
-                                        Exemples : 08:15, 08:20, 13:45, 15:20…
+                                        Le groupe est recalculé automatiquement. Exemple : 08:00 → D1, 08:30 → D2, 08:45 → D3, 09:00 → D4, puis D5, D6… sans limite fixe.
                                     </small>
+                                </div>
+                            </div>
+
+                            <div
+                                id="editPageAutoGroupPreview"
+                                class="ssa-edit-summary"
+                                hidden
+                                style="margin-top:10px;"
+                            >
+                                <i class="bi bi-grid-1x2-fill"></i>
+
+                                <div>
+                                    <strong>Groupe automatique</strong>
+                                    <span id="editPageAutoGroupCode">—</span>
                                 </div>
                             </div>
 
@@ -318,9 +328,9 @@
                             </strong>
 
                             <span>
-                                La capacité du groupe est vérifiée
-                                une deuxième fois par Laravel au moment
-                                de l’enregistrement.
+                                Le groupe est recalculé côté Laravel depuis
+                                le jour et l’heure, sans limite de places ni
+                                blocage lié à une capacité maximale.
                             </span>
                         </div>
                     </div>
@@ -723,24 +733,6 @@ document.addEventListener(
 
             (c.slots || [])
                 .forEach(item => {
-                    const current =
-                        Number(
-                            item.current_count
-                            || 0
-                        );
-
-                    const max =
-                        Number(
-                            item.max_students
-                            || 12
-                        );
-
-                    const full =
-                        Boolean(
-                            item.is_full
-                            || current >= max
-                        );
-
                     const currentGroup =
                         String(item.id)
                         === String(
@@ -754,19 +746,9 @@ document.addEventListener(
                                 item.code
                                 || item.name
                                 || 'Groupe'
-                            )
-                            + ' — '
-                            + current
-                            + '/'
-                            + max
-                            + (
-                                full
-                                    ? ' — COMPLET'
-                                    : ' places'
                             ),
                             currentGroup,
-                            full
-                                && !currentGroup
+                            false
                         )
                     );
                 });
@@ -941,7 +923,7 @@ document.addEventListener(
 );
 </script>
 
-<!-- ASSIGNATION_HEURE_LIBRE_MINUTE_V1_EDIT -->
+<!-- AUTO_GROUP_FROM_TIME_V1_EDIT -->
 <style>
 .ssa-free-time-grid {
     display:grid;
@@ -980,6 +962,11 @@ document.addEventListener(
                 'edit_page_subject_id'
             );
 
+        const level =
+            document.getElementById(
+                'edit_page_level_id'
+            );
+
         const classRoom =
             document.getElementById(
                 'edit_page_class_id'
@@ -993,6 +980,32 @@ document.addEventListener(
         const preview =
             document.getElementById(
                 'editPageGeneratedSlotCode'
+            );
+
+        const groupPreview =
+            document.getElementById(
+                'editPageAutoGroupPreview'
+            );
+
+        const groupCodeTarget =
+            document.getElementById(
+                'editPageAutoGroupCode'
+            );
+
+        const form =
+            document.getElementById(
+                'dedicatedAssignmentEditForm'
+            );
+
+        const knownTimeMap =
+            @json($studentTimeSlotMap ?? []);
+
+        const initialScheduleKey =
+            @json(
+                (string) old(
+                    'schedule_id',
+                    $assignment->student_slot_key ?? ''
+                )
             );
 
         if (
@@ -1012,7 +1025,112 @@ document.addEventListener(
                         ''
                     );
 
-        const parseHour =
+        const selectedText =
+            select =>
+                select?.value
+                    ? (
+                        select.options[
+                            select.selectedIndex
+                        ]?.textContent
+                        || ''
+                    ).trim()
+                    : '';
+
+        const twoLetterCode =
+            (
+                value,
+                fallback
+            ) => {
+                const normalized =
+                    clean(value)
+                        .toUpperCase()
+                        .replace(
+                            /[^A-Z0-9]/g,
+                            ''
+                        );
+
+                let code =
+                    normalized.slice(
+                        0,
+                        2
+                    );
+
+                if (!code) {
+                    return fallback;
+                }
+
+                if (code.length === 1) {
+                    code += 'X';
+                }
+
+                return code;
+            };
+
+        const classPrefix =
+            () => {
+                const normalized =
+                    clean(
+                        selectedText(
+                            classRoom
+                        )
+                    )
+                        .toLowerCase();
+
+                if (
+                    normalized.includes(
+                        'debut'
+                    )
+                ) {
+                    return 'D';
+                }
+
+                if (
+                    normalized.includes(
+                        'inter'
+                    )
+                ) {
+                    return 'I';
+                }
+
+                if (
+                    normalized.includes(
+                        'avance'
+                    )
+                    || normalized.includes(
+                        'adulte'
+                    )
+                ) {
+                    return 'A';
+                }
+
+                const fallback =
+                    normalized
+                        .replace(
+                            /[^a-z0-9]/g,
+                            ''
+                        )
+                        .charAt(0)
+                        .toUpperCase();
+
+                return fallback || 'G';
+            };
+
+        const dayCode =
+            value =>
+                ({
+                    1:'L',
+                    2:'MA',
+                    3:'M',
+                    4:'J',
+                    5:'V',
+                    6:'S',
+                    7:'D',
+                })[
+                    Number(value)
+                ]
+                || '';
+
+        const validTime =
             value => {
                 const match =
                     String(value || '')
@@ -1021,7 +1139,7 @@ document.addEventListener(
                         );
 
                 if (!match) {
-                    return null;
+                    return false;
                 }
 
                 const h =
@@ -1034,216 +1152,189 @@ document.addEventListener(
                     h * 60
                     + m;
 
-                if (
-                    h < 0
-                    || h > 23
-                    || m < 0
-                    || m > 59
-                    || total < 8 * 60
-                    || total > 22 * 60
-                ) {
-                    return null;
-                }
-
-                const diff =
-                    total
-                    - 8 * 60;
-
-                const aligned =
-                    diff % 30 === 0;
-
-                const part =
-                    aligned
-                        ? String(
-                            (diff / 30)
-                            + 1
-                        )
-                        : (
-                            String(h)
-                                .padStart(
-                                    2,
-                                    '0'
-                                )
-                            + String(m)
-                                .padStart(
-                                    2,
-                                    '0'
-                                )
-                        );
-
-                return {
-                    keyPart: part,
-                    codePart: part,
-                };
-            };
-
-        const codeForCurrent =
-            parsed => {
-                const dayCode =
-                    ({
-                        1:'L',
-                        2:'MA',
-                        3:'M',
-                        4:'J',
-                        5:'V',
-                        6:'S',
-                        7:'D',
-                    })[
-                        Number(
-                            day.value
-                        )
-                    ]
-                    || '';
-
-                const subjectText =
-                    subject?.value
-                        ? subject.options[
-                            subject.selectedIndex
-                        ]?.textContent
-                        : '';
-
-                let subjectCode =
-                    clean(subjectText)
-                        .toUpperCase()
-                        .replace(
-                            /[^A-Z0-9]/g,
-                            ''
-                        )
-                        .slice(
-                            0,
-                            2
-                        );
-
-                if (
-                    subjectCode.length
-                    === 1
-                ) {
-                    subjectCode += 'X';
-                }
-
-                const classText =
-                    classRoom?.value
-                        ? classRoom.options[
-                            classRoom.selectedIndex
-                        ]?.textContent
-                        : '';
-
-                const normalizedClass =
-                    clean(classText)
-                        .toLowerCase();
-
-                let classCode = '';
-
-                if (
-                    normalizedClass.includes(
-                        'debut'
-                    )
-                ) {
-                    classCode = 'D';
-                } else if (
-                    normalizedClass.includes(
-                        'inter'
-                    )
-                ) {
-                    classCode = 'I';
-                } else if (
-                    normalizedClass.includes(
-                        'avance'
-                    )
-                ) {
-                    classCode = 'A';
-                } else {
-                    classCode =
-                        normalizedClass
-                            .replace(
-                                /[^a-z0-9]/g,
-                                ''
-                            )
-                            .charAt(0)
-                            .toUpperCase();
-                }
-
-                const groupText =
-                    group?.value
-                        ? (
-                            group.options[
-                                group.selectedIndex
-                            ]?.textContent
-                            || ''
-                        )
-                        : '';
-
-                const groupMatch =
-                    String(groupText)
-                        .match(
-                            /(\d+)/
-                        );
-
-                const groupNumber =
-                    groupMatch
-                        ? groupMatch[1]
-                        : '';
-
-                if (
-                    !dayCode
-                    || !parsed
-                    || !subjectCode
-                    || !classCode
-                    || !groupNumber
-                ) {
-                    return '';
-                }
-
                 return (
-                    dayCode
-                    + parsed.codePart
-                    + subjectCode
-                    + classCode
-                    + groupNumber
+                    h >= 0
+                    && h <= 23
+                    && m >= 0
+                    && m <= 59
+                    && total >= 8 * 60
+                    && total <= 22 * 60
                 );
             };
 
-        const ensureOption =
+        const previewSlotNumber =
+            (
+                selectedDay,
+                selectedTime
+            ) => {
+                const dayMap =
+                    knownTimeMap[
+                        String(
+                            selectedDay
+                        )
+                    ]
+                    || knownTimeMap[
+                        Number(
+                            selectedDay
+                        )
+                    ]
+                    || {};
+
+                const times =
+                    Object.keys(
+                        dayMap
+                    );
+
+                times.push(
+                    '08:00'
+                );
+
+                times.push(
+                    selectedTime
+                );
+
+                const unique =
+                    Array.from(
+                        new Set(
+                            times.filter(
+                                validTime
+                            )
+                        )
+                    )
+                        .sort();
+
+                const index =
+                    unique.indexOf(
+                        selectedTime
+                    );
+
+                return index >= 0
+                    ? index + 1
+                    : null;
+            };
+
+        const ensureHiddenOption =
             (
                 key,
+                label,
                 code
             ) => {
                 let option =
-                    Array
-                        .from(
-                            hiddenTime.options
-                        )
+                    Array.from(
+                        hiddenTime.options
+                    )
                         .find(
                             item =>
                                 String(
                                     item.value
                                 )
-                                === String(key)
+                                === String(
+                                    key
+                                )
                         );
 
                 if (!option) {
                     option =
-                        document
-                            .createElement(
-                                'option'
-                            );
+                        document.createElement(
+                            'option'
+                        );
 
                     option.value =
-                        String(key);
-
-                    hiddenTime
-                        .appendChild(
-                            option
+                        String(
+                            key
                         );
+
+                    hiddenTime.appendChild(
+                        option
+                    );
                 }
+
+                option.textContent =
+                    label;
 
                 option.dataset.code =
                     code;
 
-                option.textContent =
-                    code;
-
                 return option;
+            };
+
+        const setAutomaticGroup =
+            groupCode => {
+                if (!group) {
+                    return;
+                }
+
+                let option =
+                    Array.from(
+                        group.options
+                    )
+                        .find(
+                            item =>
+                                String(
+                                    item.dataset?.code
+                                    || item.textContent
+                                    || ''
+                                )
+                                    .trim()
+                                    .toUpperCase()
+                                === String(
+                                    groupCode
+                                )
+                                    .trim()
+                                    .toUpperCase()
+                        );
+
+                if (!option) {
+                    option =
+                        document.createElement(
+                            'option'
+                        );
+
+                    option.value =
+                        'AUTO:'
+                        + groupCode;
+
+                    option.textContent =
+                        groupCode;
+
+                    option.dataset.code =
+                        groupCode;
+
+                    option.dataset.auto =
+                        '1';
+
+                    group.appendChild(
+                        option
+                    );
+                }
+
+                group.value =
+                    option.value;
+
+                if (
+                    groupPreview
+                    && groupCodeTarget
+                ) {
+                    groupPreview.hidden =
+                        false;
+
+                    groupCodeTarget.textContent =
+                        groupCode;
+                }
+            };
+
+        const clearAutomaticGroup =
+            () => {
+                if (
+                    groupPreview
+                    && groupCodeTarget
+                ) {
+                    groupPreview.hidden =
+                        true;
+
+                    groupCodeTarget.textContent =
+                        '—';
+                }
             };
 
         const refreshPreview =
@@ -1273,26 +1364,34 @@ document.addEventListener(
                         day.value
                     );
 
+                const selectedHour =
+                    String(
+                        hour.value
+                        || ''
+                    );
+
                 if (
                     !selectedDay
-                    || !hour.value
+                    || !selectedHour
                 ) {
                     hiddenTime.value =
                         '';
 
-                    hour.setCustomValidity('');
+                    hour.setCustomValidity(
+                        ''
+                    );
 
+                    clearAutomaticGroup();
                     refreshPreview('');
 
                     return;
                 }
 
-                const parsed =
-                    parseHour(
-                        hour.value
-                    );
-
-                if (!parsed) {
+                if (
+                    !validTime(
+                        selectedHour
+                    )
+                ) {
                     hiddenTime.value =
                         '';
 
@@ -1300,30 +1399,93 @@ document.addEventListener(
                         'L’heure doit être comprise entre 08:00 et 22:00.'
                     );
 
+                    clearAutomaticGroup();
                     refreshPreview('');
 
                     return;
                 }
 
-                hour.setCustomValidity('');
+                hour.setCustomValidity(
+                    ''
+                );
+
+                const number =
+                    previewSlotNumber(
+                        selectedDay,
+                        selectedHour
+                    );
+
+                const groupCode =
+                    number
+                        ? (
+                            classPrefix()
+                            + number
+                        )
+                        : '';
+
+                const code =
+                    (
+                        number
+                        && subject?.value
+                        && level?.value
+                        && classRoom?.value
+                    )
+                        ? (
+                            dayCode(
+                                selectedDay
+                            )
+                            + '1'
+                            + twoLetterCode(
+                                selectedText(
+                                    subject
+                                ),
+                                'MT'
+                            )
+                            + twoLetterCode(
+                                selectedText(
+                                    level
+                                ),
+                                'NV'
+                            )
+                            + groupCode
+                        )
+                        : '';
 
                 const key =
                     selectedDay
-                    + ':'
-                    + parsed.keyPart;
+                    + '|'
+                    + selectedHour;
 
-                const code =
-                    codeForCurrent(
-                        parsed
-                    );
+                const dayLabel =
+                    day.options[
+                        day.selectedIndex
+                    ]?.textContent
+                    ?.trim()
+                    || '';
 
-                ensureOption(
+                ensureHiddenOption(
                     key,
+                    (
+                        code
+                        ? code + ' — '
+                        : ''
+                    )
+                    + dayLabel
+                    + ' · '
+                    + selectedHour,
                     code
                 );
 
                 hiddenTime.value =
                     key;
+
+                if (groupCode) {
+                    setAutomaticGroup(
+                        groupCode
+                    );
+                } else {
+                    clearAutomaticGroup();
+                }
 
                 refreshPreview(
                     code
@@ -1335,12 +1497,28 @@ document.addEventListener(
                 const value =
                     String(
                         hiddenTime.value
+                        || initialScheduleKey
                         || ''
                     );
 
-                const match =
+                let match =
                     value.match(
-                        /^([1-7]):([0-9]{1,4})$/
+                        /^([1-7])\|(\d{2}:\d{2})$/
+                    );
+
+                if (match) {
+                    day.value =
+                        match[1];
+
+                    hour.value =
+                        match[2];
+
+                    return;
+                }
+
+                match =
+                    value.match(
+                        /^([1-7]):(\d{1,2})$/
                     );
 
                 if (!match) {
@@ -1350,33 +1528,22 @@ document.addEventListener(
                 day.value =
                     match[1];
 
-                const raw =
-                    match[2];
+                const slot =
+                    Number(
+                        match[2]
+                    );
+
+                const total =
+                    8 * 60
+                    + (
+                        slot - 1
+                    )
+                    * 30;
 
                 if (
-                    raw.length === 4
+                    total >= 8 * 60
+                    && total <= 22 * 60
                 ) {
-                    hour.value =
-                        raw.slice(
-                            0,
-                            2
-                        )
-                        + ':'
-                        + raw.slice(
-                            2,
-                            4
-                        );
-                } else {
-                    const slot =
-                        Number(raw);
-
-                    const total =
-                        8 * 60
-                        + (
-                            slot - 1
-                        )
-                        * 30;
-
                     hour.value =
                         String(
                             Math.floor(
@@ -1394,14 +1561,6 @@ document.addEventListener(
                             '0'
                         );
                 }
-
-                refreshPreview(
-                    codeForCurrent(
-                        parseHour(
-                            hour.value
-                        )
-                    )
-                );
             };
 
         day.addEventListener(
@@ -1421,23 +1580,43 @@ document.addEventListener(
 
         [
             subject,
+            level,
             classRoom,
-            group,
         ]
             .filter(Boolean)
             .forEach(
                 element => {
-                    element
-                        .addEventListener(
-                            'change',
-                            () =>
-                                setTimeout(
-                                    syncHidden,
-                                    0
-                                )
-                        );
+                    element.addEventListener(
+                        'change',
+                        () =>
+                            setTimeout(
+                                syncHidden,
+                                0
+                            )
+                    );
                 }
             );
+
+        form?.addEventListener(
+            'submit',
+            event => {
+                syncHidden();
+
+                if (
+                    !day.value
+                    || !hour.value
+                    || !hiddenTime.value
+                ) {
+                    event.preventDefault();
+
+                    if (!day.value) {
+                        day.focus();
+                    } else {
+                        hour.focus();
+                    }
+                }
+            }
+        );
 
         setTimeout(
             () => {
@@ -1455,6 +1634,7 @@ document.addEventListener(
     }
 );
 </script>
+
 <!-- ASSIGNATION_RESULTAT_CODE_SEUL_V6_2_EDIT_STYLE -->
 <style>
 #editPageGeneratedSlotCode.ssa-code-only-preview {

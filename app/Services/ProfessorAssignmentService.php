@@ -9,6 +9,7 @@ use App\Models\ProfAssignment;
 use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,15 +41,27 @@ class ProfessorAssignmentService
 
         $targets = $this->resolveTargets($rows);
 
+        $rowsBySlotId = collect($rows)
+            ->keyBy(
+                fn (array $row) =>
+                    (int) $row['class_slot_id']
+            );
+
         return DB::transaction(function () use (
             $professor,
-            $targets
+            $targets,
+            $rowsBySlotId
         ) {
             $created = 0;
             $updated = 0;
 
             foreach ($targets as $slot) {
-                $schedule = $this->scheduleForSlot($slot);
+                $row = (array) (
+                    $rowsBySlotId->get(
+                        (int) $slot->id
+                    )
+                    ?? []
+                );
 
                 $assignment = ProfAssignment::query()
                     ->where('prof_id', $professor->id)
@@ -58,7 +71,8 @@ class ProfessorAssignmentService
                 $data = $this->assignmentData(
                     $professor,
                     $slot,
-                    $schedule
+                    null,
+                    $row
                 );
 
                 if ($assignment) {
@@ -117,6 +131,12 @@ class ProfessorAssignmentService
 
         $targets = $this->resolveTargets($rows);
 
+        $rowsBySlotId = collect($rows)
+            ->keyBy(
+                fn (array $row) =>
+                    (int) $row['class_slot_id']
+            );
+
         $targetSlotIds = $targets
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
@@ -125,7 +145,8 @@ class ProfessorAssignmentService
         return DB::transaction(function () use (
             $professor,
             $targets,
-            $targetSlotIds
+            $targetSlotIds,
+            $rowsBySlotId
         ) {
             $existing = ProfAssignment::query()
                 ->with([
@@ -164,7 +185,12 @@ class ProfessorAssignmentService
             $updated = 0;
 
             foreach ($targets as $slot) {
-                $schedule = $this->scheduleForSlot($slot);
+                $row = (array) (
+                    $rowsBySlotId->get(
+                        (int) $slot->id
+                    )
+                    ?? []
+                );
 
                 $assignment = ProfAssignment::query()
                     ->where('prof_id', $professor->id)
@@ -174,7 +200,8 @@ class ProfessorAssignmentService
                 $data = $this->assignmentData(
                     $professor,
                     $slot,
-                    $schedule
+                    null,
+                    $row
                 );
 
                 if ($assignment) {
@@ -418,7 +445,7 @@ class ProfessorAssignmentService
             if (!$slot) {
                 throw ValidationException::withMessages([
                     "assignments.$index.class_slot_id" =>
-                        'Le créneau sélectionné ne correspond pas au parcours Matière → Niveau → Classe.',
+                        'Le groupe sélectionné ne correspond pas au parcours Matière → Niveau → Classe.',
                 ]);
             }
 
@@ -440,8 +467,62 @@ class ProfessorAssignmentService
     private function assignmentData(
         User $professor,
         ClassSlot $slot,
-        ?Schedule $schedule
+        ?Schedule $schedule,
+        ?array $row = null
     ): array {
+        /*
+         * Depuis /admin/prof-assignments, le groupe est déjà calculé
+         * automatiquement à partir du jour et de l'heure par le contrôleur,
+         * exactement comme pour les étudiants.
+         *
+         * Quand $row est fourni, jour + heure sont obligatoires et ne
+         * dépendent ni de schedules ni de ProfessorAvailability.
+         *
+         * Depuis /admin/schedule, $row reste null et l'ancien
+         * comportement basé sur la séance Schedule est conservé.
+         */
+        if ($row !== null) {
+            $day = !empty(
+                $row['assignment_day_of_week'] ?? null
+            )
+                ? (int) $row['assignment_day_of_week']
+                : null;
+
+            $start = trim(
+                (string) (
+                    $row['assignment_start_time']
+                    ?? ''
+                )
+            );
+
+            $start = $start !== ''
+                ? $start
+                : null;
+
+            $end = $start
+                ? Carbon::createFromFormat(
+                    'H:i',
+                    $start
+                )
+                    ->addMinutes(90)
+                    ->format('H:i:s')
+                : null;
+
+            return [
+                'prof_id' => $professor->id,
+                'subject_id' => $slot->subject_id,
+                'level_id' => $slot->level_id,
+                'class_id' => $slot->class_id,
+                'class_slot_id' => $slot->id,
+                'preferred_availability_id' => null,
+                'day_of_week' => $day,
+                'start_time' => $start
+                    ? $start . ':00'
+                    : null,
+                'end_time' => $end,
+            ];
+        }
+
         return [
             'prof_id' => $professor->id,
             'subject_id' => $slot->subject_id,
