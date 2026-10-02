@@ -163,7 +163,7 @@
                     route(
                         'student.student.chat',
                         array_filter([
-                            'subject_id' => $subject->id,
+                            'subject' => $subject->id,
                             'assignment_code' =>
                                 $subject->assignment_code
                                 ?? null,
