@@ -23,25 +23,30 @@ class NotificationController extends Controller
     public function registerToken(Request $request)
     {
         $validated = $request->validate([
-            'token'    => 'required|string|max:191',
+            'token'    => 'required|string|max:4096',
             'platform' => 'nullable|string|in:android,ios,web',
         ]);
 
         $user = $request->user();
 
-        // Éviter les doublons : désactiver l'ancien token s'il existe
-        DeviceToken::where('token', $validated['token'])
-            ->where('user_id', '!=', $user->id)
-            ->update(['is_active' => false]);
+        $token = trim((string) $validated['token']);
+        $tokenHash = DeviceToken::hashToken($token);
 
-        // Créer ou mettre à jour le token pour cet utilisateur
-        $deviceToken = DeviceToken::updateOrCreate(
+        /*
+         * Un token FCM représente un appareil précis. S'il était
+         * précédemment associé à un autre compte (ordinateur partagé,
+         * déconnexion/reconnexion), on réaffecte la même ligne au compte
+         * courant au lieu de conserver deux lignes avec le même hash.
+         * Cela respecte l'index unique device_tokens_token_hash_unique.
+         */
+        $deviceToken = DeviceToken::query()->updateOrCreate(
             [
-                'user_id' => $user->id,
-                'token'   => $validated['token'],
+                'token_hash' => $tokenHash,
             ],
             [
-                'platform'  => $validated['platform'] ?? 'android',
+                'user_id' => $user->id,
+                'token' => $token,
+                'platform' => $validated['platform'] ?? 'android',
                 'is_active' => true,
             ]
         );
@@ -64,13 +69,17 @@ class NotificationController extends Controller
     public function unregisterToken(Request $request)
     {
         $validated = $request->validate([
-            'token' => 'required|string|max:500',
+            'token' => 'required|string|max:4096',
         ]);
 
         $user = $request->user();
 
-        $deleted = DeviceToken::where('user_id', $user->id)
-            ->where('token', $validated['token'])
+        $deleted = DeviceToken::query()
+            ->where('user_id', $user->id)
+            ->where(
+                'token_hash',
+                DeviceToken::hashToken((string) $validated['token'])
+            )
             ->delete();
 
         return response()->json([

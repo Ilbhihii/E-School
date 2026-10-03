@@ -19,6 +19,13 @@ class Kernel extends ConsoleKernel
          * Aucun nettoyage automatique des lives.
          * Un live terminé reste visible avec le statut « Terminé ».
          */
+
+
+        /* Rappels de lives : environ 30 minutes avant le début. */
+        $schedule
+            ->command('notifications:live-reminders')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
     }
 
     /**

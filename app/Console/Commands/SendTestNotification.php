@@ -54,7 +54,7 @@ class SendTestNotification extends Command
                 null,
                 'bi bi-bell-fill',
                 ['test' => '1'],
-                false
+                true
             );
 
             $this->info("{$count} notification(s) envoyée(s) au rôle {$role}.");
@@ -82,7 +82,7 @@ class SendTestNotification extends Command
                 $user->dashboardRoute(),
                 'bi bi-bell-fill',
                 ['test' => '1'],
-                false
+                true
             );
 
             $this->line("✓ {$role}: {$user->name}");

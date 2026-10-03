@@ -2,10 +2,10 @@
    Smart School Academy — Service Worker v1.0.0
    ============================================================ */
 
-const CACHE_NAME = 'ssa-cache-v2';
-const STATIC_CACHE = 'ssa-static-v2';
-const DYNAMIC_CACHE = 'ssa-dynamic-v2';
-const API_CACHE = 'ssa-api-v2';
+const CACHE_NAME = 'ssa-cache-v3';
+const STATIC_CACHE = 'ssa-static-v3';
+const DYNAMIC_CACHE = 'ssa-dynamic-v3';
+const API_CACHE = 'ssa-api-v3';
 
 const PRECACHE_URLS = [
   '/',
@@ -107,7 +107,7 @@ function networkFirst(request) {
 }
 
 // Network Only — pour les appels API (évite les données périmées)
-function networkOnly() {
+function networkOnly(request) {
   return fetch(request).catch(() => {
     return new Response(
       JSON.stringify({ offline: true, message: 'Connexion requise pour cette fonctionnalité.' }),
@@ -155,13 +155,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Appels API (avec /api/)
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request));
+  // Les espaces authentifiés et les API ne doivent jamais être mis en cache :
+  // cela évite qu'un autre compte sur le même navigateur voie des données privées.
+  const protectedPrefixes = [
+    '/api/',
+    '/admin/',
+    '/prof/',
+    '/student/',
+    '/parent/',
+    '/notifications',
+  ];
+
+  if (protectedPrefixes.some(prefix => url.pathname.startsWith(prefix))) {
+    event.respondWith(networkOnly(request));
     return;
   }
 
-  // Pages HTML — Network First
+  // Pages HTML publiques — Network First
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request));
     return;
@@ -178,34 +188,88 @@ self.addEventListener('message', event => {
   }
 });
 
-/* ─── NOTIFICATIONS PUSH (future use) ─── */
+/* ─── NOTIFICATIONS PUSH FCM / WEB PUSH ─── */
 self.addEventListener('push', event => {
   if (!event.data) return;
+
+  let payload = {};
+
   try {
-    const data = event.data.json();
-    const options = {
-      body: data.body || 'Nouvelle mise à jour disponible.',
-      icon: '/images/icons/icon.svg',
-      badge: '/images/icons/icon.svg',
-      vibrate: [200, 100, 200],
-      data: { url: data.url || '/' }
-    };
-    event.waitUntil(
-      self.registration.showNotification(
-        data.title || 'Smart School Academy',
-        options
-      )
-    );
-  } catch (e) {
-    // Ignorer les erreurs de parsing
+    payload = event.data.json() || {};
+  } catch (error) {
+    payload = { body: event.data.text() };
   }
+
+  const notification = payload.notification || {};
+  const data = payload.data || {};
+  const fcmOptions = payload.fcmOptions || payload.fcm_options || {};
+
+  const title =
+    notification.title
+    || data.title
+    || payload.title
+    || 'Smart School Academy';
+
+  const body =
+    notification.body
+    || data.body
+    || payload.body
+    || 'Nouvelle notification';
+
+  const targetUrl =
+    data.url
+    || fcmOptions.link
+    || '/notifications';
+
+  const options = {
+    body,
+    icon: notification.icon || '/images/icons/icon-192x192.png',
+    badge: '/images/icons/icon-192x192.png',
+    tag: data.category ? 'ssa-' + data.category : undefined,
+    renotify: false,
+    vibrate: [180, 80, 180],
+    data: {
+      url: targetUrl,
+      category: data.category || 'general',
+    },
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  if (event.notification.data && event.notification.data.url) {
-    event.waitUntil(
-      clients.openWindow(event.notification.data.url)
-    );
-  }
+
+  const rawUrl = event.notification?.data?.url || '/notifications';
+  const destination = new URL(rawUrl, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    }).then(windowClients => {
+      for (const client of windowClients) {
+        try {
+          const clientUrl = new URL(client.url);
+          const targetUrl = new URL(destination);
+
+          if (clientUrl.origin === targetUrl.origin) {
+            if ('navigate' in client) {
+              client.navigate(destination);
+            }
+
+            if ('focus' in client) {
+              return client.focus();
+            }
+          }
+        } catch (error) {
+          // Continue vers openWindow.
+        }
+      }
+
+      return clients.openWindow(destination);
+    })
+  );
 });

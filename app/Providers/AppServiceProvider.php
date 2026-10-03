@@ -204,6 +204,87 @@ class AppServiceProvider extends ServiceProvider
             }
         );
 
+
+        /*
+         * PUSH_NOTIFICATIONS_ALL_ROLES_V11
+         *
+         * Les événements pédagogiques alimentent le centre de notifications
+         * ET Firebase. Une panne Firebase ne doit jamais bloquer l'action
+         * principale de l'utilisateur.
+         */
+        $safeSchoolNotification = function (callable $callback): void {
+            try {
+                $callback(
+                    app(
+                        \App\Services\SchoolNotificationService::class
+                    )
+                );
+            } catch (\Throwable $exception) {
+                \Illuminate\Support\Facades\Log::warning(
+                    '[SchoolNotification] Notification ignorée.',
+                    [
+                        'exception' => $exception->getMessage(),
+                    ]
+                );
+            }
+        };
+
+        \App\Models\Live::created(
+            function (\App\Models\Live $live) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->liveCreated($live)
+                );
+            }
+        );
+
+        \App\Models\Live::updated(
+            function (\App\Models\Live $live) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->liveUpdated($live)
+                );
+            }
+        );
+
+        \App\Models\Assignment::created(
+            function (\App\Models\Assignment $assignment) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->assignmentCreated($assignment)
+                );
+            }
+        );
+
+        \App\Models\Assignment::updated(
+            function (\App\Models\Assignment $assignment) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->assignmentUpdated($assignment)
+                );
+            }
+        );
+
+        \App\Models\Course::created(
+            function (\App\Models\Course $course) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->courseCreated($course)
+                );
+            }
+        );
+
+        \App\Models\Course::updated(
+            function (\App\Models\Course $course) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->courseUpdated($course)
+                );
+            }
+        );
+
+        \App\Models\Message::created(
+            function (\App\Models\Message $message) use ($safeSchoolNotification) {
+                $safeSchoolNotification(
+                    fn ($service) => $service->messageCreated($message)
+                );
+            }
+        );
+
         view()->composer('layouts.front', function ($view) {
             $religieux = \App\Models\Subject::where('type', 'religieux')->get();
             $scolaire = \App\Models\Subject::where('type', 'scolaire')->get();

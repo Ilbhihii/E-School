@@ -9,6 +9,7 @@ class DeviceToken extends Model
     protected $fillable = [
         'user_id',
         'token',
+        'token_hash',
         'platform',
         'is_active',
     ];
@@ -16,6 +17,23 @@ class DeviceToken extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+
+    protected static function booted(): void
+    {
+        static::saving(function (DeviceToken $deviceToken) {
+            if (trim((string) $deviceToken->token) !== '') {
+                $deviceToken->token_hash = static::hashToken(
+                    (string) $deviceToken->token
+                );
+            }
+        });
+    }
+
+    public static function hashToken(string $token): string
+    {
+        return hash('sha256', trim($token));
+    }
 
     public function user()
     {

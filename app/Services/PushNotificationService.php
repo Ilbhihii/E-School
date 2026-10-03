@@ -6,7 +6,6 @@ use App\Models\DeviceToken;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
-use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
 
@@ -16,27 +15,23 @@ class PushNotificationService
 
     public function __construct()
     {
-        // Tentative d'initialisation Firebase ; en cas d'échec
-        // le service fonctionne en mode silencieux (utile en dev sans credentials)
         try {
             $this->messaging = app(Messaging::class);
         } catch (\Throwable $e) {
-            Log::warning('Firebase non configuré : ' . $e->getMessage());
+            Log::warning(
+                'Firebase non configuré : ' . $e->getMessage()
+            );
+
             $this->messaging = null;
         }
     }
 
-    /**
-     * Vérifie si Firebase est configuré
-     */
     public function isConfigured(): bool
     {
-        return $this->messaging !== null;
+        return (bool) config('push.enabled', true)
+            && $this->messaging !== null;
     }
 
-    /**
-     * Envoyer une notification à un token spécifique
-     */
     public function sendToToken(
         string $token,
         string $title,
@@ -44,52 +39,73 @@ class PushNotificationService
         array $data = []
     ): bool {
         if (!$this->isConfigured()) {
-            Log::info('[PushNotification] Firebase non configuré. Notification ignorée.', [
-                'title' => $title,
-                'body' => $body,
-            ]);
+            Log::info(
+                '[PushNotification] Firebase non configuré. Notification ignorée.',
+                ['title' => $title]
+            );
+
             return false;
         }
 
-        try {
-            $notification = Notification::create($title, $body);
+        $data = $this->stringifyData($data);
+        $data['title'] = $title;
+        $data['body'] = $body;
 
+        try {
             $message = CloudMessage::new()
-                ->withNotification($notification)
+                ->withNotification(
+                    Notification::create(
+                        $title,
+                        $body
+                    )
+                )
                 ->withData($data)
-                ->withChangedTarget('token', $token);
+                ->withChangedTarget(
+                    'token',
+                    $token
+                );
 
             $this->messaging->send($message);
+
             return true;
-        } catch (FirebaseException $e) {
-            $this->handleFirebaseError($token, $e);
-            return false;
         } catch (\Throwable $e) {
-            Log::error('[PushNotification] Erreur inattendue : ' . $e->getMessage(), [
-                'token' => substr($token, 0, 20) . '...',
-            ]);
+            $this->handleFirebaseError(
+                $token,
+                $e
+            );
+
             return false;
         }
     }
 
-    /**
-     * Envoyer une notification à un utilisateur (tous ses tokens actifs)
-     */
     public function sendToUser(
         User $user,
         string $title,
         string $body,
         array $data = []
     ): int {
-        $tokens = $user->deviceTokens()->active()->pluck('token')->toArray();
-
-        if (empty($tokens)) {
-            return 0;
-        }
+        $devices = $user
+            ->deviceTokens()
+            ->active()
+            ->get();
 
         $sent = 0;
-        foreach ($tokens as $token) {
-            if ($this->sendToToken($token, $title, $body, $data)) {
+
+        foreach ($devices as $device) {
+            if (
+                $this->sendToToken(
+                    (string) $device->token,
+                    $title,
+                    $body,
+                    array_merge(
+                        $data,
+                        [
+                            'platform' =>
+                                (string) ($device->platform ?? ''),
+                        ]
+                    )
+                )
+            ) {
                 $sent++;
             }
         }
@@ -97,9 +113,6 @@ class PushNotificationService
         return $sent;
     }
 
-    /**
-     * Envoyer une notification à plusieurs utilisateurs
-     */
     public function sendToUsers(
         iterable $users,
         string $title,
@@ -107,33 +120,46 @@ class PushNotificationService
         array $data = []
     ): int {
         $sent = 0;
+
         foreach ($users as $user) {
-            $sent += $this->sendToUser($user, $title, $body, $data);
+            if ($user instanceof User) {
+                $sent += $this->sendToUser(
+                    $user,
+                    $title,
+                    $body,
+                    $data
+                );
+            }
         }
+
         return $sent;
     }
 
-    /**
-     * Envoyer une notification à tous les tokens d'une plateforme spécifique
-     */
     public function sendToPlatform(
         string $platform,
         string $title,
         string $body,
         array $data = []
     ): int {
-        $tokens = DeviceToken::active()
+        $tokens = DeviceToken::query()
+            ->active()
             ->platform($platform)
-            ->pluck('token')
-            ->toArray();
-
-        if (empty($tokens)) {
-            return 0;
-        }
+            ->get();
 
         $sent = 0;
-        foreach ($tokens as $token) {
-            if ($this->sendToToken($token, $title, $body, $data)) {
+
+        foreach ($tokens as $device) {
+            if (
+                $this->sendToToken(
+                    (string) $device->token,
+                    $title,
+                    $body,
+                    array_merge(
+                        $data,
+                        ['platform' => $platform]
+                    )
+                )
+            ) {
                 $sent++;
             }
         }
@@ -141,27 +167,59 @@ class PushNotificationService
         return $sent;
     }
 
-    /**
-     * Gère les erreurs Firebase (token invalide, désinscrit, etc.)
-     */
-    protected function handleFirebaseError(string $token, FirebaseException $e): void
+    protected function stringifyData(array $data): array
     {
-        $message = $e->getMessage();
+        $result = [];
 
-        // Token invalide ou désinscrit → désactiver
-        if (
-            str_contains($message, 'UNREGISTERED') ||
-            str_contains($message, 'INVALID_ARGUMENT') ||
-            str_contains($message, 'NOT_FOUND')
-        ) {
-            DeviceToken::where('token', $token)->update(['is_active' => false]);
-            Log::info('[PushNotification] Token désactivé (invalide/désinscrit)', [
-                'token' => substr($token, 0, 20) . '...',
-            ]);
-        } else {
-            Log::error('[PushNotification] Erreur Firebase : ' . $message, [
-                'token' => substr($token, 0, 20) . '...',
-            ]);
+        foreach ($data as $key => $value) {
+            if (is_scalar($value) || $value === null) {
+                $result[(string) $key] = (string) ($value ?? '');
+            }
         }
+
+        return $result;
+    }
+
+    protected function handleFirebaseError(
+        string $token,
+        \Throwable $exception
+    ): void {
+        $message = $exception->getMessage();
+        $upper = strtoupper($message);
+
+        $invalid =
+            str_contains($upper, 'UNREGISTERED')
+            || str_contains($upper, 'INVALID_ARGUMENT')
+            || str_contains($upper, 'NOT_FOUND')
+            || str_contains($upper, 'REGISTRATION TOKEN IS NOT A VALID')
+            || str_contains($upper, 'REQUESTED ENTITY WAS NOT FOUND');
+
+        if ($invalid) {
+            DeviceToken::query()
+                ->where(
+                    'token_hash',
+                    DeviceToken::hashToken($token)
+                )
+                ->update(['is_active' => false]);
+
+            Log::info(
+                '[PushNotification] Token FCM désactivé.',
+                [
+                    'token_hash' =>
+                        DeviceToken::hashToken($token),
+                ]
+            );
+
+            return;
+        }
+
+        Log::error(
+            '[PushNotification] Erreur Firebase.',
+            [
+                'exception' => $message,
+                'token_hash' =>
+                    DeviceToken::hashToken($token),
+            ]
+        );
     }
 }

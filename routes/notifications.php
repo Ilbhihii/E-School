@@ -25,6 +25,26 @@ Route::middleware('auth')
         Route::patch('/{notification}/read', [NotificationController::class, 'markAsRead'])
             ->name('read');
 
+        Route::get('/push/config', [NotificationController::class, 'pushConfig'])
+            ->middleware('throttle:30,1')
+            ->name('push.config');
+
+        Route::get('/push/status', [NotificationController::class, 'pushStatus'])
+            ->middleware('throttle:30,1')
+            ->name('push.status');
+
+        Route::post('/push/register', [NotificationController::class, 'registerPushToken'])
+            ->middleware('throttle:20,1')
+            ->name('push.register');
+
+        Route::post('/push/unregister', [NotificationController::class, 'unregisterPushToken'])
+            ->middleware('throttle:20,1')
+            ->name('push.unregister');
+
+        Route::post('/push/test', [NotificationController::class, 'testPush'])
+            ->middleware('throttle:5,1')
+            ->name('push.test');
+
         Route::delete('/{notification}', [NotificationController::class, 'destroy'])
             ->name('destroy');
     });

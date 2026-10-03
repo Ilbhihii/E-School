@@ -3,6 +3,7 @@
     $notificationUser = auth()->user();
     $notificationUnreadCount = $notificationUser->unreadNotifications()->count();
     $notificationPreview = $notificationUser->notifications()->latest()->limit(6)->get();
+    $pushRoleEnabled = in_array($notificationUser->role, ['admin', 'prof', 'student'], true);
 @endphp
 
 @once
@@ -57,6 +58,18 @@
     html.light-mode .ssa-notify-item:hover { background:#f8fafc; }
     html.light-mode .ssa-notify-item.is-unread { background:#eff6ff; }
     html.light-mode .ssa-notify-badge { border-color:#fff; }
+    .ssa-push-manager { margin-bottom:8px; padding:10px; border:1px solid rgba(96,165,250,.13); border-radius:11px; background:rgba(59,130,246,.055); }
+    .ssa-push-actions { display:flex; align-items:center; gap:7px; }
+    .ssa-push-button, .ssa-push-test { min-height:34px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid rgba(96,165,250,.2); border-radius:9px; color:#dbeafe; background:rgba(37,99,235,.12); font-size:.62rem; font-weight:800; cursor:pointer; }
+    .ssa-push-button { flex:1; padding:6px 9px; }
+    .ssa-push-test { width:34px; padding:0; }
+    .ssa-push-button:disabled, .ssa-push-test:disabled { cursor:default; opacity:.62; }
+    .ssa-push-status { display:block; margin-top:7px; color:#7f8ea3; font-size:.56rem; line-height:1.35; }
+    .ssa-push-status[data-state=success] { color:#86efac; }
+    .ssa-push-status[data-state=warning] { color:#fcd34d; }
+    .ssa-push-status[data-state=danger] { color:#fda4af; }
+    html.light-mode .ssa-push-manager { border-color:rgba(37,99,235,.12); background:#f8fbff; }
+    html.light-mode .ssa-push-button, html.light-mode .ssa-push-test { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
     @media (max-width: 575.98px) { .ssa-notify-panel { position:fixed; top:72px; right:14px; left:14px; width:auto; } }
 </style>
 @endonce
@@ -127,6 +140,39 @@
         </div>
 
         <div class="ssa-notify-foot">
+            @if($pushRoleEnabled)
+                <div
+                    class="ssa-push-manager"
+                    data-ssa-push-manager
+                    data-config-url="{{ route('notifications.push.config') }}"
+                    data-register-url="{{ route('notifications.push.register') }}"
+                    data-unregister-url="{{ route('notifications.push.unregister') }}"
+                    data-test-url="{{ route('notifications.push.test') }}"
+                >
+                    <div class="ssa-push-actions">
+                        <button type="button" class="ssa-push-button" data-ssa-push-enable>
+                            <i class="bi bi-bell-fill"></i>
+                            <span data-ssa-push-label>Activer sur cet appareil</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="ssa-push-test"
+                            data-ssa-push-test
+                            title="Envoyer une notification de test"
+                            aria-label="Tester les notifications"
+                            hidden
+                        >
+                            <i class="bi bi-send-check-fill"></i>
+                        </button>
+                    </div>
+
+                    <small class="ssa-push-status" data-ssa-push-status>
+                        Vérification des notifications…
+                    </small>
+                </div>
+            @endif
+
             <a href="{{ route('notifications.index') }}" class="ssa-notify-all">
                 Voir toutes les notifications
                 <i class="bi bi-arrow-right"></i>
@@ -255,4 +301,10 @@
 })();
 </script>
 @endonce
+
+@if($pushRoleEnabled)
+    @once
+        <script src="{{ asset('js/ssa-push-notifications-v1.js') }}?v={{ file_exists(public_path('js/ssa-push-notifications-v1.js')) ? filemtime(public_path('js/ssa-push-notifications-v1.js')) : 1 }}" defer></script>
+    @endonce
+@endif
 @endauth

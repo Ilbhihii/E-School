@@ -7,6 +7,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\View\View;
+use App\Models\DeviceToken;
+use App\Services\NotificationCenterService;
+use App\Services\PushNotificationService;
 
 class NotificationController extends Controller
 {
@@ -107,6 +110,153 @@ class NotificationController extends Controller
         $request->user()->readNotifications()->delete();
 
         return back()->with('success', 'Les notifications déjà lues ont été supprimées.');
+    }
+
+    public function pushConfig(Request $request): JsonResponse
+    {
+        $this->authorizePushRole($request);
+
+        $firebase = (array) config('push.web.firebase', []);
+        $vapidKey = trim((string) config('push.web.vapid_key', ''));
+
+        $required = [
+            'api_key',
+            'project_id',
+            'messaging_sender_id',
+            'app_id',
+        ];
+
+        $complete = (bool) config('push.enabled', true)
+            && $vapidKey !== '';
+
+        foreach ($required as $field) {
+            if (trim((string) ($firebase[$field] ?? '')) === '') {
+                $complete = false;
+                break;
+            }
+        }
+
+        return response()->json([
+            'enabled' => $complete,
+            'firebase' => [
+                'apiKey' => (string) ($firebase['api_key'] ?? ''),
+                'authDomain' => (string) ($firebase['auth_domain'] ?? ''),
+                'projectId' => (string) ($firebase['project_id'] ?? ''),
+                'storageBucket' => (string) ($firebase['storage_bucket'] ?? ''),
+                'messagingSenderId' => (string) ($firebase['messaging_sender_id'] ?? ''),
+                'appId' => (string) ($firebase['app_id'] ?? ''),
+            ],
+            'vapid_key' => $vapidKey,
+            'service_worker' => asset('sw.js'),
+        ]);
+    }
+
+    public function registerPushToken(Request $request): JsonResponse
+    {
+        $this->authorizePushRole($request);
+
+        $validated = $request->validate([
+            'token' => ['required', 'string', 'max:4096'],
+        ]);
+
+        $token = trim((string) $validated['token']);
+        $hash = DeviceToken::hashToken($token);
+        $user = $request->user();
+
+        /*
+         * Un même token navigateur ne doit exister qu'une fois. Sur un
+         * ordinateur partagé, une reconnexion avec un autre compte doit
+         * réaffecter ce token plutôt que créer une seconde ligne ayant le
+         * même token_hash (index unique).
+         */
+        $device = DeviceToken::query()->updateOrCreate(
+            [
+                'token_hash' => $hash,
+            ],
+            [
+                'user_id' => $user->id,
+                'token' => $token,
+                'platform' => 'web',
+                'is_active' => true,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'device_id' => $device->id,
+        ]);
+    }
+
+    public function unregisterPushToken(Request $request): JsonResponse
+    {
+        $this->authorizePushRole($request);
+
+        $validated = $request->validate([
+            'token' => ['required', 'string', 'max:4096'],
+        ]);
+
+        DeviceToken::query()
+            ->where('user_id', $request->user()->id)
+            ->where(
+                'token_hash',
+                DeviceToken::hashToken((string) $validated['token'])
+            )
+            ->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function pushStatus(
+        Request $request,
+        PushNotificationService $push
+    ): JsonResponse {
+        $this->authorizePushRole($request);
+
+        return response()->json([
+            'enabled' => (bool) config('push.enabled', true),
+            'firebase_configured' => $push->isConfigured(),
+            'web_tokens' => DeviceToken::query()
+                ->where('user_id', $request->user()->id)
+                ->where('platform', 'web')
+                ->active()
+                ->count(),
+        ]);
+    }
+
+    public function testPush(
+        Request $request,
+        NotificationCenterService $notifications
+    ): JsonResponse {
+        $this->authorizePushRole($request);
+
+        $notifications->send(
+            $request->user(),
+            '🔔 Notifications activées',
+            'Cet appareil peut recevoir les notifications Smart School Academy.',
+            'general',
+            $request->user()->dashboardRoute(),
+            'bi bi-bell-fill',
+            ['source' => 'web_push_test'],
+            true,
+            'normal'
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification de test envoyée.',
+        ]);
+    }
+
+    protected function authorizePushRole(Request $request): void
+    {
+        abort_unless(
+            in_array(
+                (string) $request->user()?->role,
+                ['admin', 'prof', 'student'],
+                true
+            ),
+            403
+        );
     }
 
     protected function findOwnedNotification(Request $request, string $id): DatabaseNotification

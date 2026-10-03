@@ -38,6 +38,58 @@ class AdminNotificationService
         $this->sendWhatsApp(
             $message
         );
+
+        $this->sendInAppAndPush(
+            $title,
+            $details,
+            $url
+        );
+    }
+
+
+    private function sendInAppAndPush(
+        string $title,
+        array $details,
+        ?string $url
+    ): void {
+        try {
+            $summary = collect($details)
+                ->filter(
+                    fn ($value) =>
+                        $value !== null
+                        && trim((string) $value) !== ''
+                )
+                ->take(3)
+                ->map(
+                    fn ($value, $label) =>
+                        trim((string) $label)
+                        . ' : '
+                        . trim((string) $value)
+                )
+                ->implode(' · ');
+
+            app(NotificationCenterService::class)
+                ->sendToAdmins(
+                    $title,
+                    $summary !== ''
+                        ? $summary
+                        : 'Nouvelle activité à consulter.',
+                    'general',
+                    $url,
+                    'bi bi-bell-fill',
+                    ['source' => 'admin_notification_service'],
+                    true,
+                    'high'
+                );
+        } catch (Throwable $exception) {
+            Log::warning(
+                'Notification push administrateur ignorée.',
+                [
+                    'title' => $title,
+                    'exception' => $exception->getMessage(),
+                ]
+            );
+        }
     }
 
     private function buildMessage(
