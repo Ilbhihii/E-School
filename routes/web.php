@@ -1589,7 +1589,7 @@ require __DIR__ . '/admin_plans.php';
 | Tests flexibles — admin
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'isAdmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get(
         '/tests-flexibles',
         [\App\Http\Controllers\Admin\FlexibleTestController::class, 'index']

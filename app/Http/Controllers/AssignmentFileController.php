@@ -154,12 +154,9 @@ class AssignmentFileController extends Controller
 
         if ($user->isProf()) {
             if (!$owner->isStudent()) return false;
-            return $paths->professorCanAccessStudent(
+            return $paths->professorCanAccessAssignment(
                 $user,
-                (int) $owner->id,
-                (int) $assignment->subject_id,
-                (int) ($assignment->classRoom?->level_id ?? 0),
-                (int) $assignment->class_room_id
+                $assignment
             );
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Assignment;
 use App\Models\ClassRoom;
 use App\Models\Course;
 use App\Models\Level;
@@ -624,11 +625,92 @@ class LearningPathService
         User $professor,
         Course $course
     ): bool {
-        return $this->professorCanAccessPath(
-            $professor,
-            (int) $course->subject_id,
-            (int) $course->level_id,
-            (int) $course->class_id
+        if (
+            !$this->professorCanAccessPath(
+                $professor,
+                (int) $course->subject_id,
+                (int) $course->level_id,
+                (int) $course->class_id
+            )
+        ) {
+            return false;
+        }
+
+        $wantedCode = strtoupper(
+            trim((string) ($course->assignment_code ?? ''))
+        );
+
+        $slotCode = strtoupper(
+            trim((string) ($course->slot_code ?? ''))
+        );
+
+        /*
+         * Compatibilité : les anciens cours sans groupe/code restent
+         * accessibles au professeur affecté au parcours historique.
+         */
+        if ($wantedCode === '' && $slotCode === '') {
+            return true;
+        }
+
+        $query = ProfAssignment::query()
+            ->where('prof_id', $professor->id)
+            ->where('subject_id', $course->subject_id)
+            ->where('level_id', $course->level_id)
+            ->where('class_id', $course->class_id);
+
+        if ($slotCode !== '') {
+            $query->whereHas(
+                'classSlot',
+                fn ($slotQuery) =>
+                    $slotQuery->whereRaw(
+                        'UPPER(TRIM(code)) = ?',
+                        [$slotCode]
+                    )
+            );
+        }
+
+        $day = (int) ($course->assignment_day_of_week ?? 0);
+        $time = trim(
+            (string) ($course->assignment_start_time ?? '')
+        );
+
+        if (
+            $day >= 1
+            && $day <= 7
+            && Schema::hasColumn('prof_assignments', 'day_of_week')
+        ) {
+            $query->where('day_of_week', $day);
+        }
+
+        if (
+            $time !== ''
+            && Schema::hasColumn('prof_assignments', 'start_time')
+        ) {
+            $query->whereTime('start_time', '=', $time);
+        }
+
+        $assignments = $query
+            ->with(['subject', 'classRoom', 'classSlot'])
+            ->get();
+
+        if ($assignments->isEmpty()) {
+            return false;
+        }
+
+        if ($wantedCode === '') {
+            return true;
+        }
+
+        return $assignments->contains(
+            function (ProfAssignment $assignment) use ($wantedCode) {
+                $code = app(
+                    AssignmentScopeService::class
+                )->professorCode($assignment);
+
+                return strtoupper(
+                    trim((string) $code)
+                ) === $wantedCode;
+            }
         );
     }
 
@@ -664,6 +746,102 @@ class LearningPathService
                 $classId
             )
             ->exists();
+    }
+
+    /**
+     * Autorisation exacte pour consulter une copie/devoir d'un étudiant.
+     * Les nouveaux devoirs sont isolés par groupe et, lorsqu'ils existent,
+     * par code/jour/heure. Les anciennes données incomplètes conservent un
+     * fallback sur le parcours historique afin de rester consultables.
+     */
+    public function professorCanAccessAssignment(
+        User $professor,
+        Assignment $assignment
+    ): bool {
+        if (!$professor->isProf()) {
+            return false;
+        }
+
+        $assignment->loadMissing([
+            'classRoom.level',
+        ]);
+
+        $levelId = (int) (
+            $assignment->classRoom?->level_id
+            ?? 0
+        );
+
+        if (
+            !$assignment->subject_id
+            || !$assignment->class_room_id
+            || !$levelId
+        ) {
+            return false;
+        }
+
+        $query = ProfAssignment::query()
+            ->where('prof_id', $professor->id)
+            ->where('subject_id', $assignment->subject_id)
+            ->where('level_id', $levelId)
+            ->where('class_id', $assignment->class_room_id);
+
+        if (
+            !empty($assignment->class_slot_id)
+            && Schema::hasColumn('prof_assignments', 'class_slot_id')
+        ) {
+            $query->where(
+                'class_slot_id',
+                (int) $assignment->class_slot_id
+            );
+        }
+
+        $day = (int) ($assignment->assignment_day_of_week ?? 0);
+        $time = trim(
+            (string) ($assignment->assignment_start_time ?? '')
+        );
+
+        if (
+            $day >= 1
+            && $day <= 7
+            && Schema::hasColumn('prof_assignments', 'day_of_week')
+        ) {
+            $query->where('day_of_week', $day);
+        }
+
+        if (
+            $time !== ''
+            && Schema::hasColumn('prof_assignments', 'start_time')
+        ) {
+            $query->whereTime('start_time', '=', $time);
+        }
+
+        $assignments = $query
+            ->with(['subject', 'classRoom', 'classSlot'])
+            ->get();
+
+        if ($assignments->isEmpty()) {
+            return false;
+        }
+
+        $wantedCode = strtoupper(
+            trim((string) ($assignment->assignment_code ?? ''))
+        );
+
+        if ($wantedCode === '') {
+            return true;
+        }
+
+        return $assignments->contains(
+            function (ProfAssignment $profAssignment) use ($wantedCode) {
+                $code = app(
+                    AssignmentScopeService::class
+                )->professorCode($profAssignment);
+
+                return strtoupper(
+                    trim((string) $code)
+                ) === $wantedCode;
+            }
+        );
     }
 
     public function userCanAccessCourse(

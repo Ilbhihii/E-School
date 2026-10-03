@@ -1,82 +1,12 @@
 <?php
 
-use App\Services\StudentSlotOrdinalService;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
-    {
-        if (
-            !Schema::hasTable(
-                'pedagogical_time_slots'
-            )
-        ) {
-            Schema::create(
-                'pedagogical_time_slots',
-                function (
-                    Blueprint $table
-                ) {
-                    $table->id();
-
-                    $table
-                        ->unsignedTinyInteger(
-                            'day_of_week'
-                        );
-
-                    $table
-                        ->time(
-                            'start_time'
-                        );
-
-                    $table
-                        ->unsignedSmallInteger(
-                            'slot_number'
-                        );
-
-                    $table->timestamps();
-
-                    $table->unique(
-                        [
-                            'day_of_week',
-                            'start_time',
-                        ],
-                        'pts_day_time_unique'
-                    );
-
-                    $table->index(
-                        [
-                            'day_of_week',
-                            'slot_number',
-                        ],
-                        'pts_day_number_index'
-                    );
-                }
-            );
-        }
-
-        /*
-         * Compatibilité avec une ancienne version de cette migration :
-         * elle créait un UNIQUE(day_of_week, slot_number). Avec l'insertion
-         * d'une heure entre deux créneaux, la renumérotation transitoire peut
-         * alors provoquer une erreur 1062. On retire cet ancien UNIQUE avant
-         * le bootstrap et on conserve uniquement un index non unique.
-         *
-         * Cette correction est volontairement placée ici (et pas seulement
-         * dans une migration plus récente), car un serveur ayant échoué sur
-         * CETTE migration doit pouvoir la relancer et se réparer tout seul.
-         */
-        $this->normalizeDayNumberIndex();
-
-        app(
-            StudentSlotOrdinalService::class
-        )->bootstrap();
-    }
-
-    private function normalizeDayNumberIndex(): void
     {
         if (!Schema::hasTable('pedagogical_time_slots')) {
             return;
@@ -151,8 +81,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists(
-            'pedagogical_time_slots'
-        );
+        // Migration corrective : ne pas restaurer l'ancien index UNIQUE cassant.
     }
 };

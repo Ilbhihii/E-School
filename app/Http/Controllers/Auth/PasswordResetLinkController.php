@@ -32,28 +32,36 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        if (config('mail.default') === 'log') {
-            return back()->withInput($request->only('email'))->withErrors([
-                'email' => 'Le serveur utilise encore le mode de test. Redémarrez Laravel après avoir configuré Gmail.',
-            ]);
-        }
+        $genericMessage =
+            'Si un compte correspond à cette adresse, '
+            . 'un lien de réinitialisation sera envoyé.';
 
         try {
-            $status = Password::sendResetLink($request->only('email'));
+            /*
+             * Ne jamais révéler au visiteur si l'adresse existe ni les
+             * détails de la configuration du serveur de messagerie.
+             */
+            if (config('mail.default') === 'log') {
+                \Log::warning(
+                    'Password reset requested while mailer is set to log.'
+                );
+            } else {
+                Password::sendResetLink(
+                    $request->only('email')
+                );
+            }
         } catch (\Throwable $exception) {
-            \Log::error('Password reset email delivery failed', [
-                'email' => $request->email,
-                'error' => $exception->getMessage(),
-            ]);
-
-            return back()->withInput($request->only('email'))->withErrors([
-                'email' => 'L’email n’a pas pu être envoyé. Vérifiez le compte Gmail et son mot de passe d’application.',
-            ]);
+            \Log::error(
+                'Password reset email delivery failed',
+                [
+                    'error' => $exception->getMessage(),
+                ]
+            );
         }
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                            ->withErrors(['email' => __($status)]);
+        return back()->with(
+            'status',
+            $genericMessage
+        );
     }
 }

@@ -105,7 +105,7 @@ class FlexibleTestController extends Controller
         $validated = $request->validate([
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'level_id' => ['required', 'integer', 'exists:levels,id'],
-            'class_id' => ['required', 'integer', 'exists:classes,id'],
+            'class_id' => ['required', 'integer', 'exists:class_rooms,id'],
 
             'title' => ['required', 'string', 'max:255'],
             'instructions' => ['nullable', 'string', 'max:10000'],

@@ -25,9 +25,9 @@ return new class extends Migration
                         'ped_time_slots_day_time_unique'
                     );
 
-                    $table->unique(
+                    $table->index(
                         ['day_of_week', 'slot_number'],
-                        'ped_time_slots_day_number_unique'
+                        'pts_day_number_index'
                     );
                 }
             );

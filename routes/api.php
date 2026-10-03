@@ -25,9 +25,12 @@ use App\Http\Controllers\API\CourseResourceController;
    ═══════════════════════════════════════════════════════════════ */
 
 // ─── Authentification ───
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/register', [AuthController::class, 'register'])
+    ->middleware('throttle:3,1');
+Route::post('/login',    [AuthController::class, 'login'])
+    ->middleware('throttle:30,1');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+    ->middleware('throttle:3,1');
 Route::post('/stripe/webhook', [\App\Http\Controllers\PaymentController::class, 'stripeWebhook'])
     ->middleware('throttle:120,1');
 

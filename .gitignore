@@ -118,4 +118,15 @@ storage/app/firebase-auth.json
 # =========================================================
 
 .DS_Store
-Thumbs.db/public/test-audio.webm
+Thumbs.db
+/public/test-audio.webm
+
+# =========================================================
+# Local maintenance / emergency scripts and backups
+# =========================================================
+
+/APPLY_*.php
+/FIX_*.php
+/storage/feature-backups/
+/public/storage_backup_*/
+/.claude/

@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -53,13 +55,35 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        $throttleKey =
+            Str::lower($validated['email'])
+            . '|'
+            . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'Trop de tentatives de connexion. Réessayez dans '
+                    . $seconds
+                    . ' seconde(s).',
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
         $user = User::where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
+            RateLimiter::hit($throttleKey, 60);
+
             throw ValidationException::withMessages([
                 'email' => ['Les identifiants fournis sont incorrects.'],
             ]);
         }
+
+        RateLimiter::clear($throttleKey);
 
         if (!$user->is_active) {
             return response()->json([
@@ -174,11 +198,23 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink($request->only('email'));
+        try {
+            Password::sendResetLink(
+                $request->only('email')
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
+        /*
+         * Réponse volontairement identique qu'un compte existe ou non.
+         * Cela évite l'énumération des adresses e-mail via l'API publique.
+         */
         return response()->json([
-            'success' => $status === Password::RESET_LINK_SENT,
-            'message' => __($status),
+            'success' => true,
+            'message' =>
+                'Si un compte correspond à cette adresse, '
+                . 'un lien de réinitialisation sera envoyé.',
         ]);
     }
 
