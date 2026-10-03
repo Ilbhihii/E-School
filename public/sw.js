@@ -139,13 +139,18 @@ self.addEventListener('fetch', event => {
   // Ignorer les requêtes non-HTTP(S)
   if (!url.protocol.startsWith('http')) return;
 
+  // Ne jamais mettre en cache les requêtes POST/PUT/PATCH/DELETE.
+  if (request.method !== 'GET') {
+    event.respondWith(networkOnly(request));
+    return;
+  }
+
   // Ignorer les requêtes vers des domaines externes (CDN, analytics, etc.)
   if (url.origin !== self.location.origin) {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
-  // Stratégie par type de fichier
   if (request.destination === 'style' ||
       request.destination === 'script' ||
       request.destination === 'font' ||
