@@ -904,6 +904,19 @@ class LiveController extends Controller
                 'email',
             ]);
 
+        /*
+         * LIVE_EDIT_LEGACY_SLOT_COMPAT_V1
+         *
+         * Certains anciens lives pointent encore vers un ancien enregistrement
+         * class_slots devenu inactif après la normalisation des groupes.
+         * Le formulaire actuel ne liste que les groupes actifs : on retrouve
+         * donc le groupe actif équivalent grâce au code (D1, D2, I1, A1...).
+         */
+        $selectedLiveSlot =
+            $this->activeEquivalentSlotForLive(
+                $live
+            );
+
         return view(
             'admin.lives.edit',
             [
@@ -929,7 +942,8 @@ class LiveController extends Controller
                 'selectedSlotId' =>
                     old(
                         'class_slot_id',
-                        $live->class_slot_id
+                        $selectedLiveSlot?->id
+                            ?? $live->class_slot_id
                     ),
                 'professors' =>
                     $professors,
@@ -967,7 +981,7 @@ class LiveController extends Controller
                 'exists:class_rooms,id',
             ],
             'class_slot_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'exists:class_slots,id',
             ],
@@ -1113,14 +1127,50 @@ class LiveController extends Controller
             ]);
         }
 
-        $slot =
-            $this->structure
-                ->slotForPath(
-                    (int) $validated['class_slot_id'],
-                    (int) $validated['subject_id'],
-                    (int) $validated['level_id'],
-                    (int) $validated['class_id']
+        $slot = null;
+
+        if (!empty($validated['class_slot_id'])) {
+            $slot =
+                $this->structure
+                    ->slotForPath(
+                        (int) $validated['class_slot_id'],
+                        (int) $validated['subject_id'],
+                        (int) $validated['level_id'],
+                        (int) $validated['class_id']
+                    );
+        }
+
+        /*
+         * Compatibilité des anciens lives : si le navigateur n'a pas pu
+         * soumettre class_slot_id parce que l'ancien groupe n'est plus listé,
+         * on reprend automatiquement le groupe actif portant le même code.
+         * Le groupe reste indépendant du jour et de l'heure.
+         */
+        if (!$slot) {
+            $fallbackSlot =
+                $this->activeEquivalentSlotForLive(
+                    $live
                 );
+
+            if (
+                $fallbackSlot
+                && (int) $fallbackSlot->subject_id
+                    === (int) $validated['subject_id']
+                && (int) $fallbackSlot->level_id
+                    === (int) $validated['level_id']
+                && (int) $fallbackSlot->class_id
+                    === (int) $validated['class_id']
+            ) {
+                $slot = $fallbackSlot;
+            }
+        }
+
+        if (!$slot) {
+            throw ValidationException::withMessages([
+                'class_slot_id' =>
+                    'Veuillez sélectionner un groupe valide pour ce parcours.',
+            ]);
+        }
 
         $conflict = Live::query()
             ->where('id', '!=', $live->id)
@@ -1221,6 +1271,49 @@ class LiveController extends Controller
                 'success',
                 'Live modifié avec succès.'
             );
+    }
+
+
+    /**
+     * Retrouve le groupe actif équivalent d'un ancien live.
+     *
+     * Les migrations de normalisation ont pu recréer D1/D2/I1/A1 avec un
+     * nouvel identifiant tout en laissant le live attaché à l'ancien ID.
+     * Le code du groupe est la référence fonctionnelle à conserver ici.
+     */
+    private function activeEquivalentSlotForLive(
+        Live $live
+    ): ?ClassSlot {
+        $current = $live->classSlot;
+
+        if (!$current) {
+            return null;
+        }
+
+        return ClassSlot::query()
+            ->where(
+                'subject_id',
+                $current->subject_id
+            )
+            ->where(
+                'level_id',
+                $current->level_id
+            )
+            ->where(
+                'class_id',
+                $current->class_id
+            )
+            ->where(
+                'code',
+                $current->code
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->orderByDesc('id')
+            ->first()
+            ?? $current;
     }
 
 
