@@ -2,10 +2,10 @@
    Smart School Academy — Service Worker v1.0.0
    ============================================================ */
 
-const CACHE_NAME = 'ssa-cache-v3';
-const STATIC_CACHE = 'ssa-static-v3';
-const DYNAMIC_CACHE = 'ssa-dynamic-v3';
-const API_CACHE = 'ssa-api-v3';
+const CACHE_NAME = 'ssa-cache-v4';
+const STATIC_CACHE = 'ssa-static-v4';
+const DYNAMIC_CACHE = 'ssa-dynamic-v4';
+const API_CACHE = 'ssa-api-v4';
 
 const PRECACHE_URLS = [
   '/',
@@ -16,7 +16,6 @@ const PRECACHE_URLS = [
   '/css/light-global.css',
   '/js/global-theme-sync.js',
   '/manifest.json',
-  '/images/icon-192x192.png',
   '/images/logoSSA-removebg-preview.png',
   '/images/icons/icon-192x192.png',
   '/images/icons/icon-512x512.png',
